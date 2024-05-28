@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add FreePass</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="mb-4">Add FreePass</h1>
+    <form id="freepass-form">
+      <div class="form-group">
+        <label for="value">Value</label>
+        <input type="number" class="form-control" id="value" name="value" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+  </div>
+  <script>
+    document.getElementById('freepass-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const value = document.getElementById('value').value;
+      
+      fetch('/api/freepass', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ value })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('FreePass created:', data);
+        window.location.href = '/';
+      })
+      .catch(error => console.error('Error creating FreePass:', error));
+    });
+  </script>
+</body>
+</html>

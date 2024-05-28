@@ -1,20 +1,48 @@
-version: '3'
+version: '3.8'
+
 services:
   app:
-    build: .
+    image: node:14
+    working_dir: /app
+    volumes:
+      - .:/app
     ports:
       - "3000:3000"
-    depends_on:
-      - db
+      - "3001:3001"
     environment:
-      DB_HOST: db
-      DB_USER: root
-      DB_PASSWORD: password
-      DB_NAME: freepassdb
-  db:
+      - DB_HOST=mariadb
+      - DB_NAME=ltidb
+      - DB_USER=user
+      - DB_PASS=pass
+      - LTI_KEY=w43ZLaZvOLpIjt8J3sGb5dHisb2i76fKetXTKQ5qVIbfgaGuoff8KmIA6DrGZAAR
+      - CANVAS_URL=http://localhost:3091
+    depends_on:
+      - mariadb
+      - mongodb
+    command: bash -c "npm install && node index.js"
+
+  mariadb:
     image: mariadb:latest
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: freepassdb
+      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_DATABASE: ltidb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
     ports:
       - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  mongodb:
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: pass
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mariadb_data:
+  mongodb_data:
