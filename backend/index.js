@@ -72,14 +72,14 @@ const Subject = sequelize.define('Subject', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  instructorId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Instructor,
-      key: 'id',
-    },
-  },
+  // instructorId: {
+  //   type: DataTypes.INTEGER,
+  //   allowNull: false,
+  //   references: {
+  //     model: Instructor,
+  //     key: 'id',
+  //   },
+  // },
 });
 
 const Student = sequelize.define('Student', {
@@ -92,14 +92,14 @@ const Student = sequelize.define('Student', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  subjectId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Subject,
-      key: 'id',
-    },
-  },
+  // subjectId: {
+  //   type: DataTypes.INTEGER,
+  //   allowNull: false,
+  //   references: {
+  //     model: Subject,
+  //     key: 'id',
+  //   },
+  // },
 });
 
 const FreePass = sequelize.define('FreePass', {
@@ -110,17 +110,17 @@ const FreePass = sequelize.define('FreePass', {
   },
   studentId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: Student,
       key: 'id',
     },
   },
-  subjectId: {
+  instructorId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
-      model: Subject,
+      model: Instructor,
       key: 'id',
     },
   },
@@ -134,21 +134,52 @@ const FreePass = sequelize.define('FreePass', {
   },
   status: {
     type: DataTypes.STRING,
-    defaultValue: 'requested', // 'granted', 'under review'
+    defaultValue: 'active', //inactive,used
+  },
+}, {
+  timestamps: false,
+});
+
+const FreePassRequest = sequelize.define('FreePassRequest', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
+  studentId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: Student,
+      key: 'id',
+    },
+  },
+  status: {
+    type: DataTypes.STRING,
+    defaultValue: 'requested',
+  },
+  timestamp: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
   },
 }, {
   timestamps: false,
 });
 
 // Define Associations
-Instructor.hasMany(Subject, { foreignKey: 'instructorId' });
-Subject.belongsTo(Instructor, { foreignKey: 'instructorId' });
+// Instructor.hasMany(Subject, { foreignKey: 'instructorId' });
+// Subject.belongsTo(Instructor, { foreignKey: 'instructorId' });
 
-Subject.hasMany(Student, { foreignKey: 'subjectId' });
-Student.belongsTo(Subject, { foreignKey: 'subjectId' });
+// Subject.hasMany(Student, { foreignKey: 'subjectId' });
+// Student.belongsTo(Subject, { foreignKey: 'subjectId' });
 
-Student.hasMany(FreePass, { foreignKey: 'studentId' });
+User.hasMany(FreePassRequest, { foreignKey: 'studentId' });
+Student.hasMany(FreePassRequest, { foreignKey: 'studentId' });
+FreePassRequest.belongsTo(Student, { foreignKey: 'studentId' });
+
 FreePass.belongsTo(Student, { foreignKey: 'studentId' });
+FreePass.belongsTo(Instructor, { foreignKey: 'instructorId' });
+
 
 // Middleware
 app.use(bodyParser.json());
@@ -178,28 +209,26 @@ const authenticateJWT = (req, res, next) => {
 };
 
 
-// Connect to the database and sync
-const connectWithRetry = async () => {
+// Seed Database route
+app.get('/api/seed', async (req, res) => {
   try {
-    await sequelize.authenticate();
-    console.log('Database connected!');
     await sequelize.sync({ force: true });
     console.log('Database synced!');
-    await seedDatabase(); // Seed the database after syncing
-  } catch (err) {
-    console.error('Unable to connect to the database:', err);
-    setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
+    await seedDatabase();
+    res.send('Database seeded');
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-};
+});
 
-// Seed the database
+// Function to seed the database
 const seedDatabase = async () => {
   const hashedPassword = await bcrypt.hash('password', 10);
 
   // Create instructors
   const [jharana, anisha] = await Instructor.bulkCreate([
-    { name: 'Jharana',id: 100 },
-    { name: 'Anisha',id: 200},
+    { name: 'Jharana', id:100 },
+    { name: 'Anisha', id: 101 },
   ]);
 
   // Create users for instructors
@@ -217,12 +246,12 @@ const seedDatabase = async () => {
 
   // Create students
   const students = await Student.bulkCreate([
-    {id:1, name: 'Student1', subjectId: math.id },
-    {id:2, name: 'Student2', subjectId: math.id },
-    {id:3, name: 'Student3', subjectId: science.id },
-    {id:4, name: 'Student4', subjectId: science.id },
-    {id:5, name: 'Student5', subjectId: english.id },
-    {id:6, name: 'Student6', subjectId: english.id },
+    { name: 'Student1'},
+    { name: 'Student2'},
+    { name: 'Student3'},
+    { name: 'Student4'},
+    { name: 'Student5'},
+    { name: 'Student6'},
   ]);
 
   // Create users for students
@@ -230,6 +259,20 @@ const seedDatabase = async () => {
     await User.create({ name: student.name, email: `${student.name.toLowerCase()}@example.com`, password: hashedPassword, role: 'student', id: student.id });
   }
 };
+
+// Start the connection process
+const connectWithRetry = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Database connected!');
+    // await sequelize.sync();
+    // console.log('Database synced!');
+  } catch (err) {
+    console.error('Unable to connect to the database:', err);
+    setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
+  }
+};
+
 
 // Routes
 
@@ -328,8 +371,8 @@ app.post('/api/student/:studentId/request-pass', authenticateJWT, async (req, re
       return res.status(403).json({ error: 'Access denied.' });
     }
 
-    const { subjectId, value } = req.body;
-    const newPass = await FreePass.create({ studentId, subjectId, value, status: 'requested' });
+    const { } = req.body;
+    const newPass = await FreePass.create({ studentId, value: "To be set", status: 'requested' });
     res.json(newPass);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -348,11 +391,11 @@ app.get('/api/instructor/:instructorId/passes', authenticateJWT, async (req, res
       return res.status(403).json({ error: 'Access denied.' });
     }
 
-    const subjects = await Subject.findAll({ where: { instructorId: req.user.id } });
-    const subjectIds = subjects.map(subject => subject.id);
-    const students = await Student.findAll({ where: { subjectId: subjectIds } });
-    const studentIds = students.map(student => student.id);
-    const passes = await FreePass.findAll({ where: { studentId: studentIds } });
+    // const subjects = await Subject.findAll({ where: { instructorId: req.user.id } });
+    // const subjectIds = subjects.map(subject => subject.id);
+    // const students = await Student.findAll({ where: { subjectId: subjectIds } });
+    // const studentIds = students.map(student => student.id);
+    // const passes = await FreePass.findAll({ where: { studentId: studentIds } });
     res.json(passes);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -370,9 +413,6 @@ app.get('/api/instructor/:instructorId/requests', authenticateJWT, async (req, r
       return res.status(403).json({ error: 'Access denied.' });
     }
 
-    const subjects = await Subject.findAll({ where: { instructorId: req.user.id } });
-    const subjectIds = subjects.map(subject => subject.id);
-    const students = await Student.findAll({ where: { subjectId: subjectIds } });
     const studentIds = students.map(student => student.id);
     const requests = await FreePass.findAll({ where: { studentId: studentIds, status: 'requested' } });
     res.json(requests);
@@ -410,11 +450,7 @@ app.post('/api/instructor/:instructorId/grant-pass/:id', authenticateJWT, async 
     const { value, comment } = req.body;
     const pass = await FreePass.findOne({ where: { id } });
     const student = await Student.findOne({ where: { id: pass.studentId } });
-    const subject = await Subject.findOne({ where: { id: student.subjectId } });
 
-    if (subject.instructorId !== parseInt(instructorId)) {
-      return res.status(403).json({ error: 'You are not authorized to grant this pass' });
-    }
 
     const [updated] = await FreePass.update({ value, status: 'granted', comment }, { where: { id } });
     if (updated) {
@@ -428,6 +464,243 @@ app.post('/api/instructor/:instructorId/grant-pass/:id', authenticateJWT, async 
   }
 });
 
+// Create a new free pass
+app.post('/api/freepass', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'instructor') {
+    return res.status(403).json({ error: 'Access denied. Only instructors can create free passes.' });
+  }
+  
+  try {
+    const { studentId, value } = req.body;
+    const instructorId = req.user.id;
+    const newPass = await FreePass.create({ studentId, instructorId, value, status: 'active' });
+    res.status(201).json(newPass);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all free passes
+app.get('/api/freepass', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'instructor') {
+    return res.status(403).json({ error: 'Access denied. Only instructors can view free passes.' });
+  }
+
+  try {
+    const instructorId = req.user.id;
+    const passes = await FreePass.findAll({
+      where: {
+        instructorId: instructorId
+      },
+      order: [['timestamp', 'DESC']],
+      include: [{
+        model: Student,
+        attributes: ['id', 'name'],
+        required: false // Include even if studentId is not present
+      }]
+    });
+    res.json(passes);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get a specific free pass by ID
+app.get('/api/freepass/:id', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'instructor') {
+    return res.status(403).json({ error: 'Access denied. Only instructors can view free passes.' });
+  }
+
+  try {
+    const pass = await FreePass.findByPk(req.params.id);
+    if (!pass) {
+      return res.status(404).json({ error: 'Free pass not found' });
+    }
+    res.json(pass);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update a free pass by ID
+app.put('/api/freepass/:id', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'instructor') {
+    return res.status(403).json({ error: 'Access denied. Only instructors can update free passes.' });
+  }
+
+  try {
+    const { value, status } = req.body;
+    const pass = await FreePass.findByPk(req.params.id);
+    if (!pass) {
+      return res.status(404).json({ error: 'Free pass not found' });
+    }
+    pass.value = value;
+    pass.status = status;
+    await pass.save();
+    res.json(pass);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a free pass by ID
+app.delete('/api/freepass/:id', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'instructor') {
+    return res.status(403).json({ error: 'Access denied. Only instructors can delete free passes.' });
+  }
+
+  try {
+    const pass = await FreePass.findByPk(req.params.id);
+    if (!pass) {
+      return res.status(404).json({ error: 'Free pass not found' });
+    }
+
+    if (pass.instructorId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied. You can only delete your own free passes.' });
+    }
+
+    await pass.destroy();
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+//student with passes
+app.get('/api/students', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'instructor') {
+    return res.status(403).json({ error: 'Access denied. Only instructors can view free passes.' });
+  }
+
+  try {
+    const instructorId = req.user.id;
+
+    // Fetch the list of students
+    const students = await User.findAll({
+      where: {
+        role: 'student'
+      },
+      attributes: ['id', 'name', 'email','createdAt']
+    });
+
+    // Fetch the free passes
+    const passes = await FreePass.findAll({
+      where: {
+        instructorId: instructorId
+      },
+      order: [['timestamp', 'DESC']]
+    });
+
+    // Organize the free passes under each respective student and categorize them by status
+    const studentsWithPasses = students.map(student => {
+      const studentPasses = passes.filter(pass => pass.studentId === student.id);
+
+      const categorizedPasses = studentPasses.reduce((acc, pass) => {
+        const status = pass.status; // Assuming 'status' is a field in FreePass model
+        if (!acc[status]) {
+          acc[status] = [];
+        }
+        acc[status].push(pass);
+        return acc;
+      }, {});
+
+      return {
+        ...student.toJSON(),
+        passes: categorizedPasses
+      };
+    });
+
+    res.json(studentsWithPasses);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/freepass/:id/assign/:studentId', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'instructor') {
+    return res.status(403).json({ error: 'Access denied. Only instructors can assign students to free passes.' });
+  }
+
+  const { id,studentId } = req.params;
+
+  if (!studentId) {
+    return res.status(400).json({ error: 'Student ID is required' });
+  }
+
+  try {
+    const pass = await FreePass.findByPk(id);
+    if (!pass) {
+      return res.status(404).json({ error: 'Free pass not found' });
+    }
+
+    // Update the pass with the studentId
+    pass.studentId = studentId;
+    await pass.save();
+
+    res.json(pass);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+app.post('/api/freepassrequest', async (req, res) => {
+  try {
+    const { studentId, value } = req.body;
+    const newRequest = await FreePassRequest.create({ studentId, value, status: 'requested' });
+    res.status(201).json(newRequest);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+function generateRandomValue() {
+  return Math.floor(Math.random() * 1000000).toString();
+}
+
+// API endpoint to set X number of passes to each student
+app.post('/api/generate-passes/:numberOfPasses', authenticateJWT, async (req, res) => {
+  if (req.user.role !== 'instructor') {
+    return res.status(403).json({ error: 'Access denied. Only instructors can generate passes.' });
+  }
+
+  const { numberOfPasses } = req.params;
+
+  if (!numberOfPasses || numberOfPasses <= 0) {
+    return res.status(400).json({ error: 'Valid number of passes is required' });
+  }
+
+  try {
+    // Fetch all students
+    const students = await User.findAll({
+      where: {
+        role: 'student'
+      }
+    });
+
+    // Generate and save the specified number of passes for each student
+    const passes = [];
+    for (const student of students) {
+      for (let i = 0; i < numberOfPasses; i++) {
+        passes.push({
+          value: generateRandomValue(),
+          studentId: student.id,
+          instructorId: req.user.id, // Assuming the passes are assigned by the current instructor
+          status: 'active', // Default status, adjust as needed
+          timestamp: new Date()
+        });
+      }
+    }
+
+    // Bulk create passes in the database
+    await FreePass.bulkCreate(passes);
+
+    res.status(201).json({ message: `${numberOfPasses} passes generated for each student` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // Start the connection process
 connectWithRetry();
 

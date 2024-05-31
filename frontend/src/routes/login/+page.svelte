@@ -1,63 +1,79 @@
 <script>
-  import { onMount } from 'svelte';
-  import axios from 'axios';
-  import { writable } from 'svelte/store';
+	import { onMount } from 'svelte';
+	import axios from 'axios';
+	import { writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
+	import AuthMaster from '../../layouts/AuthMaster.svelte';
 
-  const token = writable(null);
-  const user = writable(null);
+	const token = writable(null);
+	const user = writable(null);
 
-  let email = '';
-  let password = '';
-  let errorMessage = '';
+	let email = '';
+	let password = '';
+	let errorMessage = '';
 
-  const login = async () => {
-    try {
-      const response = await axios.post('http://localhost:3100/api/login', { email, password });
-      if (response.data.user.role === 'instructor') {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-				localStorage.setItem('token', JSON.stringify(response.data.token));
+	const login = async () => {
+		try {
+			const response = await axios.post('http://localhost:3100/api/login', { email, password });
+			localStorage.setItem('user', JSON.stringify(response.data.user));
+			localStorage.setItem('token', JSON.stringify(response.data.token));
 
-				user.set(response.data.user);
-				token.set(response.data.token);
-        goto('/instructor-home');
-      } else {
-        goto('/student-home');
-      }
-    } catch (error) {
-      errorMessage = error.response?.data?.error || 'Login failed';
-    }
-  };
+			user.set(response.data.user);
+			token.set(response.data.token);
+			if (response.data.user.role === 'instructor') {
+				goto('/instructor/home');
+			} else {
+				goto('/student/home');
+			}
+		} catch (error) {
+			errorMessage = error.response?.data?.error || 'Login failed';
+		}
+	};
 </script>
 
-<main>
-  <h1>Login</h1>
-  <form on:submit|preventDefault={login}>
-    <label for="email">Email:</label>
-    <input id="email" type="email" bind:value={email} required />
+<AuthMaster>
+	<div class="">
+		<div class="row">
+			<div class="col-md-4 h-full bg-signin text-center text-white p-5 gap-2">
+				<h3>Sign in</h3>
+				<p></p>
+			</div>
+			<div class="col-md-8 h-full d-flex flex-column justify-content-center align-items-center">
+				<div class="text-center">
+					<h5>Sign In</h5>
+					<p class="text-muted"></p>
+				</div>
+				<form class="form-group" on:submit|preventDefault={login}>
+					<label for="email">Email:</label>
+					<input class="form-control" id="email" type="email" bind:value={email} required />
 
-    <label for="password">Password:</label>
-    <input id="password" type="password" bind:value={password} required />
+					<label for="password">Password:</label>
+					<input
+						class="form-control"
+						id="password"
+						type="password"
+						bind:value={password}
+						required
+					/>
 
-    <button type="submit">Login</button>
-  </form>
+					<button class="btn btn-primary" type="submit">Login</button>
+				</form>
 
-  {#if errorMessage}
-    <p style="color: red;">{errorMessage}</p>
-  {/if}
-</main>
+				{#if errorMessage}
+					<p style="color: red;">{errorMessage}</p>
+				{/if}
+			</div>
+		</div>
+	</div>
+</AuthMaster>
 
 <style>
-  main {
-    max-width: 400px;
-    margin: 0 auto;
-    padding: 1rem;
-    text-align: center;
-  }
-
-  label, input {
-    display: block;
-    width: 100%;
-    margin-bottom: 1rem;
-  }
+	.bg-signin {
+		background-color: navy;
+		background-size: cover;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		flex-direction: column;
+	}
 </style>
