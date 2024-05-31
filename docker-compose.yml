@@ -1,15 +1,29 @@
 version: '3.8'
 
 services:
-  app:
-    image: node:14
-    working_dir: /app
-    volumes:
-      - .:/app
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "3000:3000"
-      - "3001:3001"
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     environment:
+      - NODE_ENV=development
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3100:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
       - DB_HOST=mariadb
       - DB_NAME=ltidb
       - DB_USER=user
@@ -19,7 +33,8 @@ services:
     depends_on:
       - mariadb
       - mongodb
-    command: bash -c "npm install && node index.js"
+    command: >
+      sh -c "npm install && node src/index.js"
 
   mariadb:
     image: mariadb:latest
@@ -29,7 +44,7 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: pass
     ports:
-      - "3306:3306"
+      - "3308:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
 
