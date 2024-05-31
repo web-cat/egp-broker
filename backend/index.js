@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
 const { Sequelize, DataTypes } = require('sequelize');
 
 const app = express();
@@ -151,6 +152,8 @@ FreePass.belongsTo(Student, { foreignKey: 'studentId' });
 
 // Middleware
 app.use(bodyParser.json());
+app.use(cors()); 
+
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -285,7 +288,9 @@ app.post('/api/login', async (req, res) => {
 
     res.json({
       user: userProfile,
-      token
+      token: {
+        access_token: token
+      }
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
