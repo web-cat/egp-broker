@@ -17,7 +17,7 @@
 			user.set(JSON.parse(storedUser));
 			token.set(JSON.parse(storedToken));
 		} else {
-			// goto('/logout');
+			goto('/logout');
 			return;
 		}
 	});
