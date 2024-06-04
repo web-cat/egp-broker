@@ -7,10 +7,13 @@
 	let value = '';
 	let error = '';
 	let success = '';
+	let courseId = writable(null);
 	let freePasses = [];
+	let courses = [];
 
 	onMount(async () => {
 		await fetchFreePasses();
+		await fetchcourses();
 	});
 
 	async function fetchFreePasses() {
@@ -36,6 +39,29 @@
 		}
 	}
 
+	async function fetchcourses() {
+		try {
+			const storedToken = localStorage.getItem('token');
+			let token = JSON.parse(storedToken);
+
+			const response = await fetch('http://localhost:3100/api/my-courses', {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${token.access_token}`
+				}
+			});
+
+			if (response.ok) {
+				courses = await response.json();
+			} else {
+				const errorData = await response.json();
+				error = errorData.error;
+			}
+		} catch (err) {
+			error = 'An error occurred while fetching courses.';
+		}
+	}
+
 	async function submitFreePassRequest() {
 		try {
 			const storedToken = localStorage.getItem('token');
@@ -47,7 +73,7 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${token.access_token}`
 				},
-				body: JSON.stringify({ value })
+				body: JSON.stringify({ value, courseId })
 			});
 
 			if (response.ok) {
@@ -106,6 +132,12 @@
 					bind:value={value}
 					required
 				/>
+				Course:
+				<select class="form-control" name="course" bind:value={courseId}>
+					{#each courses as course}
+						<option value="{course.id}">{course.name}</option>
+					{/each}
+				</select>
 			<div class="input-group-append">
 			  <button class="btn btn-outline-secondary" on:click={generateValue} type="button">🔀</button>
 			  <button class="btn btn-primary" type="submit">Add Pass</button>
@@ -128,6 +160,7 @@
 				<td>Value</td>
 				<td>Status</td>
 				<td>Granted to</td>
+				<td>Course</td>
 				<td>Created</td>
 				<td>Action</td>
 			</tr>
@@ -144,6 +177,11 @@
 					<td>
 						{#if pass.Student}
 							{pass.Student.name}
+						{/if}
+					</td>
+					<td>
+						{#if pass.Course}
+							{pass.Course.name}
 						{/if}
 					</td>
 					<td>

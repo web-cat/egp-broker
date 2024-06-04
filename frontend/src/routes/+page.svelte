@@ -19,7 +19,7 @@
 				goto('/student/home');
 			}
 		} else {
-			goto('/logout');
+			// goto('/logout');
 			return;
 		}
 	});

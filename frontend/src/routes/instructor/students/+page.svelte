@@ -7,15 +7,43 @@
 
 	let showModal = writable(false);
 	let selectedStudent = writable(null);
+	let courseId = writable(null);
 	let value = '';
 	let error = '';
 	let success = '';
+	let passCount = writable(1);
 	let students = [];
+	let courses = [];
 
 	onMount(async () => {
 		await fetchData();
 		await fetchFreePasses();
+		await fetchcourses();
 	});
+
+	async function fetchcourses() {
+		try {
+			const storedToken = localStorage.getItem('token');
+			let token = JSON.parse(storedToken);
+
+			const response = await fetch('http://localhost:3100/api/my-courses', {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${token.access_token}`
+				}
+			});
+
+			if (response.ok) {
+				courses = await response.json();
+			} else {
+				const errorData = await response.json();
+				error = errorData.error;
+			}
+		} catch (err) {
+			error = 'An error occurred while fetching courses.';
+		}
+	}
+
 
 	function openModal(student) {
 		selectedStudent.set(student);
@@ -27,7 +55,7 @@
 		selectedStudent.set(null);
 	}
 
-	function generatePassesConfirm(){
+	function generatePassesConfirm() {
 		// Swal.fire({
 		// 	title: 'Are you sure?',
 		// 	text: "This will provide 5 passes to every student!",
@@ -38,7 +66,6 @@
 		// 	confirmButtonText: 'Yes, sure!'
 		// }).then((result) => {
 		// 	if (result.isConfirmed) {
-				
 		// 	}
 		// });
 	}
@@ -47,7 +74,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/generate-passes/5`, {
+			const response = await fetch(`http://localhost:3100/api/generate-passes/${$courseId}/${$passCount}`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`,
@@ -162,7 +189,18 @@
 </script>
 
 <Master>
-	<button class="btn btn-danger" type="button" on:click={generatePasses}>Generate 5 passes for each students</button>
+	<div class="d-flex">
+		<input class="form-control" type="number" bind:value={$passCount} />
+		Course:
+		<select class="form-control" name="course" bind:value={$courseId}>
+			{#each courses as course}
+				<option value="{course.id}">{course.name}</option>
+			{/each}
+		</select>
+		<button class="btn btn-danger" type="button" on:click={generatePasses}>
+			Generate {$passCount} passes for each student
+		</button>
+	</div>
 	{#if success}
 		<p class="success">{success}</p>
 	{/if}
@@ -185,20 +223,14 @@
 		<tbody>
 			{#each students as student}
 				<tr>
-					<td>
-						{student.id}
-					</td>
-					<td>
-						{student.name}
-					</td>
+					<td>{student.id}</td>
+					<td>{student.name}</td>
 					<td>
 						{#each Object.entries(getPassCount(student.passes)) as [status, count]}
 							<div>{status}: {count}</div>
 						{/each}
 					</td>
-					<td>
-						{student.createdAt}
-					</td>
+					<td>{student.createdAt}</td>
 					<td>
 						<button class="btn btn-primary" on:click={() => openModal(student)}>Assign</button>
 					</td>
@@ -229,8 +261,8 @@
 							aria-label="Close"
 							style="padding-bottom: 0.2rem"
 						>
-							<span aria-hidden="true" class="m-0"
-								><svg
+							<span aria-hidden="true" class="m-0">
+								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									width="18"
 									height="18"
@@ -241,10 +273,11 @@
 									stroke-linecap="round"
 									stroke-linejoin="round"
 									class="feather feather-x"
-									><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"
-									></line></svg
-								></span
-							>
+								>
+									<line x1="18" y1="6" x2="6" y2="18"></line>
+									<line x1="6" y1="6" x2="18" y2="18"></line>
+								</svg>
+							</span>
 						</button>
 					</div>
 					<div class="modal-body">
@@ -258,9 +291,9 @@
 									<tr>
 										<td>{pass.value}</td>
 										<td>
-											<button class="btn btn-primary" on:click={() => assign(pass.id)}
-												>Assign</button
-											>
+											<button class="btn btn-primary" on:click={() => assign(pass.id)}>
+												Assign
+											</button>
 										</td>
 									</tr>
 								{/each}

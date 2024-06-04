@@ -8,12 +8,44 @@
 	let error = '';
 	let success = '';
 	let freePasses = [];
-	let counter = 1;
+	let courses = [];
 	let filter = writable('all');
+	let courseId = writable(null);
+
+	// Reactive statement to update filteredPasses based on filter and courseId
+	$: filteredPasses = freePasses.filter((pass) => {
+		const matchesFilter = $filter === 'all' || pass.status === $filter;
+		const matchesCourse = !$courseId || pass.courseId === $courseId;
+		return matchesFilter && matchesCourse;
+	});
 
 	onMount(async () => {
 		await fetchFreePasses();
+		await fetchCourses();
 	});
+
+	async function fetchCourses() {
+		try {
+			const storedToken = localStorage.getItem('token');
+			let token = JSON.parse(storedToken);
+
+			const response = await fetch('http://localhost:3100/api/my-courses', {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${token.access_token}`
+				}
+			});
+
+			if (response.ok) {
+				courses = await response.json();
+			} else {
+				const errorData = await response.json();
+				error = errorData.error;
+			}
+		} catch (err) {
+			error = 'An error occurred while fetching courses.';
+		}
+	}
 
 	async function fetchFreePasses() {
 		try {
@@ -87,7 +119,7 @@
 				error = errorData.error;
 			}
 		} catch (err) {
-			error = 'An error occurred while useing the free pass.';
+			error = 'An error occurred while using the free pass.';
 		}
 	}
 </script>
@@ -119,7 +151,7 @@
 
 	<div class="mt-5 row">
 		<div class="col">
-			<h2>List of Passes</h2>
+			<h2>List of Passes ({filteredPasses.length})</h2>
 		</div>
 		<div class="col-auto">
 			<select class="form-control" bind:value={$filter}>
@@ -128,92 +160,49 @@
 				<option value="active">Active</option>
 			</select>
 		</div>
+		<div class="col-auto">
+			<select class="form-control" bind:value={$courseId}>
+				<option value={null}>All</option>
+				{#each courses ?? [] as course}
+					<option value={course.id}>{course.name}</option>
+				{/each}
+			</select>
+		</div>
 	</div>
 
 	<table class="table table-bordered">
 		<thead>
 			<tr>
 				<td>Value</td>
+				<td>Course</td>
 				<td>Status</td>
 				<td>Created</td>
 				<td>Action</td>
 			</tr>
 		</thead>
 		<tbody>
-			{#if $filter == 'all'}
-				{#each freePasses ?? [] as pass}
-					<tr>
-						<td>
-							{pass.value}
-						</td>
-						<td>
-							{pass.status}
-						</td>
-						<td>
-							{pass.timestamp}
-						</td>
-						<td>
-							{#if pass.status == 'active'}
-								<button class="btn btn-danger" on:click={() => use(pass.id)}>Use</button>
-							{:else}
-								No action available
-							{/if}
-						</td>
-					</tr>
-				{/each}
+			{#each filteredPasses ?? [] as pass}
+				<tr>
+					<td>{pass.value}</td>
+					<td>
+						{#if pass.Course}
+							{pass.Course.name}
+						{/if}
+					</td>
+					<td>{pass.status}</td>
+					<td>{pass.timestamp}</td>
+					<td>
+						{#if pass.status == 'active'}
+							<button class="btn btn-danger" on:click={() => use(pass.id)}>Use</button>
+						{:else}
+							No action available
+						{/if}
+					</td>
+				</tr>
+			{/each}
 
-				{#if freePasses.length == 0}
-				<p>
-					No free passes available, Please request!
-				</p>
-				{/if}
-			{:else if $filter == 'active'}
-				{#each freePasses.filter((pass) => pass.status === 'active') as pass}
-					<tr>
-						<td>
-							{pass.value}
-						</td>
-						<td>
-							{pass.status}
-						</td>
-						<td>
-							{pass.timestamp}
-						</td>
-						<td>
-							{#if pass.status == 'active'}
-								<button class="btn btn-danger" on:click={() => use(pass.id)}>Use</button>
-							{:else}
-								No action available
-							{/if}
-						</td>
-					</tr>
-				{/each}
-				{#if freePasses.filter((pass) => pass.status === 'active').length == 0}
-					<p>
-						No free passes available, Please request!
-					</p>
-				{/if}
-			{:else if $filter == 'used'}
-				{#each freePasses.filter((pass) => pass.status === 'used') as pass}
-					<tr>
-						<td>
-							{pass.value}
-						</td>
-						<td>
-							{pass.status}
-						</td>
-						<td>
-							{pass.timestamp}
-						</td>
-						<td> No action available </td>
-					</tr>
-				{/each}
-
-				{#if freePasses.filter((pass) => pass.status === 'used').length == 0}
-					<p>
-						No used free passes yet!
-					</p>
-				{/if}
+			{#if filteredPasses.length == 0}
+				<p>No free passes available, Please request!</p>
 			{/if}
 		</tbody>
 	</table>

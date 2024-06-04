@@ -19,11 +19,13 @@
 			<li><a href="/instructor/students">Students</a></li>
 			<li><a href="/instructor/freepass">Passes</a></li>
 			<li><a href="/instructor/requests">Requests</a></li>
+			<li><a href="/instructor/courses">My Courses</a></li>
 			<li><a class="dropdown-item" href="/profile">Profile</a></li>
 			<li><a class="dropdown-item" on:click={() => logout()} href="#">Logout</a></li>
 		{:else}
 			<li><a href="/student/passes">My Passes</a></li>
 			<li><a href="/student/request">Request +</a></li>
+			<li><a href="/student/courses">My Courses</a></li>
 			<li><a class="dropdown-item" href="/profile">Profile</a></li>
 			<li><a class="dropdown-item" on:click={() => logout()} href="#">Logout</a></li>
 		{/if}
