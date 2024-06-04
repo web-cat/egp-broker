@@ -7,8 +7,35 @@
 	let reason = '';
 	let error = '';
 	let success = '';
+	let courses = [];
+	let courseId = writable(null);
 
-	onMount(async () => {});
+	onMount(async () => {
+		await fetchcourses();
+	});
+
+	async function fetchcourses() {
+		try {
+			const storedToken = localStorage.getItem('token');
+			let token = JSON.parse(storedToken);
+
+			const response = await fetch('http://localhost:3100/api/my-courses', {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${token.access_token}`
+				}
+			});
+
+			if (response.ok) {
+				courses = await response.json();
+			} else {
+				const errorData = await response.json();
+				error = errorData.error;
+			}
+		} catch (err) {
+			error = 'An error occurred while fetching courses.';
+		}
+	}
 
 	async function submitFreePassRequest() {
 		try {
@@ -21,7 +48,7 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${token.access_token}`
 				},
-				body: JSON.stringify({ reason })
+				body: JSON.stringify({ reason, courseId })
 			});
 
 			if (response.ok) {
@@ -49,6 +76,13 @@
 				bind:value={reason}
 				required
 			/>
+			<div class="input-group-append">
+				<select required class="form-control" name="course" bind:value={courseId}>
+					{#each courses as course}
+						<option value={course.id}>{course.name}</option>
+					{/each}
+				</select>
+			</div>
 			<div class="input-group-append">
 				<button class="btn btn-primary" type="submit">Request Free Pass</button>
 			</div>

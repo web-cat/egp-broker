@@ -128,6 +128,7 @@
 				<td>Requested by</td>
 				<td>Reason</td>
 				<td>Status</td>
+				<td>Course</td>
 				<td>Created</td>
 				<td>Action</td>
 			</tr>
@@ -145,6 +146,9 @@
 					</td>
 					<td>
 						{pass.status}
+					</td>
+					<td>
+						{pass.Course?.name}
 					</td>
 					<td>
 						{pass.timestamp}

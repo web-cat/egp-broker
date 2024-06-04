@@ -250,11 +250,19 @@ app.get('/api/instructor/requests', authenticateJWT, async (req, res) => {
     try {
         const instructorId = req.user.id; //TODO use this for instructor wise
         const requests = await FreePassRequest.findAll({
-            where: { status: 'requested' }, include: [{
+            where: {
+                status: 'requested',
+                '$Course.instructorId$': instructorId
+                }, include: [{
                 model: Student,
                 attributes: ['id', 'name'],
                 required: false // Include even if studentId is not present
-            }]
+            }, {
+                model: Course,
+                attributes: ['id', 'name'],
+                required: false,
+                // where: { instructorId } 
+            }],
         });
         res.json(requests);
     } catch (error) {
@@ -294,6 +302,7 @@ app.post('/api/instructor/grant-pass/:id/:count', authenticateJWT, async (req, r
                 passes.push({
                     value: generateRandomValue(),
                     studentId: student.id,
+                    courseId: pass.courseId,
                     instructorId: instructorId,
                     status: 'active',
                     timestamp: new Date()
@@ -543,14 +552,15 @@ app.post('/api/freepass/:id/assign/:studentId', authenticateJWT, async (req, res
 
 app.post('/api/freepassrequest', authenticateJWT, async (req, res) => {
     try {
-        const { reason } = req.body;
+        const { reason, courseId } = req.body;
         const studentId = req.user.id;
 
         // Check for existing request with 'requested' status
         const existingRequest = await FreePassRequest.findOne({
             where: {
                 studentId,
-                status: 'requested'
+                status: 'requested',
+                courseId
             }
         });
 
@@ -559,7 +569,7 @@ app.post('/api/freepassrequest', authenticateJWT, async (req, res) => {
         }
 
         // Create new request if no pending request exists
-        const newRequest = await FreePassRequest.create({ studentId, reason, status: 'requested' });
+        const newRequest = await FreePassRequest.create({ studentId, reason, courseId, status: 'requested' });
         res.status(201).json(newRequest);
     } catch (error) {
         res.status(500).json({ error: error.message });

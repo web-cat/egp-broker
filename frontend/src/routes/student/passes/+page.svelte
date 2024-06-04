@@ -125,21 +125,6 @@
 </script>
 
 <Master>
-	<form class="mt-5 form-group" on:submit|preventDefault={submitFreePassRequest}>
-		<div class="input-group">
-			<input
-				placeholder="Please enter a reason for free pass"
-				class="form-control"
-				type="text"
-				id="reason"
-				bind:value={reason}
-				required
-			/>
-			<div class="input-group-append">
-				<button class="btn btn-primary" type="submit">Request Free Pass</button>
-			</div>
-		</div>
-	</form>
 
 	{#if success}
 		<p class="success">{success}</p>
