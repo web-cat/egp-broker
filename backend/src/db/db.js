@@ -131,14 +131,15 @@ const PassType = sequelize.define('PassType', {
     },
     description: {
         type: DataTypes.STRING,
+        allowNull: true,
     },
     initialCount: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
     },
     validityPeriod: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
     },
 });
 
@@ -195,7 +196,7 @@ const FreePassRequest = sequelize.define('FreePassRequest', {
         autoIncrement: true,
         primaryKey: true,
     },
-    studentId: {
+    userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {

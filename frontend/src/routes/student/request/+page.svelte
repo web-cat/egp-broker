@@ -8,7 +8,8 @@
 	let error = '';
 	let success = '';
 	let courses = [];
-	let courseId = writable(null);
+	let courseOfferingId = writable(null);
+	let passTypeId = writable("1");
 
 	onMount(async () => {
 		await fetchcourses();
@@ -19,7 +20,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3100/api/my-courses', {
+			const response = await fetch('http://localhost:3100/api/courses', {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -48,7 +49,7 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${token.access_token}`
 				},
-				body: JSON.stringify({ reason, courseId })
+				body: JSON.stringify({ reason, courseOfferingId, passTypeId })
 			});
 
 			if (response.ok) {
@@ -77,10 +78,15 @@
 				required
 			/>
 			<div class="input-group-append">
-				<select required class="form-control" name="course" bind:value={courseId}>
+				<label for="">Course</label>
+				<select required class="form-control" name="course" bind:value={courseOfferingId}>
 					{#each courses as course}
-						<option value={course.id}>{course.name}</option>
+						<option value={course.CourseOffering.id}>{course.CourseOffering.Course.name} | {course.CourseOffering.Term.name}</option>
 					{/each}
+				</select>
+				<label for="">Pass Type</label>
+				<select required class="form-control" name="course" bind:value={passTypeId}>
+					<option value="1">Default Pass Type</option>
 				</select>
 			</div>
 			<div class="input-group-append">

@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const { User, Course, CourseEnrollment, FreePassPool, FreePassRequest, sequelize } = require('./src/db/db');
+const { User, Course, CourseEnrollment, PassType, FreePassPool, FreePassRequest, sequelize } = require('./src/db/db');
 const { Term, CourseOffering, LTIId } = require('./src/db/db');
 
 const app = express()
@@ -93,7 +93,9 @@ const seedDatabase = async () => {
             { name: 'Anisha', email: 'anisha@test.test', password: hashedPassword, id: anisha.id },
         ]);
 
-        // Create LTI IDs for instructors
+        await PassType.bulkCreate([
+            { id: 1, name: 'Default'},
+        ]);
         await LTIId.bulkCreate([
             { ltiId: 'jharana_canvas', userId: jharana.id, client: 'canvas' },
             { ltiId: 'anisha_canvas', userId: anisha.id, client: 'canvas' },
@@ -709,15 +711,16 @@ app.post('/api/freepass/:id/assign/:studentId', authenticateJWT, async (req, res
 
 app.post('/api/freepassrequest', authenticateJWT, async (req, res) => {
     try {
-        const { reason, courseId } = req.body;
-        const studentId = req.user.id;
+        const { reason, courseOfferingId, passTypeId } = req.body;
+        const userId = req.user.id;
 
         // Check for existing request with 'requested' status
         const existingRequest = await FreePassRequest.findOne({
             where: {
-                studentId,
+                userId,
                 status: 'requested',
-                courseId
+                courseOfferingId,
+                passTypeId
             }
         });
 
@@ -726,7 +729,7 @@ app.post('/api/freepassrequest', authenticateJWT, async (req, res) => {
         }
 
         // Create new request if no pending request exists
-        const newRequest = await FreePassRequest.create({ studentId, reason, courseId, status: 'requested' });
+        const newRequest = await FreePassRequest.create({ userId, reason, courseOfferingId, passTypeId, status: 'requested' });
         res.status(201).json(newRequest);
     } catch (error) {
         res.status(500).json({ error: error.message });
