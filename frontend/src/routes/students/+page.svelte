@@ -226,7 +226,8 @@
 			<tr>
 				<td>ID</td>
 				<td>Name</td>
-				<td>Passes</td>
+				<td>Available Passes</td>
+				<td>Used Passes</td>
 				<!-- <td>Created</td> -->
 				<!-- <td>Action</td> -->
 			</tr>
@@ -237,7 +238,10 @@
 					<td>{student.User.id}</td>
 					<td>{student.User.name}</td>
 					<td>
-						{student.User.freePassCount}
+						{student.User.activePassCount}
+					</td>
+					<td>
+						{student.User.usedPassCount}
 					</td>
 					<!-- <td>
 						{student.createdAt}

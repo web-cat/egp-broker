@@ -356,8 +356,8 @@ FreePassPool.belongsTo(User, { foreignKey: 'userId' });
 // User.hasMany(FreePassPool, { foreignKey: 'creatorId' });
 // FreePassPool.belongsTo(User, { foreignKey: 'creatorId' });
 
-User.hasMany(FreePassRequest, { foreignKey: 'studentId' });
-FreePassRequest.belongsTo(User, { foreignKey: 'studentId' });
+User.hasMany(FreePassRequest, { foreignKey: 'userId' });
+FreePassRequest.belongsTo(User, { foreignKey: 'userId' });
 
 CourseOffering.hasMany(FreePassRequest, { foreignKey: 'courseOfferingId' });
 FreePassRequest.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });

@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
-	import { token } from '../../../stores';
-	import Master from '../../../layouts/Master.svelte';
+	import { course, token } from '../../stores';
+	import Master from '../../layouts/Master.svelte';
 	import { writable } from 'svelte/store';
 	import { fade } from 'svelte/transition';
 
@@ -42,7 +42,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3100/api/instructor/requests', {
+			const response = await fetch(`http://localhost:3100/api/instructor/${$course.CourseOffering.id}/requests`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -128,8 +128,8 @@
 				<td>Requested by</td>
 				<td>Reason</td>
 				<td>Status</td>
-				<td>Course</td>
-				<td>Created</td>
+				<!-- <td>Course</td>
+				<td>Created</td> -->
 				<td>Action</td>
 			</tr>
 		</thead>
@@ -137,8 +137,8 @@
 			{#each requests as pass}
 				<tr>
 					<td>
-						{#if pass.Student}
-							{pass.Student.name}
+						{#if pass.User}
+							{pass.User.name}
 						{/if}
 					</td>
 					<td>
@@ -147,12 +147,12 @@
 					<td>
 						{pass.status}
 					</td>
-					<td>
+					<!-- <td>
 						{pass.Course?.name}
 					</td>
 					<td>
 						{pass.timestamp}
-					</td>
+					</td> -->
 					<td>
 						<button class="btn btn-danger" on:click={() => openModal(pass)}>Grant</button>
 					</td>

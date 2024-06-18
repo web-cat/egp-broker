@@ -18,8 +18,8 @@
 		<li><a href="/home">Course: {$course?.CourseOffering?.Course?.name} ({$course?.role.toUpperCase()})</a></li>
 		{#if $course?.role == 'instructor' || $course?.role == 'ta'}
 			<li><a href="/students">My Students</a></li>
-			<li><a href="/instructor/freepass">Passes</a></li>
-			<li><a href="/instructor/requests">Requests</a></li>
+			<!-- <li><a href="/instructor/freepass">Passes</a></li> -->
+			<li><a href="/requests">Requests</a></li>
 			<!-- <li><a href="/instructor/courses">My Courses</a></li> -->
 			<!-- <li><a class="dropdown-item" href="/profile">Profile</a></li> -->
 			<li><a class="dropdown-item" on:click={() => logout()} href="#">Logout</a></li>

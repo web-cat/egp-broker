@@ -338,9 +338,11 @@ app.get('/api/course-offering/:id/students', authenticateJWT, async (req, res) =
             ],
         });
 
-        // Fetch count of FreePassPool entries for each user
+        // Fetch count of FreePassPool entries for each user, grouped by status
         const freePassCounts = await sequelize.query(
-            `SELECT userId, COUNT(*) as freePassCount
+            `SELECT userId, 
+                    SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as activeCount,
+                    SUM(CASE WHEN status = 'used' THEN 1 ELSE 0 END) as usedCount
             FROM FreePassPools
             GROUP BY userId`,
             { type: sequelize.QueryTypes.SELECT }
@@ -349,12 +351,13 @@ app.get('/api/course-offering/:id/students', authenticateJWT, async (req, res) =
         // Merge the count results with the enrollments
         const enrollmentsWithFreePassCount = enrollments.map(enrollment => {
             const user = enrollment.User;
-            const freePassCount = freePassCounts.find(count => count.userId === user.id)?.freePassCount || 0;
+            const freePassCount = freePassCounts.find(count => count.userId === user.id) || { activeCount: 0, usedCount: 0 };
             return {
                 ...enrollment.toJSON(),
                 User: {
                     ...user.toJSON(),
-                    freePassCount
+                    activePassCount: freePassCount.activeCount,
+                    usedPassCount: freePassCount.usedCount
                 }
             };
         });
@@ -364,6 +367,7 @@ app.get('/api/course-offering/:id/students', authenticateJWT, async (req, res) =
         res.status(500).json({ error: error.message });
     }
 });
+
 
 
 app.post('/api/student/request-pass', authenticateJWT, async (req, res) => {
@@ -404,26 +408,23 @@ app.get('/api/instructor/:instructorId/passes', authenticateJWT, async (req, res
     }
 });
 
-app.get('/api/instructor/requests', authenticateJWT, async (req, res) => {
-    if (req.user.role !== 'instructor') {
-        return res.status(403).json({ error: 'Access denied.' });
-    }
-
+app.get('/api/instructor/:courseOfferingId/requests', authenticateJWT, async (req, res) => {
     try {
         const instructorId = req.user.id; //TODO use this for instructor wise
+        const courseOfferingId = req.params.courseOfferingId; // Get the course offering ID from the request parameters
         const requests = await FreePassRequest.findAll({
             where: {
                 status: 'requested',
-                '$Course.instructorId$': instructorId
+                courseOfferingId
+                // '$Course.instructorId$': instructorId
             }, include: [{
-                model: Student,
+                model: User,
                 attributes: ['id', 'name'],
                 required: false // Include even if studentId is not present
             }, {
-                model: Course,
-                attributes: ['id', 'name'],
+                model: CourseOffering,
+                attributes: ['id'],
                 required: false,
-                // where: { instructorId } 
             }],
         });
         res.json(requests);
@@ -447,15 +448,11 @@ app.get('/api/profile', authenticateJWT, async (req, res) => {
 });
 
 app.post('/api/instructor/grant-pass/:id/:count', authenticateJWT, async (req, res) => {
-    if (req.user.role !== 'instructor') {
-        return res.status(403).json({ error: 'Access denied.' });
-    }
-
     try {
-        const instructorId = req.user.id;
+        const creatorId = req.user.id;
         const { id, count } = req.params;
         const pass = await FreePassRequest.findOne({ where: { id } });
-        const student = await Student.findOne({ where: { id: pass.studentId } });
+        const user = await User.findOne({ where: { id: pass.userId } });
         const [updated] = await FreePassRequest.update({ status: 'granted' }, { where: { id } });
         if (updated) {
             const passes = [];
@@ -463,16 +460,17 @@ app.post('/api/instructor/grant-pass/:id/:count', authenticateJWT, async (req, r
             for (let i = 0; i < count; i++) {
                 passes.push({
                     value: generateRandomValue(),
-                    studentId: student.id,
-                    courseId: pass.courseId,
-                    instructorId: instructorId,
+                    userId: user.id,
+                    creatorId: creatorId,
+                    courseOfferingId: pass.courseOfferingId,
+                    creatorId: creatorId,
                     status: 'active',
                     timestamp: new Date()
                 });
             }
 
-            await FreePass.bulkCreate(passes);
-            const updatedPass = await FreePass.findOne({ where: { id } });
+            await FreePassPool.bulkCreate(passes);
+            const updatedPass = await FreePassRequest.findOne({ where: { id } });
             res.status(200).json(updatedPass);
         } else {
             throw new Error('Pass not found');
