@@ -43,7 +43,16 @@ const authenticateJWT = (req, res, next) => {
 // Seed Database route
 app.get('/api/seed', async (req, res) => {
     try {
+        // Disable foreign key checks
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
+
+        // Drop all tables and recreate them
+        await sequelize.drop();
         await sequelize.sync({ force: true });
+
+        // Enable foreign key checks
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+
         console.log('Database synced!');
         await seedDatabase();
         res.send('Database seeded');
@@ -51,6 +60,7 @@ app.get('/api/seed', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 const seedDatabase = async () => {
     const hashedPassword = await bcrypt.hash('password', 10);
