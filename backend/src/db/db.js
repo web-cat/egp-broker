@@ -148,7 +148,7 @@ const FreePassPool = sequelize.define('FreePassPool', {
         autoIncrement: true,
         primaryKey: true,
     },
-    studentId: {
+    creatorId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -156,21 +156,34 @@ const FreePassPool = sequelize.define('FreePassPool', {
             key: 'id',
         },
     },
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: User,
+            key: 'id',
+        },
+    },
+    courseOfferingId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: CourseOffering,
+            key: 'id',
+        },
+    },
     passTypeId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: PassType,
             key: 'id',
         },
+        defaultValue: null
     },
-    initialCount: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-    },
-    usedCount: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
+    status: {
+        type: DataTypes.STRING,
+        defaultValue: "active",
     },
 }, {
     timestamps: false,
@@ -336,8 +349,11 @@ CourseEnrollment.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
 PassType.hasMany(FreePassPool, { foreignKey: 'passTypeId' });
 FreePassPool.belongsTo(PassType, { foreignKey: 'passTypeId' });
 
-User.hasMany(FreePassPool, { foreignKey: 'studentId' });
-FreePassPool.belongsTo(User, { foreignKey: 'studentId' });
+User.hasMany(FreePassPool, { foreignKey: 'userId' });
+FreePassPool.belongsTo(User, { foreignKey: 'userId' });
+
+// User.hasMany(FreePassPool, { foreignKey: 'creatorId' });
+// FreePassPool.belongsTo(User, { foreignKey: 'creatorId' });
 
 User.hasMany(FreePassRequest, { foreignKey: 'studentId' });
 FreePassRequest.belongsTo(User, { foreignKey: 'studentId' });

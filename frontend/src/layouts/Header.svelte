@@ -1,6 +1,6 @@
 <script>
 	// Import any necessary functions or stores
-	import { isLoading, user, token } from '../stores';
+	import { isLoading, user, token, course } from '../stores';
 
 	import { goto } from '$app/navigation';
 
@@ -14,19 +14,20 @@
 		<a href="/"> FREE PASS </a>
 	</div>
 	<ul class="nav-links d-flex align-items-center">
-		<li><a href="/">Home</a></li>
-		{#if $user?.role == 'instructor'}
-			<li><a href="/instructor/students">Students</a></li>
+		<li><a href="/home">Home</a></li>
+		<li><a href="/home">Course: {$course?.CourseOffering?.Course?.name} ({$course?.role})</a></li>
+		{#if $course?.role == 'instructor' || $course?.role == 'ta'}
+			<li><a href="/students">My Students</a></li>
 			<li><a href="/instructor/freepass">Passes</a></li>
 			<li><a href="/instructor/requests">Requests</a></li>
-			<li><a href="/instructor/courses">My Courses</a></li>
-			<li><a class="dropdown-item" href="/profile">Profile</a></li>
+			<!-- <li><a href="/instructor/courses">My Courses</a></li> -->
+			<!-- <li><a class="dropdown-item" href="/profile">Profile</a></li> -->
 			<li><a class="dropdown-item" on:click={() => logout()} href="#">Logout</a></li>
 		{:else}
 			<li><a href="/student/passes">My Passes</a></li>
 			<li><a href="/student/request">Request +</a></li>
-			<li><a href="/student/courses">My Courses</a></li>
-			<li><a class="dropdown-item" href="/profile">Profile</a></li>
+			<!-- <li><a href="/student/courses">My Courses</a></li> -->
+			<!-- <li><a class="dropdown-item" href="/profile">Profile</a></li> -->
 			<li><a class="dropdown-item" on:click={() => logout()} href="#">Logout</a></li>
 		{/if}
 		<li class="position-relative dropdown">
@@ -36,7 +37,7 @@
 				data-bs-toggle="dropdown"
 				aria-expanded="false"
 			>
-				<a href="#" class="d-flex gap-1 profile-sign text-left">
+				<a href="/home" class="d-flex gap-1 profile-sign text-left">
 					<img
 						style="object-fit: contain;border-radius: 100%"
 						src="/images/placeholder.png"
@@ -48,6 +49,7 @@
 						<h6 class="m-0 p-0" style="font-size: 0.8rem">
 							Welcome, {$user?.name}!
 						</h6>
+						<p class="m-0 p-0" style="font-size: 0.8rem">{$course?.CourseOffering?.Course?.name} ({$course?.role})</p>
 					</div>
 				</a>
 			</button>

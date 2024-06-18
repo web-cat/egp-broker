@@ -20,11 +20,7 @@
 
 			user.set(response.data.user);
 			token.set(response.data.token);
-			if (response.data.user.role === 'instructor') {
-				goto('/instructor/home');
-			} else {
-				goto('/student/home');
-			}
+			goto('/home');
 		} catch (error) {
 			errorMessage = error.response?.data?.error || 'Login failed';
 		}

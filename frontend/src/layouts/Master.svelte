@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 	import 'bootstrap/dist/css/bootstrap.min.css';
 	import '/src/styles/global.css';
-	import { user, token, isLoading } from '../stores';
+	import { user, token, isLoading, course } from '../stores';
 	import { goto } from '$app/navigation';
 
 	var mounted = false;
@@ -13,11 +13,13 @@
 		mounted = true;
 		const storedUser = localStorage.getItem('user');
 		const storedToken = localStorage.getItem('token');
+		const storedCourse = localStorage.getItem('course');
 		if (storedUser && storedToken) {
 			user.set(JSON.parse(storedUser));
 			token.set(JSON.parse(storedToken));
+			course.set(JSON.parse(storedCourse));
 		} else {
-			goto('/logout');
+			// goto('/logout');
 			return;
 		}
 	});

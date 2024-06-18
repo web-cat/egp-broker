@@ -1,0 +1,82 @@
+<script>
+	import Master from '../../layouts/Master.svelte';
+	import { course, user } from '../../stores';
+	import { onMount } from 'svelte';
+
+	let userProfile;
+	let courses = [];
+
+	onMount(async () => {
+		user.subscribe((value) => {
+			userProfile = value;
+		});
+
+		await fetchcourses();
+	});
+
+	async function fetchcourses() {
+		try {
+			const storedToken = localStorage.getItem('token');
+			let token = JSON.parse(storedToken);
+
+			const response = await fetch('http://localhost:3100/api/courses', {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${token.access_token}`
+				}
+			});
+
+			if (response.ok) {
+				courses = await response.json();
+			} else {
+				const errorData = await response.json();
+				error = errorData.error;
+			}
+		} catch (err) {
+			error = 'An error occurred while fetching courses.';
+		}
+	}
+
+	function setDefault(c) {
+		localStorage.setItem('course', JSON.stringify(c));
+		course.set(c);
+	}
+</script>
+
+<Master>
+	<h1>Welcome, {userProfile?.name}</h1>
+	<p>This is the common home page.</p>
+
+	<table class="table table-bordered">
+		<thead>
+			<tr>
+				<th>Course</th>
+				<th>Role</th>
+				<th>Action</th>
+			</tr>
+		</thead>
+		{#each courses as c}
+			<tr>
+				<td>
+					{c.CourseOffering.Course.name} | {c.CourseOffering.Term.name}
+				</td>
+				<td>
+					{c.role}
+				</td>
+				
+				<td>
+					{#if $course.id === c.id}
+						<p>Default</p>
+					{:else}
+					<button
+							class="btn btn-sm btn-danger"
+							on:click={() => {
+								setDefault(c);
+							}}>Set As Default</button
+						>
+					{/if}
+				</td>
+			</tr>
+		{/each}
+	</table>
+</Master>

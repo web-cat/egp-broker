@@ -21,7 +21,7 @@ export async function handle({ event, resolve }) {
 
 	// Proceed with redirect logic outside of the try-catch block
 	if ((token == null || token === '') && (user == null || user === '') && !publicPaths.includes(event.url.pathname)) {
-		return redirect(303, '/logout');
+		// return redirect(303, '/logout');
 	}
 
 	if (event.url.pathname.endsWith('/logout')) {
