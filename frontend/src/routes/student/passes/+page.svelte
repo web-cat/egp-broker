@@ -1,6 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { token } from '../../../stores';
+	import { course, token } from '../../../stores';
 	import Master from '../../../layouts/Master.svelte';
 	import { writable } from 'svelte/store';
 
@@ -21,38 +21,15 @@
 
 	onMount(async () => {
 		await fetchFreePasses();
-		await fetchCourses();
 	});
 
-	async function fetchCourses() {
-		try {
-			const storedToken = localStorage.getItem('token');
-			let token = JSON.parse(storedToken);
-
-			const response = await fetch('http://localhost:3100/api/my-courses', {
-				method: 'GET',
-				headers: {
-					Authorization: `Bearer ${token.access_token}`
-				}
-			});
-
-			if (response.ok) {
-				courses = await response.json();
-			} else {
-				const errorData = await response.json();
-				error = errorData.error;
-			}
-		} catch (err) {
-			error = 'An error occurred while fetching courses.';
-		}
-	}
 
 	async function fetchFreePasses() {
 		try {
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3100/api/freepass', {
+			const response = await fetch(`http://localhost:3100/api/freepass/${$course.CourseOffering.id}`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -161,7 +138,7 @@
 				<td>Value</td>
 				<td>Course</td>
 				<td>Status</td>
-				<td>Created</td>
+				<!-- <td>Created</td> -->
 				<td>Action</td>
 			</tr>
 		</thead>
@@ -170,12 +147,12 @@
 				<tr>
 					<td>{pass.value}</td>
 					<td>
-						{#if pass.Course}
-							{pass.Course.name}
+						{#if pass.CourseOffering?.Course}
+							{pass.CourseOffering?.Course?.name}|{pass.CourseOffering?.Term?.name}
 						{/if}
 					</td>
 					<td>{pass.status}</td>
-					<td>{pass.timestamp}</td>
+					<!-- <td>{pass.timestamp}</td> -->
 					<td>
 						{#if pass.status == 'active'}
 							<button class="btn btn-danger" on:click={() => use(pass.id)}>Use</button>

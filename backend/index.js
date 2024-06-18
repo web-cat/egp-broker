@@ -94,7 +94,7 @@ const seedDatabase = async () => {
         ]);
 
         await PassType.bulkCreate([
-            { id: 1, name: 'Default'},
+            { id: 1, name: 'Default' },
         ]);
         await LTIId.bulkCreate([
             { ltiId: 'jharana_canvas', userId: jharana.id, client: 'canvas' },
@@ -497,53 +497,41 @@ app.post('/api/freepass', authenticateJWT, async (req, res) => {
 });
 
 // Get all free passes
-app.get('/api/freepass', authenticateJWT, async (req, res) => {
-    if (req.user.role == 'instructor') {
-        try {
-            const instructorId = req.user.id;
-            const passes = await FreePass.findAll({
-                where: {
-                    instructorId: instructorId
-                },
-                order: [['timestamp', 'DESC']],
+app.get('/api/freepass/:courseOfferingId', authenticateJWT, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { courseOfferingId } = req.params;
+        const passes = await FreePassPool.findAll({
+            where: {
+                userId: userId,
+                courseOfferingId: courseOfferingId
+            },
+            // order: [['timestamp', 'DESC']],
+            include: [{
+                model: User,
+                attributes: ['id', 'name'],
+                required: false
+            }, {
+                model: CourseOffering,
+                attributes: ['id'],
+                required: false,
                 include: [{
-                    model: Student,
-                    attributes: ['id', 'name'],
-                    required: false // Include even if studentId is not present
-                }, {
                     model: Course,
                     attributes: ['id', 'name'],
                     required: false
+                }, {
+                    model: Term,
+                    attributes: ['id','name'],
+                    required: false,
                 }]
-            });
-            res.json(passes);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    } else if (req.user.role == 'student') {
-        try {
-            const studentId = req.user.id;
-            const passes = await FreePass.findAll({
-                where: {
-                    studentId: studentId
-                },
-                order: [['timestamp', 'DESC']],
-                include: [{
-                    model: Student,
-                    attributes: ['id', 'name'],
-                    required: false
-                }, {
-                    model: Course,
-                    attributes: ['id', 'name'],
-                    required: false
-                }
-                ]
-            });
-            res.json(passes);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
+            }
+            ]
+        });
+        res.json(passes);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
+    // }
 
 
 

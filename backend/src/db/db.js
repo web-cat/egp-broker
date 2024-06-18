@@ -182,6 +182,10 @@ const FreePassPool = sequelize.define('FreePassPool', {
         },
         defaultValue: null
     },
+    value: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
     status: {
         type: DataTypes.STRING,
         defaultValue: "active",
@@ -358,6 +362,9 @@ FreePassPool.belongsTo(User, { foreignKey: 'userId' });
 
 User.hasMany(FreePassRequest, { foreignKey: 'userId' });
 FreePassRequest.belongsTo(User, { foreignKey: 'userId' });
+
+CourseOffering.hasMany(FreePassPool, { foreignKey: 'courseOfferingId' });
+FreePassPool.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
 
 CourseOffering.hasMany(FreePassRequest, { foreignKey: 'courseOfferingId' });
 FreePassRequest.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
