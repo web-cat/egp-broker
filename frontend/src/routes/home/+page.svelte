@@ -28,6 +28,10 @@
 
 			if (response.ok) {
 				courses = await response.json();
+
+				if ($course == null) {
+					if (courses.length > 0) setDefault(courses[0]);
+				}
 			} else {
 				const errorData = await response.json();
 				error = errorData.error;
@@ -63,12 +67,12 @@
 				<td>
 					{c.role}
 				</td>
-				
+
 				<td>
-					{#if $course.id === c.id}
+					{#if $course?.id === c.id}
 						<p>Default</p>
 					{:else}
-					<button
+						<button
 							class="btn btn-sm btn-danger"
 							on:click={() => {
 								setDefault(c);
