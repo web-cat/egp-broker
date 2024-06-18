@@ -4,7 +4,8 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const { User, Student, Instructor, Subject, Course, CourseEnrollment, FreePass, FreePassRequest, sequelize } = require('./src/db/db');
+const { User, Course, CourseEnrollment, FreePass, FreePassRequest, sequelize } = require('./src/db/db');
+const { Term, CourseOffering, LTIId } = require('./src/db/db');
 
 const app = express()
 const port = 3000;
@@ -63,55 +64,113 @@ app.get('/api/seed', async (req, res) => {
 
 
 const seedDatabase = async () => {
-    const hashedPassword = await bcrypt.hash('password', 10);
+    try {
+        // Disable foreign key checks
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
 
-    // Create instructors
-    const [jharana, anisha] = await Instructor.bulkCreate([
-        { name: 'Jharana', id: 100 },
-        { name: 'Anisha', id: 101 },
-    ]);
+        // Drop all tables in correct order
+        await sequelize.getQueryInterface().dropAllTables();
 
-    // Create users for instructors
-    await User.bulkCreate([
-        { name: 'Jharana', email: 'jharana@example.com', password: hashedPassword, role: 'instructor', id: jharana.id },
-        { name: 'Anisha', email: 'anisha@example.com', password: hashedPassword, role: 'instructor', id: anisha.id },
-    ]);
+        // Enable foreign key checks
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
 
-    // Create courses
-    const [math, science, english] = await Course.bulkCreate([
-        { name: 'Math', instructorId: jharana.id },
-        { name: 'Science', instructorId: jharana.id },
-        { name: 'English', instructorId: anisha.id },
-    ]);
+        // Recreate tables
+        await sequelize.sync({ force: true });
 
-    // Create students
-    const students = await Student.bulkCreate([
-        { name: 'Student1' },
-        { name: 'Student2' },
-        { name: 'Student3' },
-        { name: 'Student4' },
-        { name: 'Student5' },
-        { name: 'Student6' },
-    ]);
+        const hashedPassword = await bcrypt.hash('12345678', 10);
 
-    // Create users for students
-    for (const student of students) {
-        await User.create({ name: student.name, email: `${student.name.toLowerCase()}@example.com`, password: hashedPassword, role: 'student', id: student.id });
+        // Create terms
+        const [term1, term2] = await Term.bulkCreate([
+            { name: 'Fall 2024' },
+            { name: 'Spring 2025' },
+        ]);
+        const jharana = { id: 101 };
+        const anisha = { id: 121 };
+
+        // Create users for instructors
+        await User.bulkCreate([
+            { name: 'Jharana', email: 'jharana@test.test', password: hashedPassword, id: jharana.id },
+            { name: 'Anisha', email: 'anisha@test.test', password: hashedPassword, id: anisha.id },
+        ]);
+
+        // Create LTI IDs for instructors
+        await LTIId.bulkCreate([
+            { ltiId: 'jharana_canvas', userId: jharana.id, client: 'canvas' },
+            { ltiId: 'anisha_canvas', userId: anisha.id, client: 'canvas' },
+        ]);
+
+        // Create courses
+        const [math, science, english, cs] = await Course.bulkCreate([
+            { name: 'Math' },
+            { name: 'Science' },
+            { name: 'English' },
+            { name: 'Computer Science' },
+        ]);
+
+        // Create course offerings with multiple sections
+        const [mathFall, scienceFall, englishFall, cs1, cs2, cs3, cs5, cs6] = await CourseOffering.bulkCreate([
+            { courseId: math.id, termId: term1.id, sectionNumber: 'A' },
+            { courseId: science.id, termId: term1.id, sectionNumber: 'A' },
+            { courseId: english.id, termId: term1.id, sectionNumber: 'A' },
+            { courseId: cs.id, termId: term1.id, sectionNumber: '1' },
+            { courseId: cs.id, termId: term1.id, sectionNumber: '2' },
+            { courseId: cs.id, termId: term1.id, sectionNumber: '3' },
+            { courseId: cs.id, termId: term1.id, sectionNumber: '5' },
+            { courseId: cs.id, termId: term1.id, sectionNumber: '6' },
+        ]);
+
+        // Assign instructors to course offerings
+        await CourseEnrollment.bulkCreate([
+            { userId: jharana.id, courseOfferingId: mathFall.id, role: 'instructor' },
+            { userId: jharana.id, courseOfferingId: scienceFall.id, role: 'instructor' },
+            { userId: anisha.id, courseOfferingId: englishFall.id, role: 'instructor' },
+            { userId: jharana.id, courseOfferingId: cs1.id, role: 'instructor' },
+            { userId: jharana.id, courseOfferingId: cs2.id, role: 'ta' },
+            { userId: anisha.id, courseOfferingId: cs2.id, role: 'instructor' },
+            { userId: anisha.id, courseOfferingId: cs3.id, role: 'instructor' },
+            { userId: anisha.id, courseOfferingId: cs5.id, role: 'instructor' },
+            { userId: jharana.id, courseOfferingId: cs6.id, role: 'ta' },
+        ]);
+
+        // Create students
+        const students = [
+            { name: 's1', id: 901 },
+            { name: 's2', id: 902 },
+            { name: 's3', id: 903 },
+            { name: 's4', id: 904 },
+            { name: 's5', id: 905 },
+            { name: 's6', id: 906 },
+        ];
+
+        // Create users for students and assign LTI IDs
+        for (const student of students) {
+            await User.create({ name: student.name, email: `${student.name.toLowerCase()}@test.test`, password: hashedPassword, id: student.id });
+            await LTIId.create({ ltiId: `${student.name.toLowerCase()}_canvas`, userId: student.id, client: 'canvas' });
+        }
+
+        // Enroll students in course offerings
+        const enrollments = [
+            { userId: students[0].id, courseOfferingId: mathFall.id, role: 'student' },
+            { userId: students[0].id, courseOfferingId: scienceFall.id, role: 'student' },
+            { userId: students[1].id, courseOfferingId: englishFall.id, role: 'student' },
+            { userId: students[2].id, courseOfferingId: mathFall.id, role: 'student' },
+            { userId: students[3].id, courseOfferingId: scienceFall.id, role: 'student' },
+            { userId: students[3].id, courseOfferingId: englishFall.id, role: 'student' },
+            { userId: students[4].id, courseOfferingId: mathFall.id, role: 'student' },
+            { userId: students[5].id, courseOfferingId: englishFall.id, role: 'student' },
+            { userId: students[0].id, courseOfferingId: cs1.id, role: 'student' },
+            { userId: students[1].id, courseOfferingId: cs2.id, role: 'student' },
+            { userId: students[2].id, courseOfferingId: cs3.id, role: 'student' },
+            { userId: students[3].id, courseOfferingId: cs5.id, role: 'student' },
+            { userId: students[4].id, courseOfferingId: cs6.id, role: 'student' },
+        ];
+
+        await CourseEnrollment.bulkCreate(enrollments);
+
+        console.log('Database seeded successfully!');
+    } catch (error) {
+        console.error('Error seeding database:', error);
     }
-
-    // Enroll students in courses
-    const enrollments = [
-        { studentId: students[0].id, courseId: math.id },
-        { studentId: students[0].id, courseId: science.id },
-        { studentId: students[1].id, courseId: english.id },
-        { studentId: students[2].id, courseId: math.id },
-        { studentId: students[3].id, courseId: science.id },
-        { studentId: students[3].id, courseId: english.id },
-        { studentId: students[4].id, courseId: math.id },
-        { studentId: students[5].id, courseId: english.id },
-    ];
-
-    await CourseEnrollment.bulkCreate(enrollments);
 };
 
 // Start the connection process
@@ -263,7 +322,7 @@ app.get('/api/instructor/requests', authenticateJWT, async (req, res) => {
             where: {
                 status: 'requested',
                 '$Course.instructorId$': instructorId
-                }, include: [{
+            }, include: [{
                 model: Student,
                 attributes: ['id', 'name'],
                 required: false // Include even if studentId is not present
@@ -339,7 +398,7 @@ app.post('/api/freepass', authenticateJWT, async (req, res) => {
     try {
         const { studentId, value, courseId } = req.body;
         const instructorId = req.user.id;
-        const newPass = await FreePass.create({ studentId, instructorId, value, status: 'active',courseId });
+        const newPass = await FreePass.create({ studentId, instructorId, value, status: 'active', courseId });
         res.status(201).json(newPass);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -360,10 +419,10 @@ app.get('/api/freepass', authenticateJWT, async (req, res) => {
                     model: Student,
                     attributes: ['id', 'name'],
                     required: false // Include even if studentId is not present
-                },{
+                }, {
                     model: Course,
                     attributes: ['id', 'name'],
-                    required: false 
+                    required: false
                 }]
             });
             res.json(passes);
@@ -382,12 +441,12 @@ app.get('/api/freepass', authenticateJWT, async (req, res) => {
                     model: Student,
                     attributes: ['id', 'name'],
                     required: false
-                },{
+                }, {
                     model: Course,
                     attributes: ['id', 'name'],
-                    required: false 
+                    required: false
                 }
-            ]
+                ]
             });
             res.json(passes);
         } catch (error) {
