@@ -7,11 +7,8 @@
 	let reason = '';
 	let error = '';
 	let success = '';
-	let passTypeId = writable("1");
 
-	onMount(async () => {
-		
-	});
+	onMount(async () => {});
 
 	async function submitFreePassRequest() {
 		try {
@@ -19,6 +16,7 @@
 			let token = JSON.parse(storedToken);
 
 			let courseOfferingId = $course.CourseOffering.id;
+			let passTypeId = 1;
 			const response = await fetch('http://localhost:3100/api/freepassrequest', {
 				method: 'POST',
 				headers: {
@@ -44,25 +42,27 @@
 
 <Master>
 	<form class="mt-5 form-group" on:submit|preventDefault={submitFreePassRequest}>
-		<div class="input-group">
-			<input
-				placeholder="Please enter a reason for free pass"
-				class="form-control"
-				type="text"
-				id="reason"
-				bind:value={reason}
-				required
-			/>
-			<div class="input-group-append">
-				<label for="">Pass Type</label>
-				<select required class="form-control" name="course" bind:value={passTypeId}>
-					<option value="1">Default Pass Type</option>
-				</select>
-			</div>
-			<div class="input-group-append">
-				<button class="btn btn-primary" type="submit">Request Free Pass</button>
-			</div>
+		<!-- <div class="input-group"> -->
+
+		<div class="input-group-append">
+			<label for="">Pass Type</label>
+			<select required class="form-control" name="course">
+				<option selected value="1">Default Pass Type</option>
+			</select>
 		</div>
+		<input
+			placeholder="Please enter a reason for free pass"
+			class="form-control mt-2"
+			type="text"
+			id="reason"
+			bind:value={reason}
+			required
+		/>
+
+		<div class="input-group-append mt-2">
+			<button class="btn btn-primary" type="submit">Request Free Pass</button>
+		</div>
+		<!-- </div> -->
 	</form>
 	{#if success}
 		<p class="success">{success}</p>
