@@ -15,7 +15,7 @@
 	</div>
 	<ul class="nav-links d-flex align-items-center">
 		<li><a href="/home">Home</a></li>
-		<li><a href="/home">Course: {$course?.CourseOffering?.Course?.name} ({$course?.role})</a></li>
+		<li><a href="/home">Course: {$course?.CourseOffering?.Course?.name} ({$course?.role.toUpperCase()})</a></li>
 		{#if $course?.role == 'instructor' || $course?.role == 'ta'}
 			<li><a href="/students">My Students</a></li>
 			<li><a href="/instructor/freepass">Passes</a></li>
@@ -49,7 +49,7 @@
 						<h6 class="m-0 p-0" style="font-size: 0.8rem">
 							Welcome, {$user?.name}!
 						</h6>
-						<p class="m-0 p-0" style="font-size: 0.8rem">{$course?.CourseOffering?.Course?.name} ({$course?.role})</p>
+						<p class="m-0 p-0" style="font-size: 0.8rem">{$course?.CourseOffering?.Course?.name} ({$course?.role.toUpperCase()})</p>
 					</div>
 				</a>
 			</button>

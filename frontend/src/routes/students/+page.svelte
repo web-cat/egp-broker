@@ -44,7 +44,6 @@
 		}
 	}
 
-
 	function openModal(student) {
 		selectedStudent.set(student);
 		showModal.set(true);
@@ -74,14 +73,17 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/generate-passes/${$course.CourseOffering.id}/${$passCount}`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${token.access_token}`,
-					Content: 'application/json'
-				},
-				body: JSON.stringify({})
-			});
+			const response = await fetch(
+				`http://localhost:3100/api/generate-passes/${$course.CourseOffering.id}/${$passCount}`,
+				{
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${token.access_token}`,
+						Content: 'application/json'
+					},
+					body: JSON.stringify({})
+				}
+			);
 
 			if (response.ok) {
 				success = 'Set successfully!';
@@ -129,12 +131,15 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/course-offering/${$course?.CourseOffering.id}/students/`, {
-				method: 'GET',
-				headers: {
-					Authorization: `Bearer ${token.access_token}`
+			const response = await fetch(
+				`http://localhost:3100/api/course-offering/${$course?.CourseOffering.id}/students/`,
+				{
+					method: 'GET',
+					headers: {
+						Authorization: `Bearer ${token.access_token}`
+					}
 				}
-			});
+			);
 
 			if (response.ok) {
 				students = await response.json();
@@ -190,8 +195,11 @@
 
 <Master>
 	<div class="row gx-1 my-2">
-		<div class="col form-control">
-			Course: {$course.CourseOffering.Course.name}|{$course.CourseOffering.Course.name}
+		<div class="col">
+			<span class="badge bg-secondary text-white">Course: {$course.CourseOffering.Course.name}</span
+			>
+			<span class="badge bg-primary text-white">Term: {$course.CourseOffering.Term.name}</span>
+			<span class="badge bg-primary text-white">Role: {$course.role.toUpperCase()}</span>
 		</div>
 		<label for="">No of passes: </label>
 		<input class="col form-control" type="number" bind:value={$passCount} />
@@ -219,8 +227,8 @@
 				<td>ID</td>
 				<td>Name</td>
 				<td>Passes</td>
-				<td>Created</td>
-				<td>Action</td>
+				<!-- <td>Created</td> -->
+				<!-- <td>Action</td> -->
 			</tr>
 		</thead>
 		<tbody>
@@ -231,12 +239,12 @@
 					<td>
 						{student.User.freePassCount}
 					</td>
-					<td>
-						<!-- {student.createdAt} -->
-					</td>
-					<td>
+					<!-- <td>
+						{student.createdAt}
+					</td> -->
+					<!-- <td>
 						<button class="btn btn-primary" on:click={() => openModal(student)}>Assign</button>
-					</td>
+					</td> -->
 				</tr>
 			{/each}
 		</tbody>
