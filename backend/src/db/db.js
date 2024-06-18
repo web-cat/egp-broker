@@ -39,18 +39,6 @@ const User = sequelize.define('User', {
     },
 });
 
-const Instructor = sequelize.define('Instructor', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-});
-
 const Course = sequelize.define('Course', {
     id: {
         type: DataTypes.INTEGER,
@@ -61,21 +49,81 @@ const Course = sequelize.define('Course', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    instructorId: {
+});
+
+const Term = sequelize.define('Term', {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+});
+
+const CourseOffering = sequelize.define('CourseOffering', {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    courseId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: Instructor,
+            model: Course,
             key: 'id',
         },
     },
-    ltiId: {
+    termId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: Term,
+            key: 'id',
+        },
+    },
+    sectionNumber: {
         type: DataTypes.STRING,
-        allowNull: true,
+        allowNull: false,
     },
 });
 
-const Subject = sequelize.define('Subject', {
+const CourseEnrollment = sequelize.define('CourseEnrollment', {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: User,
+            key: 'id',
+        },
+    },
+    courseOfferingId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: CourseOffering,
+            key: 'id',
+        },
+    },
+    role: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    enrolledAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+    },
+});
+
+const PassType = sequelize.define('PassType', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -85,16 +133,15 @@ const Subject = sequelize.define('Subject', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-});
-
-const Student = sequelize.define('Student', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
-    name: {
+    description: {
         type: DataTypes.STRING,
+    },
+    initialCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+    validityPeriod: {
+        type: DataTypes.INTEGER,
         allowNull: false,
     },
 });
@@ -109,13 +156,17 @@ const FreePassPool = sequelize.define('FreePassPool', {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
-            model: Student,
+            model: User,
             key: 'id',
         },
     },
-    passType: {
-        type: DataTypes.STRING,
+    passTypeId: {
+        type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+            model: PassType,
+            key: 'id',
+        },
     },
     initialCount: {
         type: DataTypes.INTEGER,
@@ -139,15 +190,23 @@ const FreePassRequest = sequelize.define('FreePassRequest', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: Student,
+            model: User,
             key: 'id',
         },
     },
-    courseId: {
+    courseOfferingId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: Course,
+            model: CourseOffering,
+            key: 'id',
+        },
+    },
+    passTypeId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: PassType,
             key: 'id',
         },
     },
@@ -158,9 +217,15 @@ const FreePassRequest = sequelize.define('FreePassRequest', {
         type: DataTypes.STRING,
         defaultValue: 'requested',
     },
-    timestamp: {
+    createdAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
+    },
+    grantedAt: {
+        type: DataTypes.DATE,
+    },
+    rejectedAt: {
+        type: DataTypes.DATE,
     },
 }, {
     timestamps: false,
@@ -172,11 +237,11 @@ const Assignment = sequelize.define('Assignment', {
         autoIncrement: true,
         primaryKey: true,
     },
-    courseId: {
+    courseOfferingId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: Course,
+            model: CourseOffering,
             key: 'id',
         },
     },
@@ -184,13 +249,24 @@ const Assignment = sequelize.define('Assignment', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    dueDate: {
-        type: DataTypes.DATE,
+    description: {
+        type: DataTypes.STRING,
+    },
+    value: {
+        type: DataTypes.INTEGER,
         allowNull: false,
     },
-    ltiId: {
+    status: {
         type: DataTypes.STRING,
-        allowNull: true,
+        defaultValue: 'assigned',
+    },
+    createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+    },
+    dueAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
     },
 });
 
@@ -200,7 +276,7 @@ const PassUsage = sequelize.define('PassUsage', {
         autoIncrement: true,
         primaryKey: true,
     },
-    freePassPoolId: {
+    freePassId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -216,100 +292,14 @@ const PassUsage = sequelize.define('PassUsage', {
             key: 'id',
         },
     },
-    usageDate: {
+    usedAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
     },
-    expiresAt: {
-        type: DataTypes.DATE,
-        allowNull: true,
-    },
 }, {
     timestamps: false,
 });
 
-const CourseEnrollment = sequelize.define('CourseEnrollment', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
-    studentId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Student,
-            key: 'id',
-        },
-    },
-    courseId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Course,
-            key: 'id',
-        },
-    },
-    enrollmentDate: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-    },
-});
-
-// Define Many-to-Many Relationships for Pass Types
-const PassType = sequelize.define('PassType', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-});
-
-// Junction table for Course and PassType
-const CoursePassType = sequelize.define('CoursePassType', {
-    courseId: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Course,
-            key: 'id',
-        },
-    },
-    passTypeId: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: PassType,
-            key: 'id',
-        },
-    },
-}, {
-    timestamps: false,
-});
-
-// Junction table for Assignment and PassType
-const AssignmentPassType = sequelize.define('AssignmentPassType', {
-    assignmentId: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Assignment,
-            key: 'id',
-        },
-    },
-    passTypeId: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: PassType,
-            key: 'id',
-        },
-    },
-}, {
-    timestamps: false,
-});
-
-// LTI ID Table to handle multiple LTI IDs for Users
 const LTIId = sequelize.define('LTIId', {
     id: {
         type: DataTypes.INTEGER,
@@ -335,44 +325,51 @@ const LTIId = sequelize.define('LTIId', {
 });
 
 // Define Associations
+User.hasMany(CourseEnrollment, { foreignKey: 'userId' });
+CourseEnrollment.belongsTo(User, { foreignKey: 'userId' });
+
+Course.hasMany(CourseOffering, { foreignKey: 'courseId' });
+CourseOffering.belongsTo(Course, { foreignKey: 'courseId' });
+
+Term.hasMany(CourseOffering, { foreignKey: 'termId' });
+CourseOffering.belongsTo(Term, { foreignKey: 'termId' });
+
+CourseOffering.hasMany(CourseEnrollment, { foreignKey: 'courseOfferingId' });
+CourseEnrollment.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
+
+PassType.hasMany(FreePassPool, { foreignKey: 'passTypeId' });
+FreePassPool.belongsTo(PassType, { foreignKey: 'passTypeId' });
+
+User.hasMany(FreePassPool, { foreignKey: 'studentId' });
+FreePassPool.belongsTo(User, { foreignKey: 'studentId' });
+
 User.hasMany(FreePassRequest, { foreignKey: 'studentId' });
-Student.hasMany(FreePassRequest, { foreignKey: 'studentId' });
-FreePassRequest.belongsTo(Student, { foreignKey: 'studentId' });
+FreePassRequest.belongsTo(User, { foreignKey: 'studentId' });
 
-FreePassPool.belongsTo(Student, { foreignKey: 'studentId' });
+CourseOffering.hasMany(FreePassRequest, { foreignKey: 'courseOfferingId' });
+FreePassRequest.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
 
-FreePassRequest.belongsTo(Course, { foreignKey: 'courseId' });
+PassType.hasMany(FreePassRequest, { foreignKey: 'passTypeId' });
+FreePassRequest.belongsTo(PassType, { foreignKey: 'passTypeId' });
 
-Course.belongsTo(Instructor, { foreignKey: 'instructorId' });
-Instructor.hasMany(Course, { foreignKey: 'instructorId' });
+CourseOffering.hasMany(Assignment, { foreignKey: 'courseOfferingId' });
+Assignment.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
 
-CourseEnrollment.belongsTo(Student, { foreignKey: 'studentId' });
-CourseEnrollment.belongsTo(Course, { foreignKey: 'courseId' });
-Student.hasMany(CourseEnrollment, { foreignKey: 'studentId' });
-Course.hasMany(CourseEnrollment, { foreignKey: 'courseId' });
+FreePassPool.hasMany(PassUsage, { foreignKey: 'freePassId' });
+PassUsage.belongsTo(FreePassPool, { foreignKey: 'freePassId' });
 
-PassUsage.belongsTo(FreePassPool, { foreignKey: 'freePassPoolId' });
+Assignment.hasMany(PassUsage, { foreignKey: 'assignmentId' });
 PassUsage.belongsTo(Assignment, { foreignKey: 'assignmentId' });
-FreePassPool.hasMany(PassUsage, { foreignKey: 'freePassPoolId' });
-
-Assignment.belongsTo(Course, { foreignKey: 'courseId' });
-Course.hasMany(Assignment, { foreignKey: 'courseId' });
 
 LTIId.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(LTIId, { foreignKey: 'userId' });
 
 // Many-to-Many Associations
-Course.belongsToMany(PassType, { through: CoursePassType, foreignKey: 'courseId' });
-PassType.belongsToMany(Course, { through: CoursePassType, foreignKey: 'passTypeId' });
+CourseOffering.belongsToMany(PassType, { through: 'CourseOfferingPassType', foreignKey: 'courseOfferingId' });
+PassType.belongsToMany(CourseOffering, { through: 'CourseOfferingPassType', foreignKey: 'passTypeId' });
 
-Assignment.belongsToMany(PassType, { through: AssignmentPassType, foreignKey: 'assignmentId' });
-PassType.belongsToMany(Assignment, { through: AssignmentPassType, foreignKey: 'passTypeId' });
-
-Assignment.belongsToMany(LTIId, { through: 'AssignmentLTIId', foreignKey: 'assignmentId' });
-LTIId.belongsToMany(Assignment, { through: 'AssignmentLTIId', foreignKey: 'ltiId' });
-
-Course.belongsToMany(LTIId, { through: 'CourseLTIId', foreignKey: 'courseId' });
-LTIId.belongsToMany(Course, { through: 'CourseLTIId', foreignKey: 'ltiId' });
+Assignment.belongsToMany(PassType, { through: 'AssignmentPassType', foreignKey: 'assignmentId' });
+PassType.belongsToMany(Assignment, { through: 'AssignmentPassType', foreignKey: 'passTypeId' });
 
 // Sync Database
 sequelize.sync({ force: true }).then(() => {
@@ -382,17 +379,14 @@ sequelize.sync({ force: true }).then(() => {
 module.exports = {
     sequelize,
     User,
-    Instructor,
-    Subject,
-    Student,
+    Course,
+    Term,
+    CourseOffering,
+    CourseEnrollment,
+    PassType,
     FreePassPool,
     FreePassRequest,
-    PassUsage,
-    Course,
-    CourseEnrollment,
     Assignment,
-    PassType,
-    CoursePassType,
-    AssignmentPassType,
+    PassUsage,
     LTIId,
 };
