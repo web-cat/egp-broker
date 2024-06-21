@@ -133,6 +133,10 @@ const PassType = sequelize.define('PassType', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    tags: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     initialCount: {
         type: DataTypes.INTEGER,
         allowNull: true,
@@ -140,6 +144,14 @@ const PassType = sequelize.define('PassType', {
     validityPeriod: {
         type: DataTypes.INTEGER,
         allowNull: true,
+    },
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: User,
+            key: 'id',
+        },
     },
 });
 
@@ -282,6 +294,10 @@ const Assignment = sequelize.define('Assignment', {
         type: DataTypes.DATE,
         allowNull: false,
     },
+    tags: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    }
 });
 
 const PassUsage = sequelize.define('PassUsage', {

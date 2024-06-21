@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const { User, Course, CourseEnrollment, PassType, FreePassPool, FreePassRequest, sequelize } = require('./src/db/db');
+const { User, Course, CourseEnrollment, PassType, Assignment, FreePassPool, FreePassRequest, sequelize } = require('./src/db/db');
 const { Term, CourseOffering, LTIId } = require('./src/db/db');
 
 const app = express()
@@ -169,6 +169,73 @@ const seedDatabase = async () => {
 
         await CourseEnrollment.bulkCreate(enrollments);
 
+        // Seed Assignments
+        const assignments = [
+            {
+                courseOfferingId: mathFall.id,
+                title: 'Math Assignment 1',
+                description: 'Solve problems from Chapter 1',
+                value: 10,
+                status: 'assigned',
+                dueAt: new Date('2024-09-30'),
+                tags: 'Class'
+            },
+            {
+                courseOfferingId: scienceFall.id,
+                title: 'Science Assignment 1',
+                description: 'Write a report on Photosynthesis',
+                value: 15,
+                status: 'assigned',
+                dueAt: new Date('2024-10-05'),
+                tags: 'Class'
+            },
+            {
+                courseOfferingId: englishFall.id,
+                title: 'English Midterm Exam',
+                description: 'Complete the midterm exam',
+                value: 50,
+                status: 'assigned',
+                dueAt: new Date('2024-10-15'),
+                tags: 'Exam, Term End'
+            },
+            {
+                courseOfferingId: cs1.id,
+                title: 'CS Project 1',
+                description: 'Build a basic website',
+                value: 20,
+                status: 'assigned',
+                dueAt: new Date('2024-11-01'),
+                tags: 'Class'
+            }
+        ];
+
+        await Assignment.bulkCreate(assignments);
+
+        // Seed PassTypes
+        const passTypes = [
+            {
+                name: 'Regular Pass',
+                tags: 'Class',
+                initialCount: 10,
+                validityPeriod: 30 // 30 days
+            },
+            {
+                name: 'Exam Pass',
+                tags: 'Exam',
+                initialCount: 5,
+                validityPeriod: 15 // 15 days
+            },
+            {
+                name: 'Term End Pass',
+                tags: 'Term End',
+                initialCount: 2,
+                validityPeriod: 10 // 10 days
+            }
+        ];
+
+        await PassType.bulkCreate(passTypes);
+
+
         console.log('Database seeded successfully!');
     } catch (error) {
         console.error('Error seeding database:', error);
@@ -309,6 +376,28 @@ app.get('/api/courses/', authenticateJWT, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// assignments by course offering
+app.get('/api/course-offering/:id/assignments', authenticateJWT, async (req, res) => {
+    try {
+        const courseOfferingId = req.params.id; // Get the course offering ID from the request parameters
+
+        // Fetch assignments
+        const assignments = await Assignment.findAll({
+            where: {
+                courseOfferingId: courseOfferingId,
+            },
+            attributes: [
+                'id', 'title', 'description', 'value', 'status', 'createdAt', 'dueAt', 'tags'
+            ],
+        });
+
+        res.json(assignments);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 // students by course offering
 app.get('/api/course-offering/:id/students', authenticateJWT, async (req, res) => {
@@ -521,7 +610,7 @@ app.get('/api/freepass/:courseOfferingId', authenticateJWT, async (req, res) => 
                     required: false
                 }, {
                     model: Term,
-                    attributes: ['id','name'],
+                    attributes: ['id', 'name'],
                     required: false,
                 }]
             }
