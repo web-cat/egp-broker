@@ -876,21 +876,30 @@ function generateRandomValue() {
 // API endpoint to set X number of passes to each student
 app.post('/api/generate-passes/:courseOfferingId', authenticateJWT, async (req, res) => {
     const { courseOfferingId } = req.params;
-    const { passTypeId, passCount } = req.body;
+    const { passTypeId, passCount, studentIds } = req.body;
 
     console.log(req.body);
     if (!passCount || passCount <= 0) {
         return res.status(400).json({ error: 'Valid number of passes is required' });
     }
 
-    try {
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+        return res.status(400).json({ error: 'Valid student IDs are required' });
+    }
 
+    try {
+        // Verify that the provided student IDs are enrolled in the given course offering
         const enrollments = await CourseEnrollment.findAll({
             where: {
                 courseOfferingId: courseOfferingId,
-                role: 'student'
+                role: 'student',
+                userId: studentIds
             },
         });
+
+        if (enrollments.length === 0) {
+            return res.status(404).json({ error: 'No students found for the given IDs in the specified course offering' });
+        }
 
         // Generate and save the specified number of passes for each student
         const passes = [];
@@ -917,6 +926,7 @@ app.post('/api/generate-passes/:courseOfferingId', authenticateJWT, async (req, 
         res.status(500).json({ error: error.message });
     }
 });
+
 
 
 app.get('/api/my-courses', authenticateJWT, async (req, res) => {

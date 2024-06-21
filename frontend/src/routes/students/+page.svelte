@@ -16,6 +16,7 @@
 	let students = [];
 	let courses = [];
 	let passTypes = [];
+	let selectedStudentIds = [];
 
 	onMount(async () => {
 		await fetchStudents();
@@ -57,6 +58,15 @@
 		selectedStudent.set(null);
 	}
 
+	// Function to handle checkbox change
+	function handleCheckboxChange(event, studentId) {
+		if (event.target.checked) {
+			selectedStudentIds = [...selectedStudentIds, studentId];
+		} else {
+			selectedStudentIds = selectedStudentIds.filter((id) => id !== studentId);
+		}
+	}
+
 	function generatePassesConfirm() {
 		// Swal.fire({
 		// 	title: 'Are you sure?',
@@ -88,7 +98,11 @@
 						Authorization: `Bearer ${token.access_token}`,
 						'Content-Type': 'application/json'
 					},
-					body: JSON.stringify({ passTypeId: $passTypeId, passCount: $passCount })
+					body: JSON.stringify({
+						passTypeId: $passTypeId,
+						passCount: $passCount,
+						studentIds: selectedStudentIds
+					})
 				}
 			);
 
@@ -174,7 +188,7 @@
 			if (response.ok) {
 				passTypes = await response.json();
 				if (passTypes.length > 0) {
-					passTypeId.set(passTypes[0].id)
+					passTypeId.set(passTypes[0].id);
 				}
 			} else {
 				const errorData = await response.json();
@@ -263,6 +277,7 @@
 				<td>Name</td>
 				<td>Available Passes</td>
 				<td>Used Passes</td>
+				<td>Select</td>
 				<!-- <td>Created</td> -->
 				<!-- <td>Action</td> -->
 			</tr>
@@ -284,6 +299,12 @@
 					<!-- <td>
 						<button class="btn btn-primary" on:click={() => openModal(student)}>Assign</button>
 					</td> -->
+					<td>
+						<input
+							type="checkbox"
+							on:change={(event) => handleCheckboxChange(event, student.User.id)}
+						/>
+					</td>
 				</tr>
 			{/each}
 		</tbody>
