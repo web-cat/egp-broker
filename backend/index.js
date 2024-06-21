@@ -4,9 +4,9 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const { Op } = require('sequelize');
 const { User, Course, CourseEnrollment, PassType, Assignment, FreePassPool, FreePassRequest, sequelize } = require('./src/db/db');
 const { Term, CourseOffering, LTIId } = require('./src/db/db');
-
 const app = express()
 const port = 3000;
 
@@ -93,9 +93,6 @@ const seedDatabase = async () => {
             { name: 'Anisha', email: 'anisha@test.test', password: hashedPassword, id: anisha.id },
         ]);
 
-        await PassType.bulkCreate([
-            { id: 1, name: 'Default' },
-        ]);
         await LTIId.bulkCreate([
             { ltiId: 'jharana_canvas', userId: jharana.id, client: 'canvas' },
             { ltiId: 'anisha_canvas', userId: anisha.id, client: 'canvas' },
@@ -214,7 +211,7 @@ const seedDatabase = async () => {
         // Seed PassTypes
         const passTypes = [
             {
-                name: 'Regular Pass',
+                name: 'General Free Pass',
                 tags: 'Class',
                 initialCount: 10,
                 validityPeriod: 30 // 30 days
@@ -259,6 +256,65 @@ const connectWithRetry = async () => {
 
 // Routes
 
+// Get PassTypes
+app.get('/api/pass-types', authenticateJWT, async (req, res) => {
+    try {
+        const userId = req.user.id; // Get the authenticated user's ID
+
+        // Fetch pass types where userId is either null (global) or matches the authenticated user's ID
+        const passTypes = await PassType.findAll({
+            where: {
+                [Op.or]: [
+                    { userId: null },
+                    { userId: userId }
+                ]
+            }
+        });
+
+        res.json(passTypes);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// Create a new PassType
+app.post('/', authenticateJWT, async (req, res) => {
+    try {
+        const { name, description, tags, initialCount, validityPeriod } = req.body;
+        const userId  = req.user.id;
+        const passType = await PassType.create({
+            name,
+            description,
+            tags,
+            initialCount,
+            validityPeriod,
+            userId,
+        });
+
+        res.status(201).json(passType);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// Delete a PassType by ID
+app.delete('/:id', authenticateJWT, async (req, res) => {
+    try {
+        const passType = await PassType.findByPk(req.params.id);
+
+        if (!passType) {
+            return res.status(404).json({ error: 'PassType not found' });
+        }
+
+        await passType.destroy();
+
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 // Health check
 app.get('/', async (req, res) => {
     try {
@@ -818,13 +874,12 @@ function generateRandomValue() {
 }
 
 // API endpoint to set X number of passes to each student
-app.post('/api/generate-passes/:courseOfferingId/:numberOfPasses', authenticateJWT, async (req, res) => {
-    // if (req.user.role !== 'instructor') {
-    //     return res.status(403).json({ error: 'Access denied. Only instructors can generate passes.' });
-    // }
-    const { numberOfPasses, courseOfferingId } = req.params;
+app.post('/api/generate-passes/:courseOfferingId', authenticateJWT, async (req, res) => {
+    const { courseOfferingId } = req.params;
+    const { passTypeId, passCount } = req.body;
 
-    if (!numberOfPasses || numberOfPasses <= 0) {
+    console.log(req.body);
+    if (!passCount || passCount <= 0) {
         return res.status(400).json({ error: 'Valid number of passes is required' });
     }
 
@@ -840,12 +895,13 @@ app.post('/api/generate-passes/:courseOfferingId/:numberOfPasses', authenticateJ
         // Generate and save the specified number of passes for each student
         const passes = [];
         for (const enrollment of enrollments) {
-            for (let i = 0; i < numberOfPasses; i++) {
+            for (let i = 0; i < passCount; i++) {
                 passes.push({
                     value: generateRandomValue(),
                     courseOfferingId: courseOfferingId,
                     userId: enrollment.userId,
                     creatorId: req.user.id,
+                    passTypeId: passTypeId,
                     status: 'active',
                 });
             }
@@ -856,7 +912,7 @@ app.post('/api/generate-passes/:courseOfferingId/:numberOfPasses', authenticateJ
         // Bulk create passes in the database
         await FreePassPool.bulkCreate(passes);
 
-        res.status(201).json({ message: `${numberOfPasses} passes generated for each student` });
+        res.status(201).json({ message: `${passCount} passes generated for each student` });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

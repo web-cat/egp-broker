@@ -8,17 +8,20 @@
 	let showModal = writable(false);
 	let selectedStudent = writable(null);
 	let courseOfferingId = writable(null);
+	let passTypeId = writable(null);
 	let value = '';
 	let error = '';
 	let success = '';
 	let passCount = writable(1);
 	let students = [];
 	let courses = [];
+	let passTypes = [];
 
 	onMount(async () => {
 		await fetchStudents();
 		// await fetchFreePasses();
 		await fetchcourses();
+		await fetchPassTypes();
 	});
 
 	async function fetchcourses() {
@@ -70,18 +73,22 @@
 	}
 	async function generatePasses() {
 		try {
+			if ($passTypeId == null) {
+				alert('Please select a pass type');
+				return;
+			}
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3100/api/generate-passes/${$course.CourseOffering.id}/${$passCount}`,
+				`http://localhost:3100/api/generate-passes/${$course.CourseOffering.id}`,
 				{
 					method: 'POST',
 					headers: {
 						Authorization: `Bearer ${token.access_token}`,
-						Content: 'application/json'
+						'Content-Type': 'application/json'
 					},
-					body: JSON.stringify({})
+					body: JSON.stringify({ passTypeId: $passTypeId, passCount: $passCount })
 				}
 			);
 
@@ -152,6 +159,32 @@
 		}
 	}
 
+	async function fetchPassTypes() {
+		try {
+			const storedToken = localStorage.getItem('token');
+			let token = JSON.parse(storedToken);
+
+			const response = await fetch(`http://localhost:3100/api/pass-types/`, {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${token.access_token}`
+				}
+			});
+
+			if (response.ok) {
+				passTypes = await response.json();
+				if (passTypes.length > 0) {
+					passTypeId.set(passTypes[0].id)
+				}
+			} else {
+				const errorData = await response.json();
+				error = errorData.error;
+			}
+		} catch (err) {
+			error = 'An error occurred while fetching passTypes.';
+		}
+	}
+
 	async function assign(id) {
 		try {
 			const studentId = $selectedStudent.id;
@@ -203,12 +236,14 @@
 		</div>
 		<label for="">No of passes: </label>
 		<input class="col form-control" type="number" bind:value={$passCount} />
-		<!-- <select class="form-control" name="course" bind:value={$courseOfferingId}>
-			{#each courses as course}
-				<option value="{course.CourseOffering.id}">{course.CourseOffering.Course.name} | {course.CourseOffering.Term.name}</option>
+
+		<label for="">Pass Type: </label>
+		<select required class="form-control" name="course" bind:value={$passTypeId}>
+			{#each passTypes as passType}
+				<option value={passType.id}>{passType.name}</option>
 			{/each}
-		</select> -->
-		<button class="col btn btn-danger" type="button" on:click={generatePasses}>
+		</select>
+		<button class="col btn btn-danger mt-2" type="button" on:click={generatePasses}>
 			Generate {$passCount} passes for each student
 		</button>
 	</div>
