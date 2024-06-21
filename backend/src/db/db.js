@@ -391,11 +391,6 @@ PassType.belongsToMany(CourseOffering, { through: 'CourseOfferingPassType', fore
 Assignment.belongsToMany(PassType, { through: 'AssignmentPassType', foreignKey: 'assignmentId' });
 PassType.belongsToMany(Assignment, { through: 'AssignmentPassType', foreignKey: 'passTypeId' });
 
-// Sync Database
-sequelize.sync({ force: true }).then(() => {
-    console.log('Database & tables created!');
-});
-
 module.exports = {
     sequelize,
     User,
