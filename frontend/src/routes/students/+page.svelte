@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import { course, passes, selectedPassId, token } from '../../stores';
 	import Master from '../../layouts/Master.svelte';
 	import { fade } from 'svelte/transition';
@@ -17,7 +17,62 @@
 	let courses = [];
 	let passTypes = [];
 	let selectedStudentIds = [];
+	let showPassTypeForm = false;
 
+	let passType = {
+		name: '',
+		description: '',
+		tags: '',
+		initialCount: '',
+		validityPeriod: ''
+	};
+
+	const dispatch = createEventDispatcher();
+
+	// Function to handle form submission
+	async function handleSubmit(event) {
+		event.preventDefault();
+
+		const storedToken = localStorage.getItem('token');
+		let token = JSON.parse(storedToken);
+
+		try {
+			const response = await fetch('http://localhost:3100/api/pass-types', {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${token.access_token}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(passType)
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				dispatch('passTypeSaved', result);
+				// alert('Pass type saved successfully!');
+				passTypeId.set(result.id);
+				fetchPassTypes();
+				showPassTypeForm = false;
+				resetForm();
+			} else {
+				const errorData = await response.json();
+				alert(`Error: ${errorData.error}`);
+			}
+		} catch (error) {
+			alert(`Error: ${error.message}`);
+		}
+	}
+
+	// Function to reset the form
+	function resetForm() {
+		passType = {
+			name: '',
+			description: '',
+			tags: '',
+			initialCount: '',
+			validityPeriod: '',
+		};
+	}
 	onMount(async () => {
 		await fetchStudents();
 		// await fetchFreePasses();
@@ -187,7 +242,7 @@
 
 			if (response.ok) {
 				passTypes = await response.json();
-				if (passTypes.length > 0) {
+				if (passTypes.length > 0 && $passTypeId == null) {
 					passTypeId.set(passTypes[0].id);
 				}
 			} else {
@@ -252,14 +307,74 @@
 		<input class="col form-control" type="number" bind:value={$passCount} />
 
 		<label for="">Pass Type: </label>
-		<select required class="form-control" name="course" bind:value={$passTypeId}>
-			{#each passTypes as passType}
-				<option value={passType.id}>{passType.name}</option>
-			{/each}
-		</select>
-		<button class="col btn btn-danger mt-2" type="button" on:click={generatePasses}>
-			Generate {$passCount} passes for each student
-		</button>
+		<div class="d-flex">
+			<select
+				required
+				class="form-control mr-2"
+				style="flex:1; margin-right: 1rem;"
+				name="course"
+				bind:value={$passTypeId}
+			>
+				{#each passTypes as passType}
+					<option value={passType.id}>{passType.name}</option>
+				{/each}
+			</select>
+			{#if showPassTypeForm}{:else}
+				<button
+					on:click={() => {
+						showPassTypeForm = !showPassTypeForm;
+					}}
+					class="btn btn-primary ml-2">Add New Pass Type</button
+				>
+			{/if}
+		</div>
+
+		{#if showPassTypeForm}
+			<h5>Create new Pass Type</h5>
+			<form on:submit={handleSubmit}>
+				<div>
+					<label for="name">Name</label>
+					<input  required class="form-control" type="text" id="name" bind:value={passType.name}  />
+				</div>
+				<div>
+					<label for="description">Description</label>
+					<textarea required class="form-control" id="description" bind:value={passType.description}
+					></textarea>
+				</div>
+				<div>
+					<label for="tags">Tags</label>
+					<input required class="form-control" type="text" id="tags" bind:value={passType.tags} />
+				</div>
+				<div>
+					<label for="initialCount">Initial Count</label>
+					<input required
+						class="form-control"
+						type="number"
+						id="initialCount"
+						bind:value={passType.initialCount}
+					/>
+				</div>
+				<div>
+					<label for="validityPeriod">Validity Period (days)</label>
+					<input required
+						class="form-control"
+						type="number"
+						id="validityPeriod"
+						bind:value={passType.validityPeriod}
+					/>
+				</div>
+				<!-- Assume userId is set elsewhere, e.g., via a hidden field or passed in -->
+				<!-- <div>
+				<label for="userId">User ID</label>
+				<input type="number" id="userId" bind:value={passType.userId}>
+			</div> -->
+				<button class="btn btn-primary" type="submit">Save Pass Type</button>
+			</form>
+		{:else}
+			<button class="col btn btn-danger mt-2" type="button" on:click={generatePasses}>
+				Generate {$passCount} passes for each student
+			</button>
+		{/if}
 	</div>
 	{#if success}
 		<p class="success">{success}</p>

@@ -279,7 +279,7 @@ app.get('/api/pass-types', authenticateJWT, async (req, res) => {
 
 
 // Create a new PassType
-app.post('/', authenticateJWT, async (req, res) => {
+app.post('/api/pass-types', authenticateJWT, async (req, res) => {
     try {
         const { name, description, tags, initialCount, validityPeriod } = req.body;
         const userId  = req.user.id;
@@ -300,7 +300,7 @@ app.post('/', authenticateJWT, async (req, res) => {
 
 
 // Delete a PassType by ID
-app.delete('/:id', authenticateJWT, async (req, res) => {
+app.delete('/api/pass-types/:id', authenticateJWT, async (req, res) => {
     try {
         const passType = await PassType.findByPk(req.params.id);
 
