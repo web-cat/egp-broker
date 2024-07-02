@@ -322,6 +322,14 @@ const PassUsage = sequelize.define('PassUsage', {
             key: 'id',
         },
     },
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: User,
+            key: 'id',
+        },
+    },
     assignmentId: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -426,6 +434,9 @@ FreePassRequest.belongsTo(PassType, { foreignKey: 'passTypeId' });
 
 CourseOffering.hasMany(Assignment, { foreignKey: 'courseOfferingId' });
 Assignment.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
+
+User.hasMany(PassUsage, { foreignKey: 'userId' });
+PassUsage.belongsTo(User, { foreignKey: 'userId' });
 
 FreePassPool.hasMany(PassUsage, { foreignKey: 'freePassId' });
 PassUsage.belongsTo(FreePassPool, { foreignKey: 'freePassId' });

@@ -5,12 +5,29 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const { Op } = require('sequelize');
-const { User, Course, CourseEnrollment, PassType, Assignment, FreePassPool, FreePassRequest, sequelize } = require('./src/db/db');
+const { User, Course, CourseEnrollment, PassType, Assignment, FreePassPool, FreePassRequest, sequelize, PassUsage } = require('./src/db/db');
 const { Term, CourseOffering, LTIId } = require('./src/db/db');
 const app = express()
 const port = 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+
+async function canUseFreePass(userId) {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const lastUsage = await PassUsage.findOne({
+        where: {
+            userId: userId,
+            usedAt: {
+                [Op.gte]: oneWeekAgo,
+            },
+        },
+        order: [['usedAt', 'DESC']],
+    });
+
+    return !lastUsage;
+}
 
 
 // Middleware
@@ -757,26 +774,54 @@ app.get('/api/freepass/:id', authenticateJWT, async (req, res) => {
     }
 });
 
-app.post('/api/freepass-use/:id', authenticateJWT, async (req, res) => {
-    if (req.user.role !== 'student') {
-        return res.status(403).json({ error: 'Access denied. Only student can use free passes.' });
-    }
-
+app.post('/api/freepass-use/:assignmentId/:id', authenticateJWT, async (req, res) => {
     try {
-        const pass = await FreePass.findByPk(req.params.id);
-        if (!pass) {
+        const { assignmentId, id } = req.params;
+        const userId = req.user.id;
+
+        // Find the FreePassPool
+        const freePass = await FreePassPool.findByPk(id);
+        if (!freePass) {
             return res.status(404).json({ error: 'Free pass not found' });
         }
-        if (pass.studentId !== req.user.id) {
+
+        // Check if the pass belongs to the authenticated user
+        if (freePass.userId !== userId) {
             return res.status(403).json({ error: 'Access denied. You can only use your own free passes.' });
         }
-        pass.status = "used";
-        await pass.save();
-        res.json(pass);
+
+        // Check if the user can use a free pass
+        const canUsePass = await canUseFreePass(userId);
+        if (!canUsePass) {
+            const passUsage = await PassUsage.create({
+                freePassId: freePass.id,
+                assignmentId: assignmentId,
+                status: 'failed',
+                usedAt: new Date(),
+                userId: userId,
+            });
+            return res.status(429).json({ error: 'You can only use one free pass per week.' });
+        }
+
+        // Update the pass status to "used"
+        freePass.status = "used";
+        await freePass.save();
+
+        // Create a PassUsage record
+        const passUsage = await PassUsage.create({
+            freePassId: freePass.id,
+            assignmentId: assignmentId,
+            status: 'success',
+            usedAt: new Date(),
+            userId: userId,
+        });
+
+        res.json(passUsage);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 // Update a free pass by ID
 app.put('/api/freepass/:id', authenticateJWT, async (req, res) => {

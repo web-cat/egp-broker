@@ -6,7 +6,7 @@
 	import { writable } from 'svelte/store';
 
 	let showModal = writable(false);
-	let selectedStudent = writable(null);
+	let selectedAssignment = writable(null);
 	let courseOfferingId = writable(null);
 	let value = '';
 	let error = '';
@@ -14,10 +14,35 @@
 	let passCount = writable(1);
 	let students = [];
 	let assignments = [];
+	let freePasses = [];
 
 	onMount(async () => {
 		await fetchassignments();
+		await fetchFreePasses();
 	});
+
+	async function fetchFreePasses() {
+		try {
+			const storedToken = localStorage.getItem('token');
+			let token = JSON.parse(storedToken);
+
+			const response = await fetch(`http://localhost:3100/api/freepass/${$course.CourseOffering.id}`, {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${token.access_token}`
+				}
+			});
+
+			if (response.ok) {
+				freePasses = await response.json();
+			} else {
+				const errorData = await response.json();
+				error = errorData.error;
+			}
+		} catch (err) {
+			error = 'An error occurred while fetching free passes.';
+		}
+	}
 
 	async function fetchassignments() {
 		try {
@@ -42,14 +67,44 @@
 		}
 	}
 
-	function openModal(student) {
-		selectedStudent.set(student);
+	function openModal(assignment) {
+		selectedAssignment.set(assignment);
 		showModal.set(true);
 	}
 
 	function closeModal() {
 		showModal.set(false);
-		selectedStudent.set(null);
+		selectedAssignment.set(null);
+	}
+
+	async function use(id, assignmentId) {
+		try {
+			const storedToken = localStorage.getItem('token');
+			let token = JSON.parse(storedToken);
+
+			const response = await fetch(
+				`http://localhost:3100/api/freepass-use/${assignmentId}/${id}`,
+				{
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${token.access_token}`
+					}
+				}
+			);
+
+			if (response.ok) {
+				success = 'Free pass used successfully!';
+				error = '';
+				closeModal();
+				fetchFreePasses();
+			} else {
+				const errorData = await response.json();
+				error = errorData.error;
+				alert(error);
+			}
+		} catch (err) {
+			error = 'An error occurred while using the free pass.';
+		}
 	}
 </script>
 
@@ -71,7 +126,7 @@
 				<td>Description</td>
 				<td>Tags</td>
 				<!-- <td>Created</td> -->
-				<!-- <td>Action</td> -->
+				<td>Action</td>
 			</tr>
 		</thead>
 		<tbody>
@@ -86,9 +141,9 @@
 					<!-- <td>
 						{student.createdAt}
 					</td> -->
-					<!-- <td>
-						<button class="btn btn-primary" on:click={() => openModal(student)}>Assign</button>
-					</td> -->
+					<td>
+						<button class="btn btn-primary" on:click={() => openModal(assignment)}>Use FreePass</button>
+					</td>
 				</tr>
 			{/each}
 		</tbody>
@@ -146,8 +201,8 @@
 									<tr>
 										<td>{pass.value}</td>
 										<td>
-											<button class="btn btn-primary" on:click={() => assign(pass.id)}>
-												Assign
+											<button class="btn btn-primary" on:click={() => use(pass.id, $selectedAssignment.id)}>
+												Use
 											</button>
 										</td>
 									</tr>
