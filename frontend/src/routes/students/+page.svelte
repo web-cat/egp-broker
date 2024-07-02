@@ -70,7 +70,7 @@
 			description: '',
 			tags: '',
 			initialCount: '',
-			validityPeriod: '',
+			validityPeriod: ''
 		};
 	}
 	onMount(async () => {
@@ -293,6 +293,18 @@
 		}
 		return counts;
 	}
+
+	function handleSelectAllChange(event) {
+		const isChecked = event.target.checked;
+		if (isChecked) {
+			selectedStudentIds = students.map((student) => student.User.id);
+		} else {
+			selectedStudentIds = [];
+		}
+		students.forEach((student) => {
+			document.getElementById(`student-checkbox-${student.User.id}`).checked = isChecked;
+		});
+	}
 </script>
 
 <Master>
@@ -334,7 +346,7 @@
 			<form on:submit={handleSubmit}>
 				<div>
 					<label for="name">Name</label>
-					<input  required class="form-control" type="text" id="name" bind:value={passType.name}  />
+					<input required class="form-control" type="text" id="name" bind:value={passType.name} />
 				</div>
 				<div>
 					<label for="description">Description</label>
@@ -347,7 +359,8 @@
 				</div>
 				<div>
 					<label for="initialCount">Initial Count</label>
-					<input required
+					<input
+						required
 						class="form-control"
 						type="number"
 						id="initialCount"
@@ -356,7 +369,8 @@
 				</div>
 				<div>
 					<label for="validityPeriod">Validity Period (days)</label>
-					<input required
+					<input
+						required
 						class="form-control"
 						type="number"
 						id="validityPeriod"
@@ -392,7 +406,7 @@
 				<td>Name</td>
 				<td>Available Passes</td>
 				<td>Used Passes</td>
-				<td>Select</td>
+				<td>Select <input type="checkbox" on:change={handleSelectAllChange} /></td>
 				<!-- <td>Created</td> -->
 				<!-- <td>Action</td> -->
 			</tr>
@@ -402,20 +416,11 @@
 				<tr>
 					<td>{student.User.id}</td>
 					<td>{student.User.name}</td>
-					<td>
-						{student.User.activePassCount}
-					</td>
-					<td>
-						{student.User.usedPassCount}
-					</td>
-					<!-- <td>
-						{student.createdAt}
-					</td> -->
-					<!-- <td>
-						<button class="btn btn-primary" on:click={() => openModal(student)}>Assign</button>
-					</td> -->
+					<td>{student.User.activePassCount}</td>
+					<td>{student.User.usedPassCount}</td>
 					<td>
 						<input
+							id={`student-checkbox-${student.User.id}`}
 							type="checkbox"
 							on:change={(event) => handleCheckboxChange(event, student.User.id)}
 						/>
@@ -423,6 +428,7 @@
 				</tr>
 			{/each}
 		</tbody>
+		
 	</table>
 
 	{#if $showModal}

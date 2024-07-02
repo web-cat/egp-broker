@@ -743,6 +743,10 @@ app.get('/api/freepass/:courseOfferingId', authenticateJWT, async (req, res) => 
                     attributes: ['id', 'name'],
                     required: false,
                 }]
+            },{
+                model: PassType,
+                attributes: ['id', 'name'],
+                required: false,
             }
             ]
         });

@@ -193,12 +193,16 @@
 					<div class="modal-body">
 						<table class="table table-bordered">
 							<thead>
+								<th>Type</th>
 								<th>Pass Value</th>
 								<th>Action</th>
 							</thead>
 							<tbody>
-								{#each freePasses as pass}
+								{#each freePasses.filter((pass) => {
+									return pass.status !='used';
+								}) as pass}
 									<tr>
+										<td>{pass.PassType?.name}</td>
 										<td>{pass.value}</td>
 										<td>
 											<button class="btn btn-primary" on:click={() => use(pass.id, $selectedAssignment.id)}>

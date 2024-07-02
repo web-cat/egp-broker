@@ -154,11 +154,11 @@
 					<td>{pass.status}</td>
 					<!-- <td>{pass.timestamp}</td> -->
 					<td>
-						{#if pass.status == 'active'}
+						<!-- {#if pass.status == 'active'}
 							<button class="btn btn-danger" on:click={() => use(pass.id)}>Use</button>
 						{:else}
 							No action available
-						{/if}
+						{/if} -->
 					</td>
 				</tr>
 			{/each}
