@@ -43,7 +43,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3100/api/instructor/${$course.CourseOffering.id}/requests`,
+				`http://localhost:3100/api/student/${$course.CourseOffering.id}/requests`,
 				{
 					method: 'GET',
 					headers: {
@@ -62,95 +62,6 @@
 			error = 'An error occurred while fetching free passes.';
 		}
 	}
-
-	async function submitFreePassRequest() {
-		try {
-			const storedToken = localStorage.getItem('token');
-			let token = JSON.parse(storedToken);
-
-			const response = await fetch('http://localhost:3100/api/freepass', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${token.access_token}`
-				},
-				body: JSON.stringify({ value })
-			});
-
-			if (response.ok) {
-				const result = await response.json();
-				success = 'Free pass created successfully!';
-				value = '';
-				error = '';
-				await fetchrequests(); // Refresh the list after creating a new pass
-			} else {
-				const errorData = await response.json();
-				error = errorData.error;
-			}
-		} catch (err) {
-			error = 'An error occurred while creating the free pass.';
-		}
-	}
-
-	async function grant(id, count) {
-		try {
-			const storedToken = localStorage.getItem('token');
-			let token = JSON.parse(storedToken);
-
-			const response = await fetch(
-				`http://localhost:3100/api/instructor/grant-pass/${id}/${count}`,
-				{
-					method: 'POST',
-					headers: {
-						Authorization: `Bearer ${token.access_token}`
-					}
-				}
-			);
-
-			if (response.ok) {
-				success = 'Free pass granted successfully!';
-				error = '';
-				closeModal();
-				await fetchrequests(); // Refresh the list after granting
-			} else {
-				const errorData = await response.json();
-				error = errorData.error;
-				alert(error);
-			}
-		} catch (err) {
-			error = 'An error occurred while granting the free pass.';
-		}
-	}
-
-	async function reject(id) {
-		try {
-			const storedToken = localStorage.getItem('token');
-			let token = JSON.parse(storedToken);
-
-			const response = await fetch(
-				`http://localhost:3100/api/instructor/reject-pass/${id}`,
-				{
-					method: 'POST',
-					headers: {
-						Authorization: `Bearer ${token.access_token}`
-					}
-				}
-			);
-
-			if (response.ok) {
-				success = 'Free pass rejected successfully!';
-				error = '';
-				closeModal();
-				await fetchrequests(); // Refresh the list after rejecting
-			} else {
-				const errorData = await response.json();
-				error = errorData.error;
-				alert(error);
-			}
-		} catch (err) {
-			error = 'An error occurred while rejecting the free pass.';
-		}
-	}
 </script>
 
 <Master>
@@ -161,9 +72,7 @@
 				<td>Requested by</td>
 				<td>Reason</td>
 				<td>Status</td>
-				<!-- <td>Course</td>
-				<td>Created</td> -->
-				<td>Action</td>
+				<td>Free Pass ID</td>
 			</tr>
 		</thead>
 		<tbody>
@@ -180,27 +89,10 @@
 					<td>
 						{pass.status}
 					</td>
-					<!-- <td>
-						{pass.Course?.name}
-					</td>
 					<td>
-						{pass.timestamp}
-					</td> -->
-					<td>
-						<button
-							class="btn btn-danger"
-							on:click={() => {
-								selectedRequest.set(pass);
-								reject(pass.id);
-							}}>Reject</button
-						>
-						<button
-							class="btn btn-success"
-							on:click={() => {
-								selectedRequest.set(pass);
-								grant(pass.id, 1);
-							}}>Grant</button
-						>
+						{#if pass.FreePassPool != null}
+							{pass.FreePassPool.id}
+						{/if}
 					</td>
 				</tr>
 			{/each}

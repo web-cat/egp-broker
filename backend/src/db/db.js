@@ -241,7 +241,7 @@ const FreePassRequest = sequelize.define('FreePassRequest', {
     },
     status: {
         type: DataTypes.STRING,
-        defaultValue: 'requested',
+        defaultValue: 'requested', // could be 'requested', 'granted', or 'failed'
     },
     createdAt: {
         type: DataTypes.DATE,
@@ -252,6 +252,14 @@ const FreePassRequest = sequelize.define('FreePassRequest', {
     },
     rejectedAt: {
         type: DataTypes.DATE,
+    },
+    freePassPoolId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: FreePassPool,
+            key: 'id',
+        },
     },
 }, {
     timestamps: false,
@@ -322,9 +330,14 @@ const PassUsage = sequelize.define('PassUsage', {
             key: 'id',
         },
     },
+    status:{
+        type: DataTypes.STRING,
+        defaultValue: 'success', //success, failed
+    },
     usedAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
+        allowNull: true,
     },
 }, {
     timestamps: false,
@@ -354,6 +367,26 @@ const LTIId = sequelize.define('LTIId', {
     },
 });
 
+const AssignmentPassType = sequelize.define('AssignmentPassType', {
+    assignmentId: {
+        type: DataTypes.INTEGER,
+        references: {
+            model: Assignment,
+            key: 'id',
+        },
+    },
+    passTypeId: {
+        type: DataTypes.INTEGER,
+        references: {
+            model: PassType,
+            key: 'id',
+        },
+    },
+}, {
+    timestamps: false,
+});
+
+
 // Define Associations
 User.hasMany(CourseEnrollment, { foreignKey: 'userId' });
 CourseEnrollment.belongsTo(User, { foreignKey: 'userId' });
@@ -372,6 +405,9 @@ FreePassPool.belongsTo(PassType, { foreignKey: 'passTypeId' });
 
 User.hasMany(FreePassPool, { foreignKey: 'userId' });
 FreePassPool.belongsTo(User, { foreignKey: 'userId' });
+
+FreePassRequest.belongsTo(FreePassPool, { foreignKey: 'freePassPoolId' });
+FreePassPool.hasMany(FreePassRequest, { foreignKey: 'freePassPoolId' });
 
 // User.hasMany(FreePassPool, { foreignKey: 'creatorId' });
 // FreePassPool.belongsTo(User, { foreignKey: 'creatorId' });

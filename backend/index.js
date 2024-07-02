@@ -282,7 +282,7 @@ app.get('/api/pass-types', authenticateJWT, async (req, res) => {
 app.post('/api/pass-types', authenticateJWT, async (req, res) => {
     try {
         const { name, description, tags, initialCount, validityPeriod } = req.body;
-        const userId  = req.user.id;
+        const userId = req.user.id;
         const passType = await PassType.create({
             name,
             description,
@@ -578,6 +578,34 @@ app.get('/api/instructor/:courseOfferingId/requests', authenticateJWT, async (re
     }
 });
 
+app.get('/api/student/:courseOfferingId/requests', authenticateJWT, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const courseOfferingId = req.params.courseOfferingId; // Get the course offering ID from the request parameters
+        const requests = await FreePassRequest.findAll({
+            where: {
+                userId
+                // '$Course.instructorId$': instructorId
+            }, include: [{
+                model: User,
+                attributes: ['id', 'name'],
+                required: false // Include even if studentId is not present
+            }, {
+                model: CourseOffering,
+                attributes: ['id'],
+                required: false,
+            }, {
+                model: FreePassPool,
+                attributes: ['id', 'value'],
+                required: false
+            }],
+        });
+        res.json(requests);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/profile', authenticateJWT, async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id, {
@@ -596,27 +624,57 @@ app.post('/api/instructor/grant-pass/:id/:count', authenticateJWT, async (req, r
     try {
         const creatorId = req.user.id;
         const { id, count } = req.params;
+
+        // Find the FreePassRequest
+        const passRequest = await FreePassRequest.findOne({ where: { id } });
+        if (!passRequest) {
+            return res.status(404).json({ error: 'Pass request not found' });
+        }
+
+        // Find the User
+        const user = await User.findOne({ where: { id: passRequest.userId } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Update the FreePassRequest status to 'granted'
+        const [updated] = await FreePassRequest.update({ status: 'granted' }, { where: { id } });
+        if (!updated) {
+            throw new Error('Failed to update pass request status');
+        }
+
+        // Create a new FreePassPool entry
+        const newPass = {
+            value: generateRandomValue(),
+            userId: user.id,
+            creatorId: creatorId,
+            courseOfferingId: passRequest.courseOfferingId,
+            status: 'active',
+            timestamp: new Date()
+        };
+
+        const createdPass = await FreePassPool.create(newPass);
+
+        // Update the FreePassRequest with the new FreePassPool ID
+        passRequest.freePassPoolId = createdPass.id;
+        await passRequest.save();
+
+        res.status(200).json(passRequest);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+app.post('/api/instructor/reject-pass/:id', authenticateJWT, async (req, res) => {
+    try {
+        const creatorId = req.user.id;
+        const { id, } = req.params;
         const pass = await FreePassRequest.findOne({ where: { id } });
         const user = await User.findOne({ where: { id: pass.userId } });
-        const [updated] = await FreePassRequest.update({ status: 'granted' }, { where: { id } });
+        const [updated] = await FreePassRequest.update({ status: 'rejected' }, { where: { id } });
         if (updated) {
-            const passes = [];
-
-            for (let i = 0; i < count; i++) {
-                passes.push({
-                    value: generateRandomValue(),
-                    userId: user.id,
-                    creatorId: creatorId,
-                    courseOfferingId: pass.courseOfferingId,
-                    creatorId: creatorId,
-                    status: 'active',
-                    timestamp: new Date()
-                });
-            }
-
-            await FreePassPool.bulkCreate(passes);
-            const updatedPass = await FreePassRequest.findOne({ where: { id } });
-            res.status(200).json(updatedPass);
+            res.status(200).json(updated);
         } else {
             throw new Error('Pass not found');
         }
@@ -624,7 +682,6 @@ app.post('/api/instructor/grant-pass/:id/:count', authenticateJWT, async (req, r
         res.status(500).json({ error: error.message });
     }
 });
-
 // Create a new free pass
 app.post('/api/freepass', authenticateJWT, async (req, res) => {
     // if (req.user.role !== 'instructor') {
