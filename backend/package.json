@@ -19,6 +19,7 @@
     "jsonwebtoken": "^9.0.2",
     "ltijs": "^5.9.5",
     "mariadb": "^3.3.0",
+    "mongoose": "^8.4.4",
     "mysql2": "^3.9.7",
     "sequelize": "^6.37.3"
   }

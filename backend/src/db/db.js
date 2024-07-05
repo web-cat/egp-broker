@@ -1,4 +1,4 @@
-const { Sequelize, DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
 const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
@@ -7,455 +7,264 @@ const dbConfig = {
     database: process.env.DB_NAME || 'freepassdb',
 };
 
-// Initialize Sequelize
-const sequelize = new Sequelize(dbConfig.database, dbConfig.user, dbConfig.password, {
-    host: dbConfig.host,
-    dialect: 'mariadb',
-});
+// Connect to MongoDB
+const mongoURI = `mongodb://${dbConfig.user}:${dbConfig.password}@${dbConfig.host}/${dbConfig.database}`;
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => console.error(err));
 
-// Define Models
-const User = sequelize.define('User', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+// Define Schemas and Models
+const userSchema = new mongoose.Schema({
     name: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
     email: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
         unique: true,
     },
     password: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     }
 });
 
-const Course = sequelize.define('Course', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const courseSchema = new mongoose.Schema({
     name: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
 });
 
-const Term = sequelize.define('Term', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const termSchema = new mongoose.Schema({
     name: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
 });
 
-const CourseOffering = sequelize.define('CourseOffering', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const courseOfferingSchema = new mongoose.Schema({
     courseId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Course,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Course',
+        required: true,
     },
     termId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Term,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Term',
+        required: true,
     },
     sectionNumber: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
 });
 
-const CourseEnrollment = sequelize.define('CourseEnrollment', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const courseEnrollmentSchema = new mongoose.Schema({
     userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: User,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
     },
     courseOfferingId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: CourseOffering,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CourseOffering',
+        required: true,
     },
     role: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
     enrolledAt: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
+        type: Date,
+        default: Date.now,
     },
 });
 
-const PassType = sequelize.define('PassType', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const passTypeSchema = new mongoose.Schema({
     name: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
-    description: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    tags: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    initialCount: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-    },
-    validityPeriod: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-    },
+    description: String,
+    tags: String,
+    initialCount: Number,
+    validityPeriod: Number,
     userId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: {
-            model: User,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
     },
 });
 
-const FreePassPool = sequelize.define('FreePassPool', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const freePassPoolSchema = new mongoose.Schema({
     creatorId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: {
-            model: User,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
     },
     userId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: {
-            model: User,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
     },
     courseOfferingId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: {
-            model: CourseOffering,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CourseOffering',
     },
     passTypeId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: {
-            model: PassType,
-            key: 'id',
-        },
-        defaultValue: null
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PassType',
+        default: null
     },
     value: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
     status: {
-        type: DataTypes.STRING,
-        defaultValue: "active",
+        type: String,
+        default: "active",
     },
 }, {
     timestamps: false,
 });
 
-const FreePassRequest = sequelize.define('FreePassRequest', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const freePassRequestSchema = new mongoose.Schema({
     userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: User,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
     },
     courseOfferingId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: CourseOffering,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CourseOffering',
+        required: true,
     },
     passTypeId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: PassType,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PassType',
+        required: true,
     },
-    reason: {
-        type: DataTypes.STRING,
-    },
+    reason: String,
     status: {
-        type: DataTypes.STRING,
-        defaultValue: 'requested', // could be 'requested', 'granted', or 'failed'
+        type: String,
+        default: 'requested', // could be 'requested', 'granted', or 'failed'
     },
     createdAt: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
+        type: Date,
+        default: Date.now,
     },
-    grantedAt: {
-        type: DataTypes.DATE,
-    },
-    rejectedAt: {
-        type: DataTypes.DATE,
-    },
+    grantedAt: Date,
+    rejectedAt: Date,
     freePassPoolId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: {
-            model: FreePassPool,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'FreePassPool',
     },
 }, {
     timestamps: false,
 });
 
-const Assignment = sequelize.define('Assignment', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const assignmentSchema = new mongoose.Schema({
     courseOfferingId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: CourseOffering,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CourseOffering',
+        required: true,
     },
     title: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
-    description: {
-        type: DataTypes.STRING,
-    },
+    description: String,
     value: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
+        type: Number,
+        required: true,
     },
     status: {
-        type: DataTypes.STRING,
-        defaultValue: 'assigned',
+        type: String,
+        default: 'assigned',
     },
     createdAt: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
+        type: Date,
+        default: Date.now,
     },
     dueAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
+        type: Date,
+        required: true,
     },
-    tags: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    }
+    tags: String,
 });
 
-const PassUsage = sequelize.define('PassUsage', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const passUsageSchema = new mongoose.Schema({
     freePassId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: FreePassPool,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'FreePassPool',
+        required: true,
     },
     userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: User,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
     },
     assignmentId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Assignment,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Assignment',
+        required: true,
     },
     status:{
-        type: DataTypes.STRING,
-        defaultValue: 'success', //success, failed
+        type: String,
+        default: 'success', //success, failed
     },
     usedAt: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-        allowNull: true,
+        type: Date,
+        default: Date.now,
     },
 }, {
     timestamps: false,
 });
 
-const LTIId = sequelize.define('LTIId', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
+const ltiIdSchema = new mongoose.Schema({
     ltiId: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
     userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: User,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
     },
     client: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
 });
 
-const AssignmentPassType = sequelize.define('AssignmentPassType', {
+const assignmentPassTypeSchema = new mongoose.Schema({
     assignmentId: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Assignment,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Assignment',
     },
     passTypeId: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: PassType,
-            key: 'id',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PassType',
     },
 }, {
     timestamps: false,
 });
 
-
-// Define Associations
-User.hasMany(CourseEnrollment, { foreignKey: 'userId' });
-CourseEnrollment.belongsTo(User, { foreignKey: 'userId' });
-
-Course.hasMany(CourseOffering, { foreignKey: 'courseId' });
-CourseOffering.belongsTo(Course, { foreignKey: 'courseId' });
-
-Term.hasMany(CourseOffering, { foreignKey: 'termId' });
-CourseOffering.belongsTo(Term, { foreignKey: 'termId' });
-
-CourseOffering.hasMany(CourseEnrollment, { foreignKey: 'courseOfferingId' });
-CourseEnrollment.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
-
-PassType.hasMany(FreePassPool, { foreignKey: 'passTypeId' });
-FreePassPool.belongsTo(PassType, { foreignKey: 'passTypeId' });
-
-User.hasMany(FreePassPool, { foreignKey: 'userId' });
-FreePassPool.belongsTo(User, { foreignKey: 'userId' });
-
-FreePassRequest.belongsTo(FreePassPool, { foreignKey: 'freePassPoolId' });
-FreePassPool.hasMany(FreePassRequest, { foreignKey: 'freePassPoolId' });
-
-// User.hasMany(FreePassPool, { foreignKey: 'creatorId' });
-// FreePassPool.belongsTo(User, { foreignKey: 'creatorId' });
-
-User.hasMany(FreePassRequest, { foreignKey: 'userId' });
-FreePassRequest.belongsTo(User, { foreignKey: 'userId' });
-
-CourseOffering.hasMany(FreePassPool, { foreignKey: 'courseOfferingId' });
-FreePassPool.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
-
-CourseOffering.hasMany(FreePassRequest, { foreignKey: 'courseOfferingId' });
-FreePassRequest.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
-
-PassType.hasMany(FreePassRequest, { foreignKey: 'passTypeId' });
-FreePassRequest.belongsTo(PassType, { foreignKey: 'passTypeId' });
-
-CourseOffering.hasMany(Assignment, { foreignKey: 'courseOfferingId' });
-Assignment.belongsTo(CourseOffering, { foreignKey: 'courseOfferingId' });
-
-User.hasMany(PassUsage, { foreignKey: 'userId' });
-PassUsage.belongsTo(User, { foreignKey: 'userId' });
-
-FreePassPool.hasMany(PassUsage, { foreignKey: 'freePassId' });
-PassUsage.belongsTo(FreePassPool, { foreignKey: 'freePassId' });
-
-Assignment.hasMany(PassUsage, { foreignKey: 'assignmentId' });
-PassUsage.belongsTo(Assignment, { foreignKey: 'assignmentId' });
-
-LTIId.belongsTo(User, { foreignKey: 'userId' });
-User.hasMany(LTIId, { foreignKey: 'userId' });
-
-// Many-to-Many Associations
-CourseOffering.belongsToMany(PassType, { through: 'CourseOfferingPassType', foreignKey: 'courseOfferingId' });
-PassType.belongsToMany(CourseOffering, { through: 'CourseOfferingPassType', foreignKey: 'passTypeId' });
-
-Assignment.belongsToMany(PassType, { through: 'AssignmentPassType', foreignKey: 'assignmentId' });
-PassType.belongsToMany(Assignment, { through: 'AssignmentPassType', foreignKey: 'passTypeId' });
+// Create Models
+const User = mongoose.model('User', userSchema);
+const Course = mongoose.model('Course', courseSchema);
+const Term = mongoose.model('Term', termSchema);
+const CourseOffering = mongoose.model('CourseOffering', courseOfferingSchema);
+const CourseEnrollment = mongoose.model('CourseEnrollment', courseEnrollmentSchema);
+const PassType = mongoose.model('PassType', passTypeSchema);
+const FreePassPool = mongoose.model('FreePassPool', freePassPoolSchema);
+const FreePassRequest = mongoose.model('FreePassRequest', freePassRequestSchema);
+const Assignment = mongoose.model('Assignment', assignmentSchema);
+const PassUsage = mongoose.model('PassUsage', passUsageSchema);
+const LTIId = mongoose.model('LTIId', ltiIdSchema);
+const AssignmentPassType = mongoose.model('AssignmentPassType', assignmentPassTypeSchema);
 
 module.exports = {
-    sequelize,
+    mongoose,
     User,
     Course,
     Term,

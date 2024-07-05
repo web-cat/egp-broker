@@ -13,18 +13,16 @@ services:
     environment:
       - NODE_ENV=development
 
-  mariadb:
-    image: mariadb:latest
+  mongodb:
+    image: mongo:latest
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: mydatabase
-      MYSQL_USER: myuser
-      MYSQL_PASSWORD: mypassword
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
     ports:
-      - "3307:3306"
+      - "27017:27017"
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/data/db
 
   backend:
     build:
@@ -35,15 +33,14 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      - mariadb
+      - mongodb
     environment:
       - NODE_ENV=development
-      - DB_HOST=mariadb
-      - DB_USER=myuser
-      - DB_PASSWORD=mypassword
-      - DB_NAME=mydatabase
+      - DB_HOST=mongodb
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=freepassdb
 
 volumes:
   db_data:
     driver: local
-
