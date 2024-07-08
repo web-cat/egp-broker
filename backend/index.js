@@ -1,15 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+
 const cors = require('cors');
 const mongoose = require('mongoose');
-const { User, Course, CourseEnrollment, PassType, Assignment, FreePassPool, FreePassRequest, PassUsage, Term, CourseOffering, LTIId } = require('./src/models/models');
 const app = express();
 const port = 3000;
 const coreRoutes = require("./src/routes/coreRoutes");
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const authenticateJWT = require("./src/middlewares/authMiddleware");
 
 async function canUseFreePass(userId) {
     const oneWeekAgo = new Date();
@@ -27,29 +24,6 @@ async function canUseFreePass(userId) {
 app.use(bodyParser.json());
 app.use(cors());
 app.use('/api', coreRoutes);
-
-const authenticateJWT = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-        return res.status(403).send('Access denied.');
-    }
-
-    const token = authHeader.split(' ')[1]; // Extract the Bearer token
-
-    if (!token) {
-        return res.status(403).send('Invalid token.');
-    }
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).send('Invalid token.');
-        }
-
-        req.user = user;
-        next();
-    });
-};
 
 // Seed Database route
 app.get('/api/seed', async (req, res) => {
@@ -241,61 +215,6 @@ const connectWithRetry = async () => {
     }
 };
 
-// Routes
-app.get('/api/pass-types', authenticateJWT, async (req, res) => {
-    try {
-        const userId = req.user.id; // Get the authenticated user's ID
-
-        // Fetch pass types where userId is either null (global) or matches the authenticated user's ID
-        const passTypes = await PassType.find({
-            $or: [
-                { userId: null },
-                { userId: userId }
-            ]
-        });
-
-        res.json(passTypes);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Create a new PassType
-app.post('/api/pass-types', authenticateJWT, async (req, res) => {
-    try {
-        const { name, description, tags, initialCount, validityPeriod } = req.body;
-        const userId = req.user.id;
-        const passType = await PassType.create({
-            name,
-            description,
-            tags,
-            initialCount,
-            validityPeriod,
-            userId,
-        });
-
-        res.status(201).json(passType);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Delete a PassType by ID
-app.delete('/api/pass-types/:id', authenticateJWT, async (req, res) => {
-    try {
-        const passType = await PassType.findById(req.params.id);
-
-        if (!passType) {
-            return res.status(404).json({ error: 'PassType not found' });
-        }
-
-        await passType.remove();
-
-        res.status(204).send();
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // Health check
 app.get('/', async (req, res) => {
@@ -307,57 +226,7 @@ app.get('/', async (req, res) => {
     }
 });
 
-// Register route
-app.post('/api/register', async (req, res) => {
-    const { name, email, password, role } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    try {
-        const newUser = await User.create({ name, email, password: hashedPassword, role });
-        res.status(201).json(newUser);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Login route
-app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
-
-    try {
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
-
-        const validPassword = await bcrypt.compare(password, user.password);
-
-        if (!validPassword) {
-            return res.status(401).json({ error: 'Invalid password.' });
-        }
-
-        const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
-
-        // Fetch user profile data
-        const userProfile = {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role
-        };
-
-        res.json({
-            user: userProfile,
-            token: {
-                access_token: token
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // Student Routes
 app.get('/api/student/:studentId/passes', authenticateJWT, async (req, res) => {
