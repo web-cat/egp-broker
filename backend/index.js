@@ -4,9 +4,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const { User, Course, CourseEnrollment, PassType, Assignment, FreePassPool, FreePassRequest, PassUsage, Term, CourseOffering, LTIId } = require('./src/db/db');
+const { User, Course, CourseEnrollment, PassType, Assignment, FreePassPool, FreePassRequest, PassUsage, Term, CourseOffering, LTIId } = require('./src/models/models');
 const app = express();
 const port = 3000;
+const coreRoutes = require("./src/routes/coreRoutes");
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
@@ -25,6 +26,7 @@ async function canUseFreePass(userId) {
 // Middleware
 app.use(bodyParser.json());
 app.use(cors());
+app.use('/api', coreRoutes);
 
 const authenticateJWT = (req, res, next) => {
     const authHeader = req.headers.authorization;
