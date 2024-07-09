@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  mongodb:
+    image: mongo:latest
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - "27017:27017"
+    volumes:
+      - db_data:/data/db
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3100:3000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - mongodb
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mongodb
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=freepassdb
+
+volumes:
+  db_data:
+    driver: local

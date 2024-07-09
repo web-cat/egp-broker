@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend-dev
+    ports:
+      - "3100:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mongodb
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=freepassdb
+      - MONGO_URL=mongodb://root:rootpassword@mongodb:27017/ltidb?authSource=admin
+      - JWT_SECRET=your_jwt_secret
+      - DEV_MODE=true
+      - PORT=3080
+      - CANVAS_URL=http://host.docker.internal:3091
+      - PLATFORM_NAME=Canvas LMS
+      - CLIENT_ID=10000000000001
+      - CLIENT_SECRET=xxx
+      - AUTH_ENDPOINT=http://host.docker.internal:3091/api/lti/authorize_redirect
+      - TOKEN_ENDPOINT=http://host.docker.internal:3091/login/oauth2/token
+      - JWK_KEY=http://host.docker.internal:3091/api/lti/security/jwks
+
+  mongodb:
+    image: mongo:latest
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - "27017:27017"
+    volumes:
+      - db_data:/data/db
+
+volumes:
+  db_data:
+    driver: local

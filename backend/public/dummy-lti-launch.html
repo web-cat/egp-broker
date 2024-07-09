@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dummy LTI Launch</title>
+</head>
+<body>
+    <form action="http://localhost:3000/login" method="POST">
+        <input type="hidden" name="iss" value="https://example.com">
+        <input type="hidden" name="login_hint" value="dummy_login_hint">
+        <input type="hidden" name="target_link_uri" value="http://localhost:3000">
+        <input type="hidden" name="lti_message_hint" value="dummy_message_hint">
+        <input type="hidden" name="client_id" value="your_client_id">
+        <input type="hidden" name="lti_deployment_id" value="your_deployment_id">
+        <button type="submit">Launch</button>
+    </form>
+</body>
+</html>
