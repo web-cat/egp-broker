@@ -78,7 +78,7 @@
 		<tbody>
 			{#each assignments as assignment}
 				<tr>
-					<td>{assignment.id}</td>
+					<td>{assignment._id}</td>
 					<td>{assignment.title}</td>
 					<td>{assignment.description}</td>
 					<td>
