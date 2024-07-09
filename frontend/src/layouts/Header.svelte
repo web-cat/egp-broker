@@ -53,7 +53,7 @@
 						<h6 class="m-0 p-0" style="font-size: 0.8rem">
 							Welcome, {$user?.name}!
 						</h6>
-						<p class="m-0 p-0" style="font-size: 0.8rem">{$course?.CourseOffering?.Course?.name} ({$course?.role.toUpperCase()})</p>
+						<p class="m-0 p-0" style="font-size: 0.8rem">{$course?.courseOfferingId?.courseId?.name} ({$course?.role.toUpperCase()})</p>
 					</div>
 				</a>
 			</button>
