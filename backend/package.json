@@ -22,5 +22,8 @@
     "mongoose": "^8.4.4",
     "mysql2": "^3.9.7",
     "sequelize": "^6.37.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
   }
 }
