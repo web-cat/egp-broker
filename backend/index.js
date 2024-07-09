@@ -247,26 +247,6 @@ app.get('/api/student/:studentId/passes', authenticateJWT, async (req, res) => {
     }
 });
 
-app.get('/api/courses/', authenticateJWT, async (req, res) => {
-    try {
-        const userId = req.user.id; // Get the current user ID from the authenticated user
-
-        const enrollments = await CourseEnrollment.find({
-            userId: userId, // Filter by the current user's ID
-        }).populate({
-            path: 'courseOfferingId',
-            populate: [
-                { path: 'courseId', model: Course },
-                { path: 'termId', model: Term }
-            ]
-        });
-
-        res.json(enrollments);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // Assignments by course offering
 app.get('/api/course-offering/:id/assignments', authenticateJWT, async (req, res) => {
     try {
@@ -678,22 +658,6 @@ app.post('/api/generate-passes/:courseOfferingId', authenticateJWT, async (req, 
     }
 });
 
-app.get('/api/my-courses', authenticateJWT, async (req, res) => {
-    try {
-        if (req.user.role === 'instructor') {
-            const courses = await Course.find({ instructorId: req.user.id });
-            res.status(200).json(courses);
-        } else if (req.user.role === 'student') {
-            const enrollments = await CourseEnrollment.find({ userId: req.user.id }).populate('courseId');
-            const courses = enrollments.map(enrollment => enrollment.courseId);
-            res.status(200).json(courses);
-        } else {
-            res.status(403).json({ error: 'Unauthorized access' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // Start the connection process
 connectWithRetry();

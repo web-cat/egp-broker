@@ -62,7 +62,7 @@
 		{#each courses as c}
 			<tr>
 				<td>
-					{c.CourseOffering.Course.name} | {c.CourseOffering.Term.name}
+					{c.courseOfferingId.courseId.name} | {c.courseOfferingId.termId.name}
 				</td>
 				<td>
 					{c.role}

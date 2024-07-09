@@ -80,3 +80,23 @@ exports.deletePassType = async (req, res) => {
         res.status(500).json({error: error.message});
     }
 };
+
+exports.myCourses = async (req, res) => {
+    try {
+        const userId = req.user.id; // Get the current user ID from the authenticated user
+
+        const enrollments = await CourseEnrollment.find({
+            userId: userId, // Filter by the current user's ID
+        }).populate({
+            path: 'courseOfferingId',
+            populate: [
+                { path: 'courseId', model: Course },
+                { path: 'termId', model: Term }
+            ]
+        });
+
+        res.json(enrollments);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
