@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const app = express();
 const port = 3000;
 const coreRoutes = require("./src/routes/coreRoutes");
+const ltiRoutes = require("./src/routes/ltiRoutes");
 const authenticateJWT = require("./src/middlewares/authMiddleware");
 
 async function canUseFreePass(userId) {
@@ -24,6 +25,7 @@ async function canUseFreePass(userId) {
 app.use(bodyParser.json());
 app.use(cors());
 app.use('/api', coreRoutes);
+app.use('/api/lti', ltiRoutes);
 
 // Seed Database route
 app.get('/api/seed', async (req, res) => {

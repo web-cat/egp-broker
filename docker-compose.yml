@@ -32,6 +32,7 @@ services:
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - DB_NAME=freepassdb
+      - CANVAS_URL=freepassdb
 
   mongodb:
     image: mongo:latest
