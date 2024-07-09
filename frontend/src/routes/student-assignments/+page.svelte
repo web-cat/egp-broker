@@ -26,7 +26,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/freepass/${$course.CourseOffering.id}`, {
+			const response = await fetch(`http://localhost:3100/api/freepass/${$course.courseOfferingId._id}`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -49,7 +49,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/course-offering/${$course.CourseOffering.id}/assignments/`, {
+			const response = await fetch(`http://localhost:3100/api/course-offering/${$course.courseOfferingId._id}/assignments/`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -132,7 +132,7 @@
 		<tbody>
 			{#each assignments as assignment}
 				<tr>
-					<td>{assignment.id}</td>
+					<td>{assignment._id}</td>
 					<td>{assignment.title}</td>
 					<td>{assignment.description}</td>
 					<td>

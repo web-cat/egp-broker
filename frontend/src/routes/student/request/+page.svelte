@@ -15,7 +15,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			let courseOfferingId = $course.CourseOffering.id;
+			let courseOfferingId = $course.courseOfferingId._id;
 			let passTypeId = 1;
 			const response = await fetch('http://localhost:3100/api/freepassrequest', {
 				method: 'POST',

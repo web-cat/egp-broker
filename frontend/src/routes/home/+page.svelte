@@ -69,7 +69,7 @@
 				</td>
 
 				<td>
-					{#if $course?.id === c.id}
+					{#if $course?._id === c._id}
 						<p>Default</p>
 					{:else}
 						<button

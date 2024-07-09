@@ -17,6 +17,10 @@ router.get('/courses', authenticateJWT, coreController.myCourses);
 // Assignments by course offering
 router.get('/course-offering/:id/assignments', authenticateJWT, coreController.assignmentsByCourseOffering);
 
+// Free passes
+router.get('/freepass/:courseOfferingId', authenticateJWT, coreController.studentsByCourseOffering);
+router.post('/freepassrequest', authenticateJWT, coreController.freePassRequest);
+
 /* Students by course offering */
 router.get('/course-offering/:id/students', authenticateJWT, coreController.studentsByCourseOffering);
 router.post('/generate-passes/:courseOfferingId', authenticateJWT, coreController.generatePassesByCourseOffering);

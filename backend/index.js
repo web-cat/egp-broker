@@ -176,18 +176,21 @@ const seedDatabase = async () => {
         // Seed PassTypes
         const passTypes = [
             {
+                _id: '1',
                 name: 'General Free Pass',
                 tags: 'Class',
                 initialCount: 10,
                 validityPeriod: 30 // 30 days
             },
             {
+                _id: '2',
                 name: 'Exam Pass',
                 tags: 'Exam',
                 initialCount: 5,
                 validityPeriod: 15 // 15 days
             },
             {
+                _id: '3',
                 name: 'Term End Pass',
                 tags: 'Term End',
                 initialCount: 2,
@@ -389,16 +392,6 @@ app.post('/api/freepass', authenticateJWT, async (req, res) => {
     }
 });
 
-app.get('/api/freepass/:courseOfferingId', authenticateJWT, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { courseOfferingId } = req.params;
-        const passes = await FreePassPool.find({ userId, courseOfferingId }).populate('userId').populate('courseOfferingId').populate('passTypeId');
-        res.json(passes);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 app.get('/api/freepass/:id', authenticateJWT, async (req, res) => {
     try {
@@ -546,29 +539,6 @@ app.post('/api/freepass/:id/assign/:studentId', authenticateJWT, async (req, res
     }
 });
 
-app.post('/api/freepassrequest', authenticateJWT, async (req, res) => {
-    try {
-        const { reason, courseOfferingId, passTypeId } = req.body;
-        const userId = req.user.id;
-
-        // Check for existing request with 'requested' status
-        const existingRequest = await FreePassRequest.findOne({
-            userId,
-            status: 'requested',
-            courseOfferingId,
-            passTypeId
-        });
-
-        if (existingRequest) {
-            return res.status(400).json({ error: 'You already have a pending request.' });
-        }
-
-        const newRequest = await FreePassRequest.create({ userId, reason, courseOfferingId, passTypeId, status: 'requested' });
-        res.status(201).json(newRequest);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 function generateRandomValue() {
     return Math.floor(Math.random() * 1000000).toString();

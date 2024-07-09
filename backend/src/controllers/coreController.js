@@ -205,3 +205,38 @@ exports.generatePassesByCourseOffering = async (req, res) => {
 }
 
 
+exports.freePassByCourseOffering = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { courseOfferingId } = req.params;
+        const passes = await FreePassPool.find({ userId, courseOfferingId }).populate('userId').populate('courseOfferingId').populate('passTypeId');
+        res.json(passes);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+
+exports.freePassRequest = async (req, res) => {
+    try {
+        const { reason, courseOfferingId, passTypeId } = req.body;
+        const userId = req.user.id;
+
+        // Check for existing request with 'requested' status
+        const existingRequest = await FreePassRequest.findOne({
+            userId,
+            status: 'requested',
+            courseOfferingId,
+            passTypeId: new mongoose.Types.ObjectId(passTypeId)
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ error: 'You already have a pending request.' });
+        }
+
+        const newRequest = await FreePassRequest.create({ userId, reason, courseOfferingId, passTypeId, status: 'requested' });
+        res.status(201).json(newRequest);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
