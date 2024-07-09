@@ -8,6 +8,7 @@ const port = 3000;
 const coreRoutes = require("./src/routes/coreRoutes");
 const ltiRoutes = require("./src/routes/ltiRoutes");
 const authenticateJWT = require("./src/middlewares/authMiddleware");
+const {PassType} = require("./src/models/models");
 
 async function canUseFreePass(userId) {
     const oneWeekAgo = new Date();
@@ -176,21 +177,18 @@ const seedDatabase = async () => {
         // Seed PassTypes
         const passTypes = [
             {
-                _id: '1',
                 name: 'General Free Pass',
                 tags: 'Class',
                 initialCount: 10,
                 validityPeriod: 30 // 30 days
             },
             {
-                _id: '2',
                 name: 'Exam Pass',
                 tags: 'Exam',
                 initialCount: 5,
                 validityPeriod: 15 // 15 days
             },
             {
-                _id: '3',
                 name: 'Term End Pass',
                 tags: 'Term End',
                 initialCount: 2,
