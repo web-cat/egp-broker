@@ -32,7 +32,17 @@ services:
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - DB_NAME=freepassdb
-      - CANVAS_URL=freepassdb
+      - MONGO_URL=mongodb://root:rootpassword@mongodb:27017/ltidb?authSource=admin
+      - JWT_SECRET=your_jwt_secret
+      - DEV_MODE=true
+      - PORT=3080
+      - CANVAS_URL=http://host.docker.internal:3091
+      - PLATFORM_NAME=Canvas LMS
+      - CLIENT_ID=10000000000001
+      - CLIENT_SECRET=xxx
+      - AUTH_ENDPOINT=http://host.docker.internal:3091/api/lti/authorize_redirect
+      - TOKEN_ENDPOINT=http://host.docker.internal:3091/login/oauth2/token
+      - JWK_KEY=http://host.docker.internal:3091/api/lti/security/jwks
 
   mongodb:
     image: mongo:latest
