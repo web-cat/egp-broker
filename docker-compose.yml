@@ -3,8 +3,9 @@ version: '3.8'
 services:
   frontend:
     build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile
+      target: frontend-dev
     ports:
       - "5173:5173"
     volumes:
@@ -12,6 +13,25 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend-dev
+    ports:
+      - "3100:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mongodb
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=freepassdb
 
   mongodb:
     image: mongo:latest
@@ -23,23 +43,6 @@ services:
       - "27017:27017"
     volumes:
       - db_data:/data/db
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "3100:3000"
-    volumes:
-      - ./backend:/app
-    depends_on:
-      - mongodb
-    environment:
-      - NODE_ENV=development
-      - DB_HOST=mongodb
-      - DB_USER=root
-      - DB_PASSWORD=rootpassword
-      - DB_NAME=freepassdb
 
 volumes:
   db_data:

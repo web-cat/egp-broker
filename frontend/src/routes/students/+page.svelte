@@ -50,7 +50,7 @@
 				const result = await response.json();
 				dispatch('passTypeSaved', result);
 				// alert('Pass type saved successfully!');
-				passTypeId.set(result.id);
+				passTypeId.set(result._id);
 				fetchPassTypes();
 				showPassTypeForm = false;
 				resetForm();
@@ -146,7 +146,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3100/api/generate-passes/${$course.CourseOffering.id}`,
+				`http://localhost:3100/api/generate-passes/${$course.courseOfferingId._id}`,
 				{
 					method: 'POST',
 					headers: {
@@ -208,7 +208,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3100/api/course-offering/${$course?.CourseOffering.id}/students/`,
+				`http://localhost:3100/api/course-offering/${$course?.courseOfferingId._id}/students/`,
 				{
 					method: 'GET',
 					headers: {
@@ -243,7 +243,7 @@
 			if (response.ok) {
 				passTypes = await response.json();
 				if (passTypes.length > 0 && $passTypeId == null) {
-					passTypeId.set(passTypes[0].id);
+					passTypeId.set(passTypes[0]._id);
 				}
 			} else {
 				const errorData = await response.json();
@@ -297,12 +297,12 @@
 	function handleSelectAllChange(event) {
 		const isChecked = event.target.checked;
 		if (isChecked) {
-			selectedStudentIds = students.map((student) => student.User.id);
+			selectedStudentIds = students.map((student) => student.userId._id);
 		} else {
 			selectedStudentIds = [];
 		}
 		students.forEach((student) => {
-			document.getElementById(`student-checkbox-${student.User.id}`).checked = isChecked;
+			document.getElementById(`student-checkbox-${student.userId._id}`).checked = isChecked;
 		});
 	}
 </script>
@@ -310,9 +310,9 @@
 <Master>
 	<div class="row gx-1 my-2">
 		<div class="col">
-			<span class="badge bg-secondary text-white">Course: {$course.CourseOffering.Course.name}</span
+			<span class="badge bg-secondary text-white">Course: {$course.courseOfferingId.courseId.name}</span
 			>
-			<span class="badge bg-primary text-white">Term: {$course.CourseOffering.Term.name}</span>
+			<span class="badge bg-primary text-white">Term: {$course.courseOfferingId.termId.name}</span>
 			<span class="badge bg-primary text-white">Role: {$course.role.toUpperCase()}</span>
 		</div>
 		<label for="">No of passes: </label>
@@ -324,11 +324,11 @@
 				required
 				class="form-control mr-2"
 				style="flex:1; margin-right: 1rem;"
-				name="course"
+				name="passtype"
 				bind:value={$passTypeId}
 			>
 				{#each passTypes as passType}
-					<option value={passType.id}>{passType.name}</option>
+					<option value={passType._id}>{passType.name}</option>
 				{/each}
 			</select>
 			{#if showPassTypeForm}{:else}
@@ -414,15 +414,15 @@
 		<tbody>
 			{#each students as student}
 				<tr>
-					<td>{student.User.id}</td>
-					<td>{student.User.name}</td>
-					<td>{student.User.activePassCount}</td>
-					<td>{student.User.usedPassCount}</td>
+					<td>{student.userId._id}</td>
+					<td>{student.userId.name}</td>
+					<td>{student.userId.activePassCount}</td>
+					<td>{student.userId.usedPassCount}</td>
 					<td>
 						<input
-							id={`student-checkbox-${student.User.id}`}
+							id={`student-checkbox-${student.userId._id}`}
 							type="checkbox"
-							on:change={(event) => handleCheckboxChange(event, student.User.id)}
+							on:change={(event) => handleCheckboxChange(event, student.userId._id)}
 						/>
 					</td>
 				</tr>

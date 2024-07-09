@@ -170,8 +170,8 @@
 			{#each requests as pass}
 				<tr>
 					<td>
-						{#if pass.User}
-							{pass.User.name}
+						{#if pass.userId}
+							{pass.userId.name}
 						{/if}
 					</td>
 					<td>

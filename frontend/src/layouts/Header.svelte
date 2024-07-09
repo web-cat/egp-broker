@@ -15,7 +15,7 @@
 	</div>
 	<ul class="nav-links d-flex align-items-center">
 		<li><a href="/home">Home</a></li>
-		<li><a href="/home">Course: {$course?.CourseOffering?.Course?.name} ({$course?.role.toUpperCase()})</a></li>
+		<li><a href="/home">Course: {$course?.courseOfferingId?.courseId?.name} ({$course?.role.toUpperCase()})</a></li>
 	
 		{#if $course?.role == 'instructor' || $course?.role == 'ta'}
 			<li><a href="/students">My Students</a></li>

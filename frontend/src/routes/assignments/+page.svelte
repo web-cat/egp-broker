@@ -24,7 +24,8 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/course-offering/${$course.CourseOffering.id}/assignments/`, {
+			// alert(JSON.stringify($course))
+			const response = await fetch(`http://localhost:3100/api/course-offering/${$course.courseOfferingId._id}/assignments/`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -38,7 +39,7 @@
 				error = errorData.error;
 			}
 		} catch (err) {
-			error = 'An error occurred while fetching courses.';
+			error = 'An error occurred while fetching assignements.';
 		}
 	}
 

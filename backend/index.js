@@ -247,52 +247,7 @@ app.get('/api/student/:studentId/passes', authenticateJWT, async (req, res) => {
     }
 });
 
-// Assignments by course offering
-app.get('/api/course-offering/:id/assignments', authenticateJWT, async (req, res) => {
-    try {
-        const courseOfferingId = req.params.id; // Get the course offering ID from the request parameters
 
-        // Fetch assignments
-        const assignments = await Assignment.find({ courseOfferingId });
-
-        res.json(assignments);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Students by course offering
-app.get('/api/course-offering/:id/students', authenticateJWT, async (req, res) => {
-    try {
-        const courseOfferingId = req.params.id; // Get the course offering ID from the request parameters
-
-        // Fetch enrollments
-        const enrollments = await CourseEnrollment.find({ courseOfferingId, role: 'student' }).populate('userId');
-
-        // Fetch count of FreePassPool entries for each user, grouped by status
-        const freePassCounts = await FreePassPool.aggregate([
-            { $group: { _id: '$userId', activeCount: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } }, usedCount: { $sum: { $cond: [{ $eq: ['$status', 'used'] }, 1, 0] } } } }
-        ]);
-
-        // Merge the count results with the enrollments
-        const enrollmentsWithFreePassCount = enrollments.map(enrollment => {
-            const user = enrollment.userId;
-            const freePassCount = freePassCounts.find(count => count._id.equals(user._id)) || { activeCount: 0, usedCount: 0 };
-            return {
-                ...enrollment.toObject(),
-                userId: {
-                    ...user.toObject(),
-                    activePassCount: freePassCount.activeCount,
-                    usedPassCount: freePassCount.usedCount
-                }
-            };
-        });
-
-        res.json(enrollmentsWithFreePassCount);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 app.post('/api/student/request-pass', authenticateJWT, async (req, res) => {
     if (req.user.role !== 'student') {
@@ -616,47 +571,6 @@ app.post('/api/freepassrequest', authenticateJWT, async (req, res) => {
 function generateRandomValue() {
     return Math.floor(Math.random() * 1000000).toString();
 }
-
-app.post('/api/generate-passes/:courseOfferingId', authenticateJWT, async (req, res) => {
-    const { courseOfferingId } = req.params;
-    const { passTypeId, passCount, studentIds } = req.body;
-
-    if (!passCount || passCount <= 0) {
-        return res.status(400).json({ error: 'Valid number of passes is required' });
-    }
-
-    if (!Array.isArray(studentIds) || studentIds.length === 0) {
-        return res.status(400).json({ error: 'Valid student IDs are required' });
-    }
-
-    try {
-        const enrollments = await CourseEnrollment.find({ courseOfferingId, role: 'student', userId: { $in: studentIds } });
-
-        if (enrollments.length === 0) {
-            return res.status(404).json({ error: 'No students found for the given IDs in the specified course offering' });
-        }
-
-        const passes = [];
-        for (const enrollment of enrollments) {
-            for (let i = 0; i < passCount; i++) {
-                passes.push({
-                    value: generateRandomValue(),
-                    courseOfferingId,
-                    userId: enrollment.userId,
-                    creatorId: req.user.id,
-                    passTypeId,
-                    status: 'active',
-                });
-            }
-        }
-
-        await FreePassPool.create(passes);
-
-        res.status(201).json({ message: `${passCount} passes generated for each student` });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 
 // Start the connection process
