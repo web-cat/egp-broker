@@ -2,14 +2,13 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const app = express();
 const port = 3000;
 const coreRoutes = require("./src/routes/coreRoutes");
 const ltiRoutes = require("./src/routes/ltiRoutes");
 const authenticateJWT = require("./src/middlewares/authMiddleware");
-const {PassType} = require("./src/models/models");
-
 async function canUseFreePass(userId) {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -21,6 +20,20 @@ async function canUseFreePass(userId) {
 
     return !lastUsage;
 }
+
+const {
+    User,
+    Course,
+    CourseEnrollment,
+    PassType,
+    Assignment,
+    FreePassPool,
+    FreePassRequest,
+    PassUsage,
+    Term,
+    CourseOffering,
+    LTIId
+} = require("./src/models/models");
 
 // Middleware
 app.use(bodyParser.json());
@@ -211,7 +224,8 @@ const connectWithRetry = async () => {
     try {
         await mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
         console.log('MongoDB connected!');
-        seedDatabase();
+        // await seedDatabase();
+        // console.log('Seed database!');
     } catch (err) {
         console.error('Unable to connect to MongoDB:', err);
         setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
