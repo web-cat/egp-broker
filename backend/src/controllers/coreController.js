@@ -126,7 +126,7 @@ exports.studentsByCourseOffering = async (req, res) => {
     try {
         const courseOfferingId = req.params.id; // Get the course offering ID from the request parameters
 
-        // Fetch enrollments
+        // Fetch enrollmentsx
         const enrollments = await CourseEnrollment.find({courseOfferingId, role: 'student'}).populate('userId');
 
         // Fetch count of FreePassPool entries for each user, grouped by status

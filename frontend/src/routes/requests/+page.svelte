@@ -25,7 +25,8 @@
 	};
 
 	onMount(async () => {
-		await fetchrequests();
+		console.log('Component mounted, fetching requests...');
+		await fetchRequests();
 	});
 
 	function openModal(r) {
@@ -37,29 +38,49 @@
 		showModal.set(false);
 		selectedRequest.set(null);
 	}
-	async function fetchrequests() {
+
+	async function fetchRequests() {
 		try {
 			const storedToken = localStorage.getItem('token');
-			let token = JSON.parse(storedToken);
+			const courseToken = localStorage.getItem('course');
 
-			const response = await fetch(
-				`http://localhost:3100/api/instructor/${$course.CourseOffering.id}/requests`,
-				{
-					method: 'GET',
-					headers: {
-						Authorization: `Bearer ${token.access_token}`
-					}
+			let token = JSON.parse(storedToken)
+			let course = JSON.parse(courseToken);
+
+			console.log('Token:', token);
+			console.log('course:', course);
+
+			// Check if course and CourseOffering are available
+			if (course.courseOfferingId._id) {
+				console.log('Course Offering ID:', course.courseOfferingId._id);
+
+				const response = await fetch(
+						`http://localhost:3100/api/instructor/${course.courseOfferingId._id}/requests`,
+						{
+							method: 'GET',
+							headers: {
+								Authorization: `Bearer ${token.access_token}`
+							}
+						}
+				);
+
+				if (response.ok) {
+					requests = await response.json();
+					console.log('Fetched requests:', requests);
+				} else {
+					const errorData = await response.json();
+					error = errorData.error;
+					console.log('Error fetching requests:', error);
 				}
-			);
-
-			if (response.ok) {
-				requests = await response.json();
 			} else {
-				const errorData = await response.json();
-				error = errorData.error;
+				error = 'Course Offering ID is not available';
+				console.log('course',course.courseOfferingId)
+
+				console.log('Course Offering ID is not available');
 			}
 		} catch (err) {
 			error = 'An error occurred while fetching free passes.';
+			console.log('Error fetching requests:', err);
 		}
 	}
 
@@ -82,43 +103,48 @@
 				success = 'Free pass created successfully!';
 				value = '';
 				error = '';
-				await fetchrequests(); // Refresh the list after creating a new pass
+				await fetchRequests(); // Refresh the list after creating a new pass
 			} else {
 				const errorData = await response.json();
 				error = errorData.error;
+				console.log('Error creating free pass:', error);
 			}
 		} catch (err) {
 			error = 'An error occurred while creating the free pass.';
+			console.log('Error creating free pass:', err);
 		}
 	}
 
 	async function grant(id, count) {
 		try {
+			console.log('grant count',count)
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3100/api/instructor/grant-pass/${id}/${count}`,
-				{
-					method: 'POST',
-					headers: {
-						Authorization: `Bearer ${token.access_token}`
+					`http://localhost:3100/api/instructor/grant-pass/${id}/${count}`,
+					{
+						method: 'POST',
+						headers: {
+							Authorization: `Bearer ${token.access_token}`
+						}
 					}
-				}
 			);
 
 			if (response.ok) {
 				success = 'Free pass granted successfully!';
 				error = '';
 				closeModal();
-				await fetchrequests(); // Refresh the list after granting
+				await fetchRequests(); // Refresh the list after granting
 			} else {
 				const errorData = await response.json();
 				error = errorData.error;
+				console.log('Error granting free pass:', error);
 				alert(error);
 			}
 		} catch (err) {
 			error = 'An error occurred while granting the free pass.';
+			console.log('Error granting free pass:', err);
 		}
 	}
 
@@ -128,27 +154,29 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3100/api/instructor/reject-pass/${id}`,
-				{
-					method: 'POST',
-					headers: {
-						Authorization: `Bearer ${token.access_token}`
+					`http://localhost:3100/api/instructor/reject-pass/${id}`,
+					{
+						method: 'POST',
+						headers: {
+							Authorization: `Bearer ${token.access_token}`
+						}
 					}
-				}
 			);
 
 			if (response.ok) {
 				success = 'Free pass rejected successfully!';
 				error = '';
 				closeModal();
-				await fetchrequests(); // Refresh the list after rejecting
+				await fetchRequests(); // Refresh the list after rejecting
 			} else {
 				const errorData = await response.json();
 				error = errorData.error;
+				console.log('Error rejecting free pass:', error);
 				alert(error);
 			}
 		} catch (err) {
 			error = 'An error occurred while rejecting the free pass.';
+			console.log('Error rejecting free pass:', err);
 		}
 	}
 </script>
@@ -157,84 +185,82 @@
 	<h2 class="mt-5">List of Requests</h2>
 	<table class="table table-bordered">
 		<thead>
-			<tr>
-				<td>Requested by</td>
-				<td>Reason</td>
-				<td>Status</td>
-				<!-- <td>Course</td>
-				<td>Created</td> -->
-				<td>Action</td>
-			</tr>
+		<tr>
+			<td>Requested by</td>
+			<td>Reason</td>
+			<td>Status</td>
+			<!-- <td>Course</td>
+            <td>Created</td> -->
+			<td>Action</td>
+		</tr>
 		</thead>
 		<tbody>
-			{#each requests as pass}
-				<tr>
-					<td>
-						{#if pass.userId}
-							{pass.userId.name}
-						{/if}
-					</td>
-					<td>
-						{pass.reason}
-					</td>
-					<td>
-						{pass.status}
-					</td>
-					<!-- <td>
-						{pass.Course?.name}
-					</td>
-					<td>
-						{pass.timestamp}
-					</td> -->
-					<td>
-						<button
+		{#each requests as pass}
+			<tr>
+				<td>
+					{#if pass.userId}
+						{pass.userId.name}
+					{/if}
+				</td>
+				<td>
+					{pass.reason}
+				</td>
+				<td>
+					{pass.status}
+				</td>
+				<!-- <td>
+                    {pass.Course?.name}
+                </td>
+                <td>
+                    {pass.timestamp}
+                </td> -->
+				<td>
+					<button
 							class="btn btn-danger"
 							on:click={() => {
-								selectedRequest.set(pass);
-								reject(pass.id);
-							}}>Reject</button
-						>
-						<button
+                                selectedRequest.set(pass);
+                                reject(pass._id);
+                            }}>Reject</button>
+					<button
 							class="btn btn-success"
 							on:click={() => {
-								selectedRequest.set(pass);
-								grant(pass.id, 1);
-							}}>Grant</button
-						>
-					</td>
-				</tr>
-			{/each}
+                                selectedRequest.set(pass);
+                                grant(pass._id, 1);
+                            }}>Grant</button>
+				</td>
+			</tr>
+		{/each}
 
-			{#if requests.length == 0}
-				<p>No requests, yet!</p>
-			{/if}
+		{#if requests.length == 0}
+			<p>No requests, yet!</p>
+		{/if}
 		</tbody>
 	</table>
 
 	{#if $showModal}
 		<div transition:fade={{ duration: 250 }} class={'modal-backdrop fade show'}></div>
 		<div
-			transition:fade={{ duration: 250 }}
-			class={'modal d-block'}
-			tabindex="-1"
-			role="dialog"
-			aria-labelledby="editProviderModalLabel"
-			aria-hidden="true"
+				transition:fade={{ duration: 250 }}
+				class={'modal d-block'}
+				tabindex="-1"
+				role="dialog"
+				aria-labelledby="editProviderModalLabel"
+				aria-hidden="true"
 		>
 			<div class="modal-dialog" role="document">
 				<div class="modal-content">
 					<div class="modal-header position-relative justify-content-center pt-4">
 						<h5 class="modal-title" id="editProviderModalLabel">Update</h5>
 						<button
-							on:click={closeModal}
-							type="button"
-							class="close position-absolute border-0 top-50 end-0 translate-middle"
-							data-dismiss="modal"
-							aria-label="Close"
-							style="padding-bottom: 0.2rem"
+								on:click={closeModal}
+								type="button"
+								class="close position-absolute border-0 top-50 end-0 translate-middle"
+								data-dismiss="modal"
+								aria-label="Close"
+								style="padding-bottom: 0.2rem"
 						>
-							<span aria-hidden="true" class="m-0"
-								><svg
+                            <span aria-hidden="true" class="m-0"
+							><svg
 									xmlns="http://www.w3.org/2000/svg"
 									width="18"
 									height="18"
@@ -245,9 +271,9 @@
 									stroke-linecap="round"
 									stroke-linejoin="round"
 									class="feather feather-x"
-									><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"
-									></line></svg
-								></span
+							><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"
+							></line></svg
+							></span
 							>
 						</button>
 					</div>
@@ -266,8 +292,7 @@
 
 						<div>
 							<button class="btn btn-primary" on:click={() => grant($selectedRequest.id, $counter)}
-								>Assign Passes</button
-							>
+							>Assign Passes</button>
 						</div>
 					</div>
 				</div>
@@ -288,6 +313,6 @@
 		padding: 0;
 	}
 	li {
-		margin: 10px 0;
+		margin: 5px 0;
 	}
 </style>

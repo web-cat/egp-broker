@@ -97,7 +97,7 @@ const passTypeSchema = new mongoose.Schema({
     },
 });
 
-const freePassPoolSchema = new mongoose.Schema({
+const  freePassPoolSchema = new mongoose.Schema({
     creatorId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

@@ -332,7 +332,7 @@ app.get('/api/profile', authenticateJWT, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
+// grant pass approve or decline
 app.post('/api/instructor/grant-pass/:id/:count', authenticateJWT, async (req, res) => {
     try {
         const creatorId = req.user.id;
@@ -405,17 +405,58 @@ app.post('/api/freepass', authenticateJWT, async (req, res) => {
 });
 
 
-app.get('/api/freepass/:id', authenticateJWT, async (req, res) => {
+
+app.get('/api/freepassPool/:id', authenticateJWT, async (req, res) => {
     try {
-        const pass = await FreePassPool.findById(req.params.id).populate('userId').populate('courseOfferingId').populate('passTypeId');
-        if (!pass) {
-            return res.status(404).json({ error: 'Free pass not found' });
+        const courseId = req.params.id;
+        console.log('courseId is', courseId);
+
+        // Find the course offering by _id
+        const courseOffering = await CourseOffering.findOne({ _id: courseId });
+        console.log('courseOffering', courseOffering);
+
+        if (!courseOffering) {
+            return res.status(404).json({ error: 'Course offering not found' });
         }
-        res.json(pass);
+
+        // Find the free passes associated with the courseOfferingId
+        const passes = await FreePassPool.find({ courseOfferingId: courseOffering._id })
+            .populate('userId')
+            .populate('courseOfferingId')
+            .populate('passTypeId');
+
+        if (!passes || passes.length === 0) {
+            return res.status(404).json({ error: 'Free passes not found' });
+        }
+
+        res.json(passes);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching free passes:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+
+// app.get('/api/freepassPool/:id', authenticateJWT, async (req, res) => {
+//     const userId = req.user.id;
+//
+//     try {
+//         const passes = await FreePassPool.findById(req.params.id)
+//        // .populate('userId')
+// //             .populate('courseOfferingId')
+// //             .populate('passTypeId');
+//         if (passes.length === 0) {
+//             return res.status(404).json({ error: 'No free passes found for this user' });
+//         }
+//
+//         res.json(passes);
+//     } catch (error) {
+//         console.error('Error fetching free passes:', error);
+//         res.status(500).json({ error: 'Internal server error' });
+//     }
+// });
+
+
 
 app.post('/api/freepass-use/:assignmentId/:id', authenticateJWT, async (req, res) => {
     try {
@@ -498,6 +539,7 @@ app.delete('/api/freepass/:id', authenticateJWT, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 app.get('/api/students', authenticateJWT, async (req, res) => {
     try {

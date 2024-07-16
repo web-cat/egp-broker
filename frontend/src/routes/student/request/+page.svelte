@@ -1,8 +1,8 @@
 <script>
-    import {onMount} from 'svelte';
-    import {token, course} from '../../../stores';
+    import { onMount } from 'svelte';
+    import { token, course } from '../../../stores';
     import Master from '../../../layouts/Master.svelte';
-    import {writable} from 'svelte/store';
+    import { writable } from 'svelte/store';
 
     let reason = '';
     let error = '';
@@ -11,7 +11,7 @@
     let passTypeId = writable(null);
 
     onMount(async () => {
-        fetchPassTypes()
+        await fetchPassTypes();
     });
 
     async function fetchPassTypes() {
@@ -36,7 +36,7 @@
                 error = errorData.error;
             }
         } catch (err) {
-            error = 'An error occurred while fetching passTypes.';
+            error = 'An error occurred while fetching pass types.';
         }
     }
 
@@ -46,14 +46,17 @@
             let token = JSON.parse(storedToken);
 
             let courseOfferingId = $course.courseOfferingId._id;
-            let passTypeId = 1;
+            let selectedPassTypeId = $passTypeId;  // Use the value from the writable store
+
+            console.log("Token to be sent: ", token.access_token);  // Log token for debugging
+
             const response = await fetch('http://localhost:3100/api/freepassrequest', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token.access_token}`
                 },
-                body: JSON.stringify({reason, courseOfferingId, passTypeId})
+                body: JSON.stringify({ reason, courseOfferingId, passTypeId: selectedPassTypeId })
             });
 
             if (response.ok) {
@@ -63,20 +66,20 @@
             } else {
                 const errorData = await response.json();
                 error = errorData.error;
+                console.log("Error response from server: ", error);  // Log error response
             }
         } catch (err) {
-            error = err;
+            error = err.message;
+            console.log("Error in fetch: ", err);  // Log fetch error
         }
     }
 </script>
 
 <Master>
     <form class="mt-5 form-group" on:submit|preventDefault={submitFreePassRequest}>
-        <!-- <div class="input-group"> -->
-
         <div class="input-group-append">
             <label for="">Pass Type</label>
-            <select required class="form-control" name="course" bind:value={$passTypeId}>
+            <select required class="form-control" name="passType" bind:value={$passTypeId}>
                 {#each passTypes as passType}
                     <option value={passType._id}>{passType.name}</option>
                 {/each}
@@ -94,7 +97,6 @@
         <div class="input-group-append mt-2">
             <button class="btn btn-primary" type="submit">Request Free Pass</button>
         </div>
-        <!-- </div> -->
     </form>
     {#if success}
         <p class="success">{success}</p>

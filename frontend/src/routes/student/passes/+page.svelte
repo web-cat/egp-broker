@@ -29,15 +29,15 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/freepass/${$course.courseOfferingId._id}`, {
+			const response = await fetch(`http://localhost:3100/api/freepassPool/${$course.courseOfferingId._id}`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
 				}
 			});
-
 			if (response.ok) {
 				freePasses = await response.json();
+				console.log(freePasses)
 			} else {
 				const errorData = await response.json();
 				error = errorData.error;
