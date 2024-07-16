@@ -33,4 +33,5 @@
 	<p>Visit <a href="/login">Login</a> to get started</p>
 
 	<a class="btn btn-primary" href="/login">Login</a>
+	<a class="btn btn-primary" href="/login-canvas">Login with Canvas</a>
 </main>
