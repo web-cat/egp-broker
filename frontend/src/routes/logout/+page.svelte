@@ -7,6 +7,7 @@
 		// Clear local storage items
 		localStorage.removeItem('user');
 		localStorage.removeItem('token');
+		localStorage.removeItem('course');
 
 		// Reset Svelte stores
 		user.set(null);

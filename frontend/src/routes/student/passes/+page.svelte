@@ -3,6 +3,7 @@
 	import { course, token } from '../../../stores';
 	import Master from '../../../layouts/Master.svelte';
 	import { writable } from 'svelte/store';
+	import { goto } from '$app/navigation';
 
 	let reason = '';
 	let error = '';
@@ -21,6 +22,21 @@
 
 	onMount(async () => {
 		await fetchFreePasses();
+
+		// Check role after fetching free passes
+		const storedToken = localStorage.getItem('course');
+		if (storedToken) {
+			const courseData = JSON.parse(storedToken);
+			const role = courseData?.role;
+			console.log(role)
+			// Check if the user is not a student and redirect
+			if (role !== 'student') {
+				goto('/home');
+			}
+		} else {
+			goto('/'); // Redirect if no token is found
+		}
+
 	});
 
 
@@ -29,13 +45,12 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/freepass/${$course.courseOfferingId._id}`, {
+			const response = await fetch(`http://localhost:3100/api/freepassPool/${$course.courseOfferingId._id}`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
 				}
 			});
-
 			if (response.ok) {
 				freePasses = await response.json();
 			} else {
@@ -47,58 +62,7 @@
 		}
 	}
 
-	async function submitFreePassRequest() {
-		try {
-			const storedToken = localStorage.getItem('token');
-			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3100/api/freepassrequest', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${token.access_token}`
-				},
-				body: JSON.stringify({ reason })
-			});
-
-			if (response.ok) {
-				const result = await response.json();
-				success = 'Free pass request sent successfully!';
-				error = '';
-				await fetchFreePasses(); // Refresh the list after creating a new pass
-			} else {
-				const errorData = await response.json();
-				error = errorData.error;
-			}
-		} catch (err) {
-			error = err;
-		}
-	}
-
-	async function use(id) {
-		try {
-			const storedToken = localStorage.getItem('token');
-			let token = JSON.parse(storedToken);
-
-			const response = await fetch(`http://localhost:3100/api/freepass-use/${id}`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${token.access_token}`
-				}
-			});
-
-			if (response.ok) {
-				success = 'Free pass used successfully!';
-				error = '';
-				await fetchFreePasses(); // Refresh the list after use
-			} else {
-				const errorData = await response.json();
-				error = errorData.error;
-			}
-		} catch (err) {
-			error = 'An error occurred while using the free pass.';
-		}
-	}
 </script>
 
 <Master>
@@ -147,18 +111,18 @@
 				<tr>
 					<td>{pass.value}</td>
 					<td>
-						{#if pass.CourseOffering?.Course}
-							{pass.CourseOffering?.Course?.name}|{pass.CourseOffering?.Term?.name}
+						{#if pass.courseOfferingId?.courseId}
+							{pass.courseOfferingId?.courseId?.name}
 						{/if}
 					</td>
 					<td>{pass.status}</td>
-					<!-- <td>{pass.timestamp}</td> -->
+<!--					<td>{pass.timestamp}</td> -->
 					<td>
-						<!-- {#if pass.status == 'active'}
-							<button class="btn btn-danger" on:click={() => use(pass.id)}>Use</button>
+						{#if pass.status == 'active'}
+							Available
 						{:else}
-							No action available
-						{/if} -->
+							Not available
+						{/if}
 					</td>
 				</tr>
 			{/each}

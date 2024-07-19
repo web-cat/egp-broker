@@ -9,6 +9,10 @@ const port = 3000;
 const coreRoutes = require("./src/routes/coreRoutes");
 const ltiRoutes = require("./src/routes/ltiRoutes");
 const authenticateJWT = require("./src/middlewares/authMiddleware");
+const authenticateSeedKey = require("./src/middlewares/seederMiddleware");
+
+
+
 async function canUseFreePass(userId) {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -42,7 +46,7 @@ app.use('/api', coreRoutes);
 app.use('/api/lti', ltiRoutes);
 
 // Seed Database route
-app.get('/api/seed', async (req, res) => {
+app.post('/api/seed', authenticateSeedKey, async (req, res) => {
     try {
         // Drop all collections and recreate them
         await mongoose.connection.dropDatabase();
@@ -157,6 +161,24 @@ const seedDatabase = async () => {
                 tags: 'Class'
             },
             {
+                courseOfferingId: courseOfferings[0]._id,
+                title: 'Exam Assignment Test',
+                description: 'Solve Exam problems from Chapter 1',
+                value: 12,
+                status: 'assigned',
+                dueAt: new Date('2024-09-30'),
+                tags: 'Exam'
+            },
+            {
+                courseOfferingId: courseOfferings[0]._id,
+                title: 'Exam/Class Assignment Test',
+                description: 'Solve Exam/Class problems from Chapter 1',
+                value: 22,
+                status: 'assigned',
+                dueAt: new Date('2024-09-30'),
+                tags: 'Exam,Class'
+            },
+            {
                 courseOfferingId: courseOfferings[1]._id,
                 title: 'Science Assignment 1',
                 description: 'Write a report on Photosynthesis',
@@ -187,7 +209,7 @@ const seedDatabase = async () => {
 
         await Assignment.create(assignments);
 
-        // Seed PassTypes
+        //  Seed PassTypes
         const passTypes = [
             {
                 name: 'General Free Pass',
@@ -300,7 +322,7 @@ app.get('/api/instructor/:instructorId/passes', authenticateJWT, async (req, res
     }
 });
 
-app.get('/api/instructor/:courseOfferingId/requests', authenticateJWT, async (req, res) => {
+app.get('/api/instructor/:courseOfferingId/requests', authenticateJWT, async (req, res) => { //done
     try {
         const courseOfferingId = req.params.courseOfferingId; // Get the course offering ID from the request parameters
         const requests = await FreePassRequest.find({ status: 'requested', courseOfferingId }).populate('userId').populate('courseOfferingId');
@@ -321,7 +343,7 @@ app.get('/api/student/:courseOfferingId/requests', authenticateJWT, async (req, 
     }
 });
 
-app.get('/api/profile', authenticateJWT, async (req, res) => {
+app.get('/api/profile', authenticateJWT, async (req, res) => { //done
     try {
         const user = await User.findById(req.user.id, { _id: 1, name: 1, email: 1 });
         if (!user) {
@@ -332,8 +354,8 @@ app.get('/api/profile', authenticateJWT, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
-app.post('/api/instructor/grant-pass/:id/:count', authenticateJWT, async (req, res) => {
+// grant pass approve or decline
+app.post('/api/instructor/grant-pass/:id/:count', authenticateJWT, async (req, res) => { //done
     try {
         const creatorId = req.user.id;
         const { id, count } = req.params;
@@ -393,7 +415,7 @@ app.post('/api/instructor/reject-pass/:id', authenticateJWT, async (req, res) =>
     }
 });
 
-app.post('/api/freepass', authenticateJWT, async (req, res) => {
+app.post('/api/freepass', authenticateJWT, async (req, res) => { //done
     try {
         const { userId, value, courseOfferingId, passTypeId } = req.body;
         const creatorId = req.user.id;
@@ -405,43 +427,215 @@ app.post('/api/freepass', authenticateJWT, async (req, res) => {
 });
 
 
-app.get('/api/freepass/:id', authenticateJWT, async (req, res) => {
+app.get('/api/freepassPool/:courseId', authenticateJWT, async (req, res) => {
     try {
-        const pass = await FreePassPool.findById(req.params.id).populate('userId').populate('courseOfferingId').populate('passTypeId');
-        if (!pass) {
-            return res.status(404).json({ error: 'Free pass not found' });
+        const courseId = req.params.courseId;
+        const tagsString = req.query.tags; // Get tags as a comma-separated string (if any)
+        const userId = req.user.id;
+
+        const courseOffering = await CourseOffering.findOne({ _id: courseId }).populate('courseId');
+        if (!courseOffering) {
+            return res.status(404).json({ error: 'Course offering not found' });
         }
-        res.json(pass);
+
+        let passes = await FreePassPool.find({
+            courseOfferingId: courseOffering._id,
+            userId: userId,
+        })
+            .populate('userId')
+            .populate({
+                path: 'courseOfferingId',
+                populate: { path: 'courseId' },
+            })
+            .populate('passTypeId');
+
+        if (tagsString) {
+            const tagsArray = tagsString.split(',').map(tag => tag.trim().toLowerCase());
+            passes = passes.filter(pass => {
+                const passTags = pass.passTypeId.tags.split(',').map(tag => tag.trim().toLowerCase());
+                return tagsArray.some(tag => passTags.includes(tag));
+            });
+        }
+
+        if (passes.length === 0) {
+            return res.status(404).json({ error: 'No active free passes found for this user in this course' });
+        }
+
+        res.json(passes);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching free passes:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-app.post('/api/freepass-use/:assignmentId/:id', authenticateJWT, async (req, res) => {
+// to use pass on a assignment by student
+app.post('/api/use-pass/:assignmentId/:passValue', authenticateJWT, async (req, res) => { //done
     try {
-        const { assignmentId, id } = req.params;
+        const { assignmentId, passValue } = req.params;
         const userId = req.user.id;
 
-        // Find the FreePassPool
-        const freePass = await FreePassPool.findById(id);
+        // 1. Fetch Assignment and Active Free Pass
+        const assignment = await Assignment.findById(assignmentId);
+        const freePass = await FreePassPool.findOne({
+            userId,
+            courseOfferingId: assignment.courseOfferingId,
+            value: passValue, // Unique identifier for the pass
+            status: 'active',
+        });
+
+        if (!assignment) {
+            return res.status(404).json({ error: 'Assignment not found' });
+        }
         if (!freePass) {
             return res.status(404).json({ error: 'Free pass not found' });
         }
 
+        // 2. Check Pass Usage Eligibility
+        if (!await canUseFreePass(userId)) {
+            await PassUsage.create({
+                freePassId: freePass._id,
+                assignmentId,
+                status: 'failed',
+                usedAt: new Date(),
+                userId
+            });
+            return res.status(429).json({ error: 'You can only use one free pass per week.' });
+        }
+
+        // 3. Mark Pass as Used
+        freePass.status = 'used';
+        await freePass.save();
+
+        // 4. Record Pass Usage
+        const passUsage = await PassUsage.create({
+            freePassId: freePass._id,
+            assignmentId,
+            status: 'success',
+            usedAt: new Date(),
+            userId,
+        });
+
+        res.json({ message: 'Free pass used successfully', passUsage }); // Send success response
+    } catch (error) {
+        console.error('Error using free pass:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+app.get('/api/pass-usage-history', authenticateJWT, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const passUsages = await PassUsage.find({ userId, status: 'success' })
+            .populate({
+                path: 'freePassId', // Populate the freePassId field to get pass details
+                populate: { path: 'passTypeId' }, // Populate nested passTypeId to get pass type name
+            })
+            .populate('assignmentId') // Populate assignmentId to get assignment details
+            .sort({ usedAt: -1 }); // Sort by usage date (descending)
+
+        res.json(passUsages);
+    } catch (error) {
+        console.error('Error fetching pass usage history:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// app.get('/api/freepassPool/:id', authenticateJWT, async (req, res) => {
+//     const userId = req.user.id;
+//
+//     try {
+//         const passes = await FreePassPool.findById(req.params.id)
+//        // .populate('userId')
+// //             .populate('courseOfferingId')
+// //             .populate('passTypeId');
+//         if (passes.length === 0) {
+//             return res.status(404).json({ error: 'No free passes found for this user' });
+//         }
+//
+//         res.json(passes);
+//     } catch (error) {
+//         console.error('Error fetching free passes:', error);
+//         res.status(500).json({ error: 'Internal server error' });
+//     }
+// });
+
+app.get('/api/freepassPool/:id', authenticateJWT, async (req, res) => {
+    try {
+        const courseId = req.params.id;
+        const userId = req.user.id;
+        console.log('courseId is', courseId);
+        console.log('userId is', userId);
+
+// Find the course offering by _id
+        const courseOffering = await CourseOffering.findOne({ _id: courseId }).populate('courseId');
+        console.log('courseOffering', courseOffering);
+
+        if (!courseOffering) {
+            return res.status(404).json({ error: 'Course offering not found' });
+        }
+
+// Find the free passes associated with the courseOfferingId and userId
+        const passes = await FreePassPool.find({
+            courseOfferingId: courseOffering._id,
+            userId: userId
+        })
+            .populate('userId')
+            .populate({
+                path: 'courseOfferingId',
+                populate: {
+                    path: 'courseId',
+                    model: 'Course',
+                },
+            })
+            .populate('passTypeId');
+
+        if (!passes || passes.length === 0) {
+            return res.status(404).json({ error: 'Free passes not found' });
+        }
+
+        res.json(passes);
+    } catch (error) {
+        console.error('Error fetching free passes:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
+// pass through assignment
+app.post('/api/freepass-use/:assignmentId/:id', authenticateJWT, async (req, res) => { //done
+    try {
+        const { assignmentId, id } = req.params;
+        const userIdFromToken = req.user.id; // Get userId from the token
+
+        // Find the FreePassPool
+        const freePass = await FreePassPool.findById(id);
+        console.log('freePass::',freePass)
+        if (!freePass) {
+            return res.status(404).json({ error: 'Free pass not found' });
+        }
+
+        // Additional validation: Ensure userId matches userId from token
+        if (!freePass.userId.equals(userIdFromToken)) {
+            return res.status(403).json({ error: 'You do not have permission to use this free pass.' });
+        }
+
+
         // Check if the pass belongs to the authenticated user
-        if (!freePass.userId.equals(userId)) {
+        if (!freePass.userId.equals(userIdFromToken)) {
             return res.status(403).json({ error: 'Access denied. You can only use your own free passes.' });
         }
 
         // Check if the user can use a free pass
-        const canUsePass = await canUseFreePass(userId);
+        const canUsePass = await canUseFreePass(userIdFromToken);
         if (!canUsePass) {
             const passUsage = await PassUsage.create({
                 freePassId: freePass._id,
                 assignmentId: assignmentId,
                 status: 'failed',
                 usedAt: new Date(),
-                userId: userId,
+                userId: userIdFromToken, // Use userId from token
             });
             return res.status(429).json({ error: 'You can only use one free pass per week.' });
         }
@@ -456,7 +650,7 @@ app.post('/api/freepass-use/:assignmentId/:id', authenticateJWT, async (req, res
             assignmentId: assignmentId,
             status: 'success',
             usedAt: new Date(),
-            userId: userId,
+            userId: userIdFromToken, // Use userId from token
         });
 
         res.json(passUsage);
@@ -465,7 +659,8 @@ app.post('/api/freepass-use/:assignmentId/:id', authenticateJWT, async (req, res
     }
 });
 
-app.put('/api/freepass/:id', authenticateJWT, async (req, res) => {
+
+app.put('/api/freepass/:id', authenticateJWT, async (req, res) => { //done
     try {
         const { value, status } = req.body;
         const pass = await FreePassPool.findById(req.params.id);
@@ -499,7 +694,8 @@ app.delete('/api/freepass/:id', authenticateJWT, async (req, res) => {
     }
 });
 
-app.get('/api/students', authenticateJWT, async (req, res) => {
+
+app.get('/api/students', authenticateJWT, async (req, res) => { //user
     try {
         const students = await User.find({ role: 'student' });
 
@@ -529,7 +725,7 @@ app.get('/api/students', authenticateJWT, async (req, res) => {
     }
 });
 
-app.post('/api/freepass/:id/assign/:studentId', authenticateJWT, async (req, res) => {
+app.post('/api/freepass/:id/assign/:studentId', authenticateJWT, async (req, res) => { //done
     const { id, studentId } = req.params;
 
     if (!studentId) {

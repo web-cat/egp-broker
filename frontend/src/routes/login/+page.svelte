@@ -29,7 +29,7 @@
 
 <AuthMaster>
 	<div class="">
-		<div class="row">
+		<div class="row ">
 			<div class="col-md-4 h-full bg-signin text-center text-white p-5 gap-2">
 				<h3>Sign in</h3>
 				<p></p>
@@ -71,5 +71,14 @@
 		justify-content: center;
 		align-items: center;
 		flex-direction: column;
+	}
+
+	@media (max-width: 768px) {
+		.bg-signin{
+			display: none;
+		}
+	}
+	@media only screen and (max-width: 600px) {
+
 	}
 </style>

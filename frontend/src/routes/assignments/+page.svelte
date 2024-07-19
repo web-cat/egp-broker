@@ -64,8 +64,9 @@
 	{/if}
 
 	<h2 class="mt-5">List of Assignments</h2>
-	<table class="table table-bordered">
-		<thead>
+	<div class="table-responsive">
+		<table class="table table-bordered">
+			<thead>
 			<tr>
 				<td>ID</td>
 				<td>Title</td>
@@ -74,8 +75,8 @@
 				<!-- <td>Created</td> -->
 				<!-- <td>Action</td> -->
 			</tr>
-		</thead>
-		<tbody>
+			</thead>
+			<tbody>
 			{#each assignments as assignment}
 				<tr>
 					<td>{assignment._id}</td>
@@ -92,8 +93,9 @@
 					</td> -->
 				</tr>
 			{/each}
-		</tbody>
-	</table>
+			</tbody>
+		</table>
+	</div>
 
 	{#if $showModal}
 		<div transition:fade={{ duration: 250 }} class={'modal-backdrop fade show'}></div>
@@ -175,5 +177,9 @@
 	}
 	li {
 		margin: 10px 0;
+	}
+	.table-responsive{
+		width: 100%;
+		overflow-x: auto;
 	}
 </style>

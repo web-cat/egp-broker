@@ -43,7 +43,7 @@ services:
       - AUTH_ENDPOINT=http://host.docker.internal:3091/api/lti/authorize_redirect
       - TOKEN_ENDPOINT=http://host.docker.internal:3091/login/oauth2/token
       - JWK_KEY=http://host.docker.internal:3091/api/lti/security/jwks
-
+      - SEED_KEY=12345789
   mongodb:
     image: mongo:latest
     restart: always
