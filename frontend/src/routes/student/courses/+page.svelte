@@ -3,6 +3,7 @@
 	import { token } from '../../../stores';
 	import Master from '../../../layouts/Master.svelte';
 	import { writable } from 'svelte/store';
+	import { goto } from '$app/navigation';
 
 	let value = '';
 	let error = '';
@@ -11,6 +12,19 @@
 
 	onMount(async () => {
 		await fetchcourses();
+		// Check role after fetching courses
+		const storedToken = localStorage.getItem('course');
+		if (storedToken) {
+			const courseData = JSON.parse(storedToken);
+			const role = courseData?.role;
+			console.log(role)
+			// Check if the user is not a student and redirect
+			if (role !== 'student') {
+				goto('/home');
+			}
+		} else {
+			goto('/'); // Redirect if no token is found
+		}
 	});
 
 	async function fetchcourses() {

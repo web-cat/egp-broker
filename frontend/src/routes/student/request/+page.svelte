@@ -15,6 +15,7 @@
     });
 
     async function fetchPassTypes() {
+        console.log('testing from request')
         try {
             const storedToken = localStorage.getItem('token');
             let token = JSON.parse(storedToken);

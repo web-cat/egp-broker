@@ -144,7 +144,7 @@
 			}
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
-
+			console.log('selectedStudentIds',selectedStudentIds)
 			const response = await fetch(
 				`http://localhost:3100/api/generate-passes/${$course.courseOfferingId._id}`,
 				{

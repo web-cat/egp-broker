@@ -107,7 +107,7 @@ exports.myCourses = async (req, res) => {
     }
 };
 
-exports.assignmentsByCourseOffering = async (req, res) => {
+exports.assignmentsByCourseOffering = async (req, res) => { //done
     try {
         const courseOfferingId = req.params.id; // Get the course offering ID from the request parameters
 
@@ -124,29 +124,51 @@ exports.assignmentsByCourseOffering = async (req, res) => {
 
 exports.studentsByCourseOffering = async (req, res) => {
     try {
-        const courseOfferingId = req.params.id; // Get the course offering ID from the request parameters
 
-        // Fetch enrollmentsx
-        const enrollments = await CourseEnrollment.find({courseOfferingId, role: 'student'}).populate('userId');
+        const courseOfferingId = req.params.id;
+        console.log('Fetching students for course offering:', courseOfferingId);
 
-        // Fetch count of FreePassPool entries for each user, grouped by status
+        // 1. Fetch Enrollments with Additional Logging:
+        const enrollments = await CourseEnrollment
+            .find({ courseOfferingId, role: 'student' })
+            .populate('userId')
+            .exec()
+            .then(result => {
+                console.log('Fetched enrollments:', result.length);
+                return result;
+            })
+            .catch(err => {
+                throw new Error('Error fetching enrollments: ' + err.message);
+            });
+
+        if (enrollments.length === 0) {
+            console.warn('No enrollments found for this course offering.');
+            return res.json([]);
+        }
+
+        // 2. Extract User IDs and Enhance Aggregation:
+        const userIds = enrollments.map(enrollment => enrollment.userId._id);
+        console.log('User IDs:', userIds);
+
         const freePassCounts = await FreePassPool.aggregate([
+            { $match: { userId: { $in: userIds } } }, // Filter for relevant users
             {
                 $group: {
                     _id: '$userId',
-                    activeCount: {$sum: {$cond: [{$eq: ['$status', 'active']}, 1, 0]}},
-                    usedCount: {$sum: {$cond: [{$eq: ['$status', 'used']}, 1, 0]}}
+                    activeCount: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } },
+                    usedCount: { $sum: { $cond: [{ $eq: ['$status', 'used'] }, 1, 0] } }
                 }
             }
         ]);
+        console.log('Free Pass Counts:', freePassCounts);
 
-        // Merge the count results with the enrollments
+        // 3. Merge and Respond with Robust Error Handling:
         const enrollmentsWithFreePassCount = enrollments.map(enrollment => {
             const user = enrollment.userId;
-            const freePassCount = freePassCounts.find(count => count._id.equals(user._id)) || {
-                activeCount: 0,
-                usedCount: 0
-            };
+            const freePassCount = freePassCounts.find(count =>
+                count._id.equals(user._id)
+            ) || { activeCount: 0, usedCount: 0 };
+
             return {
                 ...enrollment.toObject(),
                 userId: {
@@ -159,9 +181,10 @@ exports.studentsByCourseOffering = async (req, res) => {
 
         res.json(enrollmentsWithFreePassCount);
     } catch (error) {
-        res.status(500).json({error: error.message});
+        console.error('Error in studentsByCourseOffering:', error);
+        res.status(500).json({ error: error.message });
     }
-}
+};
 
 exports.generatePassesByCourseOffering = async (req, res) => {
     const {courseOfferingId} = req.params;

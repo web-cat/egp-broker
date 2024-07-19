@@ -6,6 +6,7 @@ const freepassRoutes = require('./routes/freepassRoutes');
 const { lti, registerPlatform } = require('./services/ltiService');
 
 const app = express();
+
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
