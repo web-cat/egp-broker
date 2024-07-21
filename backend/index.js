@@ -332,7 +332,7 @@ app.get('/api/instructor/:courseOfferingId/requests', authenticateJWT, async (re
     }
 });
 
-app.get('/api/student/:courseOfferingId/requests', authenticateJWT, async (req, res) => {
+app.get('/api/student/:courseOfferingId/requests', authenticateJWT, async (req, res) => { //done
     try {
         const userId = req.user.id;
         const courseOfferingId = req.params.courseOfferingId; // Get the course offering ID from the request parameters

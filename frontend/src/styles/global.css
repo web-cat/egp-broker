@@ -319,3 +319,7 @@ input[type="radio"]:checked + .provider-label.dashed-border{
 .provider-label.dashed-border:hover{
     border: 1px solid #3AE3F9;
 }
+/*responsive table*/
+.responsive-table{
+    overflow-x: auto;
+}

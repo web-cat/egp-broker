@@ -193,7 +193,7 @@
 								<tr>
 									<td>{pass?.courseOfferingId?.courseId?.name}</td>
 									<td>{pass.value}</td>
-									<td>{pass?.passTypeId?.name}</td>
+									<td>{pass?.passTypeId?.tags}</td>
 									<td>
 										<button class="btn btn-primary" on:click={() => use($selectedAssignment._id, pass.value)}>Use</button>
 									</td>

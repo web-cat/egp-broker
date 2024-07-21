@@ -40,6 +40,7 @@
     {/if}
 
     {#if passUsages.length > 0}
+        <div class="responsive-table">
         <table class="table table-bordered">
             <thead>
             <tr>
@@ -60,7 +61,16 @@
             {/each}
             </tbody>
         </table>
+        </div>
+
     {:else}
         <p>No pass usage history found.</p>
     {/if}
 </Master>
+
+<style>
+    .responsive-table{
+        overflow-x: auto;
+    }
+
+</style>

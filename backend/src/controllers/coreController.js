@@ -31,7 +31,7 @@ exports.test = async (req, res) => {
 };
 
 
-exports.getPassTypes = async (req, res) => {
+exports.getPassTypes = async (req, res) => { //done
     try {
         const userId = req.user.id; // Get the authenticated user's ID
 
@@ -79,7 +79,7 @@ exports.deletePassType = async (req, res) => {
             return res.status(404).json({error: 'PassType not found'});
         }
 
-        await passType.remove();
+        await passType.deleteOne();
 
         res.status(204).send();
     } catch (error) {
@@ -122,7 +122,7 @@ exports.assignmentsByCourseOffering = async (req, res) => { //done
     }
 };
 
-exports.studentsByCourseOffering = async (req, res) => {
+exports.studentsByCourseOffering = async (req, res) => { //done
     try {
 
         const courseOfferingId = req.params.id;
@@ -186,7 +186,7 @@ exports.studentsByCourseOffering = async (req, res) => {
     }
 };
 
-exports.generatePassesByCourseOffering = async (req, res) => {
+exports.generatePassesByCourseOffering = async (req, res) => { //done
     const {courseOfferingId} = req.params;
     const {passTypeId, passCount, studentIds} = req.body;
 
@@ -240,7 +240,7 @@ exports.freePassByCourseOffering = async (req, res) => {
 }
 
 
-exports.freePassRequest = async (req, res) => {
+exports.freePassRequest = async (req, res) => { //done
     try {
         const { reason, courseOfferingId, passTypeId } = req.body;
         const userId = req.user.id;
