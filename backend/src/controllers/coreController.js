@@ -51,7 +51,7 @@ exports.getPassTypes = async (req, res) => { //done
 
 
 // Create a new PassType
-exports.storePassTypes = async (req, res) => {
+exports.storePassTypes = async (req, res) => { //done
     try {
         const {name, description, tags, initialCount, validityPeriod} = req.body;
         const userId = req.user.id;
@@ -71,7 +71,7 @@ exports.storePassTypes = async (req, res) => {
 };
 
 // Delete a PassType by ID
-exports.deletePassType = async (req, res) => {
+exports.deletePassType = async (req, res) => { //done
     try {
         const passType = await PassType.findById(req.params.id);
 
@@ -87,7 +87,7 @@ exports.deletePassType = async (req, res) => {
     }
 };
 
-exports.myCourses = async (req, res) => {
+exports.myCourses = async (req, res) => { //done
     try {
         const userId = req.user.id; // Get the current user ID from the authenticated user
 
@@ -224,18 +224,6 @@ exports.generatePassesByCourseOffering = async (req, res) => { //done
         res.status(201).json({message: `${passCount} passes generated for each student`});
     } catch (error) {
         res.status(500).json({error: error.message});
-    }
-}
-
-
-exports.freePassByCourseOffering = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { courseOfferingId } = req.params;
-        const passes = await FreePassPool.find({ userId, courseOfferingId }).populate('userId').populate('courseOfferingId').populate('passTypeId');
-        res.json(passes);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
     }
 }
 

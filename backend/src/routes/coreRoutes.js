@@ -3,6 +3,7 @@ const router = express.Router();
 const coreController = require('../controllers/coreController');
 const authenticateJWT = require('../middlewares/authMiddleware');
 const authController = require("../controllers/authController");
+const {User, FreePassPool} = require("../models/models");
 
 router.get('/test', authenticateJWT, coreController.test);
 
@@ -27,6 +28,7 @@ router.post('/generate-passes/:courseOfferingId', authenticateJWT, coreControlle
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+
 
 
 module.exports = router;
