@@ -33,8 +33,6 @@
 			if (role !== 'student') {
 				goto('/home');
 			}
-		} else {
-			goto('/'); // Redirect if no token is found
 		}
 
 	});

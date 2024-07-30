@@ -13,7 +13,6 @@ const {
     LTIId
 } = require("./models/models");
 
-
 const seedDatabase = async () => {
     try {
         const hashedPassword = await bcrypt.hash('12345678', 10);
