@@ -1,31 +1,18 @@
 version: '3.8'
 
 services:
-  frontend:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-      target: frontend-dev
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: backend-dev
-    ports:
       - "3100:3000"
     volumes:
-      - ./backend:/app
-      - /app/node_modules
-    depends_on:
-      - mongodb
+      - ./frontend:/app/frontend
+      - ./backend:/app/backend
+      - /app/frontend/node_modules
+      - /app/backend/node_modules
     environment:
       - NODE_ENV=development
       - DB_HOST=mongodb

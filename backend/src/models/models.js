@@ -33,6 +33,8 @@ const userSchema = new mongoose.Schema({
 const clientSchema = new mongoose.Schema({
     clientId: String,
     clientSecret: String,
+    publicKey: String,
+    privateKey: String,
     grants: [String]
 });
 
