@@ -10,13 +10,19 @@ const {
     Assignment,
     Term,
     CourseOffering,
-    LTIId
+    LTIId,
+    Client
 } = require("./models/models");
 
 const seedDatabase = async () => {
     try {
         const hashedPassword = await bcrypt.hash('12345678', 10);
 
+        await Client.create({
+            clientId: 'demo',
+            clientSecret: '12345678',
+            grants: ['password']
+          });
         // Create terms
         const terms = await Term.create([
             { name: 'Fall 2024' },

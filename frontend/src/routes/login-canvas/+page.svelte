@@ -1,6 +1,6 @@
 <script>
 
-    window.location.href = 'http://localhost:3091/login/oauth2/auth?client_id=10000000000011&response_type=code&redirect_uri=http://localhost:5173/oauth2response'
+    window.location.href = 'http://localhost:3091/login/oauth2/auth?response_type=code&redirect_uri=http://localhost:5173/lti/launch&client_id=10000000000015&scope=https://canvas.instructure.com/lti/account_lookup/scope/show'
 </script>
 
 <div>

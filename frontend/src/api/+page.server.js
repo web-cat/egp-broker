@@ -4,7 +4,7 @@ import { json } from '@sveltejs/kit';
 export async function GET() {
     try {
         const storedToken = 'PjWYxKeZO3lB5oMaoTVqkui3erdFB8HeRKDj5zaO7rDTnw3OtdMymGNq0BiQouLB'
-        const response = await fetch('http://192.168.1.168:3091/courses/1/assignments', {
+        const response = await fetch('http://192.168.1.68:3091/courses/1/assignments', {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${storedToken}`

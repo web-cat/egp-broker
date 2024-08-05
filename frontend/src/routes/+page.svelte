@@ -32,6 +32,6 @@
 	<h1>Welcome to Pass management</h1>
 	<p>Visit <a href="/login">Login</a> to get started</p>
 
-	<a class="btn btn-primary" href="/login">Login</a>
+	<a class="btn btn-primary mb-3" href="/login">Login</a>
 	<a class="btn btn-primary" href="/login-canvas">Login with Canvas</a>
 </main>

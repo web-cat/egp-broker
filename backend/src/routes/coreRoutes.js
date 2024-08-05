@@ -6,7 +6,6 @@ const authController = require("../controllers/authController");
 const {User, FreePassPool,Assignment} = require("../models/models");
 const {
     CourseEnrollment,
-
 } = require("../models/models");
 
 router.get('/test', authenticateJWT, coreController.test);

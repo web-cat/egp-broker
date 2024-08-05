@@ -3,7 +3,7 @@ export async function load({ fetch }) {
         const accessToken = 'PjWYxKeZO3lB5oMaoTVqkui3erdFB8HeRKDj5zaO7rDTnw3OtdMymGNq0BiQouLB'; // Replace with actual token fetching logic
         const courseId = '1';
 
-        const response = await fetch(`http://192.168.1.168:3091/api/v1/courses/${courseId}/assignments`, {
+        const response = await fetch(`http://192.168.1.68:3091/api/v1/courses/${courseId}/assignments`, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${accessToken}`

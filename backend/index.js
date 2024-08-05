@@ -11,10 +11,27 @@ const authenticateJWT = require("./src/middlewares/authMiddleware");
 const authenticateSeedKey = require("./src/middlewares/seederMiddleware");
 const { connectWithRetry, dropDatabaseAndSeed } = require("./src/db"); // Import the new file
 
-
+const OAuthServer = require('express-oauth-server');
+const model = require('./src/models/oauth-model');
 // Middleware
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
+
+app.oauth = new OAuthServer({
+  model: model,
+  grants: ['password'],
+  debug: true
+});
+
+app.post('/oauth/token', (req, res, next) => {
+    console.log('Token request received:', req.body);
+    return app.oauth.token()(req, res, next);
+  });
+
+app.get('/secure', app.oauth.authenticate(), (req, res) => {
+  res.send('Secured with OAuth!');
+});
 // Routes
 app.use(freePassRoutes);
 app.use('/api', coreRoutes);
