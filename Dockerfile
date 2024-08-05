@@ -1,23 +1,21 @@
-# Stage 1: Build frontend
-FROM node:22-alpine AS frontend-dev
+FROM node:22-alpine
 
 WORKDIR /app
-COPY frontend/package*.json ./
-RUN npm install
-COPY frontend/ ./
-EXPOSE 5173
-CMD ["npm", "run", "dev"]
 
-# Stage 2: Build backend
-FROM node:22 AS backend-dev
-
-WORKDIR /app
-COPY backend/package*.json ./
-RUN npm install
-
-# Install nodemon globally
+# Install dependencies for both frontend and backend
+COPY frontend/package*.json ./frontend/
+COPY backend/package*.json ./backend/
+RUN npm install --prefix frontend
+RUN npm install --prefix backend
 RUN npm install -g nodemon
 
-COPY backend/ ./
+# Copy the source code for both frontend and backend
+COPY frontend/ ./frontend/
+COPY backend/ ./backend/
+
+# Expose ports for frontend and backend
+EXPOSE 5173
 EXPOSE 3000
-CMD ["nodemon", "index.js"]
+
+# Command to start both frontend and backend
+CMD ["sh", "-c", "cd /app/frontend && npm run dev & cd /app/backend && nodemon index.js"]

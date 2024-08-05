@@ -30,6 +30,25 @@ const userSchema = new mongoose.Schema({
     }
 });
 
+const clientSchema = new mongoose.Schema({
+    clientId: String,
+    clientSecret: String,
+    publicKey: String,
+    privateKey: String,
+    grants: [String]
+});
+
+const tokenSchema = new mongoose.Schema({
+    accessToken: String,
+    accessTokenExpiresAt: Date,
+    refreshToken: String,
+    refreshTokenExpiresAt: Date,
+    scope: String,
+    clientId: String,
+    userId: String
+});
+
+
 const courseSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -97,7 +116,7 @@ const passTypeSchema = new mongoose.Schema({
     },
 });
 
-const  freePassPoolSchema = new mongoose.Schema({
+const freePassPoolSchema = new mongoose.Schema({
     creatorId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -208,7 +227,7 @@ const passUsageSchema = new mongoose.Schema({
         ref: 'Assignment',
         required: true,
     },
-    status:{
+    status: {
         type: String,
         default: 'success', //success, failed
     },
@@ -263,6 +282,9 @@ const PassUsage = mongoose.model('PassUsage', passUsageSchema);
 const LTIId = mongoose.model('LTIId', ltiIdSchema);
 const AssignmentPassType = mongoose.model('AssignmentPassType', assignmentPassTypeSchema);
 
+const Client = mongoose.model('Client', clientSchema);
+const Token = mongoose.model('Token', tokenSchema);
+
 module.exports = {
     mongoose,
     User,
@@ -276,4 +298,6 @@ module.exports = {
     Assignment,
     PassUsage,
     LTIId,
+    Client,
+    Token,
 };

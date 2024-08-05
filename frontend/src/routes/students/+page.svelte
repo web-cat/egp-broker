@@ -399,6 +399,8 @@
 	{/if}
 
 	<h2 class="mt-5">List of Students</h2>
+	<div class="responsive-table">
+
 	<table class="table table-bordered">
 		<thead>
 			<tr>
@@ -430,6 +432,7 @@
 		</tbody>
 		
 	</table>
+	</div>
 
 	{#if $showModal}
 		<div transition:fade={{ duration: 250 }} class={'modal-backdrop fade show'}></div>

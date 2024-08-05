@@ -25,6 +25,10 @@
 			errorMessage = error.response?.data?.error || 'Login failed';
 		}
 	};
+	const redirectToCanvasAuth = () => {
+		const authUrl = 'http://192.168.1.68:3091/login/oauth2/auth?response_type=code&redirect_uri=http://localhost:5173/lti/launch&client_id=10000000000014&scope=https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
+		window.location.href = authUrl;
+	};
 </script>
 
 <AuthMaster>
@@ -53,7 +57,10 @@
 					/>
 
 					<button class="btn btn-primary" type="submit">Login</button>
+
 				</form>
+				<!-- <button on:click={redirectToCanvasAuth}>Login with canvas</button> -->
+
 
 				{#if errorMessage}
 					<p style="color: red;">{errorMessage}</p>

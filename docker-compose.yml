@@ -1,31 +1,18 @@
 version: '3.8'
 
 services:
-  frontend:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-      target: frontend-dev
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: backend-dev
-    ports:
       - "3100:3000"
     volumes:
-      - ./backend:/app
-      - /app/node_modules
-    depends_on:
-      - mongodb
+      - ./frontend:/app/frontend
+      - ./backend:/app/backend
+      - /app/frontend/node_modules
+      - /app/backend/node_modules
     environment:
       - NODE_ENV=development
       - DB_HOST=mongodb
@@ -35,15 +22,16 @@ services:
       - MONGO_URL=mongodb://root:rootpassword@mongodb:27017/ltidb?authSource=admin
       - JWT_SECRET=your_jwt_secret
       - DEV_MODE=true
-      - PORT=3080
-      - CANVAS_URL=http://host.docker.internal:3091
+      - PORT=3000
+      - CANVAS_URL=http://web:3000
       - PLATFORM_NAME=Canvas LMS
       - CLIENT_ID=10000000000001
       - CLIENT_SECRET=xxx
-      - AUTH_ENDPOINT=http://host.docker.internal:3091/api/lti/authorize_redirect
-      - TOKEN_ENDPOINT=http://host.docker.internal:3091/login/oauth2/token
-      - JWK_KEY=http://host.docker.internal:3091/api/lti/security/jwks
+      - AUTH_ENDPOINT=http://host.docker.internal:3000/api/lti/authorize_redirect
+      - TOKEN_ENDPOINT=http://host.docker.internal:3000/login/oauth2/token
+      - JWK_KEY=http://host.docker.internal:3000/api/lti/security/jwks
       - SEED_KEY=12345789
+
   mongodb:
     image: mongo:latest
     restart: always
@@ -68,3 +56,7 @@ services:
 volumes:
   db_data:
     driver: local
+
+networks:
+  my-shared-network:
+    external: true
