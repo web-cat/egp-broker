@@ -7,7 +7,7 @@ const JWT_SECRET = 'your_jwt_secret';
 const STATIC_ADMIN = {
     id: '64f90d52a2b3c202f6478d65',
     name: 'Admin User',
-    email: 'admin@test.com',
+    email: 'admin@test.test',
     password: '12345678'
 };
 
