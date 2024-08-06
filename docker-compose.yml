@@ -2,6 +2,8 @@ version: '3.8'
 
 services:
   app:
+    image: egp:0.0.1
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
