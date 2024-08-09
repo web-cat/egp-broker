@@ -37,7 +37,7 @@
 		let token = JSON.parse(storedToken);
 
 		try {
-			const response = await fetch('http://localhost:3100/api/pass-types', {
+			const response = await fetch('http://localhost:3000/api/pass-types', {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`,
@@ -85,7 +85,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3100/api/courses', {
+			const response = await fetch('http://localhost:3000/api/courses', {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -146,7 +146,7 @@
 			let token = JSON.parse(storedToken);
 			console.log('selectedStudentIds',selectedStudentIds)
 			const response = await fetch(
-				`http://localhost:3100/api/generate-passes/${$course.courseOfferingId._id}`,
+				`http://localhost:3000/api/generate-passes/${$course.courseOfferingId._id}`,
 				{
 					method: 'POST',
 					headers: {
@@ -181,7 +181,7 @@
 	// 		const storedToken = localStorage.getItem('token');
 	// 		let token = JSON.parse(storedToken);
 
-	// 		const response = await fetch('http://localhost:3100/api/freepass', {
+	// 		const response = await fetch('http://localhost:3000/api/freepass', {
 	// 			method: 'GET',
 	// 			headers: {
 	// 				Authorization: `Bearer ${token.access_token}`
@@ -208,7 +208,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3100/api/course-offering/${$course?.courseOfferingId._id}/students/`,
+				`http://localhost:3000/api/course-offering/${$course?.courseOfferingId._id}/students/`,
 				{
 					method: 'GET',
 					headers: {
@@ -233,7 +233,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/pass-types/`, {
+			const response = await fetch(`http://localhost:3000/api/pass-types/`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -260,7 +260,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/freepass/${id}/assign/${studentId}`, {
+			const response = await fetch(`http://localhost:3000/api/freepass/${id}/assign/${studentId}`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`,

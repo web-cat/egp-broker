@@ -16,7 +16,7 @@
 		isLoading.set(true);
 
 		try {
-			const response = await fetch('http://localhost:3100/api/user/login', {
+			const response = await fetch('http://localhost:3000/api/user/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -51,7 +51,7 @@
 		isLoading.set(true);
 
 		try {
-			const response = await fetch('http://localhost:3100/api/admin/login', {
+			const response = await fetch('http://localhost:3000/api/admin/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
