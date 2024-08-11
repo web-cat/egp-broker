@@ -19,7 +19,7 @@
             const storedToken = localStorage.getItem('token');
             let token = JSON.parse(storedToken);
 
-            const response = await fetch('http://localhost:3100/api/courses', {
+            const response = await fetch('http://localhost:3001/api/courses', {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token.access_token}`

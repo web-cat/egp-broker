@@ -43,7 +43,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3100/api/student/${$course.CourseOffering.id}/requests`,
+				`http://localhost:3001/api/student/${$course.CourseOffering.id}/requests`,
 				{
 					method: 'GET',
 					headers: {

@@ -5,8 +5,11 @@ const mongoose = require('mongoose');
 const app = express();
 const port = 3000;
 const coreRoutes = require("./src/routes/coreRoutes");
-const freePassRoutes = require("./src/routes/freePassRoutes");
+const freePassRoutes = require("./src/routes/freepassRoutes");
+const adminRoutes = require("./src/routes/adminRoutes");
 const ltiRoutes = require("./src/routes/ltiRoutes");
+const toolRoutes = require("./src/routes/toolRoutes");
+
 const authenticateJWT = require("./src/middlewares/authMiddleware");
 const authenticateSeedKey = require("./src/middlewares/seederMiddleware");
 const { connectWithRetry, dropDatabaseAndSeed } = require("./src/db"); // Import the new file
@@ -35,6 +38,9 @@ app.get('/secure', app.oauth.authenticate(), (req, res) => {
 // Routes
 app.use(freePassRoutes);
 app.use('/api', coreRoutes);
+app.use('/api/admin',adminRoutes);
+app.use('/api/tool',toolRoutes);
+
 app.use('/api/lti', ltiRoutes);
 
 // Seed Database route

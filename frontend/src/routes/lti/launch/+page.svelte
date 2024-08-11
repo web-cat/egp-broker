@@ -18,14 +18,14 @@
 
         try {
             // 1. Check if user exists in your database
-            const checkUserResponse = await fetch(`http://localhost:3100/api/user/${tokenData.user.name}`);
+            const checkUserResponse = await fetch(`http://localhost:3001/api/user/${tokenData.user.name}`);
             const checkUserResult = await checkUserResponse.json();
 
             if (checkUserResult.exists) {
                 // User exists, directly login
                 console.log("User exists, logging in...");
 
-                const loginResponse = await fetch('http://localhost:3100/api/login', {
+                const loginResponse = await fetch('http://localhost:3001/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -50,7 +50,7 @@
                 // User doesn't exist, register and then login
                 console.log("User doesn't exist, registering...");
 
-                const registerResponse = await fetch('http://localhost:3100/api/register', {
+                const registerResponse = await fetch('http://localhost:3001/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -69,7 +69,7 @@
                 }
 
             //    if no register then after register
-                const loginResponse = await fetch('http://localhost:3100/api/login', {
+                const loginResponse = await fetch('http://localhost:3001/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

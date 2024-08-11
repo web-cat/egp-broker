@@ -41,7 +41,7 @@
 			const storedToken = localStorage.getItem("token");
 			const token = JSON.parse(storedToken);
 			const response = await fetch(
-					`http://localhost:3100/api/freepassPool/${$selectedAssignment.id}?tags=${tags}`,
+					`http://localhost:3001/api/freepassPool/${$selectedAssignment.id}?tags=${tags}`,
 					{
 						method: "GET",
 						headers: {
@@ -70,7 +70,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-					`http://localhost:3100/api/use-pass/${assignmentId}/${passValue}`,
+					`http://localhost:3001/api/use-pass/${assignmentId}/${passValue}`,
 					{
 						method: 'POST',
 						headers: {

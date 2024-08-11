@@ -1,17 +1,30 @@
 version: '3.8'
 
 services:
-  app:
+  frontend:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    image: egp-frontend
     ports:
-      - "5173:5173"
-      - "3100:3000"
+      - "3000:5173"
     volumes:
-      - ./frontend:/app/frontend
-      - ./backend:/app/backend
-      - /app/frontend/node_modules
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    networks:
+      - my-shared-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    image: egp-backend
+    ports:
+      - "3001:3000"
+    volumes:
+      - .:/app
       - /app/backend/node_modules
     environment:
       - NODE_ENV=development
@@ -19,10 +32,10 @@ services:
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - DB_NAME=freepassdb
-      - MONGO_URL=mongodb://root:rootpassword@mongodb:27017/ltidb?authSource=admin
+      - MONGO_URL=mongodb://root:rootpassword@mongodb:27017/freepassdb?authSource=admin
       - JWT_SECRET=your_jwt_secret
       - DEV_MODE=true
-      - PORT=3000
+      - PORT=3001
       - CANVAS_URL=http://web:3000
       - PLATFORM_NAME=Canvas LMS
       - CLIENT_ID=10000000000001
@@ -31,9 +44,14 @@ services:
       - TOKEN_ENDPOINT=http://host.docker.internal:3000/login/oauth2/token
       - JWK_KEY=http://host.docker.internal:3000/api/lti/security/jwks
       - SEED_KEY=12345789
+    depends_on:
+      - mongodb
+    restart: always
+    networks:
+      - my-shared-network
 
   mongodb:
-    image: mongo:latest
+    image: mongo:4.4.29
     restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
@@ -42,6 +60,8 @@ services:
       - "27017:27017"
     volumes:
       - db_data:/data/db
+    networks:
+      - my-shared-network
 
   mongo-express:
     image: mongo-express:latest
@@ -49,9 +69,13 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=root
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=rootpassword
-      - ME_CONFIG_MONGODB_SERVER=mongodb
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: rootpassword
+      ME_CONFIG_MONGODB_SERVER: mongodb
+    depends_on:
+      - mongodb
+    networks:
+      - my-shared-network
 
 volumes:
   db_data:
@@ -59,4 +83,4 @@ volumes:
 
 networks:
   my-shared-network:
-    external: true
+    driver: bridge

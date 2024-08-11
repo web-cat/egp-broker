@@ -55,7 +55,7 @@
 				console.log('Course Offering ID:', course.courseOfferingId._id);
 
 				const response = await fetch(
-						`http://localhost:3100/api/instructor/${course.courseOfferingId._id}/requests`,
+						`http://localhost:3001/api/instructor/${course.courseOfferingId._id}/requests`,
 						{
 							method: 'GET',
 							headers: {
@@ -89,7 +89,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3100/api/freepass', {
+			const response = await fetch('http://localhost:3001/api/freepass', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -122,7 +122,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-					`http://localhost:3100/api/instructor/grant-pass/${id}/${count}`,
+					`http://localhost:3001/api/instructor/grant-pass/${id}/${count}`,
 					{
 						method: 'POST',
 						headers: {
@@ -154,7 +154,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-					`http://localhost:3100/api/instructor/reject-pass/${id}`,
+					`http://localhost:3001/api/instructor/reject-pass/${id}`,
 					{
 						method: 'POST',
 						headers: {

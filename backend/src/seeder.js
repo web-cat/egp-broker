@@ -11,16 +11,19 @@ const {
     Term,
     CourseOffering,
     LTIId,
-    Client
+    Tool
 } = require("./models/models");
 
 const seedDatabase = async () => {
     try {
         const hashedPassword = await bcrypt.hash('12345678', 10);
-
-        await Client.create({
+        await Tool.create({
+            toolId: 'demo',
+            clientId: 'demo',
             clientId: 'demo',
             clientSecret: '12345678',
+            publicKey: 'demo',
+            privateKey: '12345678',
             grants: ['password']
           });
         // Create terms

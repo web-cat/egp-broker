@@ -18,6 +18,8 @@
 	let passTypes = [];
 	let selectedStudentIds = [];
 	let showPassTypeForm = false;
+	let tags = []; // Array to hold the tags
+	let inputTag = '';
 
 	let passType = {
 		name: '',
@@ -37,7 +39,7 @@
 		let token = JSON.parse(storedToken);
 
 		try {
-			const response = await fetch('http://localhost:3100/api/pass-types', {
+			const response = await fetch('http://localhost:3001/api/pass-types', {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`,
@@ -85,7 +87,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3100/api/courses', {
+			const response = await fetch('http://localhost:3001/api/courses', {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -144,9 +146,9 @@
 			}
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
-			console.log('selectedStudentIds',selectedStudentIds)
+			console.log('selectedStudentIds', selectedStudentIds);
 			const response = await fetch(
-				`http://localhost:3100/api/generate-passes/${$course.courseOfferingId._id}`,
+				`http://localhost:3001/api/generate-passes/${$course.courseOfferingId._id}`,
 				{
 					method: 'POST',
 					headers: {
@@ -181,7 +183,7 @@
 	// 		const storedToken = localStorage.getItem('token');
 	// 		let token = JSON.parse(storedToken);
 
-	// 		const response = await fetch('http://localhost:3100/api/freepass', {
+	// 		const response = await fetch('http://localhost:3001/api/freepass', {
 	// 			method: 'GET',
 	// 			headers: {
 	// 				Authorization: `Bearer ${token.access_token}`
@@ -208,7 +210,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3100/api/course-offering/${$course?.courseOfferingId._id}/students/`,
+				`http://localhost:3001/api/course-offering/${$course?.courseOfferingId._id}/students/`,
 				{
 					method: 'GET',
 					headers: {
@@ -233,7 +235,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/pass-types/`, {
+			const response = await fetch(`http://localhost:3001/api/pass-types/`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -260,14 +262,17 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3100/api/freepass/${id}/assign/${studentId}`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${token.access_token}`,
-					Content: 'application/json'
-				},
-				body: JSON.stringify({ studentId: studentId })
-			});
+			const response = await fetch(
+				`http://localhost:3001/api/freepass/${id}/assign/${studentId}`,
+				{
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${token.access_token}`,
+						Content: 'application/json'
+					},
+					body: JSON.stringify({ studentId: studentId })
+				}
+			);
 
 			console.log(JSON.stringify({ studentId: studentId }));
 
@@ -305,22 +310,47 @@
 			document.getElementById(`student-checkbox-${student.userId._id}`).checked = isChecked;
 		});
 	}
+
+	// Function to add a tag
+	function addTag() {
+		const newTag = inputTag.trim();
+		if (newTag && !tags.includes(newTag)) {
+			tags = [...tags, newTag];
+			passType.tags = tags;
+		}
+		inputTag = ''; // Clear the input field
+	}
+
+	// Function to remove a tag
+	function removeTag(tag) {
+		tags = tags.filter((t) => t !== tag);
+		passType.tags = tags;
+	}
+
+	// Handle keypress for Enter or comma
+	function handleKeyPress(event) {
+		if (event.key === 'Enter' || event.key === ',') {
+			event.preventDefault(); // Prevent form submission
+			addTag();
+		}
+	}
 </script>
 
 <Master>
 	<div class="row gx-1 my-2">
 		<div class="col">
-			<span class="badge bg-secondary text-white">Course: {$course.courseOfferingId.courseId.name}</span
+			<span class="badge bg-secondary text-white"
+				>Course: {$course.courseOfferingId.courseId.name}</span
 			>
 			<span class="badge bg-primary text-white">Term: {$course.courseOfferingId.termId.name}</span>
 			<span class="badge bg-primary text-white">Role: {$course.role.toUpperCase()}</span>
 		</div>
-		<label for="">No of passes: </label>
-		<input class="col form-control" type="number" bind:value={$passCount} />
+		<!-- <label for="">No of passes: </label>
+		<input class="col form-control" type="number" bind:value={$passCount} /> -->
 
-		<label for="">Pass Type: </label>
-		<div class="d-flex">
-			<select
+		<!-- <label for="">Pass Type: </label> -->
+		<div class="d-flex mt-2">
+			<!-- <select
 				required
 				class="form-control mr-2"
 				style="flex:1; margin-right: 1rem;"
@@ -330,7 +360,7 @@
 				{#each passTypes as passType}
 					<option value={passType._id}>{passType.name}</option>
 				{/each}
-			</select>
+			</select> -->
 			{#if showPassTypeForm}{:else}
 				<button
 					on:click={() => {
@@ -355,7 +385,24 @@
 				</div>
 				<div>
 					<label for="tags">Tags</label>
-					<input required class="form-control" type="text" id="tags" bind:value={passType.tags} />
+					<!-- <input required class="form-control" type="text" id="tags" bind:value={passType.tags} /> -->
+					<input
+						required
+						class="form-control"
+						type="text"
+						id="tags"
+						bind:value={inputTag}
+						on:keydown={handleKeyPress}
+						placeholder="Add a tag and press Enter or comma"
+					/>
+
+					<div class="tags-container">
+						{#each tags as tag}
+							<div class="tag">
+								{tag} <button on:click={() => removeTag(tag)}>&times;</button>
+							</div>
+						{/each}
+					</div>
 				</div>
 				<div>
 					<label for="initialCount">Initial Count</label>
@@ -400,38 +447,36 @@
 
 	<h2 class="mt-5">List of Students</h2>
 	<div class="responsive-table">
-
-	<table class="table table-bordered">
-		<thead>
-			<tr>
-				<td>ID</td>
-				<td>Name</td>
-				<td>Available Passes</td>
-				<td>Used Passes</td>
-				<td>Select <input type="checkbox" on:change={handleSelectAllChange} /></td>
-				<!-- <td>Created</td> -->
-				<!-- <td>Action</td> -->
-			</tr>
-		</thead>
-		<tbody>
-			{#each students as student}
+		<table class="table table-bordered">
+			<thead>
 				<tr>
-					<td>{student.userId._id}</td>
-					<td>{student.userId.name}</td>
-					<td>{student.userId.activePassCount}</td>
-					<td>{student.userId.usedPassCount}</td>
-					<td>
-						<input
-							id={`student-checkbox-${student.userId._id}`}
-							type="checkbox"
-							on:change={(event) => handleCheckboxChange(event, student.userId._id)}
-						/>
-					</td>
+					<td>ID</td>
+					<td>Name</td>
+					<td>Available Passes</td>
+					<td>Used Passes</td>
+					<td>Select <input type="checkbox" on:change={handleSelectAllChange} /></td>
+					<!-- <td>Created</td> -->
+					<!-- <td>Action</td> -->
 				</tr>
-			{/each}
-		</tbody>
-		
-	</table>
+			</thead>
+			<tbody>
+				{#each students as student}
+					<tr>
+						<td>{student.userId._id}</td>
+						<td>{student.userId.name}</td>
+						<td>{student.userId.activePassCount}</td>
+						<td>{student.userId.usedPassCount}</td>
+						<td>
+							<input
+								id={`student-checkbox-${student.userId._id}`}
+								type="checkbox"
+								on:change={(event) => handleCheckboxChange(event, student.userId._id)}
+							/>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
 	</div>
 
 	{#if $showModal}
@@ -514,5 +559,29 @@
 	}
 	li {
 		margin: 10px 0;
+	}
+
+	.tags-container {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 8px;
+	}
+
+	.tag {
+		display: inline-block;
+		background-color: #007bff;
+		color: white;
+		padding: 4px 8px;
+		border-radius: 12px;
+		font-size: 14px;
+	}
+
+	.tag button {
+		background: none;
+		border: none;
+		color: white;
+		margin-left: 8px;
+		cursor: pointer;
 	}
 </style>

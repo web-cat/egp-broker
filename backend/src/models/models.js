@@ -30,7 +30,24 @@ const userSchema = new mongoose.Schema({
     }
 });
 
-const clientSchema = new mongoose.Schema({
+const adminSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+    },
+    password: {
+        type: String,
+        required: true,
+    }
+});
+
+const toolSchema = new mongoose.Schema({
+    toolId: String,
     clientId: String,
     clientSecret: String,
     publicKey: String,
@@ -44,7 +61,7 @@ const tokenSchema = new mongoose.Schema({
     refreshToken: String,
     refreshTokenExpiresAt: Date,
     scope: String,
-    clientId: String,
+    toolId: String,
     userId: String
 });
 
@@ -270,6 +287,8 @@ const assignmentPassTypeSchema = new mongoose.Schema({
 
 // Create Models
 const User = mongoose.model('User', userSchema);
+const Admin = mongoose.model('Admin', adminSchema);
+
 const Course = mongoose.model('Course', courseSchema);
 const Term = mongoose.model('Term', termSchema);
 const CourseOffering = mongoose.model('CourseOffering', courseOfferingSchema);
@@ -282,12 +301,13 @@ const PassUsage = mongoose.model('PassUsage', passUsageSchema);
 const LTIId = mongoose.model('LTIId', ltiIdSchema);
 const AssignmentPassType = mongoose.model('AssignmentPassType', assignmentPassTypeSchema);
 
-const Client = mongoose.model('Client', clientSchema);
+const Tool = mongoose.model('Tool', toolSchema);
 const Token = mongoose.model('Token', tokenSchema);
 
 module.exports = {
     mongoose,
     User,
+    Admin,
     Course,
     Term,
     CourseOffering,
@@ -298,6 +318,6 @@ module.exports = {
     Assignment,
     PassUsage,
     LTIId,
-    Client,
+    Tool,
     Token,
 };
