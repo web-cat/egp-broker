@@ -2,16 +2,26 @@
 const mongoose = require('mongoose');
 const { seedDatabase } = require('./seeder');
 
-const connectWithRetry = async () => {
-    const mongoURI = `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}/${process.env.DB_NAME}?authSource=admin`;
+// const connectWithRetry = async () => {
+//     const mongoURI = `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}/${process.env.DB_NAME}?authSource=admin`;
 
-    try {
-        await mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
-        console.log('MongoDB connected!');
-    } catch (err) {
-        console.error('Unable to connect to MongoDB:', err);
-        setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
-    }
+//     try {
+//         await mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
+//         console.log('MongoDB connected!');
+//     } catch (err) {
+//         console.error('Unable to connect to MongoDB:', err);
+//         setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
+//     }
+// };
+
+const connectWithRetry = () => {
+    console.log('Attempting MongoDB connection...');
+    mongoose.connect(process.env.MONGO_URL)
+        .then(() => console.log('MongoDB connected successfully'))
+        .catch(err => {
+            console.error('MongoDB connection unsuccessful, retry after 5 seconds.', err);
+            setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
+        });
 };
 
 const dropDatabaseAndSeed = async () => {
