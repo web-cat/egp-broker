@@ -1,42 +1,49 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = 'your_jwt_secret';
-
-const STATIC_ADMIN = {
-    id: '64f90d52a2b3c202f6478d65',
-    name: 'Admin User',
-    email: 'admin@test.test',
-    password: '12345678'
-};
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs'); 
+const { Admin } = require("../models/models");
 
 // Admin login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    // Check if the provided email and password match the static details
-    if (email !== STATIC_ADMIN.email || password !== STATIC_ADMIN.password) {
-        return res.status(401).json({ error: 'Invalid email or password.' });
-    }
+    try {
+        // Find the admin document in MongoDB
+        const admin = await Admin.findOne({ email });
 
-    // Generate JWT token
-    const token = jwt.sign({ id: STATIC_ADMIN.id, email: STATIC_ADMIN.email }, JWT_SECRET, { expiresIn: '1h' });
-
-    res.json({
-        user: {
-            id: STATIC_ADMIN.id,
-            name: STATIC_ADMIN.name,
-            email: STATIC_ADMIN.email
-        },
-        token: {
-            access_token: token
+        if (!admin) { 
+            return res.status(401).json({ error: 'Invalid email or password.' });
         }
-    });
+
+        // Compare the provided password with the hashed password
+        const isMatch = await bcrypt.compare(password, admin.password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign({ id: admin._id, email: admin.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        res.json({
+            user: {
+                id: admin._id,
+                name: admin.name,
+                email: admin.email
+            },
+            token: {
+                access_token: token
+            }
+        });
+    } catch (err) {
+        console.error('Error during login:', err);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
 });
 
 module.exports = router;

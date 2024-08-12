@@ -26,7 +26,7 @@
 		}
 	};
 	const redirectToCanvasAuth = () => {
-		const authUrl = 'http://192.168.1.68:3091/login/oauth2/auth?response_type=code&redirect_uri=http://localhost:5173/lti/launch&client_id=10000000000014&scope=https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
+		const authUrl = 'http://192.168.1.68:3091/login/oauth2/auth?response_type=code&redirect_uri=http://localhost:3000/lti/launch&client_id=10000000000014&scope=https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
 		window.location.href = authUrl;
 	};
 </script>

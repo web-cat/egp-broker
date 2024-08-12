@@ -11,7 +11,7 @@ export async function load({ url }) {
             grant_type: 'authorization_code',
             client_id: '10000000000015',
             client_secret: 'h2YnSFCLvNLBjpIS34bqTs045Hh1VoF1R8rhHO6YEVlH0kbket4djKV99Jd8MC9z',
-            redirect_uri: 'http://localhost:5173/lti/launch',
+            redirect_uri: 'http://localhost:3000/lti/launch',
             code
         });
         const tokenData = tokenResponse.data;

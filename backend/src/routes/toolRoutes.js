@@ -4,15 +4,6 @@ const authenticateAdmin = require('../middlewares/adminMiddleware');
 const {Tool} = require("../models/models");
 
 
-const dummyTool = {
-    toolId: 'dummyTool123',
-    clientId: 'dummyClientId456',
-    clientSecret: 'dummyClientSecret789',
-    publicKey: 'dummyPublicKeyABC',
-    privateKey: 'dummyPrivateKeyXYZ',
-    grants: ['read', 'write']
-};
-
 // Create a new tool
 router.post('/', authenticateAdmin, async (req, res) => {
     try {
