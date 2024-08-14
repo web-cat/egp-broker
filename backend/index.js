@@ -56,6 +56,21 @@ app.post('/egp-broker-service/api/seed', authenticateSeedKey, async (req, res) =
 // Connect to MongoDB
 connectWithRetry();
 
+// Static JWK FOR TESTING
+const jwk = {
+    "kty": "RSA",
+    "e": "AQAB",
+    "use": "sig",
+    "n": "qlv5ttGvzU3cVX0V1katJBnHlAMWl-9lYWc2ntgv865v9Nsj_tPymEteMTVorCkRU0jvKMi4rUMohBGFdd8IMBBRoCk--N3tP7DkbHmiCVTliBNCPOL7gj7EYK44wTkcTevftKZhXHIONk_vejIymRZwcOijfjIqE_n0AvCR3KMhZFiaMZHLfTg76rx24tSX1hKnMCM9tyrF9SIISE_EGldGfUzpGUU4HsHdL1HsPfhik6qxB9th6IqeYKOiVCPUesyIKWg4GhsycczPE1lLDkIzscb3SYcNVxcb61iaeCnBQ-ib0uyP78SxD9sjMhAuRVw5fC2366cLAolOuWGvOw"
+};
+
+// Serve the JWKS at the well-known endpoint
+app.get('/egp-broker-service/.well-known/jwks.json', (req, res) => {
+    res.json({
+        keys: [jwk]
+    });
+});
+
 // Health check
 app.get('/egp-broker-service', async (req, res) => {
     try {
