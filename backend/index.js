@@ -60,7 +60,7 @@ connectWithRetry();
 app.get('/egp-broker-service', async (req, res) => {
     try {
         await mongoose.connection.db.command({ ping: 1 });
-        res.send('OK');
+        res.send('OK! Working!');
     } catch (error) {
         res.status(500).send('Database connection failed');
     }

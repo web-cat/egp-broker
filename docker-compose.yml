@@ -1,0 +1,86 @@
+version: '3'
+services:
+  frontend:
+    build:
+      dockerfile: Dockerfile.frontend
+      context: ./frontend
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/frontend/node_modules
+    environment:
+      - NODE_ENV=development
+    networks:
+      - my-shared-network
+    restart: always
+
+  backend:
+    build:
+      dockerfile: Dockerfile.backend
+      context: ./backend
+    container_name: backend
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./backend:/app
+      - /app/backend/node_modules
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mongodb
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=freepassdb
+      - MONGO_URL=mongodb://root:rootpassword@mongodb:27017/freepassdb?authSource=admin
+      - JWT_SECRET=your_jwt_secret
+      - DEV_MODE=true
+      - PORT=3000
+      - CANVAS_URL=http://web:3000
+      - PLATFORM_NAME=Canvas LMS
+      - CLIENT_ID=10000000000001
+      - CLIENT_SECRET=xxx
+      - AUTH_ENDPOINT=http://host.docker.internal:3000/api/lti/authorize_redirect
+      - TOKEN_ENDPOINT=http://host.docker.internal:3000/login/oauth2/token
+      - JWK_KEY=http://host.docker.internal:3000/api/lti/security/jwks
+      - SEED_KEY=12345789
+    depends_on:
+      - mongodb
+    restart: always
+    networks:
+      - my-shared-network
+
+  mongodb:
+    image: mongo
+    restart: always
+    container_name: mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - "27017:27017"
+    volumes:
+      - db_data:/data/db
+    networks:
+      - my-shared-network
+
+  nginx-proxy:
+    build:
+      dockerfile: Dockerfile
+      context: ./proxy
+    restart: always
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - my-shared-network
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  my-shared-network:
+    driver: bridge
