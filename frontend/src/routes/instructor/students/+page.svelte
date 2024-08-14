@@ -26,7 +26,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3001/api/my-courses', {
+			const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/my-courses', {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -74,7 +74,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3001/api/generate-passes/${$courseId}/${$passCount}`, {
+			const response = await fetch(`https://egp-broker.cs.vt.edu/egp-broker-service/api/generate-passes/${$courseId}/${$passCount}`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`,
@@ -103,7 +103,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3001/api/freepass', {
+			const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/freepass', {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -129,7 +129,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3001/api/students', {
+			const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/students', {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -153,7 +153,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3001/api/freepass/${id}/assign/${studentId}`, {
+			const response = await fetch(`https://egp-broker.cs.vt.edu/egp-broker-service/api/freepass/${id}/assign/${studentId}`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`,

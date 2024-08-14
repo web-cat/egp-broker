@@ -43,7 +43,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3001/api/freepassPool/${$course.courseOfferingId._id}`, {
+			const response = await fetch(`https://egp-broker.cs.vt.edu/egp-broker-service/api/freepassPool/${$course.courseOfferingId._id}`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`

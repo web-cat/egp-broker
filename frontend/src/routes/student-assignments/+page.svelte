@@ -41,7 +41,7 @@
 			const storedToken = localStorage.getItem("token");
 			const token = JSON.parse(storedToken);
 			const response = await fetch(
-					`http://localhost:3001/api/freepassPool/${$selectedAssignment.id}?tags=${tags}`,
+					`https://egp-broker.cs.vt.edu/egp-broker-service/api/freepassPool/${$selectedAssignment.id}?tags=${tags}`,
 					{
 						method: "GET",
 						headers: {
@@ -70,7 +70,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-					`http://localhost:3001/api/use-pass/${assignmentId}/${passValue}`,
+					`https://egp-broker.cs.vt.edu/egp-broker-service/api/use-pass/${assignmentId}/${passValue}`,
 					{
 						method: 'POST',
 						headers: {

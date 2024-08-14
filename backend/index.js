@@ -22,29 +22,29 @@ app.use(bodyParser.json());
 app.use(cors());
 
 app.oauth = new OAuthServer({
-  model: model,
-  grants: ['password'],
-  debug: true
+    model: model,
+    grants: ['password'],
+    debug: true
 });
 
-app.post('/oauth/token', (req, res, next) => {
+app.post('/egp-broker-service/oauth/token', (req, res, next) => {
     console.log('Token request received:', req.body);
     return app.oauth.token()(req, res, next);
-  });
+});
 
-app.get('/secure', app.oauth.authenticate(), (req, res) => {
-  res.send('Secured with OAuth!');
+app.get('/egp-broker-service/secure', app.oauth.authenticate(), (req, res) => {
+    res.send('Secured with OAuth!');
 });
 // Routes
-app.use(freePassRoutes);
-app.use('/api', coreRoutes);
-app.use('/api/admin',adminRoutes);
-app.use('/api/tool',toolRoutes);
+app.use('/egp-broker-service', freePassRoutes);
+app.use('/egp-broker-service/api', coreRoutes);
+app.use('/egp-broker-service/api/admin', adminRoutes);
+app.use('/egp-broker-service/api/tool', toolRoutes);
 
-app.use('/api/lti', ltiRoutes);
+app.use('/egp-broker-service/api/lti', ltiRoutes);
 
 // Seed Database route
-app.post('/api/seed', authenticateSeedKey, async (req, res) => {
+app.post('/egp-broker-service/api/seed', authenticateSeedKey, async (req, res) => {
     try {
         await dropDatabaseAndSeed();
         res.send('Database seeded');
@@ -57,7 +57,7 @@ app.post('/api/seed', authenticateSeedKey, async (req, res) => {
 connectWithRetry();
 
 // Health check
-app.get('/', async (req, res) => {
+app.get('/egp-broker-service', async (req, res) => {
     try {
         await mongoose.connection.db.command({ ping: 1 });
         res.send('OK');
@@ -65,6 +65,8 @@ app.get('/', async (req, res) => {
         res.status(500).send('Database connection failed');
     }
 });
+
+//app.use('/egp-broker-service', app);
 
 app.listen(port, () => {
     console.log(`Backend service listening at http://localhost:${port}`);

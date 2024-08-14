@@ -18,7 +18,7 @@
 		isLoading.set(true);
 
 		try {
-			const response = await fetch('http://localhost:3001/api/user/login', {
+			const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/user/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -53,7 +53,7 @@
 		isLoading.set(true);
 
 		try {
-			const response = await fetch('http://localhost:3001/api/login', {
+			const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',

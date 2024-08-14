@@ -39,7 +39,7 @@
 		let token = JSON.parse(storedToken);
 
 		try {
-			const response = await fetch('http://localhost:3001/api/pass-types', {
+			const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/pass-types', {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`,
@@ -87,7 +87,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('http://localhost:3001/api/courses', {
+			const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/courses', {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -148,7 +148,7 @@
 			let token = JSON.parse(storedToken);
 			console.log('selectedStudentIds', selectedStudentIds);
 			const response = await fetch(
-				`http://localhost:3001/api/generate-passes/${$course.courseOfferingId._id}`,
+				`https://egp-broker.cs.vt.edu/egp-broker-service/api/generate-passes/${$course.courseOfferingId._id}`,
 				{
 					method: 'POST',
 					headers: {
@@ -183,7 +183,7 @@
 	// 		const storedToken = localStorage.getItem('token');
 	// 		let token = JSON.parse(storedToken);
 
-	// 		const response = await fetch('http://localhost:3001/api/freepass', {
+	// 		const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/freepass', {
 	// 			method: 'GET',
 	// 			headers: {
 	// 				Authorization: `Bearer ${token.access_token}`
@@ -210,7 +210,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3001/api/course-offering/${$course?.courseOfferingId._id}/students/`,
+				`https://egp-broker.cs.vt.edu/egp-broker-service/api/course-offering/${$course?.courseOfferingId._id}/students/`,
 				{
 					method: 'GET',
 					headers: {
@@ -235,7 +235,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`http://localhost:3001/api/pass-types/`, {
+			const response = await fetch(`https://egp-broker.cs.vt.edu/egp-broker-service/api/pass-types/`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -263,7 +263,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`http://localhost:3001/api/freepass/${id}/assign/${studentId}`,
+				`https://egp-broker.cs.vt.edu/egp-broker-service/api/freepass/${id}/assign/${studentId}`,
 				{
 					method: 'POST',
 					headers: {
@@ -345,8 +345,8 @@
 			<span class="badge bg-primary text-white">Term: {$course.courseOfferingId.termId.name}</span>
 			<span class="badge bg-primary text-white">Role: {$course.role.toUpperCase()}</span>
 		</div>
-		<!-- <label for="">No of passes: </label>
-		<input class="col form-control" type="number" bind:value={$passCount} /> -->
+		<label for="">No of passes: </label>
+		<input class="col form-control" type="number" bind:value={$passCount} />
 
 		<!-- <label for="">Pass Type: </label> -->
 		<div class="d-flex mt-2">
