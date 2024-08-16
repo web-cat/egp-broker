@@ -56,7 +56,6 @@ app.post('/egp-broker-service/api/seed', authenticateSeedKey, async (req, res) =
 // Connect to MongoDB
 connectWithRetry();
 
-// Static JWK FOR TESTING
 const jwk = {
     "kty": "RSA",
     "e": "AQAB",
