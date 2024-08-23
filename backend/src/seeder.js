@@ -11,12 +11,19 @@ const {
     Term,
     CourseOffering,
     LTIId,
-    Tool
+    Tool,
+    Admin
 } = require("./models/models");
 
 const seedDatabase = async () => {
     try {
         const hashedPassword = await bcrypt.hash('12345678', 10);
+         await Admin.create({
+            name: 'Admin',
+            email: 'admin@test.test',
+            password: hashedPassword
+        });
+
         await Tool.create({
             toolId: 'demo',
             clientId: 'demo',
@@ -26,18 +33,25 @@ const seedDatabase = async () => {
             privateKey: '12345678',
             grants: ['password']
           });
+          await Admin.create([
+
+          ])
         // Create terms
         const terms = await Term.create([
             { name: 'Fall 2024' },
             { name: 'Spring 2025' },
         ]);
         const jharana = { id: new mongoose.Types.ObjectId() };
+        const admin = { id: new mongoose.Types.ObjectId() };  
+        const user = { id: new mongoose.Types.ObjectId() };
         const anisha = { id: new mongoose.Types.ObjectId() };
 
         // Create users for instructors
         await User.create([
-            { _id: jharana.id, name: 'Jharana', email: 'jharana@test.test', password: hashedPassword },
-            { _id: anisha.id, name: 'Anisha', email: 'anisha@test.test', password: hashedPassword },
+            { _id: jharana.id, name: 'Jharana', email: 'jharana@test.test', password: hashedPassword, role: 'user' },
+            { _id: admin.id, name: 'admin', email: 'admin@test.test', password: hashedPassword, role: 'admin' },
+            { _id: user.id, name: 'user', email: 'user@test.test', password: hashedPassword, role: 'user' },
+            { _id: anisha.id, name: 'Anisha', email: 'anisha@test.test', password: hashedPassword, role: 'admin' },
         ]);
 
         await LTIId.create([

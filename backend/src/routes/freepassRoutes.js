@@ -235,62 +235,9 @@ router.post('/api/freepass/:id/assign/:studentId', authenticateJWT, async (req, 
     }
 });
 
-// pass through assignment
-router.post('/api/freepass-use/:assignmentId/:id', authenticateJWT, async (req, res) => { //done
-    try {
-        const { assignmentId, id } = req.params;
-        const userIdFromToken = req.user.id; // Get userId from the token
 
-        // Find the FreePassPool
-        const freePass = await FreePassPool.findById(id);
-        if (!freePass) {
-            return res.status(404).json({ error: 'Free pass not found' });
-        }
-
-        // Additional validation: Ensure userId matches userId from token
-        if (!freePass.userId.equals(userIdFromToken)) {
-            return res.status(403).json({ error: 'You do not have permission to use this free pass.' });
-        }
-
-
-        // Check if the pass belongs to the authenticated user
-        if (!freePass.userId.equals(userIdFromToken)) {
-            return res.status(403).json({ error: 'Access denied. You can only use your own free passes.' });
-        }
-
-        // Check if the user can use a free pass
-        const canUsePass = await canUseFreePass(userIdFromToken);
-        if (!canUsePass) {
-            const passUsage = await PassUsage.create({
-                freePassId: freePass._id,
-                assignmentId: assignmentId,
-                status: 'failed',
-                usedAt: new Date(),
-                userId: userIdFromToken, // Use userId from token
-            });
-            return res.status(429).json({ error: 'You can only use one free pass per week.' });
-        }
-
-        // Update the pass status to "used"
-        freePass.status = "used";
-        await freePass.save();
-
-        // Create a PassUsage record
-        const passUsage = await PassUsage.create({
-            freePassId: freePass._id,
-            assignmentId: assignmentId,
-            status: 'success',
-            usedAt: new Date(),
-            userId: userIdFromToken, // Use userId from token
-        });
-
-        res.json(passUsage);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 // to use pass on a assignment by student
-router.post('/api/use-pass/:assignmentId/:passValue', authenticateJWT, async (req, res) => { //done
+router.post('/api/use-pass/:assignmentId/:passValue', authenticateJWT, async (req, res) => { 
     try {
         const { assignmentId, passValue } = req.params;
         const userId = req.user.id;
@@ -327,7 +274,11 @@ router.post('/api/use-pass/:assignmentId/:passValue', authenticateJWT, async (re
         freePass.status = 'used';
         await freePass.save();
 
-        // 4. Record Pass Usage
+        // 4. Extend Assignment Due Date by One Day
+        assignment.dueAt = new Date(assignment.dueAt.getTime() + 24 * 60 * 60 * 1000); // Add 1 day
+        await assignment.save();
+
+        // 5. Record Pass Usage
         const passUsage = await PassUsage.create({
             freePassId: freePass._id,
             assignmentId,
@@ -336,7 +287,7 @@ router.post('/api/use-pass/:assignmentId/:passValue', authenticateJWT, async (re
             userId,
         });
 
-        res.json({ message: 'Free pass used successfully', passUsage }); // Send success response
+        res.json({ message: 'Free pass used successfully and assignment due date extended', passUsage, assignment }); // Send success response
     } catch (error) {
         console.error('Error using free pass:', error);
         res.status(500).json({ error: error.message });

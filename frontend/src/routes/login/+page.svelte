@@ -1,9 +1,8 @@
 <script>
-	import { onMount } from 'svelte';
-	import axios from 'axios';
 	import { writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import AuthMaster from '../../layouts/AuthMaster.svelte';
+	import axios from 'axios';
 
 	const token = writable(null);
 	const user = writable(null);
@@ -15,18 +14,29 @@
 	const login = async () => {
 		try {
 			const response = await axios.post('https://egp-broker.cs.vt.edu/egp-broker-service/api/login', { email, password });
+			
+			// Store user and token in local storage
 			localStorage.setItem('user', JSON.stringify(response.data.user));
 			localStorage.setItem('token', JSON.stringify(response.data.token));
 
+			// Set user and token in the store
 			user.set(response.data.user);
 			token.set(response.data.token);
-			goto('/home');
+			
+			// Check the user's role and navigate accordingly
+			const { role } = response.data.user;
+			if (role === 'admin') {
+				goto('/admin/dashboard');
+			} else {
+				goto('/home');
+			}
 		} catch (error) {
 			errorMessage = error.response?.data?.error || 'Login failed';
 		}
 	};
+
 	const redirectToCanvasAuth = () => {
-		const authUrl = 'http://192.168.1.68:3091/login/oauth2/auth?response_type=code&redirect_uri=http://localhost:5173/lti/launch&client_id=10000000000014&scope=https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
+		const authUrl = 'http://192.168.1.68:3091/login/oauth2/auth?response_type=code&redirect_uri=http://localhost:3000/lti/launch&client_id=10000000000014&scope=https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
 		window.location.href = authUrl;
 	};
 </script>
@@ -60,7 +70,6 @@
 
 				</form>
 				<!-- <button on:click={redirectToCanvasAuth}>Login with canvas</button> -->
-
 
 				{#if errorMessage}
 					<p style="color: red;">{errorMessage}</p>
