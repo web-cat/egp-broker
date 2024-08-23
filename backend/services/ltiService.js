@@ -20,7 +20,7 @@ lti.onDeepLinking(async (token, req, res) => {
 });
 
 const registerPlatform = async () => {
-  await lti.registerPlatform({
+  let resgistration = await lti.registerPlatform({
     url: 'https://canvas.instructure.com', // Replace with your Canvas instance URL
     name: 'Canvas',
     clientId: config.lti.clientId, // Replace with your Client ID
@@ -31,6 +31,8 @@ const registerPlatform = async () => {
       key: 'https://canvas.instructure.com/api/lti/security/jwks'
     }
   });
+
+  return resgistration;
 };
 
 module.exports = { lti, registerPlatform };

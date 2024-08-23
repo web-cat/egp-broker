@@ -83,7 +83,7 @@ hRlGkMrbNBUxKfMS1Hpiqu0DCu4SAibwXaU8n9nvGV4FMrDU5X0vaQ==
     res.redirect(redirectUrl);
 });
 
-router.get('/test', authenticateJWT, ltiController.test);
+router.get('/lti-setup', ltiController.ltiSetup);
 router.get('/assignments', authenticateJWT, ltiController.assignments);
 
 router.get('/:userId', authenticateJWT, async (req, res) => {
