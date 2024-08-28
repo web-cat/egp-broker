@@ -11,9 +11,8 @@ const ltiRoutes = require("./src/routes/ltiRoutes");
 const toolRoutes = require("./src/routes/toolRoutes");
 
 const authenticateJWT = require("./src/middlewares/authMiddleware");
-const authenticateSeedKey = require("./src/middlewares/seederMiddleware").default;
+const authenticateSeedKey = require("./src/middlewares/seederMiddleware");
 const { connectWithRetry, dropDatabaseAndSeed } = require("./src/db"); // Import the new file
-
 const OAuthServer = require('express-oauth-server');
 const model = require('./src/models/oauth-model');
 // Middleware
