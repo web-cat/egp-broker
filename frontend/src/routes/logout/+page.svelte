@@ -14,7 +14,7 @@
 		token.set(null);
 
 		// Redirect to home page
-		window.location.href = '/login';
+		window.location.href = '/';
 	});
 </script>
 

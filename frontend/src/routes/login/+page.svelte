@@ -26,7 +26,7 @@
 			// Check the user's role and navigate accordingly
 			const { role } = response.data.user;
 			if (role === 'admin') {
-				goto('/admin/dashboard');
+				goto('/admin');
 			} else {
 				goto('/home');
 			}
