@@ -23,6 +23,32 @@ async function canUseFreePass(userId) {
     return !lastUsage;
 }
 
+router.get('/api/v1/courses/:courseId/assignments', authenticateJWT, async (req, res) => {
+    try {
+        const courseId = req.params.courseId; // Get the course ID from the request parameters
+
+        // Find the course offering by course ID
+        const courseOffering = await CourseOffering.findOne({ courseId });
+        if (!courseOffering) {
+            return res.status(404).json({ error: 'Course offering not found' });
+        }
+
+        // Fetch assignments related to the course offering
+        const assignments = await Assignment.find({ courseOfferingId: courseOffering._id })
+            .populate('courseOfferingId') // Populate courseOfferingId if needed
+            // .populate('userId'); // Populate userId if needed
+
+        if (assignments.length === 0) {
+            return res.status(404).json({ error: 'No assignments found for this course' });
+        }
+
+        res.json(assignments);
+    } catch (error) {
+        console.error('Error fetching assignments:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.get('/api/instructor/:courseOfferingId/requests', authenticateJWT, async (req, res) => { //done
     try {
         const courseOfferingId = req.params.courseOfferingId; // Get the course offering ID from the request parameters
