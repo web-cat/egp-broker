@@ -147,14 +147,22 @@ router.post('/api/freepass', authenticateJWT, async (req, res) => { //done
 router.get('/api/freepassPool/:courseId', authenticateJWT, async (req, res) => {
     try {
         const courseId = req.params.courseId;
-        const tagsString = req.query.tags; // Get tags as a comma-separated string (if any)
-        const userId = req.user.id;
+        console.log('Received courseId:', courseId);
 
+        const tagsString = req.query.tags; // Get tags as a comma-separated string (if any)
+        console.log("Received tagsString:", tagsString);
+
+        const userId = req.user.id;
+        console.log('User ID:', userId);
+
+        // Find the course offering
         const courseOffering = await CourseOffering.findOne({ _id: courseId }).populate('courseId');
         if (!courseOffering) {
             return res.status(404).json({ error: 'Course offering not found' });
         }
+        console.log('Found courseOffering:', courseOffering);
 
+        // Find the free passes
         let passes = await FreePassPool.find({
             courseOfferingId: courseOffering._id,
             userId: userId,
@@ -165,27 +173,41 @@ router.get('/api/freepassPool/:courseId', authenticateJWT, async (req, res) => {
                 populate: { path: 'courseId' },
             })
             .populate('passTypeId');
+        
+        console.log('Found passes before filtering:', passes);
 
+        // Filter passes by tags if tagsString exists
         if (tagsString) {
             const tagsArray = tagsString.split(',').map(tag => tag.trim().toLowerCase());
+            console.log('tagsArray:', tagsArray);
+            console.log('passesss',passes);
+            console.log('passesssId',passes.passTypeId);
             passes = passes.filter(pass => {
+                // Skip entries with null passTypeId
+                if (!pass.passTypeId || !pass.passTypeId.tags) {
+                    console.log('Skipping pass with null or missing passTypeId:', pass._id);
+                    return false;
+                }
+
                 const passTags = pass.passTypeId.tags.split(',').map(tag => tag.trim().toLowerCase());
+                console.log('passTags:', passTags);
+                
                 return tagsArray.some(tag => passTags.includes(tag));
             });
         }
 
+        // If no passes remain after filtering
         if (passes.length === 0) {
             return res.status(404).json({ error: 'No active free passes found for this user in this course' });
         }
 
+        // Respond with the passes
         res.json(passes);
     } catch (error) {
         console.error('Error fetching free passes:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-
-
 
 router.put('/freepass/:id', authenticateJWT, async (req, res) => { //done
     try {

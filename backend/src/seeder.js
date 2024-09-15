@@ -12,7 +12,8 @@ const {
     CourseOffering,
     LTIId,
     Tool,
-    Admin
+    Admin,
+    FreePassPool
 } = require("./models/models");
 
 const seedDatabase = async () => {
@@ -209,7 +210,55 @@ const seedDatabase = async () => {
             }
         ];
 
-        await PassType.create(passTypes);
+        // await PassType.create(passTypes);
+        const createdPassTypes = await PassType.create(passTypes);
+
+        const freePasses = [
+            {
+                creatorId: user.id, 
+                userId: students[0].id, 
+                courseOfferingId: courseOfferings[0]._id, 
+                passTypeId: createdPassTypes[0]._id, // Use the created passType IDs
+                value: '1'
+            },
+            {
+                creatorId: user.id, 
+                userId: students[1].id, 
+                courseOfferingId: courseOfferings[1]._id, 
+                passTypeId: createdPassTypes[1]._id,
+                value: '2'
+            },
+            {
+                creatorId: jharana.id, 
+                userId: students[2].id, 
+                courseOfferingId: courseOfferings[2]._id, 
+                passTypeId: createdPassTypes[2]._id,
+                value: '1'
+            },
+            {
+                creatorId: jharana.id, 
+                userId: students[3].id, 
+                courseOfferingId: courseOfferings[3]._id, 
+                passTypeId: createdPassTypes[0]._id,
+                value: '1'
+            },
+            {
+                creatorId: user.id, 
+                userId: students[4].id, 
+                courseOfferingId: courseOfferings[4]._id, 
+                passTypeId: createdPassTypes[1]._id,
+                value: '3'
+            },
+            {
+                creatorId: admin.id, 
+                userId: students[5].id, 
+                courseOfferingId: courseOfferings[5]._id, 
+                passTypeId: createdPassTypes[2]._id,
+                value: '2'
+            },
+        ];
+    
+        await FreePassPool.create(freePasses);
 
         console.log('Database seeded successfully!');
     } catch (error) {
