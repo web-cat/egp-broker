@@ -13,7 +13,7 @@
 
 	const login = async () => {
 		try {
-			const response = await axios.post('https://egp-broker.cs.vt.edu/egp-broker-service/api/login', { email, password });
+			const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/login`, { email, password });
 			
 			// Store user and token in local storage
 			localStorage.setItem('user', JSON.stringify(response.data.user));

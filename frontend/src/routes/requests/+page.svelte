@@ -55,7 +55,7 @@
 				console.log('Course Offering ID:', course.courseOfferingId._id);
 
 				const response = await fetch(
-						`https://egp-broker.cs.vt.edu/egp-broker-service/api/instructor/${course.courseOfferingId._id}/requests`,
+						`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/instructor/${course.courseOfferingId._id}/requests`,
 						{
 							method: 'GET',
 							headers: {
@@ -89,7 +89,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/freepass', {
+			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/freepass`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -122,7 +122,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-					`https://egp-broker.cs.vt.edu/egp-broker-service/api/instructor/grant-pass/${id}/${count}`,
+					`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/instructor/grant-pass/${id}/${count}`,
 					{
 						method: 'POST',
 						headers: {
@@ -154,7 +154,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-					`https://egp-broker.cs.vt.edu/egp-broker-service/api/instructor/reject-pass/${id}`,
+					`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/instructor/reject-pass/${id}`,
 					{
 						method: 'POST',
 						headers: {

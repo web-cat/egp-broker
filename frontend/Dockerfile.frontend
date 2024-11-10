@@ -5,10 +5,8 @@ WORKDIR /app/frontend
 
 # Install frontend dependencies
 COPY package*.json ./
-RUN npm install
 
-# Copy frontend source code
-COPY . ./
+RUN npm install
 
 # Expose the port for frontend
 EXPOSE 5173

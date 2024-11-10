@@ -44,7 +44,7 @@ app.use('/api/tool', toolRoutes);
 app.use('/api/lti', ltiRoutes);
 
 // Seed Database route
-app.post('/api/seed', authenticateSeedKey, async (req, res) => {
+app.post('/api/seed', async (req, res) => {
     try {
         await dropDatabaseAndSeed();
         res.send('Database seeded');

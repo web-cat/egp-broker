@@ -19,7 +19,7 @@
 			const course = localStorage.getItem('course');
 			const courseParse = JSON.parse(course);
 			const courseId = courseParse.courseOfferingId.courseId._id;
-			const apiEndpoint = `https://egp-broker.cs.vt.edu/egp-broker-service/api/v1/courses/${courseId}/assignments`;
+			const apiEndpoint = `${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/v1/courses/${courseId}/assignments`;
 
 			const response = await fetch(apiEndpoint, {
 				method: 'GET',
@@ -52,7 +52,7 @@
 			const token = JSON.parse(storedToken);
 			console.log($selectedAssignment._id);
 			const response = await fetch(
-				`https://egp-broker.cs.vt.edu/egp-broker-service/api/freepassPool/${$selectedAssignment.courseOfferingId._id}?tags=${tags}`,
+				`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/freepassPool/${$selectedAssignment.courseOfferingId._id}?tags=${tags}`,
 				{
 					method: 'GET',
 					headers: {
@@ -81,7 +81,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`https://egp-broker.cs.vt.edu/egp-broker-service/api/use-pass/${assignmentId}/${passValue}`,
+				`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/use-pass/${assignmentId}/${passValue}`,
 				{
 					method: 'POST',
 					headers: {

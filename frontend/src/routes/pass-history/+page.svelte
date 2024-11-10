@@ -15,7 +15,7 @@
             const storedToken = localStorage.getItem('token');
             const token = JSON.parse(storedToken);
 
-            const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/pass-usage-history', {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/pass-usage-history`, {
                 headers: {
                     Authorization: `Bearer ${token.access_token}`
                 }

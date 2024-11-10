@@ -43,7 +43,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`https://egp-broker.cs.vt.edu/egp-broker-service/api/student/${$course.CourseOffering.id}/requests`,
+				`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/student/${$course.CourseOffering.id}/requests`,
 				{
 					method: 'GET',
 					headers: {
