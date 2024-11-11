@@ -4,6 +4,7 @@ services:
     build:
       dockerfile: Dockerfile.frontend
       context: ./frontend
+      target: dev
     container_name: frontend
     ports:
       - "5173:5173"
@@ -23,6 +24,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.backend
+      target: dev
     container_name: backend
     ports:
       - "3001:3000"

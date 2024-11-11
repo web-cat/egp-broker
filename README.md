@@ -23,10 +23,10 @@ docker compose up
 ### Key URLs
 | Service    | URL |
 | -------- | ------- |
-| Frontend  | localhost:5173 |
-| Backend  | localhost:3001 |
-| Database  | localhost:27017 |
-| DB Manger  | localhost:8081 |
+| Frontend (Svelte) | localhost:5173 |
+| Backend (ExpressJS) | localhost:3001 |
+| Database (MongoDB) | localhost:27017 |
+| DB Manger (Mongo Express) | localhost:8081 |
 
 ### Seed Database
 To populate the database with dummy data
