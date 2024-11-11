@@ -2,7 +2,7 @@
 
 ## Local Development
 ### Run
-#### Run all
+#### Run all (Frontend, Backend, Database, DB Manager)
 ```bash
 cd egp-broker
 ```
@@ -11,7 +11,7 @@ cd egp-broker
 docker compose up
 ```
 
-#### Run Backend Server and Database
+#### Run Backend Server, Database and DB Manager
 ```bash
 cd egp-broker/backend
 ```
@@ -40,5 +40,16 @@ curl -X POST localhost:3001/egp-broker-service/api/seed \
 
 ## Deploy
 ```bash
+cd egp-broker
+```
+
+Edit the .env file to set the docker user name and password
+```.env
+DOCKER_USERNAME=username
+DOCKER_PASSWORD=password
+```
+
+```bash
+bash publish.sh
 ```
 
