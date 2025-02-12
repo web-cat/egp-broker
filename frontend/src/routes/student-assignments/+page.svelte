@@ -3,6 +3,7 @@
 	import { writable } from 'svelte/store';
 	import Master from '../../layouts/Master.svelte';
 	import { fade } from 'svelte/transition';
+	import { env } from '$env/dynamic/public'
 
 	let showModal = writable(false);
 	let selectedAssignment = writable(null);
@@ -19,7 +20,7 @@
 			const course = localStorage.getItem('course');
 			const courseParse = JSON.parse(course);
 			const courseId = courseParse.courseOfferingId.courseId._id;
-			const apiEndpoint = `${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/v1/courses/${courseId}/assignments`;
+			const apiEndpoint = `${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/v1/courses/${courseId}/assignments`;
 
 			const response = await fetch(apiEndpoint, {
 				method: 'GET',
@@ -52,7 +53,7 @@
 			const token = JSON.parse(storedToken);
 			console.log($selectedAssignment._id);
 			const response = await fetch(
-				`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/freepassPool/${$selectedAssignment.courseOfferingId._id}?tags=${tags}`,
+				`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/freepassPool/${$selectedAssignment.courseOfferingId._id}?tags=${tags}`,
 				{
 					method: 'GET',
 					headers: {
@@ -81,7 +82,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/use-pass/${assignmentId}/${passValue}`,
+				`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/use-pass/${assignmentId}/${passValue}`,
 				{
 					method: 'POST',
 					headers: {

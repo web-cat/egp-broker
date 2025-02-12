@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import AuthMaster from '../../layouts/AuthMaster.svelte';
 	import axios from 'axios';
+	import { env } from '$env/dynamic/public'
 
 	const token = writable(null);
 	const user = writable(null);
@@ -13,7 +14,7 @@
 
 	const login = async () => {
 		try {
-			const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/login`, { email, password });
+			const response = await axios.post(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/login`, { email, password });
 			
 			// Store user and token in local storage
 			localStorage.setItem('user', JSON.stringify(response.data.user));

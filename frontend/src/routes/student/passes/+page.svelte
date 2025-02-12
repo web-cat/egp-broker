@@ -4,6 +4,7 @@
 	import Master from '../../../layouts/Master.svelte';
 	import { writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
+	import { env } from '$env/dynamic/public'
 
 	let reason = '';
 	let error = '';
@@ -43,7 +44,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/freepassPool/${$course.courseOfferingId._id}`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/freepassPool/${$course.courseOfferingId._id}`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`

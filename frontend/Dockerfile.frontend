@@ -19,4 +19,5 @@ FROM node:22-alpine AS prod
 WORKDIR /app/frontend
 COPY --from=build /app/frontend/build ./build
 EXPOSE 3000
+ENV ORIGIN=https://egp-broker.endeavour.cs.vt.edu
 CMD ["node", "build/index.js"]

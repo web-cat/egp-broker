@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { token } from '../../stores';
     import Master from '../../layouts/Master.svelte';
+    import { env } from '$env/dynamic/public'
 
     let passUsages = [];
     let error = '';
@@ -15,7 +16,7 @@
             const storedToken = localStorage.getItem('token');
             const token = JSON.parse(storedToken);
 
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/pass-usage-history`, {
+            const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/pass-usage-history`, {
                 headers: {
                     Authorization: `Bearer ${token.access_token}`
                 }

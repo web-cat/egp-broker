@@ -3,6 +3,7 @@
 	import { token } from '../../../stores';
 	import Master from '../../../layouts/Master.svelte';
 	import { writable } from 'svelte/store';
+	import { env } from '$env/dynamic/public'
 
 	let value = '';
 	let error = '';
@@ -21,7 +22,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/freepass`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/freepass`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -44,7 +45,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/my-courses`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/my-courses`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -67,7 +68,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/freepass`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/freepass`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -96,7 +97,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/freepass/${id}`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/freepass/${id}`, {
 				method: 'DELETE',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`

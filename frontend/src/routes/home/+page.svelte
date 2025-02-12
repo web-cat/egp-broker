@@ -2,6 +2,7 @@
     import Master from '../../layouts/Master.svelte';
     import { course, user } from '../../stores';
     import { onMount } from 'svelte';
+    import { env } from '$env/dynamic/public'
 
     let userProfile;
     let courses = [];
@@ -19,7 +20,7 @@
             const storedToken = localStorage.getItem('token');
             let token = JSON.parse(storedToken);
 
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/courses`, {
+            const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/courses`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token.access_token}`

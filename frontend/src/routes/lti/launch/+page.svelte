@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     export let data;
+    import { env } from '$env/dynamic/public'
 
     let isLoading = false;
     let errorMessage = null;
@@ -18,14 +19,14 @@
 
         try {
             // 1. Check if user exists in your database
-            const checkUserResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/user/${tokenData.user.name}`);
+            const checkUserResponse = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/user/${tokenData.user.name}`);
             const checkUserResult = await checkUserResponse.json();
 
             if (checkUserResult.exists) {
                 // User exists, directly login
                 console.log("User exists, logging in...");
 
-                const loginResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/login`, {
+                const loginResponse = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -50,7 +51,7 @@
                 // User doesn't exist, register and then login
                 console.log("User doesn't exist, registering...");
 
-                const registerResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/register`, {
+                const registerResponse = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -69,7 +70,7 @@
                 }
 
             //    if no register then after register
-                const loginResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/login`, {
+                const loginResponse = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

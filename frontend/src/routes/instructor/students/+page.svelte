@@ -4,6 +4,7 @@
 	import Master from '../../../layouts/Master.svelte';
 	import { fade } from 'svelte/transition';
 	import { writable } from 'svelte/store';
+	import { env } from '$env/dynamic/public'
 
 	let showModal = writable(false);
 	let selectedStudent = writable(null);
@@ -26,7 +27,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/my-courses`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/my-courses`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -74,7 +75,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/generate-passes/${$courseId}/${$passCount}`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/generate-passes/${$courseId}/${$passCount}`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`,
@@ -103,7 +104,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/freepass`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/freepass`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -129,7 +130,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/students`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/students`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
@@ -153,7 +154,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/egp-broker-service/api/freepass/${id}/assign/${studentId}`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/freepass/${id}/assign/${studentId}`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`,
