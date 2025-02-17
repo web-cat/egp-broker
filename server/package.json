@@ -1,0 +1,23 @@
+{
+  "name": "epg-broker",
+  "version": "1.0.0",
+  "description": "epg-broker lti server",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "env DEBUG=provider:* node app.js"
+  },
+  "keywords": [
+    "lti",
+    "ims",
+    "ltijs",
+    "1.3",
+    "imslti"
+  ],
+  "author": "saketh",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "ltijs": "^5.8.9"
+  }
+}

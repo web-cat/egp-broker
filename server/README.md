@@ -1,62 +1,29 @@
-# egp-broker
+# Demo LTI 1.3 Server
 
-## Local Development
-### Run
-#### Run all (Frontend, Backend, Database, DB Manager)
-```bash
-cd egp-broker
-```
+> Server is build up from ltijs server example
 
-```bash
-docker compose up
-```
+### Usage
 
-#### Run Backend Server, Database and DB Manager
-```bash
-cd egp-broker/backend
-```
+- Download or clone the repo
 
-```bash
-docker compose up
-```
+- Setup `.env` file with the relevant variables (copy `example.env` rename it to `.env` and fill out the variables)
 
-### Key URLs
-| Service    | URL |
-| -------- | ------- |
-| Frontend (Svelte) | localhost:5173 |
-| Backend (ExpressJS) | localhost:3001 |
-| Database (MongoDB) | localhost:27017 |
-| DB Manger (Mongo Express) | localhost:8081 |
+  ```
+  DB_HOST=localhost
+  DB_NAME=ltidb
+  DB_USER=user
+  DB_PASS=pass
+  LTI_KEY=LTIKEY
+  ```
+  *DB_USER and DB_PASS are not required*
 
-### Seed Database
-To populate the database with dummy data
-```bash
-curl -X POST localhost:3001/egp-broker-service/api/seed \
--H "Content-Type: application/json" \
--d '{
-    "seedKey": "12345789"
-}'
-```
+- Run `npm install`
 
-## Deploy
-```bash
-cd egp-broker
-```
-
-Edit the .env file to set the docker user name and password
-```.env
-DOCKER_USERNAME=username
-DOCKER_PASSWORD=password
-```
-
-```bash
-bash publish.sh
-```
-
+- Run `npm start` 
 
 ```json
 {
-    "title": "epg-broker",
+    "title": "lti-test",
     "scopes": [
         "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
         "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly",
@@ -85,11 +52,10 @@ bash publish.sh
         }
     ],
     "public_jwk": {},
-    "description": "epg-broker",
+    "description": "lti-test",
     "custom_fields": {},
     "public_jwk_url": "https://one-sunbeam-distinctly.ngrok-free.app/keys",
     "target_link_uri": "https://one-sunbeam-distinctly.ngrok-free.app",
     "oidc_initiation_url": "https://one-sunbeam-distinctly.ngrok-free.app/login"
 }
 ```
-
