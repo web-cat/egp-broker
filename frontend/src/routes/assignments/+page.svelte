@@ -4,6 +4,7 @@
 	import Master from '../../layouts/Master.svelte';
 	import { fade } from 'svelte/transition';
 	import { writable } from 'svelte/store';
+	import { env } from '$env/dynamic/public'
 
 	let showModal = writable(false);
 	let selectedStudent = writable(null);
@@ -25,7 +26,7 @@
 			let token = JSON.parse(storedToken);
 
 			// alert(JSON.stringify($course))
-			const response = await fetch(`https://egp-broker.cs.vt.edu/egp-broker-service/api/course-offering/${$course.courseOfferingId._id}/assignments/`, {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/course-offering/${$course.courseOfferingId._id}/assignments/`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`

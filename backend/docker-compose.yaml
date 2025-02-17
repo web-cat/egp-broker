@@ -1,38 +1,21 @@
-version: '3'
 services:
-  frontend:
-    build:
-      dockerfile: Dockerfile.frontend
-      context: ./frontend
-    container_name: frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/frontend/node_modules
-    environment:
-      - NODE_ENV=development
-    networks:
-      - my-shared-network
-    restart: always
-
   backend:
     build:
+      context: .
       dockerfile: Dockerfile.backend
-      context: ./backend
+      target: dev
     container_name: backend
     ports:
       - "3001:3000"
     volumes:
-      - ./backend:/app
-      - /app/backend/node_modules
+      - .:/app/backend
     environment:
       - NODE_ENV=development
-      - DB_HOST=mongodb
+      - DB_HOST=mongo
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - DB_NAME=freepassdb
-      - MONGO_URL=mongodb://root:rootpassword@mongodb:27017/freepassdb?authSource=admin
+      - MONGO_URL=mongodb://root:rootpassword@mongo:27017/freepassdb?authSource=admin
       - JWT_SECRET=your_jwt_secret
       - DEV_MODE=true
       - PORT=3000
@@ -45,42 +28,36 @@ services:
       - JWK_KEY=http://host.docker.internal:3000/api/lti/security/jwks
       - SEED_KEY=12345789
     depends_on:
-      - mongodb
+      - mongo
     restart: always
     networks:
       - my-shared-network
-
-  mongodb:
+    
+  mongo:
     image: mongo
     restart: always
-    container_name: mongodb
+    container_name: mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: rootpassword
-    ports:
-      - "27017:27017"
     volumes:
-      - db_data:/data/db
+      - ../mongo/db:/data/db
     networks:
       - my-shared-network
 
-  nginx-proxy:
-    build:
-      dockerfile: Dockerfile
-      context: ./proxy
+  mongo-express:
+    image: mongo-express
     restart: always
-    depends_on:
-      - frontend
-      - backend
     ports:
-      - "3000:80"
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: rootpassword
+      ME_CONFIG_MONGODB_URL: mongodb://root:rootpassword@mongo:27017/
+      ME_CONFIG_BASICAUTH: false
     networks:
       - my-shared-network
-
-volumes:
-  db_data:
-    driver: local
-
+    
 networks:
   my-shared-network:
     driver: bridge

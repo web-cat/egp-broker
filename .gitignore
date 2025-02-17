@@ -1,1 +1,5 @@
 .vscode/sftp.json
+db/
+.idea/
+.DS_Store
+.env

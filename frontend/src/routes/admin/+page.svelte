@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import 'bootstrap/dist/css/bootstrap.min.css';
     import '/src/styles/global.css';
+    import { env } from '$env/dynamic/public'
 
     let tools = [];
     let newTool = {
@@ -27,7 +28,7 @@
         isLoading = true;
         token = getTokenFromLocalStorage();
         try {
-            const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/tool', {
+            const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/tool`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -53,7 +54,7 @@
         try {
             // Update the newTool object with grants from grantsString
             newTool.grants = grantsString.split(',').map(grant => grant.trim());
-            const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/tool', {
+            const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/tool`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -85,7 +86,7 @@
         try {
             // Update the editTool object with grants from grantsString
             editTool.grants = grantsString.split(',').map(grant => grant.trim());
-            const response = await fetch(`https://egp-broker.cs.vt.edu/egp-broker-service/api/tool/${editTool._id}`, {
+            const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/tool/${editTool._id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -114,7 +115,7 @@
         isLoading = true;
         token = getTokenFromLocalStorage();
         try {
-            const response = await fetch(`https://egp-broker.cs.vt.edu/egp-broker-service/api/tool/${toolId}`, {
+            const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/tool/${toolId}`, {
                 method: 'DELETE',
                 headers: {
                     Authorization: `Bearer ${token}`,

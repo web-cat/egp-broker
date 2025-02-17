@@ -9,6 +9,7 @@ const freePassRoutes = require("./src/routes/freepassRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
 const ltiRoutes = require("./src/routes/ltiRoutes");
 const toolRoutes = require("./src/routes/toolRoutes");
+const toolAuthRoutes = require("./src/routes/toolAuthRoutes");
 
 const authenticateJWT = require("./src/middlewares/authMiddleware");
 const authenticateSeedKey = require("./src/middlewares/seederMiddleware");
@@ -40,7 +41,7 @@ app.use('/egp-broker-service', freePassRoutes);
 app.use('/egp-broker-service/api', coreRoutes);
 app.use('/egp-broker-service/api/admin', adminRoutes);
 app.use('/egp-broker-service/api/tool', toolRoutes);
-
+app.use('/egp-broker-service/api/tool_auth', toolAuthRoutes);
 app.use('/egp-broker-service/api/lti', ltiRoutes);
 
 // Seed Database route

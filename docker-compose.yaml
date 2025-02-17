@@ -1,0 +1,109 @@
+services:
+
+  frontend:
+    build:
+      dockerfile: Dockerfile.frontend
+      context: ./frontend
+      target: dev
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app/frontend
+    environment:
+      - NODE_ENV=development
+      - VITE_BACKEND_URL=http://localhost:3001
+    networks:
+      - my-shared-network
+    depends_on:
+      - mongo
+      - backend
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+      target: dev
+    container_name: backend
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./backend:/app/backend
+    environment:
+      - NODE_ENV=development
+      - DEV_MODE=true
+
+      # database
+      - DB_HOST=mongo
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=freepassdb
+      - MONGO_URL=mongodb://root:rootpassword@mongo:27017/freepassdb?authSource=admin
+      - JWT_SECRET=your_jwt_secret
+
+      # canvas 
+      - PLATFORM_NAME=Canvas LMS
+      - CANVAS_URL=http://web:3000
+
+      # auth
+      - CLIENT_ID=10000000000001
+      - CLIENT_SECRET=xxx
+      - AUTH_ENDPOINT=http://frontend:5173/api/lti/authorize_redirect
+      - TOKEN_ENDPOINT=http://frontend:5173/login/oauth2/token
+      - JWK_KEY=http://frontend:5173/api/lti/security/jwks
+      - SEED_KEY=12345789
+    depends_on:
+      - mongo
+    restart: always
+    networks:
+      - my-shared-network
+    
+  mongo:
+    image: mongo
+    restart: always
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - 27017:27017
+    volumes:
+      - ../mongo/db:/data/db
+    networks:
+      - my-shared-network
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: rootpassword
+      ME_CONFIG_MONGODB_URL: mongodb://root:rootpassword@mongo:27017/
+      ME_CONFIG_BASICAUTH: false
+    networks:
+      - my-shared-network
+
+  nginx-proxy:
+    build:
+      dockerfile: Dockerfile
+      context: ./proxy
+    restart: always
+    depends_on:
+      - frontend
+      - backend
+      - mongo
+    ports:
+      - "3000:80"
+    networks:
+      - my-shared-network
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  my-shared-network:
+    driver: bridge

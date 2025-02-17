@@ -4,6 +4,7 @@
 	import Master from '../../layouts/Master.svelte';
 	import { writable } from 'svelte/store';
 	import { fade } from 'svelte/transition';
+	import { env } from '$env/dynamic/public'
 
 	let value = '';
 	let error = '';
@@ -43,7 +44,7 @@
 			let token = JSON.parse(storedToken);
 
 			const response = await fetch(
-				`https://egp-broker.cs.vt.edu/egp-broker-service/api/student/${$course.CourseOffering.id}/requests`,
+				`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/student/${$course.CourseOffering.id}/requests`,
 				{
 					method: 'GET',
 					headers: {

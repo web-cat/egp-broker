@@ -3,6 +3,7 @@
 	import { token } from '../../../stores';
 	import Master from '../../../layouts/Master.svelte';
 	import { writable } from 'svelte/store';
+	import { env } from '$env/dynamic/public'
 
 	let value = '';
 	let error = '';
@@ -18,7 +19,7 @@
 			const storedToken = localStorage.getItem('token');
 			let token = JSON.parse(storedToken);
 
-			const response = await fetch('https://egp-broker.cs.vt.edu/egp-broker-service/api/my-courses', {
+			const response = await fetch(`${env.PUBLIC_BACKEND_URL}/egp-broker-service/api/my-courses`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${token.access_token}`
