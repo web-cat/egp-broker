@@ -1,0 +1,56 @@
+services:
+  # epg-broker:
+  #   image: epg-broker
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   restart: always
+  #   container_name: epg-broker
+  #   ports:
+  #     - 3000:3000
+  #   networks:
+  #     - my-shared-network
+  #   environment:
+  #     # LTI
+  #     DB_HOST: mongo-lti
+  #     DB_NAME: ltidb
+  #     DB_USER: root
+  #     DB_PASS: rootpassword
+  #     LTI_KEY: 2Gt4wLFA9nYHr6LwATDDYaEEumcZ7HRAF3y3tm7fKLFZexZ3GztGTxkB7x3wyuT3
+
+  #     # CANVAS
+  #     CANVAS_URL: https://canvas.endeavour.cs.vt.edu
+  #     CANVAS_NAME: endeavour.cs.vt
+  #     CANVAS_CLIENT_ID: 10000000000006
+  #     CANVAS_AUTH_ENDPOINT: https://canvas.endeavour.cs.vt.edu/api/lti/authorize_redirect
+  #     CANVAS_ACCESS_TOKEN_ENDPOINT: https://canvas.endeavour.cs.vt.edu/login/oauth2/token
+  #     CANVAS_JWK_URL: https://canvas.endeavour.cs.vt.edu/api/lti/security/jwks
+
+  mongo-lti:
+    image: mongo
+    restart: always
+    container_name: mongo-lti
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - 27017:27017
+    networks:
+      - my-shared-network
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: rootpassword
+      ME_CONFIG_MONGODB_URL: mongodb://root:rootpassword@mongo-lti:27017/
+      ME_CONFIG_BASICAUTH: false
+    networks:
+      - my-shared-network
+    
+networks:
+  my-shared-network:
+    driver: bridge

@@ -53,7 +53,7 @@ DOCKER_PASSWORD=password
 bash publish.sh
 ```
 
-
+## LTI Key config
 ```json
 {
     "title": "epg-broker",

@@ -34,7 +34,15 @@ lti.onConnect(async (token, req, res) => {
   // Store in session or database
   // req.session.user = userData;
 
-  console.log('User data:', userData);
+
+  const result  = await lti.Grade.getLineItems(res.locals.token)
+  console.log('**************************');
+  console.log('line Item:', result);
+
+  const idtoken = res.locals.token // IdToken
+  // const response = await lti.Grade.getScores(idtoken, idtoken.platformContext.endpoint.lineitem, { userId: idtoken.user })
+  // console.log('**************************');
+  // console.log('grades:', response);
 
   return res.sendFile(path.join(__dirname, './public/index.html'))
 })
