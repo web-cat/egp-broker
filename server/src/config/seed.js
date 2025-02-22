@@ -41,12 +41,34 @@ const seedDatabase = async () => {
       allowedPassTypes: [FreePassType.EXTENSION_24H, FreePassType.QUIZ_RETAKE]
     });
 
+    const course2 = await Course.create({
+      canvasId: 'course002',
+      title: 'Data Structures and Algorithms',
+      description: 'Learn about data structures and algorithms.',
+      instructorId: instructor1._id,
+      allowedPassTypes: [FreePassType.EXTENSION_24H]
+    });
+
     // Create Assignments
     const assignment1 = await Assignment.create({
       title: 'Assignment 1',
       description: 'First assignment.',
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Due in 7 days
       courseId: course1._id
+    });
+
+    const assignment2 = await Assignment.create({
+      title: 'Assignment 2',
+      description: 'Second assignment.',
+      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // Due in 14 days
+      courseId: course1._id
+    });
+
+    const assignment3 = await Assignment.create({
+      title: 'Assignment 3',
+      description: 'Third assignment.',
+      dueDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // Due in 21 days
+      courseId: course2._id
     });
 
     // Create Enrollments with used free passes

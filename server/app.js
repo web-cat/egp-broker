@@ -82,7 +82,7 @@ lti.onDeepLinking(async (token, req, res) => {
 // Setting up routes
 lti.app.use(routes)
 
-lti.whitelist('/api/enrollment/course001')
+// lti.whitelist('/api/assignment/course001')
 
 // Setup function
 const setup = async () => {

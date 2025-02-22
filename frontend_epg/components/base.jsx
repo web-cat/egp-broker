@@ -16,7 +16,7 @@ export function Base({ launchInfo }) {
       {
         name: "Assignments",
         value: "assignments",
-        component: <AssignmentTable />,
+        component: <AssignmentTable courseCanvasId={canvas_course_id} />,
       },
       {
         name: "Passes",

@@ -1,5 +1,6 @@
 const enrollment_routes = require('./enrollmentRoutes');
 const course_routes = require('./courseRoutes');
+const assignment_routes = require('./assignmentRoutes');
 const express = require('express');
 const connectWithRetry = require('../config/db');
 
@@ -13,6 +14,7 @@ router.get('/', (req, res) => {
 });
 
 router.use('/enrollment', enrollment_routes);
+router.use('/assignment', assignment_routes);
 router.use('/course', course_routes);
 
 module.exports = router;

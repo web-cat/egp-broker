@@ -8,46 +8,41 @@ import {
     TableHeader,
     TableRow,
   } from "@/components/ui/table"
+import { getLtik } from "@/lib/ltik";
+import { useEffect, useState } from "react"
+import ky from "ky"
 
-  const assignments = [
-    {
-        title: "Assignment 1",
-        due_date: "2021-10-01",
-    },
-    {
-        title: "Assignment 2",
-        due_date: "2021-10-15",
-    },
-    {
-        title: "Assignment 3",
-        due_date: "2021-11-01",
-    },
-    {
-        title: "Assignment 4",
-        due_date: "2021-11-15",
-    },
-    {
-        title: "Assignment 5",
-        due_date: "2021-12-01",
-    },
-    {
-        title: "Assignment 6",
-        due_date: "2021-12-15",
-    },
-    {
-        title: "Assignment 7",
-        due_date: "2022-01-01",
-    },
-  ]
+  export function AssignmentTable({ courseCanvasId }) {
+    const [assignments, setAssignments] = useState([]);
+
+    useEffect(() => {
+      async function fetchStudentInfo() {
+        try {
+          const assignments_for_course = await ky
+            //   .get(`/api/assignment/${courseCanvasId}`, {
+            .get(`/api/assignment/course001`, {
+              credentials: "include",
+              headers: { Authorization: "Bearer " + getLtik() },
+            })
+            .json();
+          setAssignments(assignments_for_course);
+          console.log("Assignments:", assignments_for_course);
   
-  export function AssignmentTable() {
+        } catch (error) {
+          console.error("Error fetching pass info:", error);
+        }
+      }
+  
+      fetchStudentInfo();
+    }, []);
+
+
     return (
       <Table>
         <TableCaption>Assignments</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead>Title</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead>Due Date</TableHead>
           </TableRow>
         </TableHeader>
@@ -55,7 +50,7 @@ import {
           {assignments.map((assignment) => (
             <TableRow key={assignment.title}>
               <TableCell className="font-medium">{assignment.title}</TableCell>
-              <TableCell>{assignment.due_date}</TableCell>
+              <TableCell>{new Date(assignment.dueDate).toLocaleDateString()}</TableCell>
             </TableRow>
           ))}
         </TableBody>
