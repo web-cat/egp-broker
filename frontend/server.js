@@ -84,6 +84,24 @@ lti.app.get("/api/auth", (req, res) => {
   }
 });
 
+lti.app.get("/info", async (req, res) => {
+  const token = res.locals.token;
+  const context = res.locals.context;
+
+  console.log("🔹 User Info:", token);
+
+  const info = {};
+  if (token.userInfo) {
+    if (token.userInfo.name) info.name = token.userInfo.name;
+    if (token.userInfo.email) info.email = token.userInfo.email;
+  }
+
+  if (context.roles) info.roles = context.roles;
+  if (context.context) info.context = context.context;
+
+  return res.send(info);
+});
+
 // ✅ Next.js Request Handler
 lti.app.all("/dashboard", (req, res) => {
   return handle(req, res);

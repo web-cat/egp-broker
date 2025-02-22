@@ -1,9 +1,7 @@
-// src/db.js
-const mongoose = require('mongoose');
-const { seedDatabase } = require('./seeder');
+mongoose = require('mongoose');
 
 const connectWithRetry = async () => {
-    const mongoURI = `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}/${process.env.DB_NAME}?authSource=admin`;
+    const mongoURI = `mongodb://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}/${process.env.DB_NAME_EGP}?authSource=admin`;
 
     try {
         await mongoose.connect(mongoURI, {
@@ -21,19 +19,4 @@ const connectWithRetry = async () => {
     console.log('mongo url: ', mongoURI);
 };
 
-const dropDatabaseAndSeed = async () => {
-    try {
-        if (mongoose.connection.readyState === 1) { // Ensure the connection is established
-            await mongoose.connection.dropDatabase();
-            console.log('Database cleared!');
-            await seedDatabase();
-            console.log('Database seeded!');
-        } else {
-            console.error('Database is not connected. Cannot clear and seed.');
-        }
-    } catch (error) {
-        console.error('Error seeding database:', error.message);
-    }
-};
-
-module.exports = { connectWithRetry, dropDatabaseAndSeed };
+module.exports = connectWithRetry;

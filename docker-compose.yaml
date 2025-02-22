@@ -12,11 +12,14 @@ services:
       - my-shared-network
     environment:
       # LTI
+      LTI_KEY: 2Gt4wLFA9nYHr6LwATDDYaEEumcZ7HRAF3y3tm7fKLFZexZ3GztGTxkB7x3wyuT3
+
+      # MongoDB
       DB_HOST: mongo-lti
-      DB_NAME: ltidb
       DB_USER: root
       DB_PASS: rootpassword
-      LTI_KEY: 2Gt4wLFA9nYHr6LwATDDYaEEumcZ7HRAF3y3tm7fKLFZexZ3GztGTxkB7x3wyuT3
+      DB_NAME_LTI: ltidb
+      DB_NAME_EGP: egpdb
 
       # CANVAS
       CANVAS_URL: https://canvas.endeavour.cs.vt.edu
