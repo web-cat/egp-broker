@@ -1,166 +1,93 @@
 require('dotenv').config();
+
 const mongoose = require('mongoose');
-const { 
-  Instructor, 
-  Student, 
-  Course, 
-  CoursePassType, 
-  FreePass, 
-  Enrollment, 
-  Assignment,
-  FreePassType 
-} = require('../models/models'); // Adjust path as needed
+const { Instructor, Student, Course, Enrollment, Assignment, FreePassType } = require('../models/models');
 const connectWithRetry = require('./db');
 
-async function clearDatabase() {
-  await Promise.all([
-    Instructor.deleteMany({}),
-    Student.deleteMany({}),
-    Course.deleteMany({}),
-    CoursePassType.deleteMany({}),
-    FreePass.deleteMany({}),
-    Enrollment.deleteMany({}),
-    Assignment.deleteMany({})
-  ]);
-  console.log('Database cleared');
-}
-
-async function seedDatabase() {
+const seedDatabase = async () => {
   try {
     await connectWithRetry();
-    await clearDatabase();
+    await mongoose.connection.dropDatabase();
 
     // Create Instructors
-    const instructors = await Instructor.create([
-      {
-        ltiId: 'lti_inst_1',
-        canvasId: 'canvas_inst_1',
-        email: 'professor1@university.edu',
-        firstName: 'John',
-        lastName: 'Smith'
-      },
-      {
-        ltiId: 'lti_inst_2',
-        canvasId: 'canvas_inst_2',
-        email: 'professor2@university.edu',
-        firstName: 'Jane',
-        lastName: 'Doe'
-      }
-    ]);
+    const instructor1 = await Instructor.create({
+      canvasId: 'inst001',
+      email: 'instructor1@example.com',
+      firstName: 'John',
+      lastName: 'Doe'
+    });
 
     // Create Students
-    const students = await Student.create([
-      {
-        email: 'student1@university.edu',
-        firstName: 'Alice',
-        lastName: 'Johnson'
-      },
-      {
-        email: 'student2@university.edu',
-        firstName: 'Bob',
-        lastName: 'Wilson'
-      }
-    ]);
+    const student1 = await Student.create({
+      canvasId: 'stud001',
+      email: 'student1@example.com',
+      firstName: 'Jane',
+      lastName: 'Smith'
+    });
 
-    // Create Courses
-    const courses = await Course.create([
-      {
-        ltiId: 'lti_course_1',
-        canvasId: 'canvas_course_1',
-        title: 'Introduction to Computer Science',
-        description: 'Fundamentals of programming and computer science',
-        instructorId: instructors[0]._id
-      },
-      {
-        ltiId: 'lti_course_2',
-        canvasId: 'canvas_course_2',
-        title: 'Advanced Mathematics',
-        description: 'Complex mathematical concepts and applications',
-        instructorId: instructors[1]._id
-      }
-    ]);
+    const student2 = await Student.create({
+      canvasId: 'stud002',
+      email: 'student2@example.com',
+      firstName: 'Alice',
+      lastName: 'Johnson'
+    });
+
+    // Create Courses with allowedPassTypes
+    const course1 = await Course.create({
+      canvasId: 'course001',
+      title: 'Introduction to Programming',
+      description: 'Learn the basics of programming.',
+      instructorId: instructor1._id,
+      allowedPassTypes: [FreePassType.EXTENSION_24H, FreePassType.QUIZ_RETAKE]
+    });
 
     // Create Assignments
-    const assignments = await Assignment.create([
-      {
-        title: 'Programming Project 1',
-        description: 'Build a simple calculator application',
-        dueDate: new Date('2025-03-15'),
-        courseId: courses[0]._id
-      },
-      {
-        title: 'Math Final Exam',
-        description: 'Comprehensive exam covering all topics',
-        dueDate: new Date('2025-04-01'),
-        courseId: courses[1]._id
-      }
-    ]);
+    const assignment1 = await Assignment.create({
+      title: 'Assignment 1',
+      description: 'First assignment.',
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Due in 7 days
+      courseId: course1._id
+    });
 
-    // Create CoursePassTypes
-    const coursePassTypes = await CoursePassType.create([
-      {
-        courseId: courses[0]._id,
-        passType: FreePassType.EXTENSION_24H
+    // Create Enrollments with used free passes
+    await Enrollment.create({
+      studentId: student1._id,
+      courseId: course1._id,
+      passesLeft: {
+        EXTENSION_24H: 2,
+        QUIZ_RETAKE: 1
       },
-      {
-        courseId: courses[1]._id,
-        passType: FreePassType.QUIZ_RETAKE
-      }
-    ]);
+      freePasses: [
+        {
+          type: FreePassType.EXTENSION_24H,
+          usedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // Used 2 days ago
+          assignmentId: assignment1._id
+        }
+      ]
+    });
 
-    // Create Enrollments
-    const enrollments = await Enrollment.create([
-      {
-        studentId: students[0]._id,
-        courseId: courses[0]._id,
-        enrolledAt: new Date()
+    await Enrollment.create({
+      studentId: student2._id,
+      courseId: course1._id,
+      passesLeft: {
+        EXTENSION_24H: 1,
+        QUIZ_RETAKE: 2
       },
-      {
-        studentId: students[1]._id,
-        courseId: courses[1]._id,
-        enrolledAt: new Date()
-      }
-    ]);
-
-    // Create FreePasses
-    const freePasses = await FreePass.create([
-      {
-        studentId: students[0]._id,
-        type: FreePassType.EXTENSION_24H,
-        description: '24-hour extension for Project 1',
-        reason: 'Medical emergency',
-        courseId: courses[0]._id,
-        assignmentId: assignments[0]._id,
-        remaining: 1
-      },
-      {
-        studentId: students[1]._id,
-        type: FreePassType.QUIZ_RETAKE,
-        description: 'Quiz retake pass',
-        reason: 'Technical issues during first attempt',
-        courseId: courses[1]._id,
-        assignmentId: assignments[1]._id,
-        remaining: 1
-      }
-    ]);
+      freePasses: [
+        {
+          type: FreePassType.QUIZ_RETAKE,
+          usedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // Used 1 day ago
+          assignmentId: assignment1._id
+        }
+      ]
+    });
 
     console.log('Database seeded successfully!');
-    console.log(`Created:
-      - ${instructors.length} instructors
-      - ${students.length} students
-      - ${courses.length} courses
-      - ${assignments.length} assignments
-      - ${coursePassTypes.length} course pass types
-      - ${enrollments.length} enrollments
-      - ${freePasses.length} free passes`);
-
-  } catch (error) {
-    console.error('Seeding error:', error);
-  } finally {
-    await mongoose.connection.close();
-    console.log('Database connection closed');
+    mongoose.connection.close();
+  } catch (err) {
+    console.error('Error seeding database:', err);
+    mongoose.connection.close();
   }
-}
+};
 
-// Run the seeder
 seedDatabase();

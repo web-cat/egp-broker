@@ -1,10 +1,11 @@
 # EGP-Broker LTI 1.3 Server
 
-> If you make a change to 
+> If you make a change to
 
 ## FAQ
+
 - What data can I get from Canvas?
-    -  https://canvas.instructure.com/doc/api/file.tools_variable_substitutions.html
+  - <https://canvas.instructure.com/doc/api/file.tools_variable_substitutions.html>
 
 ## API Reference
 
@@ -76,4 +77,5 @@
 ```
 
 ## Roadmap
+
 - com.instructure.User.student_view

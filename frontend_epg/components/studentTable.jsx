@@ -12,22 +12,16 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { ArrowUpDown, ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -44,120 +38,91 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
+import { getLtik } from "@/lib/ltik";
+import ky from "ky";
 
-const students = [
-  {
-    id: "m5gr84i9",
-    firstName: "Saketh",
-    lastName: "Rajesh",
-    email: "saketh@vt.edu",
-  },
-  { id: "3u1reuv4", firstName: "Bob", lastName: "Mill", email: "bob@vt.edu" },
-  {
-    id: "derv1ws0",
-    firstName: "Sally",
-    lastName: "Kumar",
-    email: "sally@vt.edu",
-  },
-  { id: "5kma53ae", firstName: "John", lastName: "Doe", email: "john@vt.edu" },
-  { id: "bhqecj4p", firstName: "Jane", lastName: "Doe", email: "jane@vt.edu" },
-  { id: "1", firstName: "Alice", lastName: "Smith", email: "alice@vt.edu" },
-  { id: "2", firstName: "Charlie", lastName: "Brown", email: "charlie@vt.edu" },
-  { id: "3", firstName: "David", lastName: "Wilson", email: "david@vt.edu" },
-  { id: "4", firstName: "Eve", lastName: "Davis", email: "eve@vt.edu" },
-  { id: "5", firstName: "Frank", lastName: "Miller", email: "frank@vt.edu" },
-  { id: "6", firstName: "Grace", lastName: "Lee", email: "grace@vt.edu" },
-  { id: "7", firstName: "Hank", lastName: "Taylor", email: "hank@vt.edu" },
-  { id: "8", firstName: "Ivy", lastName: "Anderson", email: "ivy@vt.edu" },
-  { id: "9", firstName: "Jack", lastName: "Thomas", email: "jack@vt.edu" },
-  { id: "10", firstName: "Karen", lastName: "Jackson", email: "karen@vt.edu" },
-  { id: "11", firstName: "Leo", lastName: "White", email: "leo@vt.edu" },
-  { id: "12", firstName: "Mia", lastName: "Harris", email: "mia@vt.edu" },
-  { id: "13", firstName: "Nina", lastName: "Martin", email: "nina@vt.edu" },
-  { id: "14", firstName: "Oscar", lastName: "Garcia", email: "oscar@vt.edu" },
-  { id: "15", firstName: "Paul", lastName: "Martinez", email: "paul@vt.edu" },
-  { id: "16", firstName: "Quinn", lastName: "Robinson", email: "quinn@vt.edu" },
-  { id: "17", firstName: "Rachel", lastName: "Clark", email: "rachel@vt.edu" },
-  { id: "18", firstName: "Sam", lastName: "Rodriguez", email: "sam@vt.edu" },
-  { id: "19", firstName: "Tina", lastName: "Lewis", email: "tina@vt.edu" },
-  { id: "20", firstName: "Uma", lastName: "Walker", email: "uma@vt.edu" },
-];
-
-export const columns = [
-  {
-    accessorKey: "firstName",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        First Name
-        <ArrowUpDown />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <div className="lowercase">{row.getValue("firstName")}</div>
-    ),
-  },
-  {
-    accessorKey: "lastName",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Last Name
-        <ArrowUpDown />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <div className="lowercase">{row.getValue("lastName")}</div>
-    ),
-  },
-  {
-    accessorKey: "email",
-    header: () => <div className="text-right">Email</div>,
-    cell: ({ row }) => (
-      <div className="text-right font-medium">{row.getValue("email")}</div>
-    ),
-  },
-  // {
-  //   id: "actions",
-  //   enableHiding: false,
-  //   cell: ({ row }) => {
-  //     const student = row.original;
-  //     return (
-  //       <DropdownMenu>
-  //         <DropdownMenuTrigger asChild>
-  //           <Button variant="ghost" className="h-8 w-8 p-0">
-  //             <span className="sr-only">Open menu</span>
-  //             <MoreHorizontal />
-  //           </Button>
-  //         </DropdownMenuTrigger>
-  //         <DropdownMenuContent align="end">
-  //           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-  //           <DropdownMenuItem
-  //             onClick={() => navigator.clipboard.writeText(student.id)}
-  //           >
-  //             Copy student ID
-  //           </DropdownMenuItem>
-  //           <DropdownMenuSeparator />
-  //           <DropdownMenuItem>View profile</DropdownMenuItem>
-  //           <DropdownMenuItem>Send email</DropdownMenuItem>
-  //         </DropdownMenuContent>
-  //       </DropdownMenu>
-  //     );
-  //   },
-  // },
-];
-
-export function StudentTable() {
+export function StudentTable({ courseCanvasId }) {
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
   const [rowSelection, setRowSelection] = React.useState({});
   const [selectedStudent, setSelectedStudent] = React.useState(null);
-  const [studentInfo, setStudentInfo] = React.useState(null);
+  const [students, setStudents] = React.useState([]);
+  const [passTypes, setPassTypes] = React.useState([]);
+  
+  // fetch all students
+  React.useEffect(() => {
+    async function fetchStudents() {
+      try {
+        // const students = await ky.get(`/api/enrollment/${courseCanvasId}`, {
+          const students = await ky.get(`/api/enrollment/course001`, {
+            credentials: "include",
+            headers: { Authorization: "Bearer " + getLtik() },
+          }).json();
+          console.log("Students:", students);
+          setStudents(students);
+          
+          // Get all pass types
+          const passTypes = students.reduce((acc, student) => {
+            const types = Object.keys(student.passesLeft);
+            return [...acc, ...types];
+          }
+          , []);
+          setPassTypes([...new Set(passTypes)]);
+          
+        } catch (error) {
+          console.error("Error fetching students:", error);
+        }
+      }
+      fetchStudents()
+    }, []);
+    
+    const columns = [
+      {
+        id: "firstName",
+        accessorFn: (row) => row.studentId.firstName,
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            First Name
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => <div className="font-medium">{row.getValue("firstName")}</div>,
+      },
+      {
+        id: "lastName",
+        accessorFn: (row) => row.studentId.lastName,
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Last Name
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => <div className="font-medium">{row.getValue("lastName")}</div>,
+      },
+      {
+        id: "email",
+        accessorFn: (row) => row.studentId.email,
+        header: () => <div className="text-right">Email</div>,
+        cell: ({ row }) => (
+          <div className="text-right font-medium">{row.getValue("email")}</div>
+        ),
+      },
+      ...passTypes.map((type) => ({
+        id: type.toLowerCase(),
+        accessorFn: (row) => row.passesLeft[type],
+        header: () => <div className="text-right">{type.replace("_", " ")}</div>,
+        cell: ({ row }) => (
+          <div className="text-right font-medium">{row.getValue(type.toLowerCase())}</div>
+        ),
+      })),
+    ];
 
   const handleRowClick = (student) => {
     setSelectedStudent(student);
@@ -165,35 +130,7 @@ export function StudentTable() {
 
   const closeModal = () => {
     setSelectedStudent(null);
-    setStudentInfo(null);
   };
-
-  // Fetch more student info when a student is selected
-  useEffect(() => {
-    async function fetchStudentInfo(selectedStudent) {
-      if (selectedStudent) {
-        const studentData = await ky
-          .get(`/api/student/${selectedStudent.id}`, {
-            credentials: "include",
-            headers: { Authorization: "Bearer " + getLtik() },
-          })
-          .json();
-        setStudentInfo(studentData);
-      }
-    }
-    fetchStudentInfo(selectedStudent);
-  }, [selectedStudent]);
-
-  // fetch all students
-  // useEffect(() => {
-  //   fetch("https://dummyapi.io/data/api/user", {
-  //     headers: { "app-id": "dummyappid" }
-  //   })
-  //     .then(response => response.json())
-  //     .then(data => console.log(data));
-  // }, []);
-
-  const router = useRouter();
 
   const table = useReactTable({
     data: students,
@@ -228,7 +165,7 @@ export function StudentTable() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown />
+              Columns <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -273,7 +210,7 @@ export function StudentTable() {
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                   onClick={() => handleRowClick(row.original)}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:bg-muted/50"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -299,9 +236,6 @@ export function StudentTable() {
         </Table>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
-        {/* <div className="flex-1 text-sm text-muted-foreground">
-            Showing {table.getRows().length} of {students.length} students
-        </div> */}
         <div className="space-x-2">
           <Button
             variant="outline"
@@ -326,28 +260,28 @@ export function StudentTable() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {selectedStudent.firstName} {selectedStudent.lastName}
+                {selectedStudent.studentId.firstName} {selectedStudent.studentId.lastName}
               </DialogTitle>
               <DialogDescription>
-                {studentInfo ? (
-                  <>
-                    <p>Email: {studentInfo.email}</p>
-                    <p>Phone: {studentInfo.phone}</p>
-                    <p>
-                      Address: {studentInfo.location.street},{" "}
-                      {studentInfo.location.city}
-                    </p>
-                    {/* Add more student details here */}
-                  </>
-                ) : (
-                  <p>Loading...</p>
-                )}
+                <div className="space-y-2">
+                  <p>Email: {selectedStudent.studentId.email}</p>
+                  <p>Canvas ID: {selectedStudent.studentId.canvasId}</p>
+                  <p>Extension Passes Left: {selectedStudent.passesLeft.EXTENSION_24H}</p>
+                  <p>Quiz Retakes Left: {selectedStudent.passesLeft.QUIZ_RETAKE}</p>
+                  {selectedStudent.freePasses.length > 0 && (
+                    <div>
+                      <p className="font-medium">Used Passes:</p>
+                      <ul className="list-disc pl-4">
+                        {selectedStudent.freePasses.map((pass, index) => (
+                          <li key={pass._id}>
+                            {pass.type} used on {new Date(pass.usedAt).toLocaleDateString()} for {pass.assignmentId.title}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </DialogDescription>
-              <DialogClose asChild>
-                <Button variant="ghost" onClick={closeModal}>
-                  Close
-                </Button>
-              </DialogClose>
             </DialogHeader>
           </DialogContent>
         </Dialog>

@@ -118,8 +118,19 @@ router.get('/info', async (req, res) => {
     if (token.userInfo.email) info.email = token.userInfo.email
   }
 
-  if (context.roles) info.roles = context.roles
-  if (context.context) info.context = context.context
+  if (context.roles) {
+    const regex = /^http:\/\/purl\.imsglobal\.org\/vocab\/lis\/v2\/membership#(\w+)\.?$/;
+    const membershipRoles = context.roles.map(url => {
+        const match = url.match(regex);
+        return match ? match[1] : null; // Extract role or return null
+    }).filter(Boolean); // Remove null values
+    info.role = membershipRoles[0]
+  }
+  if (context.context.title) info.title = context.context.title
+  if (context.custom.canvas_user_id) info.canvas_user_id = context.custom.canvas_user_id
+  if (context.custom.canvas_course_id) info.canvas_course_id = context.custom.canvas_course_id
+
+  console.log('Launch info:', info)
 
   return res.send(info)
 })

@@ -6,7 +6,6 @@ import { getLtik } from "@/lib/ltik";
 
 export default function WelcomeBanner() {
   const [info, setInfo] = useState();
-  const [role, setRole] = useState();
 
   useEffect(() => {
     const getInfo = async () => {
@@ -17,19 +16,9 @@ export default function WelcomeBanner() {
             headers: { Authorization: "Bearer " + getLtik() },
           })
           .json();
+          console.log("Launch info:", launchInfo);
         setInfo(launchInfo);
 
-        console.log(launchInfo);
-        // Regex to match URLs starting with membership and extract role
-        const regex = /^http:\/\/purl\.imsglobal\.org\/vocab\/lis\/v2\/membership#(\w+)\.?$/;
-
-        // Filter and extract roles from matching URLs
-        const membershipRoles = launchInfo.roles.map(url => {
-            const match = url.match(regex);
-            return match ? match[1] : null; // Extract role or return null
-        }).filter(Boolean); // Remove null values
-
-        setRole(membershipRoles[0]);
       } catch (err) {
         console.log(err);
       }
@@ -45,10 +34,10 @@ export default function WelcomeBanner() {
     <>
       <h1 className="text-3xl font-bold">Hi {info.name}!</h1>
       <h2 className="text-2xl font-bold mb-6">
-        {info.context.title} - {role}
+        {info.title} - {info.role}
       </h2>
 
-        <Base role={role} />
+        <Base launchInfo={info} />
     </>
   );
 }

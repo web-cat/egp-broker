@@ -63,6 +63,14 @@ lti.setup(process.env.LTI_KEY,
 lti.onConnect(async (token, req, res) => {
   console.log('token:', token)
   console.log('context:', res.locals.context)
+
+  // check to see if user if instructor or student
+
+  // if student, check to see if this course is in db
+    // if not redirct student to temp page saying instructor has not set up free passes yet
+    // if so add student to db is not already there
+
+
   return res.sendFile(path.join(__dirname, './public/index.html'))
 })
 
@@ -74,7 +82,7 @@ lti.onDeepLinking(async (token, req, res) => {
 // Setting up routes
 lti.app.use(routes)
 
-lti.whitelist('/api/student', '/api/instructor', '/api/course/lti_course_2/stats')
+lti.whitelist('/api/enrollment/course001')
 
 // Setup function
 const setup = async () => {
