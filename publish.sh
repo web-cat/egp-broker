@@ -33,10 +33,10 @@ build_and_push() {
   IMAGE_NAME=$1
   DOCKERFILE=$2
   CONTEXT=$3
-  echo "Building and pushing image: $IMAGE_NAME using Dockerfile: $DOCKERFILE with target: $TARGET"
+  echo "Building and pushing image: $IMAGE_NAME using Dockerfile: $DOCKERFILE"
 
   # Build the Docker image with the specified Dockerfile and target
-  docker build --target $TARGET -f $DOCKERFILE -t $REPO/$IMAGE_NAME:latest -t $REPO/$IMAGE_NAME:$COMMIT_HASH $CONTEXT --platform=linux/amd64
+  docker build -f $DOCKERFILE -t $REPO/$IMAGE_NAME:latest -t $REPO/$IMAGE_NAME:$COMMIT_HASH $CONTEXT --platform=linux/amd64
 
   # Push both tags to the repository
   docker push $REPO/$IMAGE_NAME:latest
