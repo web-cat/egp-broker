@@ -29,7 +29,7 @@ import ky from "ky"
           console.log("Assignments:", assignments_for_course);
   
         } catch (error) {
-          console.error("Error fetching pass info:", error);
+          console.error("Error fetching student info:", error);
         }
       }
   

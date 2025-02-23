@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const path = require('path')
+const { getRole } = require('../controllers/ltiController')
 
 // Requiring Ltijs
 const lti = require('ltijs').Provider
@@ -118,19 +119,32 @@ router.get('/info', async (req, res) => {
     if (token.userInfo.email) info.email = token.userInfo.email
   }
 
-  if (context.roles) {
-    const regex = /^http:\/\/purl\.imsglobal\.org\/vocab\/lis\/v2\/membership#(\w+)\.?$/;
-    const membershipRoles = context.roles.map(url => {
-        const match = url.match(regex);
-        return match ? match[1] : null; // Extract role or return null
-    }).filter(Boolean); // Remove null values
-    info.role = membershipRoles[0]
-  }
+  const role = getRole(context.roles)
+  
+  if (role) info.role = role
   if (context.context.title) info.title = context.context.title
   if (context.custom.canvas_user_id) info.canvas_user_id = context.custom.canvas_user_id
   if (context.custom.canvas_course_id) info.canvas_course_id = context.custom.canvas_course_id
 
   console.log('Launch info:', info)
+
+  return res.send(info)
+})
+
+router.get('/course_info', async (req, res) => {
+  const token = res.locals.token
+  const context = res.locals.context
+  
+  const role = getRole(context.roles)
+
+  if (role != "Instructor") {
+    return res.status(403).send("Unauthorized must be an instructor to pull course info")
+  }
+  
+  const info = {}
+  if (context.context.title) info.title = context.context.title
+  if (context.custom.canvas_user_id) info.canvas_instructor_id = context.custom.canvas_user_id
+  if (context.custom.canvas_course_id) info.canvas_course_id = context.custom.canvas_course_id
 
   return res.send(info)
 })

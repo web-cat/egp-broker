@@ -10,8 +10,7 @@ export default function WelcomeBanner() {
   useEffect(() => {
     const getInfo = async () => {
       try {
-        const launchInfo = await ky
-          .get("/lti/info", {
+        const launchInfo = await ky.get("/lti/info", {
             credentials: "include",
             headers: { Authorization: "Bearer " + getLtik() },
           })
