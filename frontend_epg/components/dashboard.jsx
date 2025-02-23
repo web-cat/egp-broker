@@ -37,13 +37,13 @@ export function Dashboard({ studentCanvasId, courseCanvasId }) {
     <>
       <h1 className="text-l font-bold">Free Passes Remaining</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        {Object.entries(studentInfo.passesLeft).map(([title, quantity]) => (
-          <Card key={title}>
+        {studentInfo.passesLeft.map((pass) => (
+          <Card key={pass._id}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{title}</CardTitle>
+              <CardTitle className="text-sm font-medium">{pass.passId.name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{quantity}</div>
+              <div className="text-2xl font-bold">{pass.count}</div>
             </CardContent>
           </Card>
         ))}

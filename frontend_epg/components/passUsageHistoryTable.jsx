@@ -25,7 +25,7 @@ export function PassUsageHistoryTable({ usedPasses }) {
         {usedPasses.map((pass, index) => (
           <TableRow key={index}>
             <TableCell className="font-medium">{pass.usedAt}</TableCell>
-            <TableCell>{pass.type}</TableCell>
+            <TableCell>{pass.passId.name}</TableCell>
             <TableCell>{pass.assignmentId.title}</TableCell>
           </TableRow>
         ))}

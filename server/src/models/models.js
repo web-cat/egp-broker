@@ -1,11 +1,19 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-// Enum for FreePassType
-const FreePassType = {
-  EXTENSION_24H: 'EXTENSION_24H',
-  QUIZ_RETAKE: 'QUIZ_RETAKE'
-};
+// Pass Schema
+const passSchema = new Schema({
+  name: { type: String, required: true, unique: true },
+  description: { type: String, required: true },
+  passType: { 
+    type: String, 
+    required: true, 
+    enum: ['DURATION', 'EVENT'] // DURATION for time-based passes, EVENT for single-use passes
+  },
+  details: {
+    durationHours: { type: Number }, // Only for DURATION passType
+  }
+});
 
 // Instructor Schema
 const instructorSchema = new Schema({
@@ -23,26 +31,29 @@ const studentSchema = new Schema({
   lastName: String
 });
 
-// Course Schema (with allowedPassTypes)
+// Course Schema
 const courseSchema = new Schema({
   canvasId: { type: String, required: true, unique: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
   instructorId: { type: Schema.Types.ObjectId, ref: 'Instructor', required: true },
-  allowedPassTypes: [{ type: String, enum: Object.values(FreePassType) }] // Moved here
+  allowedPassTypes: [{
+    passId: { type: Schema.Types.ObjectId, ref: 'Pass', required: true },
+    initialCount: { type: Number, required: true, default: 0 }
+  }]
 });
 
-// Enrollment Schema (removed allowedPassTypes)
+// Enrollment Schema (updated passesLeft and freePasses)
 const enrollmentSchema = new Schema({
   studentId: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
   courseId: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
-  passesLeft: {
-    EXTENSION_24H: { type: Number, default: 0 },
-    QUIZ_RETAKE: { type: Number, default: 0 }
-  },
+  passesLeft: [{
+    passId: { type: Schema.Types.ObjectId, ref: 'Pass' },
+    count: { type: Number, default: 0 }
+  }],
   freePasses: [
     {
-      type: { type: String, enum: Object.values(FreePassType), required: true },
+      passId: { type: Schema.Types.ObjectId, ref: 'Pass', required: true },
       usedAt: Date,
       assignmentId: { type: Schema.Types.ObjectId, ref: 'Assignment' }
     }
@@ -58,6 +69,7 @@ const assignmentSchema = new Schema({
 });
 
 // Create models
+const Pass = mongoose.model('Pass', passSchema);
 const Instructor = mongoose.model('Instructor', instructorSchema);
 const Student = mongoose.model('Student', studentSchema);
 const Course = mongoose.model('Course', courseSchema);
@@ -66,10 +78,10 @@ const Assignment = mongoose.model('Assignment', assignmentSchema);
 
 // Export models
 module.exports = {
+  Pass,
   Instructor,
   Student,
   Course,
   Enrollment,
-  Assignment,
-  FreePassType // Export the enum as well
+  Assignment
 };

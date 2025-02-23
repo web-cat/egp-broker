@@ -27,7 +27,8 @@ router.get("/:courseCanvasId", async (req, res) => {
         const enrollments = await Enrollment.find(query)
             .populate("studentId")
             .populate("freePasses")
-            .populate("passesLeft")
+            .populate("passesLeft.passId")
+            .populate("freePasses.passId")
             .populate("freePasses.assignmentId");
 
         if (!enrollments.length) {

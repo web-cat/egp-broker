@@ -1,13 +1,28 @@
 require('dotenv').config();
 
 const mongoose = require('mongoose');
-const { Instructor, Student, Course, Enrollment, Assignment, FreePassType } = require('../models/models');
+const { Instructor, Student, Course, Enrollment, Assignment, Pass } = require('../models/models');
 const connectWithRetry = require('./db');
 
 const seedDatabase = async () => {
   try {
     await connectWithRetry();
     await mongoose.connection.dropDatabase();
+
+    // Create Passes
+    const extensionPass = await Pass.create({
+      name: '24-Hour Extension',
+      description: 'Extends assignment deadline by 24 hours.',
+      passType: 'DURATION',
+      details: { durationHours: 24 }
+    });
+
+    const quizRetakePass = await Pass.create({
+      name: 'Quiz Retake',
+      description: 'Allows a retake of one quiz.',
+      passType: 'EVENT',
+      details: {}
+    });
 
     // Create Instructors
     const instructor1 = await Instructor.create({
@@ -32,13 +47,16 @@ const seedDatabase = async () => {
       lastName: 'Johnson'
     });
 
-    // Create Courses with allowedPassTypes
+    // Create Courses with allowedPassTypes (referencing Pass documents)
     const course1 = await Course.create({
       canvasId: 'course001',
       title: 'Introduction to Programming',
       description: 'Learn the basics of programming.',
       instructorId: instructor1._id,
-      allowedPassTypes: [FreePassType.EXTENSION_24H, FreePassType.QUIZ_RETAKE]
+      allowedPassTypes: [
+        { passId: extensionPass._id, initialCount: 3 },
+        { passId: quizRetakePass._id, initialCount: 2 }
+      ]
     });
 
     const course2 = await Course.create({
@@ -46,7 +64,9 @@ const seedDatabase = async () => {
       title: 'Data Structures and Algorithms',
       description: 'Learn about data structures and algorithms.',
       instructorId: instructor1._id,
-      allowedPassTypes: [FreePassType.EXTENSION_24H]
+      allowedPassTypes: [
+        { passId: extensionPass._id, initialCount: 2 },
+      ]
     });
 
     // Create Assignments
@@ -71,17 +91,23 @@ const seedDatabase = async () => {
       courseId: course2._id
     });
 
-    // Create Enrollments with used free passes
+    // Create Enrollments with used free passes (referencing Pass documents)
     await Enrollment.create({
       studentId: student1._id,
       courseId: course1._id,
-      passesLeft: {
-        EXTENSION_24H: 2,
-        QUIZ_RETAKE: 1
-      },
+      passesLeft: [
+        {
+          passId: extensionPass._id,
+          count: 3
+        },
+        {
+          passId: quizRetakePass._id,
+          count: 2
+        }
+      ],
       freePasses: [
         {
-          type: FreePassType.EXTENSION_24H,
+          passId: extensionPass._id,
           usedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // Used 2 days ago
           assignmentId: assignment1._id
         }
@@ -91,13 +117,19 @@ const seedDatabase = async () => {
     await Enrollment.create({
       studentId: student2._id,
       courseId: course1._id,
-      passesLeft: {
-        EXTENSION_24H: 1,
-        QUIZ_RETAKE: 2
-      },
+      passesLeft: [
+        {
+          passId: extensionPass._id,
+          count: 3
+        },
+        {
+          passId: quizRetakePass._id,
+          count: 2
+        }
+      ],
       freePasses: [
         {
-          type: FreePassType.QUIZ_RETAKE,
+          passId: quizRetakePass._id,
           usedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // Used 1 day ago
           assignmentId: assignment1._id
         }
