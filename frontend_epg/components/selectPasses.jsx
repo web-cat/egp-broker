@@ -58,7 +58,7 @@ export default function MultiSelectPassCards({ passes_base, course }) {
             headers: { Authorization: "Bearer " + getLtik() },
         }).json()
 
-        window.location.href = `/`
+        window.location.href = `/?ltik=${getLtik()}`
     }
 
     return (
