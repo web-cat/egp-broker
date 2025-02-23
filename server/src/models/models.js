@@ -35,7 +35,7 @@ const studentSchema = new Schema({
 const courseSchema = new Schema({
   canvasId: { type: String, required: true, unique: true },
   title: { type: String, required: true },
-  description: { type: String, required: true },
+  description: { type: String },
   instructorId: { type: Schema.Types.ObjectId, ref: 'Instructor', required: true },
   allowedPassTypes: [{
     passId: { type: Schema.Types.ObjectId, ref: 'Pass', required: true },
@@ -48,13 +48,13 @@ const enrollmentSchema = new Schema({
   studentId: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
   courseId: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
   passesLeft: [{
-    passId: { type: Schema.Types.ObjectId, ref: 'Pass' },
-    count: { type: Number, default: 0 }
+    passId: { type: Schema.Types.ObjectId, ref: 'Pass', required: true },
+    count: { type: Number, default: 0, required: true }
   }],
   freePasses: [
     {
-      passId: { type: Schema.Types.ObjectId, ref: 'Pass', required: true },
-      usedAt: Date,
+      passId: { type: Schema.Types.ObjectId, ref: 'Pass' },
+      usedAt: { type: Date },
       assignmentId: { type: Schema.Types.ObjectId, ref: 'Assignment' }
     }
   ]

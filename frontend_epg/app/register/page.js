@@ -7,6 +7,7 @@ import React, { useEffect } from 'react'
 
 function courseRegisterPage() {
   const [courseInfo, setCourseInfo] = React.useState();
+  const [passes, setPasses] = React.useState();
 
   useEffect(() => {
     async function fetchCourseInfo() {
@@ -19,6 +20,14 @@ function courseRegisterPage() {
         setCourseInfo(course_info);
         console.log("Course Info:", course_info);
 
+        const passes_info = await ky.get(`/api/pass`, {
+          credentials: "include",
+          headers: { Authorization: "Bearer " + getLtik() },
+        })
+        .json();
+      setPasses(passes_info);
+      console.log("Pass Info:", passes_info);
+
       } catch (error) {
         console.error("Error fetching course info:", error);
       }
@@ -27,7 +36,7 @@ function courseRegisterPage() {
     fetchCourseInfo();
   }, []);
 
-  if (!courseInfo) {
+  if (!courseInfo || !passes) {
     return <div>Loading...</div>;
   }
 
@@ -38,6 +47,7 @@ function courseRegisterPage() {
           title={courseInfo.title}
           description={courseInfo.description}
           instructorCanvasId={courseInfo.canvas_instructor_id}
+          passes={passes}
         />
     </div>
   )

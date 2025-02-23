@@ -12,8 +12,8 @@ export function Dashboard({ studentCanvasId, courseCanvasId }) {
     async function fetchStudentInfo() {
       try {
         const student_info = await ky
-          //   .get(`/api/enrollment/${courseCanvasId}?studentCanvasId=${studentCanvasId}`, {
-          .get(`/api/enrollment/course001?studentCanvasId=stud002`, {
+            .get(`/api/enrollment/${courseCanvasId}?studentCanvasId=${studentCanvasId}`, {
+        //   .get(`/api/enrollment/course001?studentCanvasId=stud002`, {
             credentials: "include",
             headers: { Authorization: "Bearer " + getLtik() },
           })

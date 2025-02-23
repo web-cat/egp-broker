@@ -1,16 +1,13 @@
-const getOrAddEnrollment = async (req, res) => {
-  const { studentCanvasId, courseCanvasId } = req.body;
+const { Pass, Course, Student, Enrollment } = require("../models/models");
+
+const getOrAddEnrollment = async (studentCanvasId, courseCanvasId) => {
 
   try {
     const course = await Course.findOne({ canvasId: courseCanvasId });
     const student = await Student.findOne({ canvasId: studentCanvasId });
 
-    if (!course) {
-      return res.status(404).json({ message: "Course not found" });
-    }
-
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+    if (!course || !student) {
+      return null;
     }
 
     let enrollment = await Enrollment.findOne({
@@ -19,18 +16,26 @@ const getOrAddEnrollment = async (req, res) => {
     });
 
     if (enrollment) {
-      return res.status(200).json(enrollment);
+      return enrollment;
     }
+
+    passesLeft = course.allowedPassTypes.map((pass) => {
+        return {
+            passId: pass.passId,
+            count: pass.initialCount,
+        }
+        });
 
     enrollment = await Enrollment.create({
       courseId: course._id,
       studentId: student._id,
+      passesLeft: passesLeft,
+      freePasses: [],
     });
 
-    return res.status(201).json(enrollment);
+    return enrollment;
   } catch (err) {
     console.error("Error adding or finding enrollment:", err);
-    return res.status(500).json({ message: err });
   }
 };
 
