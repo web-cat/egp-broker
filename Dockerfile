@@ -1,34 +1,16 @@
+# Stage 1: Build the frontend
+FROM node:20.5 AS frontend-builder
+WORKDIR /app/client
+COPY frontend_epg/package.json ./
+RUN npm install --force
+COPY frontend_epg/ ./
+RUN npm run build
+
 # Stage 2: Build the backend
-FROM node:22 AS backend-builder
+FROM node:22-alpine AS backend-builder
 WORKDIR /app/server
 COPY server/package.json server/package-lock.json ./
-RUN npm install
+RUN npm ci
 COPY server/ ./
-
-# Copy the built frontend into the server folder
-COPY frontend_epg/out /app/server/public
-
-# Run the Next.js app
+COPY --from=frontend-builder /app/client/out /app/server/public
 CMD ["npm", "run", "start"]
-
-
-# # Stage 1: Build the frontend
-# FROM node:14 AS frontend-builder
-# WORKDIR /app/client
-# COPY client/package.json client/package-lock.json ./
-# RUN npm install
-# COPY client/ ./
-# RUN npm run build
-
-# # Stage 2: Build the backend
-# FROM node:14 AS backend-builder
-# WORKDIR /app/server
-# COPY server/package.json server/package-lock.json ./
-# RUN npm install
-# COPY server/ ./
-
-# # Copy the built frontend into the server folder
-# COPY --from=frontend-builder /app/client/build /app/server/public
-
-# # Run the Next.js app
-# CMD ["npm", "run", "start"]

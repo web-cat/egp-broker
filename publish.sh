@@ -5,11 +5,9 @@ set -e
 
 # Variables
 REPO="docker.cs.vt.edu/stedwar2/egp-broker"
-IMAGE1_NAME="frontend_prod"
-IMAGE2_NAME="backend_prod"
-IMAGE1_DOCKERFILE="frontend/Dockerfile.frontend"
-IMAGE2_DOCKERFILE="backend/Dockerfile.backend"
-TARGET="prod"
+IMAGE_NAME="egp-lti"
+DOCKERFILE="./Dockerfile"
+
 COMMIT_HASH=$(git rev-parse --short HEAD)
 
 if [[ -f .env ]]; then
@@ -47,29 +45,14 @@ build_and_push() {
   echo "Image $IMAGE_NAME built and pushed successfully!"
 }
 
-# Main logic
-# if [[ -n $(git status --porcelain) ]]; then
-#   echo "There are uncommitted changes. Please commit or stash them before building the Docker images."
-#   exit 1
-# fi
+# Check if there are uncommitted changes
+if [[ -n $(git status --porcelain) ]]; then
+  echo "There are uncommitted changes. Please commit or stash them before building the Docker images."
+  exit 1
+fi
 
 docker_login
 
-case "$1" in
-  "all")
-    build_and_push $IMAGE1_NAME $IMAGE1_DOCKERFILE ./frontend
-    build_and_push $IMAGE2_NAME $IMAGE2_DOCKERFILE ./backend
-    ;;
-  "frontend")
-    build_and_push $IMAGE1_NAME $IMAGE1_DOCKERFILE ./frontend
-    ;;
-  "backend")
-    build_and_push $IMAGE2_NAME $IMAGE2_DOCKERFILE ./backend
-    ;;
-  *)
-    echo "Usage: $0 {all|frontend|backend}"
-    exit 1
-    ;;
-esac
+build_and_push $IMAGE_NAME $DOCKERFILE .
 
 echo "Docker build and push process completed successfully!"
