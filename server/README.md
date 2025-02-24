@@ -35,6 +35,63 @@ server/
         └── studentRoutes.js
 ```
 
+## Database Schema
+
+The EGP-Broker LTI 1.3 Server uses a noSQL schema
+
+```mermaid
+erDiagram
+    PASS {
+        String name PK "Unique"
+        String description
+        String passType "DURATION | EVENT"
+        Number durationHours
+    }
+    
+    INSTRUCTOR {
+        String canvasId PK "Unique"
+        String email "Unique"
+        String firstName
+        String lastName
+    }
+
+    STUDENT {
+        String canvasId PK "Unique"
+        String email "Unique"
+        String firstName
+        String lastName
+    }
+
+    COURSE {
+        String canvasId PK "Unique"
+        String title
+        String description
+        ObjectId instructorId FK
+    }
+
+    ENROLLMENT {
+        ObjectId studentId FK
+        ObjectId courseId FK
+    }
+
+    ASSIGNMENT {
+        String title
+        String description
+        Date dueDate
+        ObjectId courseId FK
+    }
+
+    %% Relationships
+    COURSE ||--o{ PASS : "allowedPassTypes"
+    COURSE ||--|{ ASSIGNMENT : "has"
+    COURSE ||--|{ ENROLLMENT : "enrolls"
+    ENROLLMENT ||--|{ PASS : "passesLeft"
+    ENROLLMENT ||--|{ PASS : "freePasses"
+    INSTRUCTOR ||--|{ COURSE : "teaches"
+    STUDENT ||--|{ ENROLLMENT : "enrolled"
+    ENROLLMENT ||--o{ ASSIGNMENT : "freePasses.assignmentId"
+```
+
 ## API Reference
 
 ### LTI Routes
