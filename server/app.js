@@ -3,18 +3,13 @@ const path = require("path");
 const routes = require("./src/routes");
 const { getRole } = require("./src/controllers/ltiController");
 const {
-  instructorExists,
-  addInstructor,
   getOrAddInstructor,
 } = require("./src/controllers/instructorController");
-const {
-  studentExists,
-  addStudent,
-  getOrAddStudent,
-} = require("./src/controllers/studnetControllers");
-const { get } = require("http");
+const { getOrAddStudent } = require("./src/controllers/studnetControllers");
 const { getCourse } = require("./src/controllers/courseControllers");
-const { getOrAddEnrollment } = require("./src/controllers/enrollmentControllers");
+const {
+  getOrAddEnrollment,
+} = require("./src/controllers/enrollmentControllers");
 
 const lti = require("ltijs").Provider;
 
@@ -37,46 +32,6 @@ lti.setup(
       sameSite: "None", // Set sameSite to 'None' if the testing platform is in a different domain and https is being used
     },
     devMode: false, // Set DevMode to true if the testing platform is in a different domain and https is not being used
-    // dynReg: {
-    //   url: 'https://one-sunbeam-distinctly.ngrok-free.app', // Tool Provider URL. Required field.
-    //   name: 'lti-test', // Tool Provider name. Required field.
-    //   logo: '', // Tool Provider logo URL.
-    //   description: 'Tool Description', // Tool Provider description.
-    //   redirectUris: ['https://one-sunbeam-distinctly.ngrok-free.app', 'https://one-sunbeam-distinctly.ngrok-free.app/keys'], // Additional redirection URLs. The main URL is added by default.
-    //   customParameters: {
-    //     "scopes": [
-    //       "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
-    //       "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly",
-    //       "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly",
-    //       "https://purl.imsglobal.org/spec/lti-ags/scope/score",
-    //       "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly",
-    //       "https://canvas.instructure.com/lti/public_jwk/scope/update",
-    //       "https://canvas.instructure.com/lti/account_lookup/scope/show",
-    //       "https://canvas.instructure.com/lti-ags/progress/scope/show",
-    //       "https://canvas.instructure.com/lti/page_content/show"
-    //   ],
-    //   "extensions": [
-    //       {
-    //           "platform": "canvas.instructure.com",
-    //           "settings": {
-    //               "platform": "canvas.instructure.com",
-    //               "placements": [
-    //                   {
-    //                       "placement": "course_navigation",
-    //                       "message_type": "LtiResourceLinkRequest",
-    //                       "target_link_uri": "https://one-sunbeam-distinctly.ngrok-free.app"
-    //                   }
-    //               ]
-    //           },
-    //           "privacy_level": "public"
-    //       }
-    //   ],
-    //   "public_jwk_url": "https://one-sunbeam-distinctly.ngrok-free.app/keys",
-    //   "target_link_uri": "https://one-sunbeam-distinctly.ngrok-free.app",
-    //   "oidc_initiation_url": "https://one-sunbeam-distinctly.ngrok-free.app/login"
-    //   }, // Custom parameters.
-    //   autoActivate: true // Whether or not dynamically registered Platforms should be automatically activated. Defaults to false.
-    // }
   }
 );
 
@@ -100,7 +55,6 @@ lti.onConnect(async (token, req, res) => {
     if (course == null) {
       return res.sendFile(path.join(__dirname, "./public/register.html"));
     }
-
   } else if (role == "Learner") {
     const student = await getOrAddStudent(
       context.custom.canvas_user_id,
@@ -114,8 +68,10 @@ lti.onConnect(async (token, req, res) => {
     }
 
     // enroll student in course
-    studentEnrollment = await getOrAddEnrollment(context.custom.canvas_user_id, context.custom.canvas_course_id);
-
+    studentEnrollment = await getOrAddEnrollment(
+      context.custom.canvas_user_id,
+      context.custom.canvas_course_id
+    );
   } else {
     return res.sendFile(path.join(__dirname, "./public/notset.html"));
   }
@@ -128,6 +84,46 @@ lti.onDeepLinking(async (token, req, res) => {
   return lti.redirect(res, "/deeplink", { newResource: true });
 });
 
+lti.onDynamicRegistration(async (req, res, next) => {
+  try {
+    console.log("Dynamic Registration request received.");
+    console.log("req:", req);
+
+    // Default Canvas openid_configuration if missing
+    const openidConfig =
+      req.query.openid_configuration ||
+      "https://canvas.instructure.com/api/lti/security/openid-configuration";
+    const registrationToken = req.query.registration_token;
+
+    if (!openidConfig) {
+      return res.status(400).send({
+        status: 400,
+        error: "Bad Request",
+        details: { message: 'Missing parameter: "openid_configuration".' },
+      });
+    }
+
+    const message = await lti.DynamicRegistration.register(
+      openidConfig,
+      registrationToken
+    );
+    res.setHeader("Content-type", "text/html");
+    res.send(message);
+  } catch (err) {
+    if (err.message === "PLATFORM_ALREADY_REGISTERED") {
+      return res.status(403).send({
+        status: 403,
+        error: "Forbidden",
+        details: { message: "Platform already registered." },
+      });
+    }
+    return res.status(500).send({
+      status: 500,
+      error: "Internal Server Error",
+      details: { message: err.message },
+    });
+  }
+});
 // Setting up routes
 lti.app.use(routes);
 

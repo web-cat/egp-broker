@@ -1,59 +1,40 @@
-# egp-broker
+# EGP-Broker LTI Tool Server
 
 ## Local Development
-### Run
-#### Run all (Frontend, Backend, Database, DB Manager)
-```bash
-cd egp-broker
-```
 
-```bash
-docker compose up
-```
-
-#### Run Backend Server, Database and DB Manager
-```bash
-cd egp-broker/backend
-```
+### Run all (LTI Tool UI, LTI Sever, Database, DB Manager)
 
 ```bash
 docker compose up
 ```
 
 ### Key URLs
+
 | Service    | URL |
 | -------- | ------- |
-| Frontend (Svelte) | localhost:5173 |
-| Backend (ExpressJS) | localhost:3001 |
-| Database (MongoDB) | localhost:27017 |
-| DB Manger (Mongo Express) | localhost:8081 |
-
-### Seed Database
-To populate the database with dummy data
-```bash
-curl -X POST localhost:3001/egp-broker-service/api/seed \
--H "Content-Type: application/json" \
--d '{
-    "seedKey": "12345789"
-}'
-```
+| [egp-lti](http://localhost:3000) | [localhost:3000](http://localhost:3000) |
+| [Database (MongoDB)](http://localhost:27017) | [localhost:27017](http://localhost:27017) |
+| [DB Manager (Mongo Express)](http://localhost:8081) | [localhost:8081](http://localhost:8081) |
 
 ## Deploy
-```bash
-cd egp-broker
-```
 
-Edit the .env file to set the docker user name and password
-```.env
-DOCKER_USERNAME=username
-DOCKER_PASSWORD=password
-```
+Publish EGP-Broker LTI Tool production image to [`version.cs.vt.edu`](https://version.cs.vt.edu/stedwar2/egp-broker/container_registry)
 
-```bash
-bash publish.sh
-```
+1. Edit the .env file to set the docker username and password
+
+    ```.env
+    DOCKER_USERNAME=username
+    DOCKER_PASSWORD=password
+    ```
+
+2. Run `publish.sh` script to build and push image
+
+    ```bash
+    ./publish.sh
+    ```
 
 ## LTI Key config
+
 ```json
 {
     "title": "epg-broker",
@@ -77,7 +58,7 @@ bash publish.sh
                     {
                         "placement": "course_navigation",
                         "message_type": "LtiResourceLinkRequest",
-                        "target_link_uri": "https://one-sunbeam-distinctly.ngrok-free.app"
+                        "target_link_uri": "https://egp-broker.cs.vt.edu"
                     }
                 ]
             },
@@ -86,10 +67,12 @@ bash publish.sh
     ],
     "public_jwk": {},
     "description": "epg-broker",
-    "custom_fields": {},
-    "public_jwk_url": "https://one-sunbeam-distinctly.ngrok-free.app/keys",
-    "target_link_uri": "https://one-sunbeam-distinctly.ngrok-free.app",
-    "oidc_initiation_url": "https://one-sunbeam-distinctly.ngrok-free.app/login"
+    "custom_fields": {
+        "canvas_user_id": "$Canvas.user.id",
+        "canvas_course_id": "$Canvas.course.id"
+    },
+    "public_jwk_url": "https://egp-broker.cs.vt.edu/keys",
+    "target_link_uri": "https://egp-broker.cs.vt.edu",
+    "oidc_initiation_url": "https://egp-broker.cs.vt.edu/login"
 }
 ```
-
