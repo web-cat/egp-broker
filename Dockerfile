@@ -1,9 +1,9 @@
 # Stage 1: Build the frontend
 FROM node:20.5 AS frontend-builder
 WORKDIR /app/client
-COPY frontend_epg/package.json ./
+COPY frontend/package.json ./
 RUN npm install --force
-COPY frontend_epg/ ./
+COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Build the backend

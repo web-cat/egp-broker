@@ -12,7 +12,7 @@ services:
       - my-shared-network
     environment:
       # LTI
-      LTI_KEY: 2Gt4wLFA9nYHr6LwATDDYaEEumcZ7HRAF3y3tm7fKLFZexZ3GztGTxkB7x3wyuT3
+      LTI_KEY: 2EB6yh826Rf4Wkmx47etctGtkrAn84rRF8PXcNxC62F3vv6crfVfP78WBX84YW9v
 
       # MongoDB
       DB_HOST: mongo-lti
@@ -24,7 +24,7 @@ services:
       # CANVAS
       CANVAS_URL: https://canvas.endeavour.cs.vt.edu
       CANVAS_NAME: endeavour.cs.vt
-      CANVAS_CLIENT_ID: 10000000000006
+      CANVAS_CLIENT_ID: 10000000000007
       CANVAS_AUTH_ENDPOINT: https://canvas.endeavour.cs.vt.edu/api/lti/authorize_redirect
       CANVAS_ACCESS_TOKEN_ENDPOINT: https://canvas.endeavour.cs.vt.edu/login/oauth2/token
       CANVAS_JWK_URL: https://canvas.endeavour.cs.vt.edu/api/lti/security/jwks
