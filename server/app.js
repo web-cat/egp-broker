@@ -41,6 +41,13 @@ lti.onConnect(async (token, req, res) => {
   console.log("token:", token);
   console.log("context:", context);
 
+  try {
+    const result = await lti.Grade.getLineItems(token, { resourceLinkId: true })
+    console.log("result:", result);
+  } catch (error) {
+    console.error("Error fetching line items:", error);
+  }
+
   const role = getRole(context.roles);
   const course = await getCourse(context.custom.canvas_course_id);
 
