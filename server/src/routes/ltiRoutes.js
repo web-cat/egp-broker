@@ -149,6 +149,26 @@ router.get('/course_info', async (req, res) => {
   return res.send(info)
 })
 
+router.get('/lti_key_config_dev.json', (req, res) => {
+  const filePath = path.join(__dirname, '../lti_key_configs/lti_key_config_dev.json')
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.log(err.message)
+      return res.status(500).send({ err: err.message })
+    }
+  })
+})
+
+router.get('/lti_key_config_prod.json', (req, res) => {
+  const filePath = path.join(__dirname, '../lti_key_configs/lti_key_config_prod.json')
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.log(err.message)
+      return res.status(500).send({ err: err.message })
+    }
+  })
+})
+
 // Wildcard route to deal with redirecting to React routes
 router.get('*', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')))
 

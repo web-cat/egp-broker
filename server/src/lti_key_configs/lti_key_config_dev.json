@@ -1,0 +1,39 @@
+{
+    "title": "epg-broker-dev",
+    "scopes": [
+        "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
+        "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly",
+        "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly",
+        "https://purl.imsglobal.org/spec/lti-ags/scope/score",
+        "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly",
+        "https://canvas.instructure.com/lti/public_jwk/scope/update",
+        "https://canvas.instructure.com/lti/account_lookup/scope/show",
+        "https://canvas.instructure.com/lti-ags/progress/scope/show",
+        "https://canvas.instructure.com/lti/page_content/show"
+    ],
+    "extensions": [
+        {
+            "platform": "canvas.instructure.com",
+            "settings": {
+                "platform": "canvas.instructure.com",
+                "placements": [
+                    {
+                        "placement": "course_navigation",
+                        "message_type": "LtiResourceLinkRequest",
+                        "target_link_uri": "https://one-sunbeam-distinctly.ngrok-free.app"
+                    }
+                ]
+            },
+            "privacy_level": "public"
+        }
+    ],
+    "public_jwk": {},
+    "description": "epg-broker-dev",
+    "custom_fields": {
+        "canvas_user_id": "$Canvas.user.id",
+        "canvas_course_id": "$Canvas.course.id"
+    },
+    "public_jwk_url": "https://one-sunbeam-distinctly.ngrok-free.app/keys",
+    "target_link_uri": "https://one-sunbeam-distinctly.ngrok-free.app",
+    "oidc_initiation_url": "https://one-sunbeam-distinctly.ngrok-free.app/login"
+}

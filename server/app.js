@@ -131,10 +131,12 @@ lti.onDynamicRegistration(async (req, res, next) => {
     });
   }
 });
+
 // Setting up routes
 lti.app.use(routes);
 
-// lti.whitelist('/api/assignment/course001','/api/enrollment/course001', '/api/pass/');
+// Whitelist lti_key_config files
+lti.whitelist('/lti/lti_key_config_prod.json', '/lti/lti_key_config_dev.json');
 
 // Setup function
 const setup = async () => {
