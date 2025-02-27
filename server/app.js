@@ -135,16 +135,18 @@ lti.onDynamicRegistration(async (req, res, next) => {
 // Setting up routes
 lti.app.use(routes);
 
-// Whitelist lti_key_config files
-lti.whitelist('/lti/lti_key_config_prod.json', '/lti/lti_key_config_dev.json');
+lti.whitelist(
+  // Whitelist lti_key_config files from lti auth
+  '/lti/lti_key_config_prod.json', '/lti/lti_key_config_dev.json', 
+  // Whitelist tool routes from lti auth
+  '/api/tool/student_passes', '/api/tool/redeem_pass'
+);
 
 // Setup function
 const setup = async () => {
   await lti.deploy({ port: process.env.PORT });
 
-  /**
-   * Register platform
-   */
+  // Register platform
   await lti.registerPlatform({
     url: process.env.CANVAS_URL, // or url : 'https://canvas.exampledomain.com' (depends on config form Canvas instance) if iss is changed in config/security.yml file! It must be the same as the iss
     name: process.env.CANVAS_NAME, // domain name from canvas instance
