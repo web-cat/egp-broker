@@ -54,8 +54,8 @@ export function StudentTable({ courseCanvasId }) {
   React.useEffect(() => {
     async function fetchStudents() {
       try {
-        const students = await ky.get(`/api/enrollment/${courseCanvasId}`, {
-        // const students = await ky.get(`/api/enrollment/course001`, {
+        // const students = await ky.get(`/api/enrollment/${courseCanvasId}`, {
+        const students = await ky.get(`/api/enrollment/course001`, {
             credentials: "include",
             headers: { Authorization: "Bearer " + getLtik() },
           })

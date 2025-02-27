@@ -19,8 +19,8 @@ import ky from "ky"
       async function fetchStudentInfo() {
         try {
           const assignments_for_course = await ky
-              .get(`/api/assignment/${courseCanvasId}`, {
-            // .get(`/api/assignment/course001`, {
+            // .get(`/api/assignment/${courseCanvasId}`, {
+            .get(`/api/assignment/course001`, {
               credentials: "include",
               headers: { Authorization: "Bearer " + getLtik() },
             })

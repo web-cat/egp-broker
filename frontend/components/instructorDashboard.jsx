@@ -13,8 +13,8 @@ function InstructorDashboard({ courseCanvasId }) {
     const fetchUsedFreePasses = async () => {
       try {
         const usedFreePasses = await ky
-          .get(`/api/enrollment/${courseCanvasId}/usedFreePasses`, {
-        //   .get(`/api/enrollment/course001/usedFreePasses`, {
+        //   .get(`/api/enrollment/${courseCanvasId}/usedFreePasses`, {
+          .get(`/api/enrollment/course001/usedFreePasses`, {
             credentials: "include",
             headers: { Authorization: "Bearer " + getLtik() },
           })
