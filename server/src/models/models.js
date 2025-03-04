@@ -63,6 +63,7 @@ const enrollmentSchema = new Schema({
 // Assignment Schema
 const assignmentSchema = new Schema({
   title: { type: String, required: true },
+  canvasId: { type: String, required: true, unique: true },
   description: { type: String, required: true },
   dueDate: { type: Date, required: true },
   courseId: { type: Schema.Types.ObjectId, ref: 'Course', required: true }
