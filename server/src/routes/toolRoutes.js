@@ -1,6 +1,6 @@
 const express = require("express");
 const { authenticateJWT } = require("../middleware/toolMiddleware");
-const { Student, Course, Enrollment } = require("../models/models");
+const { Student, Course, Enrollment, Assignment } = require("../models/models");
 
 const router = express();
 
@@ -31,6 +31,7 @@ router.post("/student_passes", authenticateJWT, async (req, res) => {
         const passes = enrollment.passesLeft
         .filter((pass) => passType ? pass.passId.passType.toLowerCase() === passType.toLowerCase() : true)
         .map((pass) => ({
+                id: pass.passId._id,
                 name: pass.passId.name,
                 description: pass.passId.description,
                 count: pass.count
@@ -44,9 +45,16 @@ router.post("/student_passes", authenticateJWT, async (req, res) => {
     }
 });
 
-router.post("/redeem_pass", authenticateJWT, async (req, res) => {
-    const { canvasStudentId, studentEmail, canvasCourseId, passId } = req.body;
-    console.log(`Canvas Student ID: ${canvasStudentId}, Student Email: ${studentEmail}, Canvas Course ID: ${canvasCourseId}, Pass ID: ${passId}`);
+router.post("/redeem_pass", 
+    // authenticateJWT, 
+    async (req, res) => {
+    const { canvasStudentId, studentEmail, canvasCourseId, canvasAssignmentID, passId } = req.body;
+
+    console.log(`
+        Canvas Student ID: ${canvasStudentId}, Student Email: ${studentEmail}, 
+        Canvas Course ID: ${canvasCourseId}, Canvas Assignment ID: ${canvasAssignmentID}, 
+        Pass ID: ${passId}`
+    );
 
     try {
         // Get student object ID from canvasStudentId
@@ -67,6 +75,11 @@ router.post("/redeem_pass", authenticateJWT, async (req, res) => {
             return res.status(404).json({ message: "Enrollment not found" });
         }
 
+        const assignment = await Assignment.findOne({ canvasId: canvasAssignmentID });
+        if (!assignment) {
+            return res.status(404).json({ message: "Assignment not found" });
+        }
+
         // Find the pass in passesLeft
         const passIndex = enrollment.passesLeft.findIndex(pass => pass.passId._id.toString() === passId);
         if (passIndex === -1 || enrollment.passesLeft[passIndex].count <= 0) {
@@ -77,7 +90,17 @@ router.post("/redeem_pass", authenticateJWT, async (req, res) => {
         enrollment.passesLeft[passIndex].count -= 1; // Decrease the count of the pass
         await enrollment.save(); // Save the updated enrollment
 
-        res.json({ message: "Pass redeemed successfully!" });
+        enrollment.freePasses.push({
+            passId: passId,
+            usedAt: new Date(),
+            assignmentId: assignment._id,
+        });
+        await enrollment.save();
+        
+        const passDetails = enrollment.passesLeft[passIndex].passId.details;
+        const durationHours = passDetails.durationHours;
+
+        res.status(200).json({ durationHours });
 
     } catch (error) {
         console.error(error);
