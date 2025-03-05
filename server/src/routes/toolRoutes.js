@@ -45,14 +45,12 @@ router.post("/student_passes", authenticateJWT, async (req, res) => {
     }
 });
 
-router.post("/redeem_pass", 
-    // authenticateJWT, 
-    async (req, res) => {
-    const { canvasStudentId, studentEmail, canvasCourseId, canvasAssignmentID, passId } = req.body;
+router.post("/redeem_pass", authenticateJWT, async (req, res) => {
+    const { canvasStudentId, studentEmail, canvasCourseId, canvasAssignmentId, passId } = req.body;
 
     console.log(`
         Canvas Student ID: ${canvasStudentId}, Student Email: ${studentEmail}, 
-        Canvas Course ID: ${canvasCourseId}, Canvas Assignment ID: ${canvasAssignmentID}, 
+        Canvas Course ID: ${canvasCourseId}, Canvas Assignment ID: ${canvasAssignmentId}, 
         Pass ID: ${passId}`
     );
 
@@ -75,15 +73,16 @@ router.post("/redeem_pass",
             return res.status(404).json({ message: "Enrollment not found" });
         }
 
-        const assignment = await Assignment.findOne({ canvasId: canvasAssignmentID });
+        const assignment = await Assignment.findOne({ canvasId: canvasAssignmentId });
         if (!assignment) {
             return res.status(404).json({ message: "Assignment not found" });
         }
 
         // Find the pass in passesLeft
         const passIndex = enrollment.passesLeft.findIndex(pass => pass.passId._id.toString() === passId);
+        console.log("Pass Index:", passIndex);
         if (passIndex === -1 || enrollment.passesLeft[passIndex].count <= 0) {
-            return res.status(400).json({ message: "Pass not available or already redeemed" });
+            return res.status(404).json({ message: "Pass not available or already redeemed" });
         }
 
         // Redeem the pass
@@ -100,6 +99,7 @@ router.post("/redeem_pass",
         const passDetails = enrollment.passesLeft[passIndex].passId.details;
         const durationHours = passDetails.durationHours;
 
+        // Return the duration of the pass
         res.status(200).json({ durationHours });
 
     } catch (error) {
