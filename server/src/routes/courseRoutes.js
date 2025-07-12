@@ -30,6 +30,25 @@ router.post("/add", async (req, res) => {
   }
 });
 
+router.post("/save-api-key", async (req, res) => {
+  const { instructorCanvasId, canvasApiKey } = req.body;
 
+  console.log("Saving API key for instructor:", instructorCanvasId);
+
+  try {
+    const instructor = await Instructor.findOne({ canvasId: instructorCanvasId });
+    if (!instructor) {
+      return res.status(404).json({ message: "Instructor not found" });
+    }
+
+    instructor.canvasApiKey = canvasApiKey;
+    await instructor.save();
+
+    res.status(200).json({ message: "Canvas API key saved successfully" });
+  } catch (err) {
+    console.error("Error saving Canvas API key:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
 
 module.exports = router;

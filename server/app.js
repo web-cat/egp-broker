@@ -31,7 +31,7 @@ lti.setup(
       secure: true, // Set secure to true if the testing platform is in a different domain and https is being used
       sameSite: "None", // Set sameSite to 'None' if the testing platform is in a different domain and https is being used
     },
-    devMode: false, // Set DevMode to true if the testing platform is in a different domain and https is not being used
+    devMode: true, // Set DevMode to true if the testing platform is in a different domain and https is not being used
   }
 );
 
@@ -42,8 +42,23 @@ lti.onConnect(async (token, req, res) => {
   console.log("context:", context);
 
   try {
-    const result = await lti.Grade.getLineItems(token, { resourceLinkId: true })
-    console.log("result:", result);
+
+    const lineItem = {
+      scoreMaximum: 100,
+      label: 'Grade',
+      tag: 'grade'
+    }
+    // Sends lineitem to a platform
+    await lti.Grade.createLineItem(res.locals.token, lineItem)
+
+
+    const lineitem_out = await lti.Grade.getLineItems(token, {resourceLinkId: false, resourceId: false})
+    console.log("lineitem_out:", lineitem_out);
+
+    const idtoken = res.locals.token // IdToken
+    const scores_out = await lti.Grade.getScores(idtoken, idtoken.platformContext.endpoint.lineitems, { userId: idtoken.user })
+
+    console.log("scores_out:", scores_out);
   } catch (error) {
     console.error("Error fetching line items:", error);
   }
@@ -91,53 +106,53 @@ lti.onDeepLinking(async (token, req, res) => {
   return lti.redirect(res, "/deeplink", { newResource: true });
 });
 
-lti.onDynamicRegistration(async (req, res, next) => {
-  try {
-    console.log("Dynamic Registration request received.");
-    console.log("req:", req);
+// lti.onDynamicRegistration(async (req, res, next) => {
+//   try {
+//     console.log("Dynamic Registration request received.");
+//     console.log("req:", req);
 
-    // Default Canvas openid_configuration if missing
-    const openidConfig =
-      req.query.openid_configuration ||
-      "https://canvas.instructure.com/api/lti/security/openid-configuration";
-    const registrationToken = req.query.registration_token;
+//     // Default Canvas openid_configuration if missing
+//     const openidConfig =
+//       req.query.openid_configuration ||
+//       "https://canvas.instructure.com/api/lti/security/openid-configuration";
+//     const registrationToken = req.query.registration_token;
 
-    if (!openidConfig) {
-      return res.status(400).send({
-        status: 400,
-        error: "Bad Request",
-        details: { message: 'Missing parameter: "openid_configuration".' },
-      });
-    }
+//     if (!openidConfig) {
+//       return res.status(400).send({
+//         status: 400,
+//         error: "Bad Request",
+//         details: { message: 'Missing parameter: "openid_configuration".' },
+//       });
+//     }
 
-    const message = await lti.DynamicRegistration.register(
-      openidConfig,
-      registrationToken
-    );
-    res.setHeader("Content-type", "text/html");
-    res.send(message);
-  } catch (err) {
-    if (err.message === "PLATFORM_ALREADY_REGISTERED") {
-      return res.status(403).send({
-        status: 403,
-        error: "Forbidden",
-        details: { message: "Platform already registered." },
-      });
-    }
-    return res.status(500).send({
-      status: 500,
-      error: "Internal Server Error",
-      details: { message: err.message },
-    });
-  }
-});
+//     const message = await lti.DynamicRegistration.register(
+//       openidConfig,
+//       registrationToken
+//     );
+//     res.setHeader("Content-type", "text/html");
+//     res.send(message);
+//   } catch (err) {
+//     if (err.message === "PLATFORM_ALREADY_REGISTERED") {
+//       return res.status(403).send({
+//         status: 403,
+//         error: "Forbidden",
+//         details: { message: "Platform already registered." },
+//       });
+//     }
+//     return res.status(500).send({
+//       status: 500,
+//       error: "Internal Server Error",
+//       details: { message: err.message },
+//     });
+//   }
+// });
 
 // Setting up routes
 lti.app.use(routes);
 
 lti.whitelist(
   // Whitelist lti_key_config files from lti auth
-  '/lti/lti_key_config_prod.json', '/lti/lti_key_config_dev.json', 
+  '/lti/lti_key_config_prod.json', '/lti/lti_key_config_dev.json',
   // Whitelist tool routes from lti auth
   '/api/tool/student_passes', '/api/tool/redeem_pass'
 );

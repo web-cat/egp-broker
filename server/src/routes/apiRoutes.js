@@ -3,6 +3,7 @@ const course_routes = require('./courseRoutes');
 const assignment_routes = require('./assignmentRoutes');
 const pass_routes = require('./passRoutes');
 const tool_routes = require('./toolRoutes');
+const canvas_routes = require('./canvasRoutes');
 const express = require('express');
 const connectWithRetry = require('../config/db');
 
@@ -19,6 +20,7 @@ router.use('/enrollment', enrollment_routes);
 router.use('/assignment', assignment_routes);
 router.use('/pass', pass_routes);
 router.use('/course', course_routes);
-router.use('/tool', tool_routes)
+router.use('/tool', tool_routes);
+router.use('/canvas', canvas_routes);
 
 module.exports = router;

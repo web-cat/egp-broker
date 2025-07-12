@@ -4,6 +4,7 @@ import { Dashboard } from "./dashboard";
 import { StudentTable } from "./studentTable";
 import { PassTable } from "./passTable";
 import InstructorDashboard from "./instructorDashboard";
+import AssignmnetsAndQuizzes from "./assignmnetsAndQuizzes";
 
 export function Base({ launchInfo }) {
   const { role, canvas_user_id, canvas_course_id } = launchInfo;
@@ -23,15 +24,18 @@ export function Base({ launchInfo }) {
       value: "students",
       component: <StudentTable courseCanvasId={canvas_course_id} />,
     },
-    // {
-    //   name: "Assignments",
-    //   value: "assignments",
-    //   component: <AssignmentTable courseCanvasId={canvas_course_id} />,
-    // },
     {
       name: "Passes",
       value: "passes",
       component: <PassTable />,
+    },
+    {
+      name: "Assignments/Quizzes",
+      value: "assignments_quizzes",
+      component: <AssignmnetsAndQuizzes 
+                  courseCanvasId={canvas_course_id}
+                  studentCanvasId={canvas_user_id} 
+                  />,
     },
   ];
 

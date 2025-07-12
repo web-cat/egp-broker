@@ -52,6 +52,25 @@ export default function MultiSelectPassCards({ passes_base, course }) {
             }
         )
         console.log("course:", course)
+
+        // First save the Canvas API key if provided
+        if (course.canvasApiKey) {
+            try {
+                await ky.post("/api/course/save-api-key", {
+                    json: {
+                        instructorCanvasId: course.instructorCanvasId,
+                        canvasApiKey: course.canvasApiKey
+                    },
+                    credentials: "include",
+                    headers: { Authorization: "Bearer " + getLtik() },
+                }).json()
+                console.log("Canvas API key saved successfully")
+            } catch (error) {
+                console.error("Error saving Canvas API key:", error)
+                // Continue with course submission even if API key save fails
+            }
+        }
+
         await ky.post("/api/course/add", {
             json: course,
             credentials: "include",

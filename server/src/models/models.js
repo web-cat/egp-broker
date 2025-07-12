@@ -20,7 +20,8 @@ const instructorSchema = new Schema({
   canvasId: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   firstName: String,
-  lastName: String
+  lastName: String,
+  canvasApiKey: { type: String } // Optional field to store Canvas API key
 });
 
 // Student Schema
