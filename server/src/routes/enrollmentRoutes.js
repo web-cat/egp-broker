@@ -7,8 +7,12 @@ router.get("/:courseCanvasId", async (req, res) => {
   const { studentCanvasId } = req.query;
   const { courseCanvasId } = req.params;
 
+  console.log("Enrollment API called with courseCanvasId:", courseCanvasId);
+  console.log("Student Canvas ID query param:", studentCanvasId);
+
   try {
     const course = await Course.findOne({ canvasId: courseCanvasId });
+    console.log("Course found:", course ? course.canvasId : "NOT FOUND");
 
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
@@ -30,6 +34,9 @@ router.get("/:courseCanvasId", async (req, res) => {
       .populate("passesLeft.passId")
       .populate("freePasses.passId")
       .populate("freePasses.assignmentId");
+
+    console.log("Enrollments found:", enrollments.length);
+    console.log("Query used:", JSON.stringify(query, null, 2));
 
     if (!enrollments.length) {
       return res.status(404).json({ message: "No enrollments found" });

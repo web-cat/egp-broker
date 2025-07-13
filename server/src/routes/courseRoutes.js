@@ -51,4 +51,30 @@ router.post("/save-api-key", async (req, res) => {
   }
 });
 
+router.get("/:courseCanvasId/instructor", async (req, res) => {
+  const { courseCanvasId } = req.params;
+
+  console.log("Getting instructor for course:", courseCanvasId);
+
+  try {
+    const course = await Course.findOne({ canvasId: courseCanvasId }).populate('instructorId');
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    if (!course.instructorId) {
+      return res.status(404).json({ message: "No instructor found for this course" });
+    }
+
+    res.status(200).json({
+      instructorCanvasId: course.instructorId.canvasId,
+      instructorName: `${course.instructorId.firstName} ${course.instructorId.lastName}`,
+      instructorEmail: course.instructorId.email
+    });
+  } catch (err) {
+    console.error("Error getting course instructor:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

@@ -31,11 +31,6 @@ export default function WelcomeBanner() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold">Hi {info.name}!</h1>
-      <h2 className="text-2xl font-bold mb-6">
-        {info.title} - {info.role}
-      </h2>
-
         <Base launchInfo={info} />
     </>
   );

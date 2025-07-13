@@ -40,28 +40,8 @@ lti.onConnect(async (token, req, res) => {
   context = res.locals.context;
   console.log("token:", token);
   console.log("context:", context);
-
-  try {
-
-    const lineItem = {
-      scoreMaximum: 100,
-      label: 'Grade',
-      tag: 'grade'
-    }
-    // Sends lineitem to a platform
-    await lti.Grade.createLineItem(res.locals.token, lineItem)
-
-
-    const lineitem_out = await lti.Grade.getLineItems(token, {resourceLinkId: false, resourceId: false})
-    console.log("lineitem_out:", lineitem_out);
-
-    const idtoken = res.locals.token // IdToken
-    const scores_out = await lti.Grade.getScores(idtoken, idtoken.platformContext.endpoint.lineitems, { userId: idtoken.user })
-
-    console.log("scores_out:", scores_out);
-  } catch (error) {
-    console.error("Error fetching line items:", error);
-  }
+  console.log("Course ID from LTI context:", context.custom.canvas_course_id);
+  console.log("User ID from LTI context:", context.custom.canvas_user_id);
 
   const role = getRole(context.roles);
   const course = await getCourse(context.custom.canvas_course_id);
@@ -90,10 +70,12 @@ lti.onConnect(async (token, req, res) => {
     }
 
     // enroll student in course
+    console.log("Enrolling student:", context.custom.canvas_user_id, "in course:", context.custom.canvas_course_id);
     studentEnrollment = await getOrAddEnrollment(
       context.custom.canvas_user_id,
       context.custom.canvas_course_id
     );
+    console.log("Enrollment result:", studentEnrollment ? "SUCCESS" : "FAILED");
   } else {
     return res.sendFile(path.join(__dirname, "./public/notset.html"));
   }

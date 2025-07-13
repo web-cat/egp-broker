@@ -9,11 +9,10 @@ assignment_groups=$(curl -X GET "$BASE_URL/api/v1/courses/$COURSE_ID/assignment_
      -H "Authorization: Bearer $API_KEY" \
      -H "Content-Type: application/json" | jq .)
 
-for group in $(echo $assignment_groups | jq .[] | jq .name); do
-#   curl -X GET "$BASE_URL/api/v1/courses/$COURSE_ID/assignment_groups/$group/assignments" \
-#        -H "Authorization: Bearer $API_KEY" \
-#        -H "Content-Type: application/json" | jq .
-    echo $group
+for group in $(echo $assignment_groups | jq .[] | jq .id); do
+  curl -X GET "$BASE_URL/api/v1/courses/$COURSE_ID/assignment_groups/$group/assignments" \
+       -H "Authorization: Bearer $API_KEY" \
+       -H "Content-Type: application/json" | jq .
 done
 
 # curl -X GET "$BASE_URL/api/v1/users/$USER_ID/courses/$COURSE_ID/assignments" \

@@ -22,7 +22,7 @@ const instructorSchema = new Schema({
   firstName: String,
   lastName: String,
   canvasApiKey: { type: String } // Optional field to store Canvas API key
-});
+}, { timestamps: true }); // Adds createdAt and updatedAt fields
 
 // Student Schema
 const studentSchema = new Schema({

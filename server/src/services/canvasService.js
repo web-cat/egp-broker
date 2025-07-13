@@ -167,6 +167,22 @@ class CanvasService {
       throw new Error(`Failed to fetch overrides: ${error.response?.data?.errors?.[0]?.message || error.message}`);
     }
   }
+
+  // Get user profile to test API key
+  async getUserProfile(apiKey) {
+    try {
+      const response = await axios.get(`${this.baseUrl}/api/v1/users/self`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user profile:', error.response?.data || error.message);
+      throw new Error(`Failed to fetch user profile: ${error.response?.data?.errors?.[0]?.message || error.message}`);
+    }
+  }
 }
 
 module.exports = CanvasService; 
