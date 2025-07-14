@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getLtik } from "@/lib/ltik";
 import ky from "ky";
-import { 
-  Award, 
-  Clock, 
-  FileText, 
-  Calendar, 
-  CheckCircle, 
+import {
+  Award,
+  Clock,
+  FileText,
+  Calendar,
+  CheckCircle,
   AlertCircle,
   Plus,
   History,
@@ -18,6 +18,16 @@ import {
   TrendingUp,
   Activity
 } from "lucide-react";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId }) {
   const [studentInfo, setStudentInfo] = useState();
@@ -26,12 +36,17 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [selectedPass, setSelectedPass] = useState(null);
   const [actualInstructorId, setActualInstructorId] = useState(instructorCanvasId);
+  const [passDialogOpen, setPassDialogOpen] = useState(false);
+  const [pendingAssignment, setPendingAssignment] = useState(null);
+  const [pendingPass, setPendingPass] = useState(null);
+  const [applying, setApplying] = useState(false);
+  const [applyMessage, setApplyMessage] = useState("");
 
   useEffect(() => {
     async function fetchStudentData() {
       try {
         setLoading(true);
-        
+
         // Fetch student enrollment and pass information
         const student_info = await ky
           .get(`/api/enrollment/${courseCanvasId}?studentCanvasId=${studentCanvasId}`, {
@@ -52,10 +67,10 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
                 headers: { Authorization: "Bearer " + getLtik() },
               })
               .json();
-            
+
             instructorId = courseInstructor.instructorCanvasId;
             console.log("Course instructor:", courseInstructor);
-            
+
           } catch (instructorError) {
             console.error("Error fetching course instructor:", instructorError);
             // Fallback: try to get from LTI context
@@ -64,16 +79,16 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
                 credentials: "include",
                 headers: { Authorization: "Bearer " + getLtik() },
               }).json();
-              
+
               console.log("LTI Info:", ltiInfo);
-              
+
               // TODO: Implement proper instructor ID fetching for students
               // This could be:
               // 1. From course enrollment data
               // 2. From a course info endpoint
               // 3. Passed down from parent component
               // 4. Stored in course metadata
-              
+
               // For now, we'll use a placeholder
               instructorId = "instructor_canvas_id_placeholder";
             } catch (ltiError) {
@@ -82,30 +97,26 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
             }
           }
         }
-        
+
         setActualInstructorId(instructorId);
-        
-        // Fetch current assignments from Canvas API
+
+        // Fetch current assignments from backend sync endpoint
         if (instructorId && instructorId !== "instructor_canvas_id_placeholder") {
           try {
-            console.log(`Fetching Canvas assignments for course ${courseCanvasId} using instructor ${instructorId}`);
-            
+            console.log(`Syncing assignments for course ${courseCanvasId} using instructor ${instructorId}`);
             const assignments_data = await ky
-              .get(`/api/canvas/assignments/${courseCanvasId}?instructorCanvasId=${instructorId}`, {
+              .post(`/api/assignment/sync/${courseCanvasId}`, {
+                json: { instructorCanvasId: instructorId },
                 credentials: "include",
                 headers: { Authorization: "Bearer " + getLtik() },
               })
               .json();
-            
-            console.log("Canvas Assignments for student:", assignments_data);
+            console.log("Synced Assignments for student:", assignments_data);
             setCurrentAssignments(assignments_data);
-            
             // Show success message in console
-            console.log(`✅ Successfully loaded ${assignments_data.length} assignments from Canvas`);
-          } catch (canvasError) {
-            console.error("Error fetching Canvas assignments:", canvasError);
-            console.log("⚠️ Falling back to mock assignments due to Canvas API error");
-            // Fallback to mock data if Canvas API fails
+            console.log(`✅ Successfully loaded ${assignments_data.length} assignments from DB`);
+          } catch (syncError) {
+            console.error("Error syncing assignments:", syncError);
             setCurrentAssignments(getMockAssignments());
           }
         } else {
@@ -125,6 +136,7 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
     fetchStudentData();
   }, [courseCanvasId, instructorCanvasId]);
 
+  // TODO: remove this
   // Helper function for mock assignments
   const getMockAssignments = () => {
     return [
@@ -137,7 +149,7 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
         assignment_group_name: "Homework"
       },
       {
-        id: "2", 
+        id: "2",
         name: "Assignment 2: Advanced Topics",
         due_at: "2024-12-25T23:59:00Z",
         points_possible: 150,
@@ -147,7 +159,7 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
       {
         id: "3",
         name: "Assignment 3: Final Project",
-        due_at: "2024-12-30T23:59:00Z", 
+        due_at: "2024-12-30T23:59:00Z",
         points_possible: 200,
         published: true,
         assignment_group_name: "Final"
@@ -155,21 +167,76 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
     ];
   };
 
-  // TODO: Implement pass application logic
-  const handleApplyPass = async (assignmentId, passId) => {
-    console.log(`Applying pass ${passId} to assignment ${assignmentId}`);
-    
-    // TODO: Implementation steps:
-    // 1. Validate that the student has the pass available
-    // 2. Check if the assignment is eligible for pass usage (not already used, within time limits, etc.)
-    // 3. Call the backend API to redeem the pass
-    // 4. Update the assignment due date in Canvas (if it's a deadline extension pass)
-    // 5. Update the local state to reflect the pass usage
-    // 6. Show success/error message to the user
-    // 7. Refresh the student's pass count and history
-    
-    // For now, just show an alert
-    alert(`Pass application logic will be implemented here. Assignment: ${assignmentId}, Pass: ${passId}`);
+  // Updated handleApplyPass to open dialog
+  const handleApplyPass = (assignmentId, passId) => {
+    const assignment = currentAssignments.find(a => a._id === assignmentId);
+    const pass = studentInfo.passesLeft.find(p => p.passId._id === passId);
+    setPendingAssignment(assignment);
+    setPendingPass(pass);
+    setApplyMessage("");
+    setPassDialogOpen(true);
+  };
+
+  // Confirm pass application
+  const confirmApplyPass = async () => {
+    if (!pendingAssignment || !pendingPass) return;
+    setApplying(true);
+    setApplyMessage("");
+    try {
+      const response = await ky.post("/api/pass/apply", {
+        json: {
+          studentCanvasId,
+          assignmentCanvasId: pendingAssignment.canvasId,
+          courseCanvasId,
+          passId: pendingPass.passId._id,
+        },
+        credentials: "include",
+        headers: { Authorization: "Bearer " + getLtik() },
+      }).json();
+      // Update UI: decrement pass count, add to usedPasses
+      setStudentInfo(prev => {
+        if (!prev) return prev;
+        // Decrement pass count
+        const newPassesLeft = prev.passesLeft.map(p =>
+          p.passId._id === pendingPass.passId._id
+            ? { ...p, count: p.count - 1 }
+            : p
+        );
+        // Add to freePasses
+        const newFreePasses = [
+          ...prev.freePasses,
+          {
+            passId: pendingPass.passId,
+            usedAt: new Date().toISOString(),
+            assignmentId: pendingAssignment._id,
+          },
+        ];
+        return { ...prev, passesLeft: newPassesLeft, freePasses: newFreePasses };
+      });
+      setApplyMessage("Pass applied successfully!");
+      setTimeout(() => {
+        setPassDialogOpen(false);
+        setPendingAssignment(null);
+        setPendingPass(null);
+        setApplyMessage("");
+      }, 1500);
+    } catch (err) {
+      let msg = "Failed to apply pass.";
+      if (err && err.response) {
+        try {
+          const data = await err.response.json();
+          // Show all error fields if present
+          msg = data.error || data.errors?.[0] || data.message || JSON.stringify(data) || msg;
+        } catch (e) {
+          msg = err.message || msg;
+        }
+      } else if (err && err.message) {
+        msg = err.message;
+      }
+      setApplyMessage(msg);
+    } finally {
+      setApplying(false);
+    }
   };
 
   // TODO: Implement assignment filtering logic
@@ -179,7 +246,7 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
     // 2. Assignment hasn't already had a pass applied to it
     // 3. Assignment is within the time window for pass usage
     // 4. Assignment type is eligible for the specific pass type
-    
+
     return assignments.filter(assignment => assignment.published);
   };
 
@@ -190,7 +257,7 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
     // 2. Pass hasn't expired
     // 3. Assignment hasn't already been extended
     // 4. Student has sufficient passes remaining
-    
+
     return pass.count > 0;
   };
 
@@ -217,6 +284,8 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
   const eligibleAssignments = getEligibleAssignments(currentAssignments);
   const availablePasses = studentInfo.passesLeft.filter(pass => pass.count > 0);
   const usedPasses = studentInfo.freePasses;
+
+  console.log("Assignments in UI:", currentAssignments);
 
   return (
     <div className="space-y-6">
@@ -348,20 +417,19 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
           {eligibleAssignments.length > 0 ? (
             <div className="space-y-4">
               {eligibleAssignments.map((assignment) => (
-                <Card key={assignment.id} className="border-l-4 border-blue-500">
+                <Card key={assignment._id || assignment.id} className="border-l-4 border-blue-500">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-lg">{assignment.name}</h3>
+                          <h3 className="font-semibold text-lg">{assignment.title || assignment.name}</h3>
                           <Badge variant="outline">{assignment.assignment_group_name}</Badge>
                         </div>
-                        
                         <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
-                          {assignment.due_at && (
+                          {assignment.dueDate && (
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              <span>Due: {new Date(assignment.due_at).toLocaleDateString()}</span>
+                              <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
                             </div>
                           )}
                           {assignment.points_possible && (
@@ -371,7 +439,6 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
                             </div>
                           )}
                         </div>
-
                         {/* Pass Application Section */}
                         <div className="border-t pt-4">
                           <h4 className="font-medium text-sm mb-3">Apply Pass:</h4>
@@ -381,8 +448,8 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
                                 key={pass.passId._id}
                                 variant="outline"
                                 size="sm"
-                                disabled={!isPassEligible(pass, assignment)}
-                                onClick={() => handleApplyPass(assignment.id, pass.passId._id)}
+                                disabled={!isPassEligible(pass, assignment) || applying}
+                                onClick={() => handleApplyPass(assignment._id, pass.passId._id)}
                                 className="text-xs"
                               >
                                 <Plus className="h-3 w-3 mr-1" />
@@ -403,7 +470,7 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
           ) : (
             <div className="text-center py-8 text-gray-500">
               <FileText className="h-8 w-8 mx-auto mb-2" />
-              <p>No assignments available for pass usage</p>
+              <p>No assignments available</p>
             </div>
           )}
         </CardContent>
@@ -458,6 +525,45 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
           )}
         </CardContent>
       </Card>
+
+      {/* Pass Application Confirmation Dialog */}
+      <Dialog open={passDialogOpen} onOpenChange={setPassDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Apply Pass</DialogTitle>
+            <DialogDescription>
+              {pendingAssignment && pendingPass && (
+                <>
+                  <div className="mb-2">
+                    <strong>Assignment:</strong> {pendingAssignment.title}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Pass Type:</strong> {pendingPass.passId.name}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Effect:</strong> {pendingPass.passId.details?.durationHours ? `Extends deadline by ${pendingPass.passId.details.durationHours} hours` : pendingPass.passId.description}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Remaining:</strong> {pendingPass.count}
+                  </div>
+                </>
+              )}
+              Are you sure you want to apply this pass?
+            </DialogDescription>
+          </DialogHeader>
+          {applyMessage && (
+            <div className={`text-sm mb-2 ${applyMessage.includes('success') ? 'text-green-600' : 'text-red-600'}`}>{applyMessage}</div>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={applying}>Cancel</Button>
+            </DialogClose>
+            <Button onClick={confirmApplyPass} disabled={applying}>
+              {applying ? "Applying..." : "Apply Pass"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <div className="border-t pt-4 text-center text-sm text-gray-500">

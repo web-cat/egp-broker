@@ -63,12 +63,18 @@ const enrollmentSchema = new Schema({
 
 // Assignment Schema
 const assignmentSchema = new Schema({
-  title: { type: String, required: true },
   canvasId: { type: String, required: true, unique: true },
-  description: { type: String, required: true },
-  dueDate: { type: Date, required: true },
-  courseId: { type: Schema.Types.ObjectId, ref: 'Course', required: true }
-});
+  title: { type: String, required: true },
+  description: { type: String },
+  dueDate: { type: Date },
+  courseId: { type: Schema.Types.ObjectId, ref: 'Course' },
+  assignment_group_name: { type: String },
+  external_tool_tag_attributes: { type: Schema.Types.Mixed },
+  published: { type: Boolean },
+  points_possible: { type: Number },
+  // Store any other Canvas fields for future flexibility
+  canvasData: { type: Schema.Types.Mixed }
+}, { timestamps: true });
 
 // Create models
 const Pass = mongoose.model('Pass', passSchema);

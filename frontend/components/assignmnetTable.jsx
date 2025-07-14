@@ -32,20 +32,18 @@ import { Button } from "@/components/ui/button";
         try {
           setLoading(true);
           setError(null);
-          
           const assignments_data = await ky
-            .get(`/api/canvas/assignments/${courseCanvasId}?instructorCanvasId=${instructorCanvasId}`, {
+            .post(`/api/assignment/sync/${courseCanvasId}`, {
+              json: { instructorCanvasId },
               credentials: "include",
               headers: { Authorization: "Bearer " + getLtik() },
             })
             .json();
-          
           setAssignments(assignments_data);
-          console.log("Canvas Assignments:", assignments_data);
-  
+          console.log("Synced Assignments (Instructor):", assignments_data);
         } catch (error) {
-          console.error("Error fetching Canvas assignments:", error);
-          setError("Failed to fetch assignments from Canvas");
+          console.error("Error syncing assignments:", error);
+          setError("Failed to fetch assignments from backend");
         } finally {
           setLoading(false);
         }
@@ -224,13 +222,13 @@ import { Button } from "@/components/ui/button";
                   <div className="space-y-3">
                     {groupAssignments.map((assignment) => (
                       <div 
-                        key={assignment.id} 
+                        key={assignment._id || assignment.id} 
                         className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold text-gray-900">{assignment.name}</h4>
+                              <h4 className="font-semibold text-gray-900">{assignment.title || assignment.name}</h4>
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 assignment.published ? 
                                   'bg-green-100 text-green-800' : 
@@ -239,18 +237,16 @@ import { Button } from "@/components/ui/button";
                                 {assignment.published ? 'Published' : 'Draft'}
                               </span>
                             </div>
-                            
                             {assignment.description && (
                               <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                                 {assignment.description.replace(/<[^>]*>/g, '')}
                               </p>
                             )}
-                            
                             <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                              {assignment.due_at && (
+                              {assignment.dueDate && (
                                 <div className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
-                                  <span>Due: {new Date(assignment.due_at).toLocaleDateString()}</span>
+                                  <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
                                 </div>
                               )}
                               {assignment.points_possible && (
@@ -260,8 +256,8 @@ import { Button } from "@/components/ui/button";
                                 </div>
                               )}
                               <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                <span>ID: {assignment.id}</span>
+                                <BookOpen className="h-3 w-3" />
+                                <span>{assignment.assignment_group_name || 'Ungrouped'}</span>
                               </div>
                             </div>
                           </div>
