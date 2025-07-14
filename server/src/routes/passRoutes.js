@@ -2,7 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const router = express.Router();
 
-const { Student, Course, Enrollment, Assignment, Pass } = require("../models/models");
+const { Student, Course, Enrollment, Assignment, Pass, Instructor } = require("../models/models");
 
 router.get("/", async (req, res) => {
   try {
@@ -76,11 +76,12 @@ router.post('/apply', async (req, res) => {
 
     console.log("Payload:", payload);
 
+    const OPENDSA_URL = process.env.OPENDSA_URL || 'http://host.docker.internal:8443';
     // Call OpenDSA endpoint
     let opendsaResponse;
     try {
       opendsaResponse = await axios.post(
-        'https://opendsa-lti.localhost.devcom.vt.edu/egp_broker/student_extensions',
+        OPENDSA_URL + '/egp_broker/student_extensions',
         payload,
         { headers: { 'Content-Type': 'application/json' } }
       );
@@ -106,6 +107,43 @@ router.post('/apply', async (req, res) => {
         assignmentId: assignment._id
       });
       await enrollment.save();
+
+      // Update Canvas assignment due date
+      try {
+        // Get instructor's Canvas API key
+        const instructor = await Instructor.findById(course.instructorId);
+        if (!instructor || !instructor.canvasApiKey) {
+          console.warn('Instructor or Canvas API key not found, skipping Canvas update');
+        } else {
+          // Calculate new due date
+          const currentDueDate = assignment.dueDate ? new Date(assignment.dueDate) : new Date();
+          const newDueDate = new Date(currentDueDate.getTime() + (pass.details.durationHours * 60 * 60 * 1000));
+          
+          // Create student-specific override in Canvas
+          const canvasOverrideResponse = await axios.post(
+            `${process.env.CANVAS_URL || 'https://canvas.endeavour.cs.vt.edu'}/api/v1/courses/${courseCanvasId}/assignments/${assignmentCanvasId}/overrides`,
+            {
+              assignment_override: {
+                student_ids: [studentCanvasId],
+                due_at: newDueDate.toISOString()
+              }
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${instructor.canvasApiKey}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          console.log('Canvas assignment override created successfully:', canvasOverrideResponse.data);
+        }
+      } catch (canvasError) {
+        console.error('Error creating Canvas assignment override:', canvasError);
+        // Don't fail the entire request if Canvas update fails
+        // The pass was already applied successfully
+      }
+
       return res.status(200).json({ success: true, opendsa: opendsaResponse.data });
     } else {
       return res.status(opendsaResponse.status).json(opendsaResponse.data);

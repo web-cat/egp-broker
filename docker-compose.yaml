@@ -29,6 +29,9 @@ services:
       CANVAS_ACCESS_TOKEN_ENDPOINT: https://canvas.endeavour.cs.vt.edu/login/oauth2/token
       CANVAS_JWK_URL: https://canvas.endeavour.cs.vt.edu/api/lti/security/jwks
 
+      # OPENDSA
+      OPENDSA_URL: http://host.docker.internal:8443
+
   mongo-lti:
     image: mongo
     restart: always
