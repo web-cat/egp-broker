@@ -2,11 +2,17 @@ const { Pass, Course, Student, Enrollment } = require("../models/models");
 
 const getOrAddEnrollment = async (studentCanvasId, courseCanvasId) => {
 
+  console.log("getOrAddEnrollment called with:", { studentCanvasId, courseCanvasId });
+
   try {
     const course = await Course.findOne({ canvasId: courseCanvasId });
     const student = await Student.findOne({ canvasId: studentCanvasId });
 
+    console.log("Course found:", course ? course.canvasId : "NOT FOUND");
+    console.log("Student found:", student ? student.canvasId : "NOT FOUND");
+
     if (!course || !student) {
+      console.log("Course or student not found, returning null");
       return null;
     }
 

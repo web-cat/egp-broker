@@ -72,6 +72,7 @@ const seedDatabase = async () => {
     // Create Assignments
     const assignment1 = await Assignment.create({
       title: 'Assignment 1',
+      canvasId: 'assign001',
       description: 'First assignment.',
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Due in 7 days
       courseId: course1._id
@@ -79,6 +80,7 @@ const seedDatabase = async () => {
 
     const assignment2 = await Assignment.create({
       title: 'Assignment 2',
+      canvasId: 'assign002',
       description: 'Second assignment.',
       dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // Due in 14 days
       courseId: course1._id
@@ -86,6 +88,7 @@ const seedDatabase = async () => {
 
     const assignment3 = await Assignment.create({
       title: 'Assignment 3',
+      canvasId: 'assign003',
       description: 'Third assignment.',
       dueDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // Due in 21 days
       courseId: course2._id

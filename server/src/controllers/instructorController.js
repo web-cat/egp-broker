@@ -1,27 +1,22 @@
 const { Instructor } = require("../models/models");
 
-const getOrAddInstructor = async (canvasId, firstName, lastName, email) => {
-    try {
-        let instructor = await Instructor.findOne({ canvasId });
+exports.getOrAddInstructor = async (canvasId, firstName, lastName, email) => {
+  try {
+    let instructor = await Instructor.findOne({ canvasId: canvasId });
 
-        if (instructor) {
-            return instructor;
-        }
-
-        instructor = await Instructor.create({
-            canvasId,
-            firstName,
-            lastName,
-            email,
-        });
-
-        return instructor;
-    } catch (err) {
-        console.error("Error adding or finding instructor:", err);
-        return err;
+    if (!instructor) {
+      instructor = new Instructor({
+        canvasId: canvasId,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+      });
+      await instructor.save();
     }
-};
 
-module.exports = {
-    getOrAddInstructor,
+    return instructor;
+  } catch (error) {
+    console.error("Error getting or adding instructor:", error);
+    throw error;
+  }
 };
