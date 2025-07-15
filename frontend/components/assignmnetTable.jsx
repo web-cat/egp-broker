@@ -14,6 +14,14 @@ import ky from "ky"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Calendar, FileText, ChevronDown, ChevronRight, Clock, Award, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { AssignmentAnalytics } from "./assignmentAnalytics";
 
   export function AssignmentTable({ courseCanvasId, instructorCanvasId }) {
     const [assignments, setAssignments] = useState([]);
@@ -21,6 +29,8 @@ import { Button } from "@/components/ui/button";
     const [error, setError] = useState(null);
     const [expandedGroups, setExpandedGroups] = useState({});
     const [showPublishedOnly, setShowPublishedOnly] = useState(false);
+    const [selectedAssignment, setSelectedAssignment] = useState(null);
+    const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
 
     useEffect(() => {
       async function fetchAssignments() {
@@ -52,27 +62,29 @@ import { Button } from "@/components/ui/button";
       fetchAssignments();
     }, [courseCanvasId, instructorCanvasId]);
 
+    const handleAssignmentClick = (assignment) => {
+      setSelectedAssignment(assignment);
+      setIsAnalyticsOpen(true);
+    };
+
     // Filter assignments based on published status
     const filteredAssignments = showPublishedOnly 
       ? assignments.filter(assignment => assignment.published)
       : assignments;
 
     // Group assignments by assignment group
-    const groupedAssignments = filteredAssignments.reduce((groups, assignment) => {
-      const groupName = assignment.assignment_group_name || "Ungrouped";
-      if (!groups[groupName]) {
-        groups[groupName] = [];
+    const groupedAssignments = filteredAssignments.reduce((acc, assignment) => {
+      const groupName = assignment.assignment_group_name || "Uncategorized";
+      if (!acc[groupName]) {
+        acc[groupName] = [];
       }
-      groups[groupName].push(assignment);
-      return groups;
+      acc[groupName].push(assignment);
+      return acc;
     }, {});
 
     // Toggle group expansion
     const toggleGroup = (groupName) => {
-      setExpandedGroups(prev => ({
-        ...prev,
-        [groupName]: !prev[groupName]
-      }));
+      setExpandedGroups(prev => ({ ...prev, [groupName]: !prev[groupName] }));
     };
 
     // Expand all groups
@@ -132,152 +144,88 @@ import { Button } from "@/components/ui/button";
     }
 
     return (
-      <div className="space-y-6">
-        {/* Statistics and Controls */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-            <div className="text-xs text-gray-600">Total</div>
-          </div>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">{stats.published}</div>
-            <div className="text-xs text-gray-600">Published</div>
-          </div>
-          <div className="text-center p-3 bg-yellow-50 rounded-lg">
-            <div className="text-2xl font-bold text-yellow-600">{stats.draft}</div>
-            <div className="text-xs text-gray-600">Draft</div>
-          </div>
-          <div className="text-center p-3 bg-purple-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600">{stats.withDueDates}</div>
-            <div className="text-xs text-gray-600">With Due Dates</div>
-          </div>
-          <div className="text-center p-3 bg-orange-50 rounded-lg">
-            <div className="text-2xl font-bold text-orange-600">{stats.totalPoints}</div>
-            <div className="text-xs text-gray-600">Total Points</div>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="flex flex-wrap gap-2 items-center justify-between">
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={expandAll}
-              className="text-xs"
-            >
-              Expand All
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={collapseAll}
-              className="text-xs"
-            >
-              Collapse All
+      <>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Assignments</h3>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="sm" onClick={() => setShowPublishedOnly(!showPublishedOnly)}>
+              <Eye className="mr-2 h-4 w-4" />
+              {showPublishedOnly ? "Show All" : "Show Published Only"}
             </Button>
           </div>
-          <Button 
-            variant={showPublishedOnly ? "default" : "outline"}
-            size="sm" 
-            onClick={() => setShowPublishedOnly(!showPublishedOnly)}
-            className="text-xs"
-          >
-            {showPublishedOnly ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
-            {showPublishedOnly ? "Show All" : "Published Only"}
-          </Button>
         </div>
+        
+        {loading && <p>Loading assignments...</p>}
+        {error && <p className="text-red-500">{error}</p>}
+        {!loading && !error && Object.keys(groupedAssignments).length === 0 && (
+          <p>No assignments found.</p>
+        )}
 
-        {/* Assignment Groups */}
         <div className="space-y-4">
-          {Object.entries(groupedAssignments).map(([groupName, groupAssignments]) => (
-            <Card key={groupName} className="overflow-hidden">
+          {Object.entries(groupedAssignments).map(([groupName, assignmentsInGroup]) => (
+            <Card key={groupName}>
               <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                className="cursor-pointer flex flex-row items-center justify-between"
                 onClick={() => toggleGroup(groupName)}
               >
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    {expandedGroups[groupName] ? (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronRight className="h-5 w-5 text-gray-500" />
-                    )}
-                    <BookOpen className="h-5 w-5" />
-                    {groupName}
-                    <span className="text-sm font-normal text-gray-500">
-                      ({groupAssignments.length} assignments)
-                    </span>
-                  </CardTitle>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <span>{groupAssignments.filter(a => a.published).length} published</span>
-                    <span>•</span>
-                    <span>{groupAssignments.filter(a => a.due_at).length} with due dates</span>
-                  </div>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  {groupName}
+                </CardTitle>
+                {expandedGroups[groupName] ? <ChevronDown /> : <ChevronRight />}
               </CardHeader>
-              
               {expandedGroups[groupName] && (
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    {groupAssignments.map((assignment) => (
-                      <div 
-                        key={assignment._id || assignment.id} 
-                        className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold text-gray-900">{assignment.title || assignment.name}</h4>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                assignment.published ? 
-                                  'bg-green-100 text-green-800' : 
-                                  'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {assignment.published ? 'Published' : 'Draft'}
-                              </span>
-                            </div>
-                            {assignment.description && (
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                                {assignment.description.replace(/<[^>]*>/g, '')}
-                              </p>
-                            )}
-                            <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                              {assignment.dueDate && (
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-                                </div>
-                              )}
-                              {assignment.points_possible && (
-                                <div className="flex items-center gap-1">
-                                  <Award className="h-3 w-3" />
-                                  <span>{assignment.points_possible} points</span>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-1">
-                                <BookOpen className="h-3 w-3" />
-                                <span>{assignment.assignment_group_name || 'Ungrouped'}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Points</TableHead>
+                        <TableHead>Published</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {assignmentsInGroup.map((assignment) => (
+                        <TableRow 
+                          key={assignment._id} 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleAssignmentClick(assignment)}
+                        >
+                          <TableCell className="font-medium">{assignment.title}</TableCell>
+                          <TableCell>
+                            {assignment.dueDate ? new Date(assignment.dueDate).toLocaleString() : "N/A"}
+                          </TableCell>
+                          <TableCell>{assignment.points_possible || "N/A"}</TableCell>
+                          <TableCell>
+                            {assignment.published ? "Yes" : "No"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               )}
             </Card>
           ))}
         </div>
-        
-        {/* Summary */}
-        <div className="text-center text-sm text-gray-500 mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="font-medium">Summary</p>
-          <p>Total assignments: {stats.total} • Groups: {Object.keys(groupedAssignments).length}</p>
-          <p>Published: {stats.published} • Draft: {stats.draft} • Total points: {stats.totalPoints}</p>
-        </div>
-      </div>
+
+        <Dialog open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>
+                Analytics for: {selectedAssignment?.title}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedAssignment && (
+              <AssignmentAnalytics 
+                assignment={selectedAssignment} 
+                courseCanvasId={courseCanvasId}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
   

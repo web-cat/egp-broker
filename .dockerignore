@@ -1,0 +1,12 @@
+# Ignore frontend node_modules and build artifacts
+frontend/node_modules
+frontend/.next
+frontend/.env
+frontend/dist
+
+# Ignore backend node_modules
+server/node_modules
+
+# Common ignores
+.DS_Store
+*.log 

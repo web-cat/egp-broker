@@ -17,20 +17,22 @@ const passSchema = new Schema({
 
 // Instructor Schema
 const instructorSchema = new Schema({
-  canvasId: { type: String, required: true, unique: true },
+  canvasId: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   firstName: String,
   lastName: String,
   canvasApiKey: { type: String } // Optional field to store Canvas API key
 }, { timestamps: true }); // Adds createdAt and updatedAt fields
+instructorSchema.index({ canvasId: 1 }, { unique: true });
 
 // Student Schema
 const studentSchema = new Schema({
-  canvasId: { type: String, required: true, unique: true },
+  canvasId: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   firstName: String,
   lastName: String
 });
+studentSchema.index({ canvasId: 1 }, { unique: true });
 
 // Course Schema
 const courseSchema = new Schema({
@@ -63,7 +65,7 @@ const enrollmentSchema = new Schema({
 
 // Assignment Schema
 const assignmentSchema = new Schema({
-  canvasId: { type: String, required: true, unique: true },
+  canvasId: { type: String, required: true },
   title: { type: String, required: true },
   description: { type: String },
   dueDate: { type: Date },
@@ -75,6 +77,7 @@ const assignmentSchema = new Schema({
   // Store any other Canvas fields for future flexibility
   canvasData: { type: Schema.Types.Mixed }
 }, { timestamps: true });
+assignmentSchema.index({ canvasId: 1, courseId: 1 }, { unique: true });
 
 // Create models
 const Pass = mongoose.model('Pass', passSchema);

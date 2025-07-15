@@ -1,8 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AssignmentTable } from "./assignmnetTable";
 import { Dashboard } from "./dashboard";
 import { StudentTable } from "./studentTable";
-import { PassTable } from "./passTable";
 import InstructorDashboard from "./instructorDashboard";
 import InstructorSettings from "./instructorSettings";
 
@@ -23,11 +21,6 @@ export function Base({ launchInfo }) {
       name: "Students",
       value: "students",
       component: <StudentTable courseCanvasId={canvas_course_id} />,
-    },
-    {
-      name: "Passes",
-      value: "passes",
-      component: <PassTable />,
     },
     {
       name: "Settings",
@@ -52,7 +45,6 @@ export function Base({ launchInfo }) {
   ];
 
   const settings = role == "Instructor" ? instructor_tabs : student_tabs;
-  // const settings =instructor_tabs;
 
   return (
     <Tabs defaultValue={settings[0].value} className="space-y-4">

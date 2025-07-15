@@ -200,27 +200,6 @@ function InstructorDashboard({ courseCanvasId }) {
         </CardContent>
       </Card>
 
-      {/* Canvas Assignment Manager - Full Width */}
-      {instructorCanvasId && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Canvas Assignment Management
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Manage assignments and due dates directly from Canvas
-            </p>
-          </CardHeader>
-          <CardContent>
-            <CanvasAssignmentManager 
-              courseCanvasId={courseCanvasId} 
-              instructorCanvasId={instructorCanvasId} 
-            />
-          </CardContent>
-        </Card>
-      )}
-
       {/* Footer */}
       <div className="border-t pt-4 text-center text-sm text-gray-500">
         <p>Dashboard last updated: {new Date().toLocaleString()}</p>

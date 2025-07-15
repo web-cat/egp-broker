@@ -208,7 +208,7 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
           {
             passId: pendingPass.passId,
             usedAt: new Date().toISOString(),
-            assignmentId: pendingAssignment._id,
+            assignmentId: pendingAssignment,
           },
         ];
         return { ...prev, passesLeft: newPassesLeft, freePasses: newFreePasses };
@@ -435,13 +435,10 @@ export function Dashboard({ studentCanvasId, courseCanvasId, instructorCanvasId 
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium text-gray-900">{pass.passName}</h4>
-                        <Badge variant="outline" className="text-xs">
-                          Used
-                        </Badge>
+                        <h4 className="font-medium text-gray-900">{pass.passId?.name}</h4>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
-                        Applied to: {pass.assignmentTitle}
+                        Applied to: {pass.assignmentId?.title || pass.assignmentId?.name}
                       </p>
                       <div className="flex items-center gap-4 text-xs text-gray-500">
                         <div className="flex items-center gap-1">
