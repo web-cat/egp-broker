@@ -30,7 +30,13 @@ services:
       CANVAS_JWK_URL: https://canvas.endeavour.cs.vt.edu/api/lti/security/jwks
 
       # OPENDSA
+      # If you are running OpenDSA locally, the port should be set to 8443.
+      # Make sure to add the port to the opendsa docker-compose.yaml file under opendsa-lti (OpenDSA-DevStack/docker-compose.yml).
+      # The ports configuration should look like this:
+      # - 8443:8443
+      # Also, add 'config.hosts << "host.docker.internal"' to OpenDSA-DevStack/opendsa-lti/config/environments/development.rb.
       OPENDSA_URL: http://host.docker.internal:8443
+      # NOTE: https://opendsa-lti.localhost.devcom.vt.edu will NOT work, because https://opendsa-lti.localhost.devcom.vt.edu is not known inside the container.
 
   mongo-lti:
     image: mongo
