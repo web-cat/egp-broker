@@ -12,6 +12,7 @@ services:
       - my-shared-network
     environment:
       # LTI
+      # this comes from canvas, replace with your value
       LTI_KEY: 2EB6yh826Rf4Wkmx47etctGtkrAn84rRF8PXcNxC62F3vv6crfVfP78WBX84YW9v
 
       # MongoDB
@@ -24,6 +25,7 @@ services:
       # CANVAS
       CANVAS_URL: https://canvas.endeavour.cs.vt.edu
       CANVAS_NAME: endeavour.cs.vt
+      # this comes from canvas, replace with your value
       CANVAS_CLIENT_ID: 10000000000007
       CANVAS_AUTH_ENDPOINT: https://canvas.endeavour.cs.vt.edu/api/lti/authorize_redirect
       CANVAS_ACCESS_TOKEN_ENDPOINT: https://canvas.endeavour.cs.vt.edu/login/oauth2/token
