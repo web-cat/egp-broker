@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "env DEBUG=provider:* node app.js",
-    "seed": "node src/config/seed.js"
+    "seed": "node src/config/seed.js",
+    "dynamic-seed": "node src/config/dynamicSeed.js"
   },
   "keywords": [
     "lti",
@@ -21,6 +22,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "ltijs": "^5.9.6",
+    "minimist": "^1.2.8",
     "mongoose": "^8.10.1"
   }
 }

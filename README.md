@@ -56,6 +56,36 @@ services:
 | [Database (MongoDB)](http://localhost:27017) | [localhost:27017](http://localhost:27017) |
 | [DB Manager (Mongo Express)](http://localhost:8081) | [localhost:8081](http://localhost:8081) |
 
+### Dynamic Seeder Usage
+
+The dynamic seeder allows you to add students and simulate pass usage for an existing course in the database.
+
+#### How to Use
+
+  **Run the dynamic seeder** from the `server` directory:
+   ```sh
+   docker exec lti-server npm run dynamic-seed -- --canvasId=<courseCanvasId> [--students=<number>]
+   ```
+   - `--canvasId` (required): The Canvas ID of the course you want to seed students into.
+   - `--students` (optional): The number of students to create and enroll (default: 5).
+
+#### What It Does
+- Looks up the specified course and its assignments in the database.
+- Creates the specified number of students with random names and emails.
+- Enrolls each student in the course.
+- Assigns passes according to the course’s allowedPassTypes.
+- Randomly uses some passes for each student, associating them with random assignments from the course.
+- Decrements the passes left for each used pass.
+- Prints a detailed summary of all students, their passes left, and passes used (including which assignment and when).
+
+#### Example
+```sh
+docker exec lti-server npm run dynamic-seed -- --canvasId=course001 --students=10
+```
+
+This will seed 10 students into the course with Canvas ID `course001` and print a detailed summary of the seeded data.
+
+
 ## More Documentation
 
 [Server Docs](./server/README.md)
