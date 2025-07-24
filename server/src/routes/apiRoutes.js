@@ -5,6 +5,7 @@ const pass_routes = require('./passRoutes');
 const tool_routes = require('./toolRoutes');
 const canvas_routes = require('./canvasRoutes');
 const instructor_routes = require('./instructorRoutes');
+const proxy_routes = require('./proxyRoutes');
 const express = require('express');
 const connectWithRetry = require('../config/db');
 
@@ -24,5 +25,6 @@ router.use('/course', course_routes);
 router.use('/tool', tool_routes);
 router.use('/canvas', canvas_routes);
 router.use('/instructor', instructor_routes);
+router.use('/proxy', proxy_routes);
 
 module.exports = router;

@@ -12,8 +12,12 @@ frontend/
 │   ├── notset
 │   │   └── page.js             # Page component for 'notset' route
 │   ├── page.js                 # Main page component
-│   └── register
-│       └── page.js             # Page component for 'register' route
+│   ├── register
+│   │   └── page.js             # Page component for 'register' route
+│   ├── pass-config
+│   │   └── page.js             # Page component for 'pass-config' route
+│   ├── tool-config
+│   │   └── page.js             # Page component for 'tool-config' route
 ├── components
 │   ├── assignmnetTable.jsx     # Component for assignment table
 │   ├── base.jsx                # Base component

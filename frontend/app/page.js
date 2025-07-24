@@ -1,10 +1,13 @@
 import WelcomeBanner from "@/components/welcomeBanner";
+import { Suspense } from 'react';
 
-export default function Home() {
+export default function Home({ searchParams }) {
   return (
-    <div className="container mx-auto p-6">
-      <WelcomeBanner />
-    </div>
+    <Suspense fallback={<div>Loading...</div>}>
+      <div className="container mx-auto p-6">
+        <WelcomeBanner />
+      </div>
+    </Suspense>
   );
 }
 
