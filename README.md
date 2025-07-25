@@ -80,10 +80,10 @@ The dynamic seeder allows you to add students and simulate pass usage for an exi
 
 #### Example
 ```sh
-docker exec lti-server npm run dynamic-seed -- --canvasId=course001 --students=10
+docker exec lti-server npm run dynamic-seed -- --canvasId=100 --students=10
 ```
 
-This will seed 10 students into the course with Canvas ID `course001` and print a detailed summary of the seeded data.
+This will seed 10 students into the course with Canvas ID `100` and print a detailed summary of the seeded data.
 
 
 ## More Documentation
