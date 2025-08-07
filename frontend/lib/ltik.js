@@ -15,6 +15,7 @@ export const getLtik = () => {
   return ltik;
 };
 
+//set the ltik in local storage
 export const setLtik = (token) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('lti_token', token);
@@ -22,6 +23,7 @@ export const setLtik = (token) => {
   }
 };
 
+//clear the lti key
 export const clearLtik = () => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('lti_token');

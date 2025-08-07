@@ -79,6 +79,35 @@ const assignmentSchema = new Schema({
 }, { timestamps: true });
 assignmentSchema.index({ canvasId: 1, courseId: 1 }, { unique: true });
 
+//1.3 to 1.1 tool mapping schema
+const ProxySchema = new mongoose.Schema({
+  deploymentId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  resourceLinkId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  toolType: {
+    type: String,
+    required: true,
+    enum: ['opendsa', /* add other tools */]
+  },
+  lti11Config: {
+    consumerKey: String,
+    sharedSecret: String,
+    launchUrl: String,
+  },
+  lastConfiguredAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { timestamps: true });
+ProxySchema.index({ deploymentId: 1, resourceLinkId: 1 }, { unique: true });
+
 // Create models
 const Pass = mongoose.model('Pass', passSchema);
 const Instructor = mongoose.model('Instructor', instructorSchema);
@@ -86,6 +115,7 @@ const Student = mongoose.model('Student', studentSchema);
 const Course = mongoose.model('Course', courseSchema);
 const Enrollment = mongoose.model('Enrollment', enrollmentSchema);
 const Assignment = mongoose.model('Assignment', assignmentSchema);
+const Proxy = mongoose.model('Proxy', ProxySchema);
 
 // Export models
 module.exports = {
@@ -94,5 +124,6 @@ module.exports = {
   Student,
   Course,
   Enrollment,
-  Assignment
+  Assignment,
+  Proxy
 };

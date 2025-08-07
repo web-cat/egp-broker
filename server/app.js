@@ -10,7 +10,7 @@ const { getCourse } = require("./src/controllers/courseControllers");
 const {
   getOrAddEnrollment,
 } = require("./src/controllers/enrollmentControllers");
-
+const { getToolConfiguration , upsertToolConfiguration } = require ("./src/controllers/toolConfigController");
 const lti = require("ltijs").Provider;
 
 // Setup
@@ -78,6 +78,17 @@ lti.onConnect(async (token, req, res) => {
     console.log("Enrollment result:", studentEnrollment ? "SUCCESS" : "FAILED");
   } else {
     return res.sendFile(path.join(__dirname, "./public/notset.html"));
+  }
+
+  let configuredToolMapping;
+  try {
+    configuredToolMapping = await getToolConfiguration(token.platformInfo.deploymentId, token.platformInfo.resourceLinkId);
+    if (configuredToolMapping instanceof Error) { 
+        throw configuredToolMapping;
+    }
+  } catch (dbError) {
+    console.error("Error looking up tool mapping from DB:", dbError);
+    //return lti.redirect(res, `${process.env.NEXT_PUBLIC_FRONTEND_URL}/error?message=${encodeURIComponent('Database lookup failed during tool config check')}`);
   }
 
   return res.sendFile(path.join(__dirname, "./public/index.html"));

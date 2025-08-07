@@ -5,6 +5,23 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    develop:
+      watch:
+        - path: ./server/src
+          action: sync
+          target: /app/server
+          ignore:
+            - node_modules/
+        - path: ./server/package.json
+          action: rebuild
+        - path: ./server/package-lock.json
+          action: rebuild
+        - path: ./frontend/package.json
+          action: rebuild
+        - path: ./frontend/package-lock.json
+          action: rebuild
+        - path: ./frontend/
+          action: rebuild
     container_name: lti-server
     ports:
       - 3000:3000
