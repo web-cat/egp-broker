@@ -32,8 +32,7 @@ const TOOL_OPTIONS = [
 export default function ToolConfig() {
     const router = useRouter();
     const [ltik, setLtik] = useState(null);
-    const [isLtikLoading, setIsLtikLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedTool, setSelectedTool] = useState("");
     const [configStatus, setConfigStatus] = useState({ message: '', type: '' });
     const [openDSAConfig, setOpenDSAConfig] = useState({
@@ -45,7 +44,7 @@ export default function ToolConfig() {
     useEffect (() => {
         const fetchLtikAndConfig = async () => {
             //get ltik and store
-            setIsLtikLoading(true);
+            setIsLoading(true);
             const key = getLtik();
             setLtik(key);
             if (key) {
@@ -71,40 +70,10 @@ export default function ToolConfig() {
             } else {
                 setConfigStatus({ message: "Authentication required. Please launch from LMS.", type: 'error' });
             }
-            setIsLtikLoading(false);
+            setIsLoading(false);
         };
         fetchLtikAndConfig();
     }, []);
-
-    /*useEffect(() => {
-    async function fetchOpenDSAContent() {
-        try {
-            // Make the request to your backend's new OpenDSA content proxy endpoint
-            const response = await ky.get(`/api/proxy/opendsa-content`, {
-                credentials: "include",
-                headers: { Authorization: "Bearer " + getLtik() },
-            })
-            .json();
-            setContentHtml(response);
-            console.log("Course Info:", response);
-
-            // The response is expected to be HTML, so get it as text
-            //const html = await response.text();
-            //setContentHtml(html);
-
-        } catch (err) {
-            console.error("Error fetching OpenDSA content:", err);
-            //console.log("Error fetching OpenDSA content:", err);
-            setError("Failed to load OpenDSA content. Please try again later.");
-            // If the error message is too generic, you might parse err.response.text()
-            // if ky provides it, to show more specific backend error messages.
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    //fetchOpenDSAContent();
-    }, []);*/
 
     const handleToolSelect = (value) => {
         setSelectedTool(value);
@@ -113,23 +82,23 @@ export default function ToolConfig() {
 
     const handleConfigure = async (e) => {
         e.preventDefault();
-        setLoading(true);
+        setIsLoading(true);
         setConfigStatus({ message: '', type: '' });
 
         if (!ltik) {
             setConfigStatus({ message: "Authentication required (LTI Key missing). Please launch from LMS.", type: 'error' });
-            setLoading(false);
+            setIsLoading(false);
             return;
         }
 
         if (!selectedTool) {
             setConfigStatus({ message: "Please select a tool to configure.", type: 'error' });
-            setLoading(false);
+            setIsLoading(false);
             return;
         }
 
         try {
-        const response = await ky.post('/api/configure-tool', {
+        const response = await ky.post('/api/tool-config', {
             json: {
             toolType: selectedTool,
             ltiConfig: openDSAConfig
@@ -155,43 +124,19 @@ export default function ToolConfig() {
             console.error("Configuration error:", error);
             setConfigStatus({ message: `An unexpected error occurred during configuration: ${error.message}`, type: 'error' });
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-4">
-            <h1 className="text-4xl font-bold mb-6 text-green-700">Welcome to Your New Section!</h1>
-            {/* Add your new content, components, forms, etc. here */}
-            <div className="mt-8">
-                <Button onClick={() => router.push('/')}>
-                    Back to Welcome
-                </Button>
-            </div>
-            </div>
-        );
-    }
     // Show a loading spinner while the LTI key is being fetched
-    if (isLtikLoading) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <p>Loading...</p>
             </div>
         );
     }
-    /*
-    return (
-        <div className="container mx-auto p-6">
-            <Link href="/" className="text-blue-600 hover:underline mb-4 block">
-                Back to Home
-            </Link>
-            <h1 className="text-3xl font-bold mb-4">
-                OpenDSA Content
-            </h1>
-        <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
-        </div>
-    );*/
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
         <Card className="w-full max-w-md p-6 shadow-lg rounded-lg">
@@ -269,8 +214,8 @@ export default function ToolConfig() {
                 </div>
                 )}
 
-                <Button type="submit" className="w-full" disabled={isLtikLoading || !ltik || !selectedTool}>
-                {isLtikLoading ? "Configuring..." : "Configure Tool"}
+                <Button type="submit" className="w-full" disabled={isLoading || !ltik || !selectedTool}>
+                {isLoading ? "Configuring..." : "Configure Tool"}
                 </Button>
             </form>
 
