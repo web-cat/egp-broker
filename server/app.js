@@ -12,6 +12,7 @@ const {
 } = require("./src/controllers/enrollmentControllers");
 const { getToolConfiguration , upsertToolConfiguration } = require ("./src/controllers/toolConfigController");
 const lti = require("ltijs").Provider;
+const toolConfigRouter = require('./src/routes/proxyRoutes.js');
 
 // Setup
 lti.setup(
@@ -88,7 +89,7 @@ lti.onConnect(async (token, req, res) => {
     }
   } catch (dbError) {
     console.error("Error looking up tool mapping from DB:", dbError);
-    //return lti.redirect(res, `${process.env.NEXT_PUBLIC_FRONTEND_URL}/error?message=${encodeURIComponent('Database lookup failed during tool config check')}`);
+    return res.sendFile(path.join(__dirname, "./public/notset.html"));
   }
 
   return res.sendFile(path.join(__dirname, "./public/index.html"));
@@ -142,6 +143,7 @@ lti.onDeepLinking(async (token, req, res) => {
 
 // Setting up routes
 lti.app.use(routes);
+lti.app.use('/api/tool-config', toolConfigRouter);
 
 lti.whitelist(
   // Whitelist lti_key_config files from lti auth

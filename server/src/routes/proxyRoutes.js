@@ -1,11 +1,122 @@
 const express = require("express");
 const router = express.Router();
-const lti = require("ltijs").Provider;
+const mongoose = require('mongoose');
 
 const { getToolConfiguration } = require("../controllers/toolConfigController");
 const { launchOpenDSA } = require('../utils/tool');
 
+// Replace with your MongoDB connection URI
+const uri = "mongodb+srv://<username>:<password>@<cluster-url>/?retryWrites=true&w=majority";
+const dbName = "your_database_name";
+
+// Connect to MongoDB using Mongoose
+mongoose.connect(uri, { dbName: dbName })
+    .then(() => console.log("Connected successfully to MongoDB"))
+    .catch(err => console.error("Failed to connect to MongoDB", err));
+
+// Define the Mongoose Schema for the tool configuration
+const toolConfigSchema = new mongoose.Schema({
+    userId: { type: String, required: true, unique: true },
+    toolType: { type: String, required: true },
+    ltiConfig: {
+        ltiConsumerKey: String,
+        ltiSharedSecret: String,
+        ltiLaunchUrl: String
+    },
+    lastUpdated: { type: Date, default: Date.now }
+}, {
+    // This removes the default __v version key from the document
+    versionKey: false 
+});
+
+// Create a Mongoose Model from the schema
+const ToolConfig = mongoose.model('ToolConfig', toolConfigSchema);
+
+// Placeholder function for LTI key validation and user lookup.
+// In a real application, you would validate the LTI key with your
+// LTI library and extract the user's unique ID from the payload.
+const getUserIdFromLtik = (ltik) => {
+    // This is a dummy implementation. Replace with your actual LTI validation logic.
+    if (ltik) {
+        // Assuming the LTI key can be used to deterministically get a user ID
+        return "user-id-from-lti-key"; 
+    }
+    return null;
+};
+
+// --- API Endpoints ---
+
+// GET /api/tool-config
+// Fetches the user's tool configuration from the database.
+router.get('/', async (req, res) => {
+    // Authenticate user using the LTI key from the Authorization header
+    const ltik = req.headers['authorization']?.split(' ')[1];
+    const userId = getUserIdFromLtik(ltik);
+
+    if (!userId) {
+        return res.status(401).json({ success: false, error: 'Authentication required.' });
+    }
+
+    try {
+        // Find the configuration document for the user
+        const config = await ToolConfig.findOne({ userId: userId });
+
+        if (config) {
+            res.json({ success: true, config: config.ltiConfig });
+        } else {
+            res.json({ success: false, message: 'No configuration found.' });
+        }
+    } catch (err) {
+        console.error("GET /api/tool-config error:", err);
+        res.status(500).json({ success: false, error: 'Internal server error.' });
+    }
+});
+
+// POST /api/tool-config
+// Saves or updates the user's tool configuration in the database.
+router.post('/', async (req, res) => {
+    // Authenticate user using the LTI key
+    const ltik = req.headers['authorization']?.split(' ')[1];
+    const userId = getUserIdFromLtik(ltik);
+
+    if (!userId) {
+        return res.status(401).json({ success: false, error: 'Authentication required.' });
+    }
+
+    const { toolType, ltiConfig } = req.body;
+
+    if (!toolType || !ltiConfig) {
+        return res.status(400).json({ success: false, error: 'Missing toolType or ltiConfig in request body.' });
+    }
+
+    try {
+        // Find and update the configuration, or create a new one if it doesn't exist.
+        const result = await ToolConfig.findOneAndUpdate(
+            { userId: userId },
+            { 
+                userId,
+                toolType,
+                ltiConfig,
+                lastUpdated: new Date()
+            },
+            { new: true, upsert: true }
+        );
+
+        if (result) {
+            res.json({ success: true, message: 'Configuration saved successfully.' });
+        } else {
+            res.status(500).json({ success: false, error: 'Failed to save configuration.' });
+        }
+    } catch (err) {
+        console.error("POST /api/tool-config error:", err);
+        res.status(500).json({ success: false, error: 'Internal server error.' });
+    }
+});
+
+module.exports = router;
+
 //WIP
+/*
 router.get('/opendsa-content', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
@@ -131,3 +242,4 @@ router.post('/configure-tool', async (req, res) => {
 });
 
 module.exports = router;
+*/

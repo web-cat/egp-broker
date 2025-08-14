@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
@@ -21,36 +22,58 @@ import {
     CardHeader, 
     CardTitle 
 } from "@/components/ui/card";
-
 //tool options
 const TOOL_OPTIONS = [
   //{ value: "", label: "Select a tool" },
   { value: "opendsa", label: "OpenDSA" },
   // Add other tools here
 ];
-
 //tool connection and configuration page - WIP
 export default function ToolConfig() {
-    //console.log("HELLO");
     const router = useRouter();
     const [ltik, setLtik] = useState(null);
-    //const [contentHtml, setContentHtml] = useState('');
-    const [loading, setLoading] = useState(false);
     const [isLtikLoading, setIsLtikLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedTool, setSelectedTool] = useState("");
     const [configStatus, setConfigStatus] = useState({ message: '', type: '' });
-
     const [openDSAConfig, setOpenDSAConfig] = useState({
         // These would be pre-filled or configured via the backend
         ltiConsumerKey: "",
         ltiSharedSecret: "",
         ltiLaunchUrl: ""
     });
-
     useEffect (() => {
-        setLtik(getLtik());
-        setIsLtikLoading(false);
+        const fetchLtikAndConfig = async () => {
+            //get ltik and store
+            setIsLtikLoading(true);
+            const key = getLtik();
+            setLtik(key);
+            if (key) {
+                try {
+                    //get request to backend api to get config info
+                    const response = await ky.get('/api/tool-config', {
+                        headers: {
+                            'Authorization': `Bearer ${key}`,
+                        },
+                        timeout: 10000
+                    }).json();
+                    if (response.success && response.config) {
+                        setOpenDSAConfig(response.config);
+                        setConfigStatus({ message: 'Existing configuration loaded from MongoDB.', type: 'success' });
+                        setSelectedTool("opendsa");
+                    } else {
+                        setConfigStatus({ message: 'No existing configuration found. Please enter details.', type: 'info' });
+                    }
+                } catch (error) {
+                    console.error("Error fetching config:", error);
+                    setConfigStatus({ message: `Error fetching configuration from backend: ${error.message}`, type: 'error' });
+                }
+            } else {
+                setConfigStatus({ message: "Authentication required. Please launch from LMS.", type: 'error' });
+            }
+            setIsLtikLoading(false);
+        };
+        fetchLtikAndConfig();
     }, []);
 
     /*useEffect(() => {
@@ -136,15 +159,6 @@ export default function ToolConfig() {
         }
     };
 
-    if (loading) {
-        return (
-        <div className="container mx-auto p-6">
-            <h1 className="text-3xl font-bold mb-4">Loading OpenDSA Content...</h1>
-            <p>Please wait while we fetch the content from OpenDSA.</p>
-        </div>
-        );
-    }
-
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -212,40 +226,39 @@ export default function ToolConfig() {
                 </div>
 
                 {selectedTool === "opendsa" && (
-                <div className="space-y-4">
-                    <h3 className="text-lg font-semibold border-b pb-2">OpenDSA Specifics (Optional/Advanced)</h3>
-                    <p className="text-sm text-gray-500">
-                    These settings are typically managed by the system.
-                    If you need to override, consult documentation.
-                    </p>
-                    {/* Example of showing fields for OpenDSA.
-                        You might pre-fill these from an API call if configuration exists. */}
-                    <div className="grid gap-2">
-                    <Label htmlFor="ltiConsumerKey">LTI 1.1 Consumer Key</Label>
-                    <Input id="ltiConsumerKey"
-                        value={openDSAConfig.ltiConsumerKey}
-                        onChange={(e) => setOpenDSAConfig({...openDSAConfig, ltiConsumerKey: e.target.value})}
-                        placeholder="Enter Consumer Key"
-                        required
-                    />
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold border-b pb-2">OpenDSA LTI 1.1 Credentials</h3>
+                        <div className="grid gap-2">
+                            <Label htmlFor="ltiConsumerKey">LTI 1.1 Consumer Key</Label>
+                            <Input
+                                id="ltiConsumerKey"
+                                value={openDSAConfig.ltiConsumerKey}
+                                onChange={(e) => setOpenDSAConfig({...openDSAConfig, ltiConsumerKey: e.target.value})}
+                                placeholder="Enter Consumer Key"
+                                required
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="ltiSharedSecret">LTI 1.1 Shared Secret</Label>
+                            <Input
+                                id="ltiSharedSecret"
+                                value={openDSAConfig.ltiSharedSecret}
+                                onChange={(e) => setOpenDSAConfig({...openDSAConfig, ltiSharedSecret: e.target.value})}
+                                placeholder="Enter Shared Secret"
+                                required
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="ltiLaunchUrl">LTI 1.1 Launch URL</Label>
+                            <Input
+                                id="ltiLaunchUrl"
+                                value={openDSAConfig.ltiLaunchUrl}
+                                onChange={(e) => setOpenDSAConfig({...openDSAConfig, ltiLaunchUrl: e.target.value})}
+                                placeholder="Enter Launch URL"
+                                required
+                            />
+                        </div>
                     </div>
-                    <div className="grid gap-2">
-                    <Label htmlFor="ltiSharedSecret">LTI 1.1 Shared Secret</Label>
-                    <Input id="ltiSharedSecret"
-                        value={openDSAConfig.ltiSharedSecret}
-                        onChange={(e) => setOpenDSAConfig({...openDSAConfig, ltiSharedSecret: e.target.value})}
-                        placeholder="Not Found. Please Enter LTI Shared Secret."
-                        required
-                    />
-                    </div>
-                    <div className="grid gap-2">
-                    <Label htmlFor="ltiLaunchUrl">LTI 1.1 Launch URL</Label>
-                    <Input id="ltiLaunchUrl"
-                        value={openDSAConfig.ltiLaunchUrl}
-                        onChange={(e) => setOpenDSAConfig({...openDSAConfig, ltiLaunchUrl: e.target.value})}
-                        disabled placeholder="Will be retrieved from backend" />
-                    </div>
-                </div>
                 )}
 
                 {configStatus.message && (
@@ -256,8 +269,8 @@ export default function ToolConfig() {
                 </div>
                 )}
 
-                <Button type="submit" className="w-full" disabled={loading || !ltik || !selectedTool}>
-                {loading ? "Configuring..." : "Configure Tool"}
+                <Button type="submit" className="w-full" disabled={isLtikLoading || !ltik || !selectedTool}>
+                {isLtikLoading ? "Configuring..." : "Configure Tool"}
                 </Button>
             </form>
 
