@@ -3,7 +3,6 @@ const router = express.Router();
 const mongoose = require('mongoose');
 
 const { getToolConfiguration } = require("../controllers/toolConfigController");
-const { launchOpenDSA } = require('../utils/tool');
 
 // Replace with your MongoDB connection URI
 const uri = "mongodb+srv://<username>:<password>@<cluster-url>/?retryWrites=true&w=majority";
@@ -18,6 +17,7 @@ mongoose.connect(uri, { dbName: dbName })
 const toolConfigSchema = new mongoose.Schema({
     userId: { type: String, required: true, unique: true },
     toolType: { type: String, required: true },
+    ltiVersion: { type: String, required: true},
     ltiConfig: {
         ltiConsumerKey: String,
         ltiSharedSecret: String,
@@ -83,10 +83,10 @@ router.post('/', async (req, res) => {
         return res.status(401).json({ success: false, error: 'Authentication required.' });
     }
 
-    const { toolType, ltiConfig } = req.body;
+    const { toolType, ltiVersion, ltiConfig } = req.body;
 
-    if (!toolType || !ltiConfig) {
-        return res.status(400).json({ success: false, error: 'Missing toolType or ltiConfig in request body.' });
+    if (!toolType || !ltiVersion || !ltiConfig) {
+        return res.status(400).json({ success: false, error: 'Missing data in request body.' });
     }
 
     try {
@@ -96,6 +96,7 @@ router.post('/', async (req, res) => {
             { 
                 userId,
                 toolType,
+                ltiVersion,
                 ltiConfig,
                 lastUpdated: new Date()
             },
@@ -114,6 +115,43 @@ router.post('/', async (req, res) => {
 });
 
 module.exports = router;
+
+// A new endpoint to receive grade data and send it to Canvas
+router.post('/grade', async (req, res) => {
+  const { userId, grade, deploymentId, resourceLinkId } = req.body;
+
+  if (!deploymentId || !resourceLinkId) {
+    return res.status(400).send({ message: "Missing deploymentId or resourceLinkId in request body." });
+  }
+
+  try {
+    const toolConfig = await getToolConfiguration(deploymentId, resourceLinkId);
+    if (!toolConfig) {
+      return res.status(404).send({ message: "Tool configuration not found for this deployment and resource." });
+    }
+
+    const idToken = JSON.parse(toolConfig.idToken);
+    const lineItemUrl = toolConfig.lineItemUrl;
+
+    const response = await lti.Grade.send(
+      idToken,
+      {
+        userId: userId,
+        scoreGiven: grade,
+        scoreMaximum: 100,
+        activityProgress: 'Completed',
+        gradingProgress: 'FullyGraded'
+      },
+      lineItemUrl
+    );
+
+    console.log('Grade passback successful:', response);
+    res.status(200).send({ message: 'Grade successfully passed back.' });
+  } catch (err) {
+    console.error('Error with grade passback:', err);
+    res.status(500).send({ message: 'Error with grade passback.', error: err.message });
+  }
+});
 
 //WIP
 /*

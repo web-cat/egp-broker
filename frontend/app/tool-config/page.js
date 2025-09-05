@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useEffect, useState} from "react";
+import React, { useCallback, useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,25 +22,49 @@ import {
     CardHeader, 
     CardTitle 
 } from "@/components/ui/card";
+
+// LTI version options
+const LTI_VERSION_OPTIONS = [
+  { value: "1.1", label: "LTI 1.1" },
+  { value: "1.3", label: "LTI 1.3" },
+];
+
 //tool options
-const TOOL_OPTIONS = [
-  //{ value: "", label: "Select a tool" },
-  { value: "opendsa", label: "OpenDSA" },
+const TOOL_OPTIONS_11 = [
+  { value: "opendsa11", label: "OpenDSA 1.1" },
+  { value: "other", label: "Other" },
   // Add other tools here
 ];
+const TOOL_OPTIONS_13 = [
+    { value: "opendsa13", label: "OpenDSA 1.3" },
+]
+
+const TOOL_OPTIONS = {
+  "1.1": [{ value: "opendsa11", label: "OpenDSA 1.1" }, { value: "other", label: "Other" }],
+  "1.3": [{ value: "opendsa13", label: "OpenDSA 1.3" }],
+};
+
+const initialToolConfig = {
+    ltiConsumerKey: "",
+    ltiSharedSecret: "",
+    ltiLaunchUrl: "",
+    lti13ClientId: "",
+    lti13OpenIdConnectUrl: "",
+    lti13ToolJwkUrl: ""
+};
+
 //tool connection and configuration page - WIP
 export default function ToolConfig() {
     const router = useRouter();
     const [ltik, setLtik] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedLtiVersion, setSelectedLtiVersion] = useState("");
     const [selectedTool, setSelectedTool] = useState("");
+    const [toolConfigs, setToolConfigs] = useState({});
     const [configStatus, setConfigStatus] = useState({ message: '', type: '' });
-    const [openDSAConfig, setOpenDSAConfig] = useState({
-        // These would be pre-filled or configured via the backend
-        ltiConsumerKey: "",
-        ltiSharedSecret: "",
-        ltiLaunchUrl: ""
-    });
+    const [toolConfig, setToolConfig] = useState(initialToolConfig);
+
+    
     useEffect (() => {
         const fetchLtikAndConfig = async () => {
             //get ltik and store
@@ -57,7 +81,7 @@ export default function ToolConfig() {
                         timeout: 10000
                     }).json();
                     if (response.success && response.config) {
-                        setOpenDSAConfig(response.config);
+                        setToolConfig(response.config);
                         setConfigStatus({ message: 'Existing configuration loaded from MongoDB.', type: 'success' });
                         setSelectedTool("opendsa");
                     } else {
@@ -75,9 +99,19 @@ export default function ToolConfig() {
         fetchLtikAndConfig();
     }, []);
 
+    const handleLtiVersionSelect = (value) => {
+        setSelectedLtiVersion(value);
+        setConfigStatus({ message: '', type: '' });
+    };
+
     const handleToolSelect = (value) => {
         setSelectedTool(value);
-        setConfigStatus({ message: '', type: '' });
+        setConfigStatus({ message: "", type: "" });
+    };
+
+    const handleConfigChange = (e, field) => {
+        const value = e.target.value;
+        setToolConfig(prev => ({ ...prev, [field]: value }));
     };
 
     const handleConfigure = async (e) => {
@@ -87,6 +121,12 @@ export default function ToolConfig() {
 
         if (!ltik) {
             setConfigStatus({ message: "Authentication required (LTI Key missing). Please launch from LMS.", type: 'error' });
+            setIsLoading(false);
+            return;
+        }
+
+        if (!selectedLtiVersion) {
+            setConfigStatus({ message: "Please select an LTI version.", type: 'error' });
             setIsLoading(false);
             return;
         }
@@ -101,9 +141,8 @@ export default function ToolConfig() {
         const response = await ky.post('/api/tool-config', {
             json: {
             toolType: selectedTool,
-            ltiConfig: openDSAConfig
-            // You could include additional form data if needed for specific tools
-            // e.g., OpenDSA's specific book path or module IDs if they are configured per instance
+            ltiVersion: selectedLtiVersion,
+            ltiConfig: toolConfig
             },
             headers: {
             'Authorization': `Bearer ${ltik}`,
@@ -114,8 +153,6 @@ export default function ToolConfig() {
 
         if (response.success) {
             setConfigStatus({ message: `Successfully configured ${selectedTool}.`, type: 'success' });
-            // Optionally, redirect after successful configuration
-            // router.push('/');
         } else {
             setConfigStatus({ message: response.error || `Failed to configure ${selectedTool}.`, type: 'error' });
         }
@@ -127,6 +164,13 @@ export default function ToolConfig() {
             setIsLoading(false);
         }
     };
+
+    const availableTools = TOOL_OPTIONS[selectedLtiVersion] || [];
+    // const availableTools = selectedLtiVersion === "1.1"
+    // ? TOOL_OPTIONS_11
+    // : selectedLtiVersion === "1.3"
+    // ? TOOL_OPTIONS_13
+    // : [];
 
     // Show a loading spinner while the LTI key is being fetched
     if (isLoading) {
@@ -155,13 +199,13 @@ export default function ToolConfig() {
 
             <form onSubmit={handleConfigure} className="space-y-6">
                 <div className="grid gap-2">
-                <Label htmlFor="tool-select">Select Tool</Label>
-                <Select onValueChange={handleToolSelect} value={selectedTool}>
-                    <SelectTrigger id="tool-select" className="w-full">
-                    <SelectValue placeholder="Select a tool" />
+                <Label htmlFor="lti-version-select">Select LTI Version</Label>
+                <Select onValueChange={handleLtiVersionSelect} value={selectedLtiVersion}>
+                    <SelectTrigger id="lti-version-select" className="w-full">
+                    <SelectValue placeholder="Select an LTI version" />
                     </SelectTrigger>
                     <SelectContent>
-                    {TOOL_OPTIONS.map((option) => (
+                    {LTI_VERSION_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                         {option.label}
                         </SelectItem>
@@ -169,16 +213,33 @@ export default function ToolConfig() {
                     </SelectContent>
                 </Select>
                 </div>
+                {selectedLtiVersion && (
+                    <div className="grid gap-2">
+                    <Label htmlFor="tool-select">Select Tool</Label>
+                    <Select onValueChange={handleToolSelect} value={selectedTool}>
+                        <SelectTrigger id="tool-select" className="w-full">
+                        <SelectValue placeholder="Select a tool" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {availableTools.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                )}
 
-                {selectedTool === "opendsa" && (
+                {selectedTool && selectedLtiVersion === "1.1" && (
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold border-b pb-2">OpenDSA LTI 1.1 Credentials</h3>
+                        <h3 className="text-lg font-semibold border-b pb-2">LTI 1.1 Credentials for {selectedTool}</h3>
                         <div className="grid gap-2">
                             <Label htmlFor="ltiConsumerKey">LTI 1.1 Consumer Key</Label>
                             <Input
                                 id="ltiConsumerKey"
-                                value={openDSAConfig.ltiConsumerKey}
-                                onChange={(e) => setOpenDSAConfig({...openDSAConfig, ltiConsumerKey: e.target.value})}
+                                value={toolConfig.ltiConsumerKey || ''}
+                                onChange={(e) => handleConfigChange(e, 'ltiConsumerKey')}
                                 placeholder="Enter Consumer Key"
                                 required
                             />
@@ -187,8 +248,8 @@ export default function ToolConfig() {
                             <Label htmlFor="ltiSharedSecret">LTI 1.1 Shared Secret</Label>
                             <Input
                                 id="ltiSharedSecret"
-                                value={openDSAConfig.ltiSharedSecret}
-                                onChange={(e) => setOpenDSAConfig({...openDSAConfig, ltiSharedSecret: e.target.value})}
+                                value={toolConfig.ltiSharedSecret || ''}
+                                onChange={(e) => handleConfigChange(e, 'ltiSharedSecret')}
                                 placeholder="Enter Shared Secret"
                                 required
                             />
@@ -197,9 +258,45 @@ export default function ToolConfig() {
                             <Label htmlFor="ltiLaunchUrl">LTI 1.1 Launch URL</Label>
                             <Input
                                 id="ltiLaunchUrl"
-                                value={openDSAConfig.ltiLaunchUrl}
-                                onChange={(e) => setOpenDSAConfig({...openDSAConfig, ltiLaunchUrl: e.target.value})}
+                                value={toolConfig.ltiLaunchUrl || ''}
+                                onChange={(e) => handleConfigChange(e, 'ltiLaunchUrl')}
                                 placeholder="Enter Launch URL"
+                                required
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {selectedTool && selectedLtiVersion === "1.3" && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold border-b pb-2">LTI 1.3 Credentials for {selectedTool}</h3>
+                        <div className="grid gap-2">
+                            <Label htmlFor="lti13ClientId">Client ID</Label>
+                            <Input
+                                id="lti13ClientId"
+                                value={toolConfig.lti13ClientId || ''}
+                                onChange={(e) => handleConfigChange(e, 'lti13ClientId')}
+                                placeholder="Enter Client ID"
+                                required
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="lti13OpenIdConnectUrl">OpenID Connect Launch URL</Label>
+                            <Input
+                                id="lti13OpenIdConnectUrl"
+                                value={toolConfig.lti13OpenIdConnectUrl || ''}
+                                onChange={(e) => handleConfigChange(e, 'lti13OpenIdConnectUrl')}
+                                placeholder="Enter OpenID Connect Launch URL"
+                                required
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="lti13ToolJwkUrl">Public Key (JWK) URL</Label>
+                            <Input
+                                id="lti13ToolJwkUrl"
+                                value={toolConfig.lti13ToolJwkUrl || ''}
+                                onChange={(e) => handleConfigChange(e, 'lti13ToolJwkUrl')}
+                                placeholder="Enter Public Key URL"
                                 required
                             />
                         </div>
@@ -216,6 +313,10 @@ export default function ToolConfig() {
 
                 <Button type="submit" className="w-full" disabled={isLoading || !ltik || !selectedTool}>
                 {isLoading ? "Configuring..." : "Configure Tool"}
+                </Button>
+
+                <Button type="advanced" className="w-full" disabled={isLoading || !ltik || !selectedTool}>
+                {isLoading ? "Configuring..." : "Advanced Settings"}
                 </Button>
             </form>
 

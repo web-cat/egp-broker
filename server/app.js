@@ -44,6 +44,23 @@ lti.onConnect(async (token, req, res) => {
   console.log("Course ID from LTI context:", context.custom.canvas_course_id);
   console.log("User ID from LTI context:", context.custom.canvas_user_id);
 
+  const toolConfig = {
+    deploymentId: token.platformInfo.deploymentId,
+    resourceLinkId: token.platformInfo.resourceLinkId,
+    lineItemUrl: token.platformInfo.lineItemUrl,
+    gradeServiceUrl: token.platformInfo.gradeServiceUrl,
+    scope: token.platformInfo.scope,
+    idToken: JSON.stringify(token) // Store the entire token for later use
+  };
+
+  try {
+    await upsertToolConfiguration(toolConfig);
+    console.log("LTI Advantage data stored successfully.");
+  } catch (dbError) {
+    console.error("Error saving LTI Advantage data to DB:", dbError);
+    return res.status(500).send("Error saving tool configuration.");
+  }
+
   const role = getRole(context.roles);
   const course = await getCourse(context.custom.canvas_course_id);
 

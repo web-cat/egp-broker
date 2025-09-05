@@ -79,7 +79,7 @@ const assignmentSchema = new Schema({
 }, { timestamps: true });
 assignmentSchema.index({ canvasId: 1, courseId: 1 }, { unique: true });
 
-//1.3 to 1.1 tool mapping schema
+//tool mapping schema
 const ProxySchema = new mongoose.Schema({
   deploymentId: {
     type: String,
@@ -94,9 +94,14 @@ const ProxySchema = new mongoose.Schema({
   toolType: {
     type: String,
     required: true,
-    enum: ['opendsa', /* add other tools */]
+    enum: ['opendsa11', 'opendsa13']
   },
-  lti11Config: {
+  ltiVersion: {
+    type: String,
+    required: true,
+    enum: ['lti11', 'lti13']
+  },
+  ltiConfig: {
     consumerKey: String,
     sharedSecret: String,
     launchUrl: String,
