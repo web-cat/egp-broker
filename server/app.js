@@ -12,6 +12,8 @@ const {
 } = require("./src/controllers/enrollmentControllers");
 
 const lti = require("ltijs").Provider;
+const session = require('express-session');
+const passport = require('./src/config/passport');
 
 // Setup
 lti.setup(
@@ -129,6 +131,24 @@ lti.onDeepLinking(async (token, req, res) => {
 //   }
 // });
 
+// Add session middleware
+lti.app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+}));
+
+// Initialize passport
+lti.app.use(passport.initialize());
+lti.app.use(passport.session());
+
+lti.app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, './public/index.html'));
+});
+// Setting up routes
+lti.app.use(routes);
+
 // Setting up routes
 lti.app.use(routes);
 
@@ -136,7 +156,8 @@ lti.whitelist(
   // Whitelist lti_key_config files from lti auth
   '/lti/lti_key_config_prod.json', '/lti/lti_key_config_dev.json',
   // Whitelist tool routes from lti auth
-  '/api/tool/student_passes', '/api/tool/redeem_pass'
+  '/api/tool/student_passes', '/api/tool/redeem_pass',
+    '/auth/signup', '/auth/login', '/auth/session-info', '/dashboard'
 );
 
 // Setup function

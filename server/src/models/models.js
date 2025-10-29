@@ -21,7 +21,9 @@ const instructorSchema = new Schema({
   email: { type: String, required: true, unique: true },
   firstName: String,
   lastName: String,
-  canvasApiKey: { type: String } // Optional field to store Canvas API key
+  canvasApiKey: { type: String }, // Optional field to store Canvas API key
+    passwordHash: { type: String },
+    isLocalAuthEnabled: { type: Boolean, default: false }
 }, { timestamps: true }); // Adds createdAt and updatedAt fields
 instructorSchema.index({ canvasId: 1 }, { unique: true });
 

@@ -10,11 +10,22 @@ export default function WelcomeBanner() {
   useEffect(() => {
     const getInfo = async () => {
       try {
-        const launchInfo = await ky.get("/lti/info", {
-            credentials: "include",
-            headers: { Authorization: "Bearer " + getLtik() },
-          })
-          .json();
+          // Check if coming from Canvas (ltik) or direct login (session)
+          const urlParams = new URLSearchParams(window.location.search);
+          const isSessionLogin = window.location.pathname === '/dashboard';
+          let launchInfo;
+          if (isSessionLogin) {
+              // Direct login via password
+              launchInfo = await ky.get("/auth/session-info", {
+                  credentials: "include"
+              }).json();
+          } else {
+               launchInfo = await ky.get("/lti/info", {
+                  credentials: "include",
+                  headers: {Authorization: "Bearer " + getLtik()},
+              })
+                  .json();
+          }
           console.log("Launch info:", launchInfo);
         setInfo(launchInfo);
 

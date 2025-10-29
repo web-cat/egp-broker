@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 { text-align: center; color: #333; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover { background: #5568d3; }
+        .message { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #fee; color: #c33; }
+        .success { background: #efe; color: #3c3; }
+        .link { text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🎓 Instructor Login</h1>
+    <div id="message"></div>
+    <form id="loginForm">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+    </form>
+    <div class="link">
+        Don't have a password? <a href="/auth/signup">Signup</a>
+    </div>
+</div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const res = await fetch('/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                document.getElementById('message').innerHTML = '<div class="message success">Login successful!</div>';
+                setTimeout(() => window.location.href = data.redirectUrl, 1000);
+            } else {
+                document.getElementById('message').innerHTML = '<div class="message error">' + data.error + '</div>';
+            }
+        } catch (err) {
+            document.getElementById('message').innerHTML = '<div class="message error">Network error</div>';
+        }
+    });
+</script>
+</body>
+</html>
