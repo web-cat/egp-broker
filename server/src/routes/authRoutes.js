@@ -3,6 +3,7 @@ const passport = require('passport');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const { Instructor } = require('../models/models');
+const { validateVTPassword } = require('../utils/passwordValidator');
 
 const router = express.Router();
 
@@ -19,6 +20,15 @@ router.get('/login', (req, res) => {
 // Handle signup
 router.post('/signup', async (req, res) => {
     const { email, password } = req.body;
+
+    // Validate password
+    const passwordValidation = validateVTPassword(password);
+    if (!passwordValidation.valid) {
+        return res.status(400).json({
+            error: 'Password does not meet VT requirements',
+            details: passwordValidation.errors
+        });
+    }
 
     try {
         const instructor = await Instructor.findOne({ email: email.toLowerCase() });
@@ -50,9 +60,26 @@ router.post('/login', (req, res, next) => {
 
         req.logIn(instructor, (err) => {
             if (err) return res.status(500).json({ error: 'Login failed' });
-            res.json({ success: true, redirectUrl: '/dashboard' });
+            res.json({ success: true, redirectUrl:  '/select-course' }); //redirect instructors to select course
         });
     })(req, res, next);
+});
+
+router.post('/set-course', (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { courseCanvasId } = req.body;
+
+    if (!courseCanvasId) {
+        return res.status(400).json({ error: 'Course ID required' });
+    }
+
+    // Store in session
+    req.session.selectedCourseCanvasId = courseCanvasId;
+
+    res.json({ success: true });
 });
 
 // Get session info (like /lti/info but for direct login)
@@ -61,15 +88,14 @@ router.get('/session-info', (req, res) => {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // Hardcoded course for now
-    const HARDCODED_COURSE_ID = "100"; // Change to a real course canvas ID from your DB
+
 
     const info = {
         name: req.user.firstName + ' ' + req.user.lastName,
         email: req.user.email,
-        role: 'Instructor',  // ← Change from array to string
-        canvas_user_id: req.user.canvasId,  // ← Flatten structure
-        canvas_course_id: HARDCODED_COURSE_ID  // ← Flatten structure
+        role: 'Instructor',
+        canvas_user_id: req.user.canvasId,
+        canvas_course_id: req.session.selectedCourseCanvasId
     };
 
     res.json(info);

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Course</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+        }
+        .loading {
+            text-align: center;
+            color: #667eea;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📚 Select Course</h1>
+
+    <div id="message"></div>
+    <div id="loading" class="loading">Loading your courses...</div>
+
+    <div id="courseSelection" style="display: none;">
+        <p>Select which course dashboard you'd like to view:</p>
+        <select id="courseSelect">
+            <option value="">-- Select a course --</option>
+        </select>
+        <button id="continueBtn" disabled>Continue to Dashboard</button>
+    </div>
+</div>
+
+<script>
+    let courses = [];
+
+    // Load courses on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch('/api/course/available-courses', {
+                credentials: 'include'
+            });
+
+            if (!res.ok) {
+                if (res.status === 401) {
+                    // Not authenticated - redirect to login
+                    window.location.href = '/auth/login';
+                    return;
+                }
+                throw new Error('Failed to fetch courses');
+            }
+
+            const data = await res.json();
+            courses = data.courses;
+
+            // Hide loading, show selection
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('courseSelection').style.display = 'block';
+
+            // Populate dropdown
+            const select = document.getElementById('courseSelect');
+            courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.canvasId;
+                option.textContent = course.title || `Course ${course.canvasId}`;
+                select.appendChild(option);
+            });
+
+            if (courses.length === 0) {
+                document.getElementById('message').innerHTML =
+                    '<div class="message error">No courses found. Please launch from Canvas first to register courses.</div>';
+            }
+
+        } catch (err) {
+            console.error('Error loading courses:', err);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('message').innerHTML =
+                '<div class="message error">Failed to load courses. Please try again.</div>';
+        }
+    });
+
+    // Enable button when course selected
+    document.getElementById('courseSelect').addEventListener('change', (e) => {
+        const btn = document.getElementById('continueBtn');
+        btn.disabled = !e.target.value;
+    });
+
+    // Handle continue button
+    document.getElementById('continueBtn').addEventListener('click', async () => {
+        const courseCanvasId = document.getElementById('courseSelect').value;
+
+        if (!courseCanvasId) return;
+
+        try {
+            // Store selected course in session
+            const res = await fetch('/auth/set-course', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courseCanvasId }),
+                credentials: 'include'
+            });
+
+            if (res.ok) {
+                // Redirect to dashboard
+                window.location.href = '/dashboard';
+            } else {
+                document.getElementById('message').innerHTML =
+                    '<div class="message error">Failed to save course selection.</div>';
+            }
+        } catch (err) {
+            console.error('Error:', err);
+            document.getElementById('message').innerHTML =
+                '<div class="message error">Failed to save course selection.</div>';
+        }
+    });
+</script>
+</body>
+</html>

@@ -59,7 +59,8 @@ lti.onConnect(async (token, req, res) => {
     if (course == null) {
       return res.sendFile(path.join(__dirname, "./public/register.html"));
     }
-  } else if (role == "Learner") {
+  }
+  else if (role == "Learner") {
     const student = await getOrAddStudent(
       context.custom.canvas_user_id,
       token.userInfo.given_name,
@@ -146,8 +147,10 @@ lti.app.use(passport.session());
 lti.app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, './public/index.html'));
 });
-// Setting up routes
-lti.app.use(routes);
+lti.app.get('/select-course', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/pages/select-course.html'));
+});
+
 
 // Setting up routes
 lti.app.use(routes);
@@ -157,7 +160,8 @@ lti.whitelist(
   '/lti/lti_key_config_prod.json', '/lti/lti_key_config_dev.json',
   // Whitelist tool routes from lti auth
   '/api/tool/student_passes', '/api/tool/redeem_pass',
-    '/auth/signup', '/auth/login', '/auth/session-info', '/dashboard'
+    '/auth/signup', '/auth/login', '/auth/session-info', '/dashboard', '/select-course',
+    '/api/course/available-courses', '/auth/set-course'
 );
 
 // Setup function

@@ -77,4 +77,25 @@ router.get("/:courseCanvasId/instructor", async (req, res) => {
   }
 });
 
+// Get courses for logged-in instructor
+router.get('/available-courses', async (req, res) => {
+    try {
+        // Check authentication
+        if (!req.isAuthenticated()) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        const instructor = req.user;
+
+        // Find courses where this instructor is the instructor
+        const courses = await Course.find({ instructorId: instructor._id })
+            .select('canvasId title') // Only return what we need
+            .lean();
+
+        res.json({ courses });
+    } catch (error) {
+        console.error('Error fetching courses:', error);
+        res.status(500).json({ error: 'Failed to fetch courses' });
+    }
+});
 module.exports = router;
