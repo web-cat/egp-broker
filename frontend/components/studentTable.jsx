@@ -104,7 +104,7 @@ export function StudentTable({ courseCanvasId }) {
         console.log("Fetching students for course:", courseCanvasId);
         const students = await ky.get(`/api/enrollment/${courseCanvasId}`, {
             credentials: "include",
-            headers: { Authorization: "Bearer " + getLtik() },
+            //headers: { Authorization: "Bearer " + getLtik() },
           })
           .json();
         console.log("Students:", students);

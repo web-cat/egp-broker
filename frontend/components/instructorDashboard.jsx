@@ -39,7 +39,7 @@ function InstructorDashboard({ courseCanvasId }) {
         // Fetch instructor info
         const info = await ky.get(`/lti/info`, {
           credentials: "include",
-          headers: { Authorization: "Bearer " + getLtik() },
+          //headers: { Authorization: "Bearer " + getLtik() },
         }).json();
         console.log("LTI Info:", info);
         setInstructorCanvasId(info.canvas_user_id || "");
@@ -48,7 +48,7 @@ function InstructorDashboard({ courseCanvasId }) {
         const usedFreePasses = await ky
           .get(`/api/enrollment/${courseCanvasId}/usedFreePasses`, {
             credentials: "include",
-            headers: { Authorization: "Bearer " + getLtik() },
+            //headers: { Authorization: "Bearer " + getLtik() },
           })
           .json();
         setUsedFreePasses(usedFreePasses);
@@ -57,7 +57,7 @@ function InstructorDashboard({ courseCanvasId }) {
         const enrollments = await ky
           .get(`/api/enrollment/${courseCanvasId}`, {
             credentials: "include",
-            headers: { Authorization: "Bearer " + getLtik() },
+            //headers: { Authorization: "Bearer " + getLtik() },
           })
           .json();
 
