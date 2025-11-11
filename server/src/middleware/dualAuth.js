@@ -2,30 +2,33 @@
  * Dual Authentication Middleware
  *
  * Allows both LTI (ltik-based) and session (Passport-based) authentication to coexist.
- *
- * Flow:
- * 1. LTI-specific routes (/lti/*) always require ltik - let ltijs handle them
- * 2. For other routes, check if user has valid Passport session first
- * 3. If session valid, bypass ltijs validation
- * 4. If no session, fall through to ltijs (will validate ltik)
  */
 
-function dualAuthMiddleware(req, res, next) {
-    // LTI-specific routes MUST use ltik (they call ltijs methods like Grade.submitScore, NamesAndRoles.getMembers)
-    if (req.path.startsWith('/lti/')) {
-        return next(); // Let ltijs middleware handle these
-    }
+/**
+ * Unified Authentication Middleware
+ * Checks for either LTI authentication (res.locals.token) or session authentication (req.isAuthenticated)
+ */
 
-    // For all other routes: check if user has valid Passport session
-    if (req.isAuthenticated && req.isAuthenticated()) {
-        // User has valid session - bypass ltijs validation
-        console.log('Dual auth: Session authenticated user accessing:', req.path);
+function requireAuth(req, res, next) {
+
+    console.log('=== requireAuth ===');
+    console.log('req.path:', req.path);
+    console.log('req.originalUrl:', req.originalUrl);
+    console.log('req.isAuthenticated():', req.isAuthenticated ? req.isAuthenticated() : 'undefined');
+    // Check if LTI user (ltijs validated successfully)
+    if (res.locals.token && res.locals.context) {
+        console.log('LTI authenticated user:', res.locals.token.user);
         return next();
     }
 
-    // No session - fall through to ltijs validation (will check for ltik)
-    console.log('Dual auth: No session, falling through to ltijs for:', req.path);
-    next();
+    // Check if session user (Passport authenticated)
+    if (req.isAuthenticated && req.isAuthenticated()) {
+        console.log('Session authenticated user:', req.user.email);
+        return next();
+    }
+    // Neither authentication present
+    console.log('Unauthorized access attempt to:', req.path);
+    return res.status(401).json({ error: 'Authentication required' });
 }
 
-module.exports = dualAuthMiddleware;
+module.exports = { requireAuth };

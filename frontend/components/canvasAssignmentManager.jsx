@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getLtik } from "@/lib/ltik";
 import ky from "ky";
+import { getAuthHeaders } from "@/lib/ltik";
 
 export default function CanvasAssignmentManager({ courseCanvasId, instructorCanvasId }) {
   const [assignments, setAssignments] = useState([]);
@@ -26,7 +27,7 @@ export default function CanvasAssignmentManager({ courseCanvasId, instructorCanv
       
       const response = await ky.get(`/api/canvas/assignments/${courseCanvasId}?instructorCanvasId=${instructorCanvasId}`, {
         credentials: "include",
-        headers: { Authorization: "Bearer " + getLtik() },
+        headers: getAuthHeaders(),
       }).json();
       
       setAssignments(response);
@@ -51,7 +52,7 @@ export default function CanvasAssignmentManager({ courseCanvasId, instructorCanv
     try {
       const response = await ky.get(`/api/canvas/assignments/${courseCanvasId}/student/${studentCanvasId}?instructorCanvasId=${instructorCanvasId}`, {
         credentials: "include",
-        headers: { Authorization: "Bearer " + getLtik() },
+        headers: getAuthHeaders(),
       }).json();
       
       setAssignments(response);
@@ -81,7 +82,7 @@ export default function CanvasAssignmentManager({ courseCanvasId, instructorCanv
           instructorCanvasId
         },
         credentials: "include",
-        headers: { Authorization: "Bearer " + getLtik() },
+        headers: getAuthHeaders(),
       }).json();
       
       setMessage("Due date updated successfully!");

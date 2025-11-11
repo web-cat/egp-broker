@@ -143,7 +143,7 @@ lti.app.use(session({
 // Initialize passport
 lti.app.use(passport.initialize());
 lti.app.use(passport.session());
-lti.app.use(dualAuthMiddleware); //middleware to bypass ltijs validation for logged in users
+//lti.app.use(dualAuthMiddleware); //middleware to bypass ltijs validation for logged in users
 lti.app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, './public/index.html'));
 });
@@ -161,9 +161,9 @@ lti.whitelist(
   // Whitelist tool routes from lti auth
   '/api/tool/student_passes', '/api/tool/redeem_pass',
     '/auth/signup', '/auth/login', '/auth/session-info', '/dashboard', '/select-course',
-    '/api/course/available-courses', '/auth/set-course',
+    '/api/course/available-courses', '/auth/set-course'
 );
-
+lti.whitelist(/^\/api\/.*/);
 // Setup function
 const setup = async () => {
   await lti.deploy({ port: process.env.PORT });
