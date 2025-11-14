@@ -29,16 +29,6 @@ const LTI_VERSION_OPTIONS = [
   { value: "1.3", label: "LTI 1.3" },
 ];
 
-//tool options
-const TOOL_OPTIONS_11 = [
-  { value: "opendsa11", label: "OpenDSA 1.1" },
-  { value: "other", label: "Other" },
-  // Add other tools here
-];
-const TOOL_OPTIONS_13 = [
-    { value: "opendsa13", label: "OpenDSA 1.3" },
-]
-
 const TOOL_OPTIONS = {
   "1.1": [{ value: "opendsa11", label: "OpenDSA 1.1" }, { value: "other", label: "Other" }],
   "1.3": [{ value: "opendsa13", label: "OpenDSA 1.3" }],
@@ -60,9 +50,9 @@ export default function ToolConfig() {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedLtiVersion, setSelectedLtiVersion] = useState("");
     const [selectedTool, setSelectedTool] = useState("");
-    const [toolConfigs, setToolConfigs] = useState({});
     const [configStatus, setConfigStatus] = useState({ message: '', type: '' });
     const [toolConfig, setToolConfig] = useState(initialToolConfig);
+    const [allToolsConfigs, setAllToolConfigs] = useState({});
 
     
     useEffect (() => {
@@ -81,9 +71,9 @@ export default function ToolConfig() {
                         timeout: 10000
                     }).json();
                     if (response.success && response.config) {
-                        setToolConfig(response.config);
+                        //setToolConfig(response.config);
                         setConfigStatus({ message: 'Existing configuration loaded from MongoDB.', type: 'success' });
-                        setSelectedTool("opendsa");
+                        //setSelectedTool("opendsa");
                     } else {
                         setConfigStatus({ message: 'No existing configuration found. Please enter details.', type: 'info' });
                     }
@@ -166,11 +156,6 @@ export default function ToolConfig() {
     };
 
     const availableTools = TOOL_OPTIONS[selectedLtiVersion] || [];
-    // const availableTools = selectedLtiVersion === "1.1"
-    // ? TOOL_OPTIONS_11
-    // : selectedLtiVersion === "1.3"
-    // ? TOOL_OPTIONS_13
-    // : [];
 
     // Show a loading spinner while the LTI key is being fetched
     if (isLoading) {

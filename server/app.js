@@ -12,7 +12,7 @@ const {
 } = require("./src/controllers/enrollmentControllers");
 const { getToolConfiguration , upsertToolConfiguration } = require ("./src/controllers/toolConfigController");
 const lti = require("ltijs").Provider;
-const toolConfigRouter = require('./src/routes/proxyRoutes.js');
+//const toolConfigRouter = require('./src/routes/proxyRoutes.js');
 
 // Setup
 lti.setup(
@@ -160,7 +160,7 @@ lti.onDeepLinking(async (token, req, res) => {
 
 // Setting up routes
 lti.app.use(routes);
-lti.app.use('/api/tool-config', toolConfigRouter);
+//lti.app.use('/api/tool-config', toolConfigRouter);
 
 lti.whitelist(
   // Whitelist lti_key_config files from lti auth
@@ -181,6 +181,17 @@ const setup = async () => {
     authenticationEndpoint: process.env.CANVAS_AUTH_ENDPOINT,
     accesstokenEndpoint: process.env.CANVAS_ACCESS_TOKEN_ENDPOINT,
     authConfig: { method: "JWK_SET", key: process.env.CANVAS_JWK_URL },
+  });
+
+  //register opendsa directly for right now
+  // Register platform
+  await lti.registerPlatform({
+    url: 'https://opendsax.cs.vt.edu/lti13/launches',
+    name: 'OpenDSA - Staging',
+    clientId: '1',
+    authenticationEndpoint: 'https://opendsax.cs.vt.edu/lti13/launches',
+    accesstokenEndpoint: 'https://opendsax.cs.vt.edu/lti13/login_initiations',
+    authConfig: { method: "JWK_SET", key: 'https://opendsax.cs.vt.edu/lti13/.well-known/jwks' },
   });
 };
 

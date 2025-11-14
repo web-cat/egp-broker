@@ -49,7 +49,7 @@ export default function WelcomeBanner() {
   useEffect(() => {
     const ltikFromUrl = searchParams.get('ltik');
     if (ltikFromUrl) {
-      console.log("WelcomeBanner: LTIK found in URL, setting:", ltikFromUrl);
+      console.log("WelcomeBanner: LTIK found in URL");
       setLtik(ltikFromUrl);
     } else {
       console.log("WelcomeBanner: No LTIK found in URL.");
