@@ -38,11 +38,6 @@ router.get("/:courseCanvasId", async (req, res) => {
     console.log("Enrollments found:", enrollments.length);
     console.log("Query used:", JSON.stringify(query, null, 2));
 
-    if (!enrollments.length) {
-      return res.status(404).json({ message: "No enrollments found" });
-    }
-
-    const students = enrollments.map((enrollment) => enrollment.studentId);
 
     res.json(enrollments);
   } catch (err) {
@@ -67,7 +62,7 @@ router.get("/:courseCanvasId/usedFreePasses", async (req, res) => {
       .populate("freePasses.assignmentId");
 
     if (!enrollments.length) {
-      return res.status(404).json({ message: "No enrollments found" });
+        return res.json([]); //return empty instead of error
     }
 
     const usedFreePasses = enrollments

@@ -37,10 +37,15 @@ function InstructorDashboard({ courseCanvasId }) {
     const fetchDashboardData = async () => {
       try {
         // Fetch instructor info
-        const info = await ky.get(`/lti/info`, {
-          credentials: "include",
-          headers: { Authorization: "Bearer " + getLtik() },
-        }).json();
+        const ltik = getLtik();
+        const info = ltik
+            ? await ky.get('/lti/info', {
+                credentials: "include",
+                headers: { Authorization: "Bearer " + ltik }
+            }).json()
+            : await ky.get('/auth/session-info', {
+                credentials: "include"
+            }).json();
         console.log("LTI Info:", info);
         setInstructorCanvasId(info.canvas_user_id || "");
 

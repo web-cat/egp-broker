@@ -9,7 +9,7 @@ export const getAuthHeaders = () => {
 
         if (ltik) {
             // LTI authentication - include Bearer token
-            return { Authorization: `Bearer ${ltik}` };
+            return { Authorization: "Bearer " + ltik }
         }
     } catch (error) {
         console.log("No ltik found, using session auth");

@@ -19,7 +19,7 @@ import {
   Shield,
   Info
 } from "lucide-react";
-import { getLtik } from "@/lib/ltik";
+import {getAuthHeaders, getLtik} from "@/lib/ltik";
 import ky from "ky";
 
 export default function InstructorSettings({ instructorCanvasId }) {
@@ -45,7 +45,7 @@ export default function InstructorSettings({ instructorCanvasId }) {
       setLoading(true);
       const response = await ky.get(`/api/instructor/${instructorCanvasId}/api-key`, {
         credentials: "include",
-        headers: { Authorization: "Bearer " + getLtik() },
+        headers: getAuthHeaders(),
       }).json();
       
       setHasApiKey(response.hasApiKey);
@@ -89,7 +89,7 @@ export default function InstructorSettings({ instructorCanvasId }) {
       const response = await ky.post(`/api/instructor/${instructorCanvasId}/test-new-api-key`, {
         json: { canvasApiKey: newApiKey },
         credentials: "include",
-        headers: { Authorization: "Bearer " + getLtik() },
+        headers: getAuthHeaders(),
       }).json();
 
       if (response.valid) {
@@ -131,7 +131,7 @@ export default function InstructorSettings({ instructorCanvasId }) {
           canvasApiKey: newApiKey
         },
         credentials: "include",
-        headers: { Authorization: "Bearer " + getLtik() },
+        headers: getAuthHeaders(),
       }).json();
 
       setMessage({ type: "success", text: "Canvas API key updated successfully!" });
@@ -172,7 +172,7 @@ export default function InstructorSettings({ instructorCanvasId }) {
       // Test the API key by making a simple Canvas API call
       const response = await ky.get(`/api/instructor/${instructorCanvasId}/test-api-key`, {
         credentials: "include",
-        headers: { Authorization: "Bearer " + getLtik() },
+        headers: getAuthHeaders(),
       }).json();
 
       if (response.valid) {

@@ -72,7 +72,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { getLtik } from "@/lib/ltik";
+import {getAuthHeaders, getLtik} from "@/lib/ltik";
 import ky from "ky";
 
 export function StudentTable({ courseCanvasId }) {
@@ -104,7 +104,7 @@ export function StudentTable({ courseCanvasId }) {
         console.log("Fetching students for course:", courseCanvasId);
         const students = await ky.get(`/api/enrollment/${courseCanvasId}`, {
             credentials: "include",
-            //headers: { Authorization: "Bearer " + getLtik() },
+            headers: getAuthHeaders(),
           })
           .json();
         console.log("Students:", students);

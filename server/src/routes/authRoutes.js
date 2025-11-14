@@ -88,8 +88,6 @@ router.get('/session-info', (req, res) => {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
-
-
     const info = {
         name: req.user.firstName + ' ' + req.user.lastName,
         email: req.user.email,
