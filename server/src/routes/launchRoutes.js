@@ -5,12 +5,14 @@ const crypto = require('crypto');
 const url = require('url');
 const lti = require('ltijs').Provider;
 
+if (!global.ltikMap) global.ltikMap = {};
+
 // --- CONFIGURATION ---
 // NOTE: These should ideally be read from env variables!
-const proxybaseUrl = 'https://lightly-liberal-wasp.ngrok-free.app';  
+const proxyBaseUrl = 'https://lightly-liberal-wasp.ngrok-free.app';  
 const opendsaUrl = 'https://opendsax.cs.vt.edu/lti13/launches'; // Target LTI Launch URL
 const opendsaClientId = '16'; // Target Tool's Client ID (Your proxy's Client ID on OpenDSA)
-const proxyClientId = '1'; //tools id on proxy's database
+const proxyClientId = '16'; //tools id on proxy's database
 
 
 /**
@@ -22,6 +24,17 @@ router.get('/lti13', async (req, res) => {
     // Assuming this code runs inside the lti.onConnect() handler
     // where 'res.locals.token' is the validated LTI token from Canvas.
     const incomingToken = res.locals.token;
+
+    const ltik = res.locals.ltik; // <-- This is the key!
+
+    if (!ltik) {
+        return res.status(500).send('LTI session key (ltik) not found.');
+    }
+
+    // Store the ltik, associating it with the user ID.
+    // This is so our *new* callback handler can find it later.
+    global.ltikMap[incomingToken.user] = ltik;
+
 
     const bookPath = incomingToken.platformContext.targetLinkUri.match(/custom_book_path=([^&]+)/)?.[1];
     const queryParams = incomingToken.platformContext.targetLinkUri.substring(incomingToken.platformContext.targetLinkUri.indexOf('?'));
@@ -51,6 +64,7 @@ router.get('/lti13', async (req, res) => {
         },
         'https://purl.imsglobal.org/spec/lti/claim/context': incomingToken.platformContext.context,
         'https://purl.imsglobal.org/spec/lti/claim/roles': incomingToken.platformContext.roles,
+        'https://purl.imsglobal.org/spec/lti/claim/email': incomingToken.userInfo.email,
 
         // --- User Info Claims ---
         given_name: incomingToken.userInfo.given_name,
@@ -61,7 +75,7 @@ router.get('/lti13', async (req, res) => {
         // --- Launch Presentation (MAPPED DIRECTLY) ---
         'https://purl.imsglobal.org/spec/lti/claim/launch_presentation': {
             document_target: incomingToken.platformContext.launchPresentation.document_target,
-            return_url: proxyBaseUrl + '/launch/return',
+            return_url: proxyBaseUrl + '/launches/return',
             locale: incomingToken.platformContext.launchPresentation.locale,
             validation_context: incomingToken.platformContext.launchPresentation.validation_context,
         },
@@ -121,7 +135,7 @@ router.get('/lti13', async (req, res) => {
                 <title>LTI 1.3 Launch</title>
             </head>
             <body onload="document.forms[0].submit()">
-                <form action="${authEndpoint}" method="POST">
+                <form action="${opendsaUrl}" method="POST">
                     <input type="hidden" name="id_token" value="${signedJwt}"/>
                     <input type="hidden" name="state" value="${state}"/>
                     <input type="hidden" name="redirect_uri" value="${redirectUri}"/>
@@ -146,6 +160,7 @@ router.get('/lti13', async (req, res) => {
  * HANDLER 2: POST Request (Secure LTI 1.3 Launch Brokering)
  */
 router.post('/lti13', async (req, res) => {
+    console.log("----------------------------------------");
     const incomingIdToken = req.body.id_token;
     const incomingState = req.body.state; 
 
@@ -193,35 +208,141 @@ router.post('/lti13', async (req, res) => {
     res.send(htmlForm);
 });
 
+/**
+ * HANDLER 3: POST Request (AGS Grade Callback from OpenDSA)
+ * This is the endpoint that OpenDSA will call to send a grade.
+ */
+router.post('/grades/callback', async (req, res) => {
+    try {
+        // 1. Parse the grade payload from OpenDSA
+        // The body format is defined by the LTI AGS spec (a 'score' object)
+        const gradeFromOpenDSA = req.body;
+        
+        console.log("Received grade callback from OpenDSA:", gradeFromOpenDSA);
 
-// This function receives the data from the external tool (opendsa) and returns the data to canvas
-router.get('/return', async (req, res) => {
-    console.log("DO I GET HERE");
-    
-    // --- TEMPORARY SOLUTION: ASSUME ORIGINAL URL IS KNOWN/PASSED ---
-    // In a production environment, you MUST retrieve this from a session/database
-    // to match the user's current context.
-    const originalCanvasReturnUrl = 'https://canvas.endeavour.cs.vt.edu/courses/17/external_content/success/external_tool_redirect'; // Example value
-    // ------------------------------------------------------------------
+        // OpenDSA MUST send back the 'userId'. This 'userId' is the
+        // 'sub' (sub: incomingToken.user) that your proxy sent in the launch.
+        const canvasUserId = gradeFromOpenDSA.userId; 
 
-    if (!originalCanvasReturnUrl) {
-        // Handle error: couldn't find where to send the user back
-        console.error("ERROR: Original Canvas return URL not found in session.");
-        return res.status(500).send("Return path is unknown.");
+        if (!canvasUserId) {
+            console.error("Grade callback missing 'userId'");
+            return res.status(400).send("Bad Request: Missing 'userId' in grade payload.");
+        }
+
+        // 2. Prepare the grade object in the format Canvas expects
+        const gradeForCanvas = {
+            scoreGiven: gradeFromOpenDSA.scoreGiven,     // e.g., 85
+            scoreMaximum: gradeFromOpenDSA.scoreMaximum, // e.g., 100
+            userId: canvasUserId,                        // The User ID for Canvas
+            activityProgress: 'Completed',
+            gradingProgress: 'FullyGraded'
+            // You can also add 'comment': gradeFromOpenDSA.comment
+        };
+
+        // 3. Find the original 'ltik' needed to talk to Canvas
+        const ltik = global.ltikMap[canvasUserId];
+
+        if (!ltik) {
+            console.error(`Could not find ltik for user ${canvasUserId}. Session might be lost.`);
+            // Note: This is why a global var is bad. Use a real database!
+            return res.status(404).send('User session not found by proxy.');
+        }
+
+        // 4. Use ltijs to securely send the grade to Canvas
+        console.log(`Forwarding grade for user ${canvasUserId} to Canvas...`);
+        
+        // This magic 'ltijs' function handles all the security,
+        // gets a new access token, and sends the grade to the
+        // 'lineitem' URL that Canvas originally provided.
+        await lti.Grade.submitScore(ltik, gradeForCanvas);
+        
+        // 5. Tell OpenDSA that you successfully received the grade
+        console.log("Grade forwarded successfully.");
+        res.status(200).send('Grade received by proxy and forwarded to Canvas.');
+
+    } catch (err) {
+        console.error('Grade passback proxy failed:', err);
+        res.status(500).send('Proxy error while forwarding grade.');
     }
-    
-    // 2. Extract all parameters OpenDSA sent (e.g., lti_msg, lti_log, etc.).
-    const returnParams = new url.URLSearchParams(req.query).toString();
-
-    // 3. Construct the final redirect URL.
-    const finalRedirectUrl = `${originalCanvasReturnUrl}?${returnParams}`;
-    
-    console.log("Redirecting user back to Canvas at:", finalRedirectUrl);
-
-    // 4. Issue the redirect.
-    // This sends an HTTP 302 response to the user's browser, telling it to go to Canvas.
-    return res.redirect(finalRedirectUrl);
 });
 
+
+//function for launches/token
+router.post('/token', async (req, res) => {
+    console.log("TEST");
+    const { 
+        grant_type, 
+        client_assertion_type, 
+        client_assertion,
+        scope 
+    } = req.body;
+
+    console.log("--- Token Endpoint Request Received from OpenDSA ---");
+    // Logging is crucial for debugging parameter issues
+    console.log("Request Body:", req.body); 
+
+    // 1. **Initial Parameter Check** (Addresses MISSING_LOGIN_PARAMETERS)
+    if (grant_type !== 'client_credentials' || 
+        client_assertion_type !== 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer' || 
+        !client_assertion || 
+        !scope) {
+        
+        console.error("Missing required OAuth parameters.");
+        return res.status(400).json({
+            error: "invalid_request",
+            error_description: "Missing required parameters (grant_type, client_assertion_type, client_assertion, scope)."
+        });
+    }
+
+    try {
+        // 2. **Validate Client Assertion JWT**
+        // Since ltijs is mainly used for tool registration, we use it to get the Platform's info
+        // and manually validate the JWT using its internal validation logic.
+        
+        // This function will fetch OpenDSA's public key (from its JWKS URL) 
+        // and validate the signature and claims (iss, sub, aud, exp, iat).
+        const isValid = await lti.verifyToken(client_assertion, opendsaClientId);
+        
+        if (!isValid) {
+            console.error("Client assertion JWT failed validation.");
+            return res.status(401).json({
+                error: "unauthorized_client",
+                error_description: "Invalid client assertion or signature."
+            });
+        }
+
+        // --- Proxy Logic: Get the Access Token from Canvas ---
+        // (This part is NOT automatic and must be written by you)
+
+        // 3. **Obtain Access Token from the REAL LMS (Canvas)**
+        // This is where your proxy needs to use *its* credentials (registered with Canvas)
+        // to get the actual token required to make Canvas API calls.
+        
+        // You need to retrieve the Platform details for Canvas using your stored Client ID/Platform ID
+        // Note: You must save the Canvas platform object/ID in an earlier step.
+        // Assuming 'canvasPlatformId' is the ID you use to identify Canvas
+        const canvasPlatformId = '88befa1ef6f29565604ce565499d0bfc'; 
+        const token = await lti.getAccessToken(canvasPlatformId, scope);
+
+        // 4. **Respond to OpenDSA with the Access Token**
+        // Since OpenDSA's request was successful (it authenticated with the proxy), 
+        // we respond with the token we just got from Canvas.
+
+        return res.json({
+            token_type: "Bearer",
+            expires_in: 3600, // Or whatever Canvas returns
+            access_token: token,
+            scope: scope
+        });
+
+    } catch (err) {
+        console.error("Error during token exchange:", err.message);
+        // This handles expired tokens (TOKEN_TOO_OLD) and other validation errors
+        return res.status(401).json({
+            error: "invalid_client",
+            error_description: err.message
+        });
+    }
+});
 
 module.exports = router;

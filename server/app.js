@@ -1,4 +1,6 @@
 require("dotenv").config();
+const express = require('express');
+const crypto = require('crypto');
 const path = require("path");
 const routes = require("./src/routes");
 const { getRole } = require("./src/controllers/ltiController");
@@ -188,7 +190,7 @@ const setup = async () => {
   await lti.registerPlatform({
     url: 'https://opendsax.cs.vt.edu/lti13/launches',
     name: 'OpenDSA - Staging',
-    clientId: '1',
+    clientId: '16',
     authenticationEndpoint: 'https://opendsax.cs.vt.edu/lti13/launches',
     accesstokenEndpoint: 'https://opendsax.cs.vt.edu/lti13/login_initiations',
     authConfig: { method: "JWK_SET", key: 'https://opendsax.cs.vt.edu/lti13/.well-known/jwks' },
