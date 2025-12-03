@@ -55,13 +55,13 @@ lti.onConnect(async (token, req, res) => {
     idToken: JSON.stringify(token) // Store the entire token for later use
   };
 
-  try {
+  /*try {
     await upsertToolConfiguration(toolConfig);
     console.log("LTI Advantage data stored successfully.");
   } catch (dbError) {
     console.error("Error saving LTI Advantage data to DB:", dbError);
     return res.status(500).send("Error saving tool configuration.");
-  }
+  }*/
 
   const role = getRole(context.roles);
   const course = await getCourse(context.custom.canvas_course_id);
@@ -111,7 +111,7 @@ lti.onConnect(async (token, req, res) => {
     return res.sendFile(path.join(__dirname, "./public/notset.html"));
   }
 
-  return res.sendFile(path.join(__dirname, "./public/index.html"));
+    return lti.redirect(res, '/launches/lti13');
 });
 
 // When receiving deep linking request redirects to deep screen

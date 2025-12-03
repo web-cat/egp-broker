@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const url = require('url');
 const lti = require('ltijs').Provider;
+//import { getLtik } from "@/lib/ltik";
 
 if (!global.ltikMap) global.ltikMap = {};
 
@@ -25,7 +26,7 @@ router.get('/lti13', async (req, res) => {
     // where 'res.locals.token' is the validated LTI token from Canvas.
     const incomingToken = res.locals.token;
 
-    const ltik = res.locals.ltik; // <-- This is the key!
+    const ltik = req.query.ltik;
 
     if (!ltik) {
         return res.status(500).send('LTI session key (ltik) not found.');

@@ -30,7 +30,7 @@ services:
     environment:
       # LTI
       # this comes from canvas, replace with your value
-      LTI_KEY: 2EB6yh826Rf4Wkmx47etctGtkrAn84rRF8PXcNxC62F3vv6crfVfP78WBX84YW9v
+      LTI_KEY: YCKvayJNPH6Bmv37xWFFcLuDDTVXnZ4KT4hM6aDXCMzwTHr2JDJNY2A7G9GKFwNV
 
       # MongoDB
       DB_HOST: mongo-lti
@@ -43,7 +43,7 @@ services:
       CANVAS_URL: https://canvas.endeavour.cs.vt.edu
       CANVAS_NAME: endeavour.cs.vt
       # this comes from canvas, replace with your value
-      CANVAS_CLIENT_ID: 10000000000007
+      CANVAS_CLIENT_ID: 10000000000024
       CANVAS_AUTH_ENDPOINT: https://canvas.endeavour.cs.vt.edu/api/lti/authorize_redirect
       CANVAS_ACCESS_TOKEN_ENDPOINT: https://canvas.endeavour.cs.vt.edu/login/oauth2/token
       CANVAS_JWK_URL: https://canvas.endeavour.cs.vt.edu/api/lti/security/jwks
