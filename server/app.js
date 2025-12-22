@@ -160,16 +160,19 @@ lti.onDeepLinking(async (token, req, res) => {
 //   }
 // });
 
-// Setting up routes
-lti.app.use(routes);
-//lti.app.use('/api/tool-config', toolConfigRouter);
+
 
 lti.whitelist(
   // Whitelist lti_key_config files from lti auth
   '/lti/lti_key_config_prod.json', '/lti/lti_key_config_dev.json',
   // Whitelist tool routes from lti auth
-  '/api/tool/student_passes', '/api/tool/redeem_pass'
+  '/api/tool/student_passes', '/api/tool/redeem_pass',
+  '/launches/token',
+  '/launches/grades/callback'
 );
+
+// Setting up routes
+lti.app.use(routes);
 
 // Setup function
 const setup = async () => {
@@ -191,9 +194,9 @@ const setup = async () => {
     url: 'https://opendsax.cs.vt.edu/lti13/launches',
     name: 'OpenDSA - Staging',
     clientId: '16',
-    authenticationEndpoint: 'https://opendsax.cs.vt.edu/lti13/launches',
-    accesstokenEndpoint: 'https://opendsax.cs.vt.edu/lti13/login_initiations',
-    authConfig: { method: "JWK_SET", key: 'https://opendsax.cs.vt.edu/lti13/.well-known/jwks' },
+    authenticationEndpoint: 'https://opendsax.cs.vt.edu/lti13/oidc_login',
+    accesstokenEndpoint: 'none',
+    authConfig: { method: "JWK_SET", key: 'https://opendsax.cs.vt.edu/lti13/.well-known/jwks' }
   });
 };
 

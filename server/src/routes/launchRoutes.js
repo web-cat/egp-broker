@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const url = require('url');
 const lti = require('ltijs').Provider;
+const jwksClient = require('jwks-rsa');
 
 if (!global.ltikMap) global.ltikMap = {};
 
@@ -14,27 +15,64 @@ const opendsaUrl = 'https://opendsax.cs.vt.edu/lti13/launches'; // Target LTI La
 const opendsaClientId = '16'; // Target Tool's Client ID (Your proxy's Client ID on OpenDSA)
 const proxyClientId = '16'; //tools id on proxy's database
 
+// --- JWKS Client for OpenDSA ---
+// This fetches OpenDSA's public keys to verify their signatures
+const client = jwksClient({
+  jwksUri: 'https://opendsax.cs.vt.edu/lti13/.well-known/jwks?lms_instance_id=16', // OpenDSA JWKS endpoint
+  requestHeaders: {
+    'Accept': 'application/json' // This tells Rails to process as JSON, not HTML
+  },
+  cache: true,
+  rateLimit: true
+});
+
+async function getOpenDSAKey(header, callback) {
+  try {
+    // Instead of getSigningKey(header.kid), get ALL keys
+    const keys = await client.getSigningKeys(); 
+    
+    // Just take the first key in the list (since OpenDSA only provides one)
+    const signingKey = keys[0].getPublicKey(); 
+    
+    console.log("Forcing verification using key:", keys[0].kid);
+    callback(null, signingKey);
+  } catch (err) {
+    console.error("Error retrieving keys from OpenDSA:", err.message);
+    callback(err);
+  }
+}
 
 /**
  * HANDLER 1: GET Request (Internal Redirect from LTI Provider/Canvas)
  */
 router.get('/lti13', async (req, res) => {
+    console.log("GET /lti13");
     console.log("RESULTS:", res.locals.token);
     //console.log("REQUEST:", req);
     // Assuming this code runs inside the lti.onConnect() handler
     // where 'res.locals.token' is the validated LTI token from Canvas.
     const incomingToken = res.locals.token;
+    const originalEndpoint = incomingToken.platformContext.endpoint;
 
-    const ltik = res.locals.ltik; // <-- This is the key!
+    //data to be referenced on return
+    const ltik = res.locals.ltik;
+    const originalLineItemUrl = originalEndpoint.lineitem;
+
+    console.log("TEST", req.query.ltik);
+    console.log("LTIK", ltik);
 
     if (!ltik) {
         return res.status(500).send('LTI session key (ltik) not found.');
     }
 
     // Store the ltik, associating it with the user ID.
-    // This is so our *new* callback handler can find it later.
-    global.ltikMap[incomingToken.user] = ltik;
+    global.ltikMap[incomingToken.user] = {
+        ltik: ltik,
+        canvasGradeUrl: originalLineItemUrl
+    };
 
+    const lineItemId = originalLineItemUrl.split('/').pop(); // Extracts '526'
+    const proxyGradeEndpointUrl = `${proxyBaseUrl}/launches/grades/callback/${lineItemId}`;
 
     const bookPath = incomingToken.platformContext.targetLinkUri.match(/custom_book_path=([^&]+)/)?.[1];
     const queryParams = incomingToken.platformContext.targetLinkUri.substring(incomingToken.platformContext.targetLinkUri.indexOf('?'));
@@ -43,7 +81,7 @@ router.get('/lti13', async (req, res) => {
 
     const launchPayload = {
         // --- OIDC / JWT Claims ---
-        iss: opendsaClientId,
+        iss: proxyBaseUrl,
         aud: opendsaClientId,
         sub: incomingToken.user,
         nonce: crypto.randomBytes(16).toString('hex'), // Must be newly generated
@@ -66,19 +104,24 @@ router.get('/lti13', async (req, res) => {
         'https://purl.imsglobal.org/spec/lti/claim/roles': incomingToken.platformContext.roles,
         'https://purl.imsglobal.org/spec/lti/claim/email': incomingToken.userInfo.email,
 
+
         // --- User Info Claims ---
         given_name: incomingToken.userInfo.given_name,
         family_name: incomingToken.userInfo.family_name,
         name: incomingToken.userInfo.name,
         email: incomingToken.userInfo.email,
 
-        // --- Launch Presentation (MAPPED DIRECTLY) ---
-        'https://purl.imsglobal.org/spec/lti/claim/launch_presentation': {
-            document_target: incomingToken.platformContext.launchPresentation.document_target,
-            return_url: proxyBaseUrl + '/launches/return',
-            locale: incomingToken.platformContext.launchPresentation.locale,
-            validation_context: incomingToken.platformContext.launchPresentation.validation_context,
+        // --- Launch Presentation ---
+        'https://purl.imsglobal.org/spec/lti/claim/launch_presentation': incomingToken.platformContext.launchPresentation,
+
+        //endpoint
+        'https://purl.imsglobal.org/spec/lti-ags/claim/endpoint': {
+            lineitem: proxyGradeEndpointUrl,
+            scope: incomingToken.platformContext.endpoint.scope,
+            lineitems: incomingToken.platformContext.endpoint.lineitems
         },
+
+        'https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice': incomingToken.platformContext.namesRoles,
 
         // Custom/Deep Linking Claims for OpenDSA (if needed)
         'https://purl.imsglobal.org/spec/lti/claim/custom': {
@@ -94,15 +137,16 @@ router.get('/lti13', async (req, res) => {
     // Get the necessary values using the Platform class methods:
     const privateKey = await platform.platformPrivateKey();
     const kid = await platform.platformKid();
-    const authEndpoint = await platform.platformAuthenticationEndpoint();
-    const client_id = await platform.platformClientId(); // Your proxy's Client ID on OpenDSA
+    console.log("\nPLATFORM INFO ", privateKey, kid, "\n");
+    //const authEndpoint = await platform.platformAuthenticationEndpoint();
+    //const client_id = await platform.platformClientId(); // Your proxy's Client ID on OpenDSA
 
 
     // Sign the JWT using the private key and kid retrieved from the Platform object
     const signedJwt = jwt.sign(launchPayload, privateKey, {
         algorithm: 'RS256',
         keyid: kid,
-        noTimestamp: true
+        //noTimestamp: true
     });
 
     //state JWT
@@ -110,7 +154,7 @@ router.get('/lti13', async (req, res) => {
         // Must contain the tool_id OpenDSA expects
         tool_id: opendsaClientId, 
         // Standard JWT/OIDC claims
-        iss: opendsaClientId, 
+        iss: proxyBaseUrl, 
         aud: opendsaClientId,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 300, // Short lifespan
@@ -122,7 +166,7 @@ router.get('/lti13', async (req, res) => {
     const state = jwt.sign(statePayload, privateKey, {
         algorithm: 'RS256',
         keyid: kid,
-        noTimestamp: true
+        //noTimestamp: true
     });
 
 
@@ -155,58 +199,6 @@ router.get('/lti13', async (req, res) => {
 
 });
 
-
-/**
- * HANDLER 2: POST Request (Secure LTI 1.3 Launch Brokering)
- */
-router.post('/lti13', async (req, res) => {
-    console.log("----------------------------------------");
-    const incomingIdToken = req.body.id_token;
-    const incomingState = req.body.state; 
-
-    if (!incomingIdToken) {
-        return res.status(400).send("Invalid LTI Launch: POST request is missing ID Token.");
-    }
-
-    console.log("INCOMING ID TOKEN:", incomingIdToken);
-
-    const brokerIdToken = generateBrokerSignedJwt(incomingIdToken);
-
-    if (!brokerIdToken) {
-        return res.status(500).send("Brokerage Error: Failed to generate signed JWT.");
-    }
-
-    console.log("[BROKER OUTGOING JWT (POST)]:", brokerIdToken);
-
-    const finalForwardingUrl = opendsaUrl;
-
-    const htmlForm = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <title>LTI Launch Redirection</title>
-        </head>
-        <body onload="document.forms[0].submit()">
-            <p>Redirecting launch securely to OpenDSA...</p>
-            <form id="ltiForwardForm" action="${finalForwardingUrl}" method="POST">
-                <input type="hidden" name="id_token" value="${brokerIdToken}">
-                <input type="hidden" name="state" value="${encodeURIComponent(incomingState)}">
-                ${Object.entries(req.body)
-            .filter(([key]) => key !== 'id_token' && key !== 'state')
-            .map(([key, value]) =>
-                `<input type="hidden" name="${key}" value="${encodeURIComponent(value)}">`
-            ).join('\n')}
-            </form>
-            <script>
-                window.setTimeout(() => document.getElementById('ltiForwardForm').submit(), 500); 
-            </script>
-        </body>
-        </html>
-    `;
-
-    res.send(htmlForm);
-});
 
 /**
  * HANDLER 3: POST Request (AGS Grade Callback from OpenDSA)
@@ -267,9 +259,7 @@ router.post('/grades/callback', async (req, res) => {
 });
 
 
-//function for launches/token
 router.post('/token', async (req, res) => {
-    console.log("TEST");
     const { 
         grant_type, 
         client_assertion_type, 
@@ -278,66 +268,55 @@ router.post('/token', async (req, res) => {
     } = req.body;
 
     console.log("--- Token Endpoint Request Received from OpenDSA ---");
-    // Logging is crucial for debugging parameter issues
-    console.log("Request Body:", req.body); 
 
-    // 1. **Initial Parameter Check** (Addresses MISSING_LOGIN_PARAMETERS)
     if (grant_type !== 'client_credentials' || 
         client_assertion_type !== 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer' || 
         !client_assertion || 
         !scope) {
         
-        console.error("Missing required OAuth parameters.");
         return res.status(400).json({
             error: "invalid_request",
-            error_description: "Missing required parameters (grant_type, client_assertion_type, client_assertion, scope)."
+            error_description: "Missing required parameters."
         });
     }
 
     try {
-        // 2. **Validate Client Assertion JWT**
-        // Since ltijs is mainly used for tool registration, we use it to get the Platform's info
-        // and manually validate the JWT using its internal validation logic.
-        
-        // This function will fetch OpenDSA's public key (from its JWKS URL) 
-        // and validate the signature and claims (iss, sub, aud, exp, iat).
-        const isValid = await lti.verifyToken(client_assertion, opendsaClientId);
-        
-        if (!isValid) {
-            console.error("Client assertion JWT failed validation.");
-            return res.status(401).json({
-                error: "unauthorized_client",
-                error_description: "Invalid client assertion or signature."
+        // 1. Manually verify the JWT from OpenDSA
+        const decoded = await new Promise((resolve, reject) => {
+            jwt.verify(client_assertion, getOpenDSAKey, { algorithms: ['RS256'], ignoreKeyid: true}, (err, decoded) => { //ignoring keyid because opendsa is weird
+                if (err) reject(err);
+                else resolve(decoded);
             });
+        });
+
+        console.log("Successfully verified OpenDSA signature for client:", decoded.sub);
+
+        // 2. Obtain a REAL Access Token from Canvas using the correct ltijs method
+        const canvasUrl = process.env.CANVAS_URL; 
+        
+        // Retrieve the platform object registered with ltijs
+        const platform = await lti.getPlatform(canvasUrl, process.env.CANVAS_CLIENT_ID);
+        
+        if (!platform) {
+            throw new Error("Platform not found for URL: " + canvasUrl);
         }
 
-        // --- Proxy Logic: Get the Access Token from Canvas ---
-        // (This part is NOT automatic and must be written by you)
+        // Get the platform access token for the requested scopes
+        const tokenData = await platform.platformAccessToken(scope);
 
-        // 3. **Obtain Access Token from the REAL LMS (Canvas)**
-        // This is where your proxy needs to use *its* credentials (registered with Canvas)
-        // to get the actual token required to make Canvas API calls.
-        
-        // You need to retrieve the Platform details for Canvas using your stored Client ID/Platform ID
-        // Note: You must save the Canvas platform object/ID in an earlier step.
-        // Assuming 'canvasPlatformId' is the ID you use to identify Canvas
-        const canvasPlatformId = '88befa1ef6f29565604ce565499d0bfc'; 
-        const token = await lti.getAccessToken(canvasPlatformId, scope);
+        console.log("Successfully fetched Canvas token for OpenDSA: ", tokenData);
 
-        // 4. **Respond to OpenDSA with the Access Token**
-        // Since OpenDSA's request was successful (it authenticated with the proxy), 
-        // we respond with the token we just got from Canvas.
-
+        // 3. Respond to OpenDSA
+        // Note: lti.getAccessToken returns the token string directly
         return res.json({
             token_type: "Bearer",
-            expires_in: 3600, // Or whatever Canvas returns
-            access_token: token,
+            expires_in: 3600,
+            access_token: tokenData.access_token,
             scope: scope
         });
 
     } catch (err) {
-        console.error("Error during token exchange:", err.message);
-        // This handles expired tokens (TOKEN_TOO_OLD) and other validation errors
+        console.error("Token Exchange Failure:", err.message);
         return res.status(401).json({
             error: "invalid_client",
             error_description: err.message
