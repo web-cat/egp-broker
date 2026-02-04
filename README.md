@@ -51,7 +51,8 @@ The `Dockerfile` uses a multi-stage build process to optimize for both speed and
 
 3.  **Synchronization**
     The first time you start the container, `docker compose` will run the `postinstall` script (Prisma generation and Nuxt preparation) automatically at startup. Scripts
-    are defined in `package.json
+    are defined in `package.json` and summarized below.
+
 
 ### Interactive Development
 
@@ -78,6 +79,17 @@ docker compose --profile production up -d app-prod
 ```
 
 The production version will be accessible at **http://localhost:8081**.
+
+### Git Conventional Commits
+
+The project uses Husky hooks to lint the code (and fix any issues) prior to any git commit. This is done inside the development docker image, so be sure to have the
+application stack running (so the app-dev container is available) when committing.
+
+The Husky hooks also use commitlint to double-check your commit messages against the conventional commits specification. See https://www.conventionalcommits.org/en/v1.0.0/
+for full details. The basics: be sure each commit starts with a type prefix (e.g. "fix: ", "feat: ", "chore: ", "docs: ", "style: ", "refactor: ", "test: ", "perf: ", "ci: ", "build: ", "release: ", "workflow: ", "revert: "). Be sure to include both the colon and
+the following space. Optionally, you can add a scope (e.g. "(lti)", "(ui)", etc.)
+between the type and the colon to specify which part of the application your changes
+affect.
 
 ### 🛠️ Key Commands
 
