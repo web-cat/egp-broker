@@ -1,18 +1,18 @@
 {
-  "name": "nuxt-boilerplate",
+  "name": "egp-broker",
   "private": true,
   "type": "module",
-  "version": "1.1.1",
-  "author": "William Fontaine",
-  "description": "A Nuxt 4 boilerplate with TypeScript, Pinia, Prisma, i18n, ESLint, Prettier, Vitest, Playwright and more.",
+  "version": "0.0.1",
+  "author": "Virginia Tech",
+  "description": "A n application to support euqitable grading practices by managing assignment resubmission tokens and supporting extensions to LTI communication via proxy behaviors.",
   "license": "MIT",
-  "homepage": "https://github.com/WilliamFontaine/nuxt-boilerplate",
+  "homepage": "https://github.com/web-cat/egp-broker",
   "repository": {
     "type": "git",
-    "url": "https://github.com/WilliamFontaine/nuxt-boilerplate.git"
+    "url": "https://github.com/web-cat/egp-broker.git"
   },
   "bugs": {
-    "url": "https://github.com/WilliamFontaine/nuxt-boilerplate/issues"
+    "url": "https://github.com/web-cat/egp-broker/issues"
   },
   "scripts": {
     "prepare": "husky",
@@ -67,7 +67,7 @@
     "@types/node": "^24.3.0",
     "@types/nodemailer": "^7.0.3",
     "@types/swagger-jsdoc": "^6.0.4",
-    "@vitest/coverage-v8": "4.0.3",
+    "@vitest/coverage-v8": "^3.2.0",
     "@vue/test-utils": "2.4.6",
     "eslint": "^9.33.0",
     "happy-dom": "20.0.8",
@@ -76,9 +76,12 @@
     "prettier": "^3.6.2",
     "prisma": "^6.14.0",
     "swagger-jsdoc": "^6.2.8",
+    "tailwindcss": "4.0.0",
+    "@tailwindcss/vite": "4.0.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2",
-    "vitest": "4.0.3"
+    "vite": "^6.0.0",
+    "vitest": "^3.2.0"
   },
   "packageManager": "pnpm@10.19.0"
 }

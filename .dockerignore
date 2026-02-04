@@ -1,0 +1,30 @@
+# Common ignores
+node_modules
+.git
+.DS_Store
+Thumbs.db
+*.log
+temp/**
+
+# Environment and Secrets (handled by --env-file or compose)
+.env
+.env.*
+
+# Persistence
+volumes/
+
+# Editor files
+.vscode
+.idea
+.fleet
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing artifacts
+coverage
+.nyc_output
+playwright-report
+test-results

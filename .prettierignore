@@ -4,3 +4,6 @@ tsconfig.json
 CHANGELOG.md
 .claude/
 pnpm-lock.yaml
+.pnpm-store/
+.specify/
+.gemini/

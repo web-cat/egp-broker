@@ -2,6 +2,10 @@ x-defaults: &defaults
   restart: no
   networks:
     - nuxt-boilerplate
+  env_file:
+    - ./.env.common
+    - ./.env
+  platform: linux/amd64
 
 x-healthcheck-defaults: &healthcheck-defaults
   interval: 10s
@@ -10,10 +14,11 @@ x-healthcheck-defaults: &healthcheck-defaults
   start_period: 30s
 
 services:
+  # The primary PostgreSQL database for the application.
   postgres:
     <<: *defaults
     image: postgres:18-alpine
-    container_name: nuxt-boilerplate_postgres
+    container_name: egp-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-database}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -21,16 +26,17 @@ services:
     ports:
       - ${POSTGRES_PORT:-5432}:5432
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./volumes/postgres_data:/var/lib/postgresql
       - ./.docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       <<: *healthcheck-defaults
-      test: ['CMD-SHELL', 'pg_isready -U $POSTGRES_USER -d $POSTGRES_DB']
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
 
+  # A web-based database management interface (accessible on port 8080).
   adminer:
     <<: *defaults
     image: adminer:latest
-    container_name: nuxt-boilerplate_adminer
+    container_name: egp-adminer
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,12 +49,43 @@ services:
     ports:
       - ${ADMINER_PORT:-8080}:8080
 
+  # The main application running in development mode with HMR and volume mounting.
+  app-dev:
+    <<: *defaults
+    build:
+      context: .
+      target: development
+    image: egp-broker-dev:${APP_VERSION:-latest}
+    container_name: egp-broker-dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - 3000:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      adminer:
+        condition: service_started
+
+  # Used to build the production-ready Docker image. Not intended for active development.
+  # Run with `docker compose --profile production up app-prod`
+  app-prod:
+    <<: *defaults
+    profiles: ['production']
+    build:
+      context: .
+      target: production
+    image: egp-broker:${APP_VERSION:-latest}
+    container_name: egp-broker
+    ports:
+      - 8081:3000 # Changed from 8080 to avoid conflict with Adminer
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 networks:
   nuxt-boilerplate:
     driver: bridge
     name: nuxt-boilerplate_network
-
-volumes:
-  postgres_data:
-  redis_data:
-  minio_data:
+# No named volumes; using bind mounts for persistence
