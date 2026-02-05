@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const url = require('url');
 const lti = require('ltijs').Provider;
 const jwksClient = require('jwks-rsa');
+const { getToolConfiguration } = require ("../controllers/toolConfigController");
 
 if (!global.ltikMap) global.ltikMap = {};
 
@@ -15,29 +16,26 @@ const opendsaUrl = 'https://opendsax.cs.vt.edu/lti13/launches'; // Target LTI La
 const opendsaClientId = '16'; // Target Tool's Client ID (Your proxy's Client ID on OpenDSA)
 const proxyClientId = '16'; //tools id on proxy's database
 
-// --- JWKS Client for OpenDSA ---
-// This fetches OpenDSA's public keys to verify their signatures
-const client = jwksClient({
-  jwksUri: 'https://opendsax.cs.vt.edu/lti13/.well-known/jwks?lms_instance_id=16', // OpenDSA JWKS endpoint
+// This fetches the tool's public keys to verify their signatures
+const getJwksClient = (uri) => jwksClient({
+  jwksUri: uri, //JWKS endpoint
   requestHeaders: {
-    'Accept': 'application/json' // This tells Rails to process as JSON, not HTML
+    'Accept': 'application/json'
   },
   cache: true,
   rateLimit: true
 });
 
-async function getOpenDSAKey(header, callback) {
+async function getTargetToolKey(header, jwksUri) {
   try {
-    // Instead of getSigningKey(header.kid), get ALL keys
-    const keys = await client.getSigningKeys(); 
+    const client = getJwksClient(jwksUri);
+    const key = await client.getSigningKeys(); 
+    return key.getPublicKey();
     
-    // Just take the first key in the list (since OpenDSA only provides one)
-    const signingKey = keys[0].getPublicKey(); 
-    
-    console.log("Forcing verification using key:", keys[0].kid);
-    callback(null, signingKey);
+    //console.log("Forcing verification using key:", keys[0].kid);
+    //callback(null, signingKey);
   } catch (err) {
-    console.error("Error retrieving keys from OpenDSA:", err.message);
+    console.error("Error retrieving keys:", err.message);
     callback(err);
   }
 }
@@ -46,7 +44,7 @@ async function getOpenDSAKey(header, callback) {
  * HANDLER 1: GET Request (Internal Redirect from LTI Provider/Canvas)
  */
 router.get('/lti13', async (req, res) => {
-    console.log("GET /lti13");
+    //console.log("GET /lti13");
     console.log("RESULTS:", res.locals.token);
     //console.log("REQUEST:", req);
     // Assuming this code runs inside the lti.onConnect() handler
@@ -54,12 +52,26 @@ router.get('/lti13', async (req, res) => {
     const incomingToken = res.locals.token;
     const originalEndpoint = incomingToken.platformContext.endpoint;
 
+    const toolId = {'694326dc587fc1082f1b9f33'};//req.query.toolId; //////////////////////////////////////////////////////////////
+    if (!toolId) {
+        return res.status(400).send('Missing toolId query parameter.');
+    }
+    console.log("id", toolId);
+    //toolId = '694326dc587fc1082f1b9f33';
+    const platform = await lti.getPlatformById(toolId);
+    console.log("PLAT", platform);
+
+    if (!platform) {
+        return res.status(404).send(`Platform with Client ID ${toolId} not found.`);
+    }
+    const targetPlatformUrl = await platform.platformUrl();
+    const authEndpoint = await platform.platformAuthenticationEndpoint();
+    const privateKey = await platform.platformPrivateKey();
+    const kid = await platform.platformKid();
+
     //data to be referenced on return
     const ltik = res.locals.ltik;
     const originalLineItemUrl = originalEndpoint.lineitem;
-
-    console.log("TEST", req.query.ltik);
-    console.log("LTIK", ltik);
 
     if (!ltik) {
         return res.status(500).send('LTI session key (ltik) not found.');
@@ -77,12 +89,20 @@ router.get('/lti13', async (req, res) => {
     const bookPath = incomingToken.platformContext.targetLinkUri.match(/custom_book_path=([^&]+)/)?.[1];
     const queryParams = incomingToken.platformContext.targetLinkUri.substring(incomingToken.platformContext.targetLinkUri.indexOf('?'));
 
+    // get all custom params together
+    const url = new URL(incomingToken.platformContext.targetLinkUri);
+    const urlCustom = Object.fromEntries(url.searchParams);
+    // merge Canvas custom and URL custom
+    const mergedCustom = {
+        ...incomingToken.platformContext.custom,
+        ...urlCustom
+    };
 
 
     const launchPayload = {
         // --- OIDC / JWT Claims ---
-        iss: proxyBaseUrl,
-        aud: opendsaClientId,
+        iss: proxyBaseUrl, //STILL NEED TO GENERALIZE
+        aud: toolId,
         sub: incomingToken.user,
         nonce: crypto.randomBytes(16).toString('hex'), // Must be newly generated
         login_hint: incomingToken.user, // Re-use the user ID for the login_hint
@@ -92,14 +112,14 @@ router.get('/lti13', async (req, res) => {
         // --- LTI Core Claims ---
         'https://purl.imsglobal.org/spec/lti/claim/message_type': 'LtiResourceLinkRequest',
         'https://purl.imsglobal.org/spec/lti/claim/version': '1.3.0',
-        'https://purl.imsglobal.org/spec/lti/claim/deployment_id': opendsaClientId,
+        'https://purl.imsglobal.org/spec/lti/claim/deployment_id': toolId, //check this
         'https://purl.imsglobal.org/spec/lti/claim/target_link_uri': opendsaUrl + queryParams,
 
         // --- Context & Resource Link Claims ---
-        'https://purl.imsglobal.org/spec/lti/claim/resource_link': {
-        id: incomingToken.platformContext.resource.id,
-        title: incomingToken.platformContext.resource.title
-        },
+        'https://purl.imsglobal.org/spec/lti/claim/resource_link': incomingToken.platformContext.resource,
+        // id: incomingToken.platformContext.resource.id,
+        // title: incomingToken.platformContext.resource.title
+        // },
         'https://purl.imsglobal.org/spec/lti/claim/context': incomingToken.platformContext.context,
         'https://purl.imsglobal.org/spec/lti/claim/roles': incomingToken.platformContext.roles,
         'https://purl.imsglobal.org/spec/lti/claim/email': incomingToken.userInfo.email,
@@ -118,26 +138,22 @@ router.get('/lti13', async (req, res) => {
         'https://purl.imsglobal.org/spec/lti-ags/claim/endpoint': {
             lineitem: proxyGradeEndpointUrl,
             scope: incomingToken.platformContext.endpoint.scope,
-            lineitems: incomingToken.platformContext.endpoint.lineitems
+            //lineitems: incomingToken.platformContext.endpoint.lineitems
         },
 
         'https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice': incomingToken.platformContext.namesRoles,
 
-        // Custom/Deep Linking Claims for OpenDSA (if needed)
-        'https://purl.imsglobal.org/spec/lti/claim/custom': {
-            // Use custom claims to pass OpenDSA-specific parameters
-            custom_ex_short_name: bookPath,
-            ...incomingToken.platformContext.custom
-        }
+        // Custom/Deep Linking Claims (if needed)
+        'https://purl.imsglobal.org/spec/lti/claim/custom': mergedCustom,
     };
 
     // The final step: generate the OIDC response and auto-submit the form
-    const platform = await lti.getPlatform(opendsaUrl, proxyClientId);
-    console.log("PLATFORM", platform);
-    // Get the necessary values using the Platform class methods:
-    const privateKey = await platform.platformPrivateKey();
-    const kid = await platform.platformKid();
-    console.log("\nPLATFORM INFO ", privateKey, kid, "\n");
+    // const platform = await lti.getPlatform(opendsaUrl, proxyClientId);
+    // console.log("PLATFORM", platform);
+    // // Get the necessary values using the Platform class methods:
+    // const privateKey = await platform.platformPrivateKey();
+    // const kid = await platform.platformKid();
+    //console.log("\nPLATFORM INFO ", privateKey, kid, "\n");
     //const authEndpoint = await platform.platformAuthenticationEndpoint();
     //const client_id = await platform.platformClientId(); // Your proxy's Client ID on OpenDSA
 
@@ -192,8 +208,8 @@ router.get('/lti13', async (req, res) => {
         </html>
     `;
 
-    console.log("LAUNCH PAYLOAD: ", launchPayload);
-    console.log("HTML ", htmlForm);
+    //console.log("LAUNCH PAYLOAD: ", launchPayload);
+    //console.log("HTML ", htmlForm);
 
     return res.send(htmlForm);
 
@@ -204,60 +220,80 @@ router.get('/lti13', async (req, res) => {
  * HANDLER 3: POST Request (AGS Grade Callback from OpenDSA)
  * This is the endpoint that OpenDSA will call to send a grade.
  */
+// router.post('/grades/callback', async (req, res) => {
+//     try {
+//         // 1. Parse the grade payload from OpenDSA
+//         // The body format is defined by the LTI AGS spec (a 'score' object)
+//         const gradeFromOpenDSA = req.body;
+        
+//         console.log("Received grade callback from OpenDSA:", gradeFromOpenDSA);
+
+//         // OpenDSA MUST send back the 'userId'. This 'userId' is the
+//         // 'sub' (sub: incomingToken.user) that your proxy sent in the launch.
+//         const canvasUserId = gradeFromOpenDSA.userId; 
+
+//         if (!canvasUserId) {
+//             console.error("Grade callback missing 'userId'");
+//             return res.status(400).send("Bad Request: Missing 'userId' in grade payload.");
+//         }
+
+//         // 2. Prepare the grade object in the format Canvas expects
+//         const gradeForCanvas = {
+//             scoreGiven: gradeFromOpenDSA.scoreGiven,     // e.g., 85
+//             scoreMaximum: gradeFromOpenDSA.scoreMaximum, // e.g., 100
+//             userId: canvasUserId,                        // The User ID for Canvas
+//             activityProgress: 'Completed',
+//             gradingProgress: 'FullyGraded'
+//             // You can also add 'comment': gradeFromOpenDSA.comment
+//         };
+
+//         // 3. Find the original 'ltik' needed to talk to Canvas
+//         const ltik = global.ltikMap[canvasUserId];
+
+//         if (!ltik) {
+//             console.error(`Could not find ltik for user ${canvasUserId}. Session might be lost.`);
+//             // Note: This is why a global var is bad. Use a real database!
+//             return res.status(404).send('User session not found by proxy.');
+//         }
+
+//         // 4. Use ltijs to securely send the grade to Canvas
+//         console.log(`Forwarding grade for user ${canvasUserId} to Canvas...`);
+        
+//         // This magic 'ltijs' function handles all the security,
+//         // gets a new access token, and sends the grade to the
+//         // 'lineitem' URL that Canvas originally provided.
+//         await lti.Grade.submitScore(ltik, gradeForCanvas);
+        
+//         // 5. Tell OpenDSA that you successfully received the grade
+//         console.log("Grade forwarded successfully.");
+//         res.status(200).send('Grade received by proxy and forwarded to Canvas.');
+
+//     } catch (err) {
+//         console.error('Grade passback proxy failed:', err);
+//         res.status(500).send('Proxy error while forwarding grade.');
+//     }
+// });
 router.post('/grades/callback', async (req, res) => {
-    try {
-        // 1. Parse the grade payload from OpenDSA
-        // The body format is defined by the LTI AGS spec (a 'score' object)
-        const gradeFromOpenDSA = req.body;
-        
-        console.log("Received grade callback from OpenDSA:", gradeFromOpenDSA);
+    const { userId, scoreGiven, scoreMaximum } = req.body;
 
-        // OpenDSA MUST send back the 'userId'. This 'userId' is the
-        // 'sub' (sub: incomingToken.user) that your proxy sent in the launch.
-        const canvasUserId = gradeFromOpenDSA.userId; 
+    // 1. Lookup session from MongoDB
+    const session = await db.collection('lti_sessions').findOne({ userId });
 
-        if (!canvasUserId) {
-            console.error("Grade callback missing 'userId'");
-            return res.status(400).send("Bad Request: Missing 'userId' in grade payload.");
-        }
-
-        // 2. Prepare the grade object in the format Canvas expects
-        const gradeForCanvas = {
-            scoreGiven: gradeFromOpenDSA.scoreGiven,     // e.g., 85
-            scoreMaximum: gradeFromOpenDSA.scoreMaximum, // e.g., 100
-            userId: canvasUserId,                        // The User ID for Canvas
-            activityProgress: 'Completed',
-            gradingProgress: 'FullyGraded'
-            // You can also add 'comment': gradeFromOpenDSA.comment
-        };
-
-        // 3. Find the original 'ltik' needed to talk to Canvas
-        const ltik = global.ltikMap[canvasUserId];
-
-        if (!ltik) {
-            console.error(`Could not find ltik for user ${canvasUserId}. Session might be lost.`);
-            // Note: This is why a global var is bad. Use a real database!
-            return res.status(404).send('User session not found by proxy.');
-        }
-
-        // 4. Use ltijs to securely send the grade to Canvas
-        console.log(`Forwarding grade for user ${canvasUserId} to Canvas...`);
-        
-        // This magic 'ltijs' function handles all the security,
-        // gets a new access token, and sends the grade to the
-        // 'lineitem' URL that Canvas originally provided.
-        await lti.Grade.submitScore(ltik, gradeForCanvas);
-        
-        // 5. Tell OpenDSA that you successfully received the grade
-        console.log("Grade forwarded successfully.");
-        res.status(200).send('Grade received by proxy and forwarded to Canvas.');
-
-    } catch (err) {
-        console.error('Grade passback proxy failed:', err);
-        res.status(500).send('Proxy error while forwarding grade.');
+    if (!session) {
+        return res.status(404).send('Session expired or not found.');
     }
-});
 
+    // 2. Forward to Canvas using stored ltik
+    await lti.Grade.submitScore(session.ltik, {
+        scoreGiven,
+        scoreMaximum,
+        userId,
+        activityProgress: 'Completed',
+        gradingProgress: 'FullyGraded'
+    });
+
+    res.status(200).send('Grade Proxy Success');
+});
 
 router.post('/token', async (req, res) => {
     const { 
@@ -281,7 +317,7 @@ router.post('/token', async (req, res) => {
     }
 
     try {
-        // 1. Manually verify the JWT from OpenDSA
+        // 1. Manually verify the JWT
         const decoded = await new Promise((resolve, reject) => {
             jwt.verify(client_assertion, getOpenDSAKey, { algorithms: ['RS256'], ignoreKeyid: true}, (err, decoded) => { //ignoring keyid because opendsa is weird
                 if (err) reject(err);

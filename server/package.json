@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "env DEBUG=provider:* node app.js",
+    "start": "env DEBUG=* node app.js",
     "seed": "node src/config/seed.js"
   },
   "keywords": [
@@ -20,6 +20,8 @@
     "axios": "^1.10.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "jwk-to-pem": "^2.0.7",
+    "jwks-rsa": "^3.2.0",
     "ltijs": "^5.9.6",
     "mongoose": "^8.10.1",
     "oauth-signature": "^1.5.0"

@@ -20,7 +20,7 @@
                     {
                         "placement": "course_navigation",
                         "message_type": "LtiResourceLinkRequest",
-                        "target_link_uri": "https://one-sunbeam-distinctly.ngrok-free.app"
+                        "target_link_uri": "https://lightly-liberal-wasp.ngrok-free.app"
                     }
                 ]
             },
@@ -33,7 +33,7 @@
         "canvas_user_id": "$Canvas.user.id",
         "canvas_course_id": "$Canvas.course.id"
     },
-    "public_jwk_url": "https://one-sunbeam-distinctly.ngrok-free.app/keys",
-    "target_link_uri": "https://one-sunbeam-distinctly.ngrok-free.app",
-    "oidc_initiation_url": "https://one-sunbeam-distinctly.ngrok-free.app/login"
+    "public_jwk_url": "https://lightly-liberal-wasp.ngrok-free.app/keys",
+    "target_link_uri": "https://lightly-liberal-wasp.ngrok-free.app",
+    "oidc_initiation_url": "https://lightly-liberal-wasp.ngrok-free.app/login"
 }
