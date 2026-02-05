@@ -21,7 +21,7 @@ enum TokenType {
 model User {
   id              String    @id @default(uuid())
   email           String    @unique
-  password        String
+  password        String?
   name            String
   emailVerified   Boolean   @default(false)
   emailVerifiedAt DateTime?
@@ -29,11 +29,55 @@ model User {
   updatedAt       DateTime  @updatedAt
 
   // Relations
-  posts     Post[]
-  tokens    Token[]
+  posts         Post[]
+  tokens        Token[]
+  ltiIdentities LtiIdentity[]
 
   // Essential index only
   @@index([emailVerified])
+}
+
+model LtiPlatform {
+  id            String   @id @default(uuid())
+  issuer        String   @unique // iss claim (e.g., https://canvas.instructure.com)
+  clientId      String // aud claim
+  authEndpoint  String // OIDC auth initiation endpoint
+  tokenEndpoint String // OIDC token endpoint
+  jwksEndpoint  String // Platform's public keys
+  name          String? // Friendly name
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  deployments LtiDeployment[]
+  identities  LtiIdentity[]
+}
+
+model LtiDeployment {
+  id           String @id @default(uuid())
+  platformId   String
+  deploymentId String // LTI deployment_id claim
+
+  platform   LtiPlatform   @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  identities LtiIdentity[]
+
+  @@unique([platformId, deploymentId])
+}
+
+model LtiIdentity {
+  id         String @id @default(uuid())
+  userId     String
+  platformId String
+  ltiSub     String // sub claim (unique user id in the platform)
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform     LtiPlatform    @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  deployment   LtiDeployment? @relation(fields: [platformId, deploymentId], references: [platformId, deploymentId])
+  deploymentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([platformId, ltiSub])
 }
 
 model LoginAttempt {

@@ -181,7 +181,7 @@ export default defineNuxtConfig({
         'base-uri': ['\'self\''],
         'font-src': ['\'self\'', 'https:', 'data:'],
         'form-action': ['\'self\''],
-        'frame-ancestors': ['\'none\''],
+        'frame-ancestors': ['*'], // Allow LTI platform iframes
         'img-src': ['\'self\'', 'data:', 'https:'],
         'object-src': ['\'none\''],
         'script-src': ['\'self\'', '\'unsafe-inline\'', '\'unsafe-eval\''],
@@ -194,7 +194,7 @@ export default defineNuxtConfig({
       referrerPolicy: 'no-referrer',
       strictTransportSecurity: false,
       xContentTypeOptions: 'nosniff',
-      xFrameOptions: 'DENY',
+      xFrameOptions: false, // Required for LTI iframe support
       xXSSProtection: '1; mode=block',
       crossOriginOpenerPolicy: false,
       originAgentCluster: false
@@ -255,6 +255,10 @@ export default defineNuxtConfig({
       loginWindow: 15, // NUXT_RATE_LIMIT_LOGIN_WINDOW (minutes)
       tokenCooldown: 5 // NUXT_RATE_LIMIT_TOKEN_COOLDOWN (minutes)
     },
+
+    // LTI 1.3 Configuration
+    ltiPrivateKey: '', // NUXT_LTI_PRIVATE_KEY (PKCS8 format)
+    ltiKeyId: 'lti-key-1', // NUXT_LTI_KEY_ID
 
     // ====== Public Configuration (accessible on client-side) ======
     public: {

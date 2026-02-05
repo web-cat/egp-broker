@@ -53,7 +53,6 @@ The `Dockerfile` uses a multi-stage build process to optimize for both speed and
     The first time you start the container, `docker compose` will run the `postinstall` script (Prisma generation and Nuxt preparation) automatically at startup. Scripts
     are defined in `package.json` and summarized below.
 
-
 ### Interactive Development
 
 Since the environment is fully containerized, you should run all development commands (like adding packages or running migrations) **inside** the container to ensure consistency.
@@ -120,6 +119,48 @@ The following scripts are available in `package.json` and can be executed using 
 | **`postinstall`** | `db:gen && prepare` | Automatically runs after `pnpm install` to set up your environment. |
 | **`changelog`**   | `git-cliff`         | Generates a `CHANGELOG.md` based on conventional commits.           |
 | **`release:*`**   | `pnpm version`      | Increments version (patch/minor/major) and pushes tags.             |
+
+---
+
+## 🎓 LTI 1.3 Advantage
+
+The EGP Broker is a certified LTI 1.3 Tool. It implements the OIDC Third-party Login flow and handles LTI launches directly within the Nitro (Nuxt 4) architecture.
+
+### Server-Side Endpoints
+
+- **`GET /api/lti13/login`**: OIDC Initiation endpoint. This is the entry point for the LMS when a user clicks the tool link. It handles the initial handshake and redirects back to the LMS for authentication.
+- **`POST /api/lti13/launch`**: OIDC Redirect URI. This endpoint receives the `id_token` from the LMS, validates its signature using the platform's JWKS, links or creates the local user account, and initializes a secure session.
+- **`GET /api/lti13/jwks`**: Public JWKS (JSON Web Key Set). Serves the tool's public keys, allowing platforms to verify any signed messages sent by the broker.
+
+### Configuration
+
+LTI 1.3 security relies on RSA key pairs. You must configure the tool's private key in your `.env` file:
+
+- **`NUXT_LTI_PRIVATE_KEY`**: The tool's private key in **PKCS8** format.
+- **`NUXT_LTI_KEY_ID`**: A unique identifier for the key (e.g., `lti-key-1`), which will be presented in the JWKS.
+
+> [!TIP]
+> You can generate a compatible key pair using OpenSSL:
+>
+> ```bash
+> openssl genrsa -out private.pem 2048
+> openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in private.pem -out private_pkcs8.pem
+> ```
+
+### Canvas Installation Instructions
+
+To install the EGP Broker in Canvas, follow these steps in the Developer Keys section of your Canvas instance:
+
+1. **Method**: Manual Entry
+2. **Title**: EGP Broker
+3. **Target Link URI**: `https://your-domain.com/`
+4. **OpenID Connect Initiation URL**: `https://your-domain.com/api/lti13/login`
+5. **Redirect URIs**: `https://your-domain.com/api/lti13/launch`
+6. **JWK Method**: Public JWK URL
+7. **Public JWK URL**: `https://your-domain.com/api/lti13/jwks`
+8. **LTI Advantage Services**: Enable "Assignment Data Service", "Result Service", and "Deep Linking Support" as needed for your use case.
+
+Once the Developer Key is created, perform the registration in the EGP Broker database (adding an `LtiPlatform` record) using the Client ID and Issuer (`https://canvas.instructure.com`) provided by Canvas.
 
 ---
 
