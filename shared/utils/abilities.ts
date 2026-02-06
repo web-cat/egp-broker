@@ -23,19 +23,24 @@ export type AppAbility = MongoAbility<[Action, Subject]>
  * @returns A CASL Ability instance
  */
 export function defineAbilitiesFor(user?: PublicUser) {
-    const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility)
+  const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility)
 
-    if (user?.globalRole === 'ADMIN') {
-        can('manage', 'all')
-    } else if (user?.globalRole === 'USER') {
-        // User-specific rules
-        can('read', 'all')
-        can('manage', 'Post', { authorId: user.id })
-        can('manage', 'User', { id: user.id })
-    } else {
-        // Anonymous/Guest rules
-        can('read', 'Post')
-    }
+  if (user?.globalRole === 'ADMIN') {
+    can('manage', 'all')
+  } else if (user?.globalRole === 'INSTRUCTOR') {
+    // Instructor rules
+    can('read', 'all')
+    can('manage', 'Post')
+    can('manage', 'User', { id: user.id })
+  } else if (user?.globalRole === 'USER') {
+    // User-specific rules
+    can('read', 'all')
+    can('manage', 'Post', { authorId: user.id })
+    can('manage', 'User', { id: user.id })
+  } else {
+    // Anonymous/Guest rules
+    can('read', 'Post')
+  }
 
-    return build()
+  return build()
 }

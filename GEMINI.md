@@ -12,16 +12,16 @@ This document outlines the architectural standards and software engineering prin
 
 This project is developed and executed entirely within Docker. **All development commands must be run inside the `app-dev` container.**
 
-*   **Initialize**: `cp .env.example .env` and configure accordingly.
-*   **Startup**: `docker compose up` starts the Nuxt app (port 3000), Postgres, and Adminer (port 8080).
-*   **Interactive Terminal**: `docker compose exec app-dev bash`
-*   **Running Commands**:
-    ```bash
-    docker compose exec app-dev pnpm install <package>
-    docker compose exec app-dev pnpm prisma migrate dev
-    docker compose exec app-dev pnpm test
-    ```
-*   **Committing**: Ensure the container is running when you `git commit`, as Husky hooks run linting inside the container.
+- **Initialize**: `cp .env.example .env` and configure accordingly.
+- **Startup**: `docker compose up` starts the Nuxt app (port 3000), Postgres, and Adminer (port 8080).
+- **Interactive Terminal**: `docker compose exec app-dev bash`
+- **Running Commands**:
+  ```bash
+  docker compose exec app-dev pnpm install <package>
+  docker compose exec app-dev pnpm prisma migrate dev
+  docker compose exec app-dev pnpm test
+  ```
+- **Committing**: Ensure the container is running when you `git commit`, as Husky hooks run linting inside the container.
 
 ---
 
@@ -53,28 +53,30 @@ Nuxt 4 introduces a strict separation between the frontend application and the s
 
 We use **`nuxt-auth-utils`** for sealed, session-based authentication.
 
-* **Session Management:** Always use `setUserSession(event, { user })` on the server and the `useUserSession()` composable on the client.
-* **Environment Variables:** Sensitive keys (like `NUXT_SESSION_PASSWORD`) must never be hardcoded. Use `.env` and access them via `runtimeConfig`.
-* **LTI 1.3 Handshake:** For LMS integration, validate OIDC tokens in `server/api/lti13/launch.post.ts` before calling `setUserSession`.
+- **Session Management:** Always use `setUserSession(event, { user })` on the server and the `useUserSession()` composable on the client.
+- **Environment Variables:** Sensitive keys (like `NUXT_SESSION_PASSWORD`) must never be hardcoded. Use `.env` and access them via `runtimeConfig`.
+- **LTI 1.3 Handshake:** For LMS integration, validate OIDC tokens in `server/api/lti13/launch.post.ts` before calling `setUserSession`.
 
 ---
 
 ## 💾 3. Data Layer (Prisma & Nitro)
 
-* **Singleton Pattern:** Database connections must be managed as a singleton in `server/utils/db.ts` to prevent "Too many connections" errors during HMR.
-* **Type Safety:** Always run `pnpm prisma generate` after schema changes. Use the generated types in your server handlers.
-* **Validation:** Use **Zod** for validating incoming request bodies in server handlers.
+- **Singleton Pattern:** Database connections must be managed as a singleton in `server/utils/db.ts` to prevent "Too many connections" errors during HMR.
+- **Type Safety:** Always run `pnpm prisma generate` after schema changes. Use the generated types in your server handlers.
+- **Validation:** Use **Zod** for validating incoming request bodies in server handlers.
 
 ```typescript
 // Example: server/api/user.post.ts
 export default defineEventHandler(async (event) => {
-  const body = await readValidatedBody(event, z.object({
-    email: z.string().email(),
-  }).parse);
-  
-  return await prisma.user.create({ data: body });
-});
+  const body = await readValidatedBody(
+    event,
+    z.object({
+      email: z.string().email()
+    }).parse
+  )
 
+  return await prisma.user.create({ data: body })
+})
 ```
 
 ---
@@ -83,17 +85,17 @@ export default defineEventHandler(async (event) => {
 
 Nuxt 4 is high-performance by default; don't break it with poor patterns.
 
-* **Data Fetching:** Prefer `useFetch` or `useAsyncData` over raw `$fetch` in components to prevent double-fetching during Hydration.
-* **Hybrid Rendering:** Use `routeRules` in `nuxt.config.ts` to define SWR (Stale-While-Revalidate) for content-heavy pages and `ssr: false` for purely administrative dashboards.
-* **Server Components:** Use `.server.vue` components for complex UI parts that don't need interactivity to reduce the client-side JS bundle.
+- **Data Fetching:** Prefer `useFetch` or `useAsyncData` over raw `$fetch` in components to prevent double-fetching during Hydration.
+- **Hybrid Rendering:** Use `routeRules` in `nuxt.config.ts` to define SWR (Stale-While-Revalidate) for content-heavy pages and `ssr: false` for purely administrative dashboards.
+- **Server Components:** Use `.server.vue` components for complex UI parts that don't need interactivity to reduce the client-side JS bundle.
 
 ---
 
 ## 🛠️ 5. Maintenance & Quality
 
-* **Strict TypeScript:** Ensure `typescript.typeCheck: true` is enabled in `nuxt.config.ts`. Avoid `any` at all costs.
-* **Error Handling:** Use `throw createError({ statusCode: 404, message: '...' })` in server routes to ensure the frontend receives a clean error object.
-* **Testing:** Place unit tests in `tests/` and use `@nuxt/test-utils` for E2E testing of the Nitro server and Vue components.
+- **Strict TypeScript:** Ensure `typescript.typeCheck: true` is enabled in `nuxt.config.ts`. Avoid `any` at all costs.
+- **Error Handling:** Use `throw createError({ statusCode: 404, message: '...' })` in server routes to ensure the frontend receives a clean error object.
+- **Testing:** Place unit tests in `tests/` and use `@nuxt/test-utils` for E2E testing of the Nitro server and Vue components.
 
 ---
 
