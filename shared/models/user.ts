@@ -145,16 +145,7 @@ export const initialResetPasswordState: ResetPasswordData = {
 /**
  * Helper function to convert Prisma User to PublicUser
  */
-export function toPublicUser(user: {
-  id: string
-  email: string
-  password: string
-  name: string
-  emailVerified: boolean
-  emailVerifiedAt: Date | null
-  createdAt: Date
-  updatedAt: Date
-}): PublicUser {
+export function toPublicUser(user: User): PublicUser {
   const { password, ...rest } = user
   return rest
 }

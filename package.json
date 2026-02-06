@@ -40,6 +40,8 @@
     "release:major": "pnpm version major && git push --follow-tags"
   },
   "dependencies": {
+    "@casl/ability": "^6.8.0",
+    "@casl/vue": "^2.2.6",
     "@nuxt/image": "1.11.0",
     "@nuxt/ui": "4.1.0",
     "@nuxtjs/i18n": "^10.0.6",

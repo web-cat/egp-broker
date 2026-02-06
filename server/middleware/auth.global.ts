@@ -4,8 +4,11 @@
  * Automatically attaches user to context for protected API routes
  * Public routes are defined in the publicRoutes array below
  */
+import { defineAbilitiesFor } from '@@/shared/utils/abilities'
+import type { PublicUser } from '@@/shared/models/user'
+import type { H3Event } from 'h3'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: H3Event) => {
   const path = event.path || ''
   const method = event.method || 'GET'
 
@@ -52,7 +55,9 @@ export default defineEventHandler(async (event) => {
   try {
     const session = await requireUserSession(event)
     // Attach user to context for easy access in handlers
-    event.context.user = session.user
+    event.context.user = session.user as PublicUser
+    // Initialize CASL ability
+    event.context.ability = defineAbilitiesFor(event.context.user)
   } catch {
     throw unauthorizedError(ERROR_CODES.AUTH.UNAUTHORIZED, 'Authentication required')
   }
