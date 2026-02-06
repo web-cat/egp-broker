@@ -87,13 +87,34 @@ export default defineEventHandler(async (event: H3Event) => {
         })
       }
 
-      // 3. Create LTI identity linked to user
+      const platformUserId = String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null
+      const deploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
+      const deploymentHost = claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid || null
+
+      // 3. Upsert deployment to store deploymentHost
+      await tx.ltiDeployment.upsert({
+        where: {
+          platformId_deploymentId: {
+            platformId: platform.id,
+            deploymentId
+          }
+        },
+        update: { deploymentHost },
+        create: {
+          platformId: platform.id,
+          deploymentId,
+          deploymentHost
+        }
+      })
+
+      // 4. Create LTI identity linked to user and deployment
       await tx.ltiIdentity.create({
         data: {
           userId: user.id,
           platformId: platform.id,
           ltiSub: sub,
-          deploymentId: claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
+          platformUserId,
+          deploymentId
         }
       })
 

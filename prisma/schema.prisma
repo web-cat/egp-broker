@@ -60,9 +60,10 @@ model LtiPlatform {
 }
 
 model LtiDeployment {
-  id           String @id @default(uuid())
-  platformId   String
-  deploymentId String // LTI deployment_id claim
+  id             String  @id @default(uuid())
+  platformId     String
+  deploymentId   String // LTI deployment_id claim
+  deploymentHost String? // Optional guid/host from tool_platform claim
 
   platform   LtiPlatform   @relation(fields: [platformId], references: [id], onDelete: Cascade)
   identities LtiIdentity[]
@@ -71,10 +72,11 @@ model LtiDeployment {
 }
 
 model LtiIdentity {
-  id         String @id @default(uuid())
-  userId     String
-  platformId String
-  ltiSub     String // sub claim (unique user id in the platform)
+  id           String @id @default(uuid())
+  userId       String
+  platformId   String
+  ltiSub       String // sub claim (unique user id in the platform)
+  platformUserId String? // Optional platform-specific numeric ID (e.g. from Canvas legacy_user_id claim)
 
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   platform     LtiPlatform    @relation(fields: [platformId], references: [id], onDelete: Cascade)

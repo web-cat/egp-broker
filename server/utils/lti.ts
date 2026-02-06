@@ -22,6 +22,16 @@ export interface LtiLaunchClaims {
     title?: string
   }
   'https://purl.imsglobal.org/spec/lti/claim/custom'?: Record<string, any>
+  'https://purl.imsglobal.org/spec/lti/claim/tool_platform'?: {
+    guid: string
+    contact_email?: string
+    description?: string
+    name?: string
+    url?: string
+    product_family_code?: string
+    version?: string
+  }
+  'https://canvas.instructure.com/lti/legacy_user_id'?: string | number
   email?: string
   name?: string
   given_name?: string
