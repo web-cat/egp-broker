@@ -87,9 +87,11 @@ export default defineEventHandler(async (event: H3Event) => {
         })
       }
 
-      const platformUserId = String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null
+      const platformUserId =
+        String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null
       const deploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
-      const deploymentHost = claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid || null
+      const deploymentHost =
+        claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid || null
 
       // 3. Upsert deployment to store deploymentHost
       await tx.ltiDeployment.upsert({
