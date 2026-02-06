@@ -1,6 +1,5 @@
 import type { H3Event } from 'h3'
 import { exportJWK, importPKCS8 } from 'jose'
-import { logger } from '~/server/utils/logger.helpers'
 
 export default defineEventHandler(async (event: H3Event) => {
   const config = useRuntimeConfig(event)

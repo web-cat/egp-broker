@@ -17,7 +17,11 @@ export const TEXT_FIELD_LIMITS = {
     MIN: 10,
     MAX: 1000
   },
-  NAME: {
+  FIRST_NAME: {
+    MIN: 2,
+    MAX: 50
+  },
+  LAST_NAME: {
     MIN: 2,
     MAX: 50
   },

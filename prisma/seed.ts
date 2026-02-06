@@ -9,7 +9,9 @@ const seedUsers = [
     email: 'admin@example.com',
     password:
       '$scrypt$n=16384,r=8,p=1$InqZJYQ714zfbFY4fs81nA$EiUh6dwE+WfBNWkdoMgFYV4b4xVworZ/loCtEFeLlYokZT1dPl2gGdcnV5/9RmJhLGzaKoxUZoT4CiqwmiBigg', // Admin123!
-    name: 'Admin User',
+    firstName: 'Admin',
+    lastName: 'User',
+    globalRole: 'ADMIN' as const,
     emailVerified: true,
     emailVerifiedAt: new Date()
   },
@@ -17,7 +19,9 @@ const seedUsers = [
     email: 'demo@example.com',
     password:
       '$scrypt$n=16384,r=8,p=1$J1715Bk7oV9rbFwFCPtSpA$y61smy4tql8Il9ybDfpOikdxkkcBVm6T5bJFlL1BDnDrURseVB25keJDYwdlgVVJYIhaP5flZvdT3OMKN7YQkw', // Demo123!
-    name: 'Demo User',
+    firstName: 'Demo',
+    lastName: 'User',
+    globalRole: 'USER' as const,
     emailVerified: true,
     emailVerifiedAt: new Date()
   }
@@ -91,7 +95,9 @@ async function main() {
       data: {
         email: userData.email,
         password: userData.password, // Already hashed
-        name: userData.name,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        globalRole: userData.globalRole,
         emailVerified: userData.emailVerified,
         emailVerifiedAt: userData.emailVerifiedAt
       }
@@ -121,7 +127,7 @@ async function main() {
   // Display created users for reference
   console.log('\n📋 Created users:')
   for (const user of createdUsers) {
-    console.log(`   • ${user.name} (${user.email}) - ID: ${user.id}`)
+    console.log(`   • ${user.firstName} ${user.lastName} (${user.email}) - ID: ${user.id}`)
   }
 }
 

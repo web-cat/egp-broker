@@ -58,10 +58,15 @@ export const createRegisterSchema = (t: (key: string) => string) =>
         )
         .regex(VALIDATION_PATTERNS.PASSWORD, t('auth.register.fields.password.validation.pattern')),
       confirmPassword: z.string(),
-      name: z
+      firstName: z
         .string()
-        .min(TEXT_FIELD_LIMITS.NAME.MIN, t('auth.register.fields.name.validation.minLength'))
-        .max(TEXT_FIELD_LIMITS.NAME.MAX, t('auth.register.fields.name.validation.maxLength'))
+        .min(TEXT_FIELD_LIMITS.FIRST_NAME.MIN, t('auth.register.fields.firstName.validation.minLength'))
+        .max(TEXT_FIELD_LIMITS.FIRST_NAME.MAX, t('auth.register.fields.firstName.validation.maxLength'))
+        .trim(),
+      lastName: z
+        .string()
+        .min(TEXT_FIELD_LIMITS.LAST_NAME.MIN, t('auth.register.fields.lastName.validation.minLength'))
+        .max(TEXT_FIELD_LIMITS.LAST_NAME.MAX, t('auth.register.fields.lastName.validation.maxLength'))
         .trim()
     })
     .refine((data) => data.password === data.confirmPassword, {
@@ -129,7 +134,8 @@ export const initialRegisterState: RegisterData = {
   email: '',
   password: '',
   confirmPassword: '',
-  name: ''
+  firstName: '',
+  lastName: ''
 }
 
 export const initialForgotPasswordState: ForgotPasswordData = {

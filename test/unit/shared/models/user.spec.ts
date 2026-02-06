@@ -8,18 +8,20 @@ describe('User Model', () => {
         id: '1',
         email: 'test@example.com',
         password: 'hashedPassword123',
-        name: 'Test User',
+        firstName: 'Test',
+        lastName: 'User',
         emailVerified: true,
         emailVerifiedAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date()
       }
 
-      const publicUser = toPublicUser(user)
+      const publicUser = toPublicUser(user as any)
 
       expect(publicUser).not.toHaveProperty('password')
       expect(publicUser.email).toBe('test@example.com')
-      expect(publicUser.name).toBe('Test User')
+      expect(publicUser.firstName).toBe('Test')
+      expect(publicUser.lastName).toBe('User')
       expect(publicUser.id).toBe('1')
     })
 
@@ -29,7 +31,8 @@ describe('User Model', () => {
         id: '2',
         email: 'user@test.com',
         password: 'secret',
-        name: 'John Doe',
+        firstName: 'John',
+        lastName: 'Doe',
         emailVerified: false,
         emailVerifiedAt: null,
         createdAt: now,
@@ -58,7 +61,8 @@ describe('User Model', () => {
         email: '',
         password: '',
         confirmPassword: '',
-        name: ''
+        firstName: '',
+        lastName: ''
       })
     })
   })

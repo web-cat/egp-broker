@@ -1,6 +1,5 @@
 import type { H3Event } from 'h3'
 import prisma from '@@/lib/prisma'
-import { logger } from '~/server/utils/logger.helpers'
 
 export default defineEventHandler(async (event: H3Event) => {
   const body = await readBody(event)
@@ -51,7 +50,8 @@ export default defineEventHandler(async (event: H3Event) => {
 
     const sub = claims.sub
     const email = claims.email
-    const name = claims.name || claims.given_name || 'LTI User'
+    const firstName = claims.given_name || claims.name?.split(' ')[0] || 'LTI'
+    const lastName = claims.family_name || claims.name?.split(' ').slice(1).join(' ') || 'User'
 
     // Find or create user and identity
     const ltiUser = await prisma.$transaction(async (tx) => {
@@ -80,7 +80,8 @@ export default defineEventHandler(async (event: H3Event) => {
         user = await tx.user.create({
           data: {
             email: email || `${sub}@lti.${platform.issuer.replace(/https?:\/\//, '')}`,
-            name,
+            firstName,
+            lastName,
             emailVerified: true,
             emailVerifiedAt: new Date()
           }
@@ -128,7 +129,8 @@ export default defineEventHandler(async (event: H3Event) => {
       user: {
         id: ltiUser.id,
         email: ltiUser.email,
-        name: ltiUser.name
+        firstName: ltiUser.firstName,
+        lastName: ltiUser.lastName
       },
       // Pass along LTI context if needed
       lti: {
