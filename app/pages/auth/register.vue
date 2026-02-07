@@ -79,13 +79,21 @@ const isLoading = ref(false)
 // Fields configuration
 const fields = computed(() => [
   {
-    name: 'name',
+    name: 'firstName',
     type: 'text' as const,
-    label: t('auth.register.fields.name.label'),
-    placeholder: t('auth.register.fields.name.placeholder'),
+    label: t('auth.register.fields.firstName.label'),
+    placeholder: t('auth.register.fields.firstName.placeholder'),
     required: true,
-    defaultValue: state.name,
+    defaultValue: state.firstName,
     autofocus: true
+  },
+  {
+    name: 'lastName',
+    type: 'text' as const,
+    label: t('auth.register.fields.lastName.label'),
+    placeholder: t('auth.register.fields.lastName.placeholder'),
+    required: true,
+    defaultValue: state.lastName
   },
   {
     name: 'email',

@@ -200,13 +200,22 @@
             "required": "L'adresse email est requise"
           }
         },
-        "name": {
-          "label": "Nom complet",
-          "placeholder": "Entrez votre nom complet",
+        "firstName": {
+          "label": "Prénom",
+          "placeholder": "Entrez votre prénom",
           "validation": {
-            "maxLength": "Le nom ne peut pas dépasser 50 caractères",
-            "minLength": "Le nom doit contenir au moins 2 caractères",
-            "required": "Le nom est requis"
+            "maxLength": "Le prénom ne peut pas dépasser 50 caractères",
+            "minLength": "Le prénom doit contenir au moins 2 caractères",
+            "required": "Le prénom est requis"
+          }
+        },
+        "lastName": {
+          "label": "Nom de famille",
+          "placeholder": "Entrez votre nom de famille",
+          "validation": {
+            "maxLength": "Le nom de famille ne peut pas dépasser 50 caractères",
+            "minLength": "Le nom de famille doit contenir au moins 2 caractères",
+            "required": "Le nom de famille est requis"
           }
         },
         "password": {

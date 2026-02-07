@@ -10,9 +10,13 @@ test.describe('Register Page', () => {
   })
 
   test('should display registration form with all required fields', async ({ page }) => {
-    // Check name field
-    const nameInput = page.getByPlaceholder(/nom/i)
-    await expect(nameInput).toBeVisible()
+    // Check firstName field
+    const firstNameInput = page.getByPlaceholder(/prénom/i)
+    await expect(firstNameInput).toBeVisible()
+
+    // Check lastName field
+    const lastNameInput = page.getByPlaceholder(/nom de famille/i)
+    await expect(lastNameInput).toBeVisible()
 
     // Check email field
     const emailInput = page.getByPlaceholder(/adresse email/i)

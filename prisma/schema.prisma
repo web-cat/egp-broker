@@ -24,6 +24,15 @@ enum GlobalRole {
   USER
 }
 
+enum CourseRole {
+  TEACHER
+  STUDENT
+  TA
+  OBSERVER
+  DESIGNER
+  ADMIN
+}
+
 model User {
   id              String    @id @default(uuid())
   email           String    @unique
@@ -40,6 +49,7 @@ model User {
   posts         Post[]
   tokens        Token[]
   ltiIdentities LtiIdentity[]
+  enrollments   Enrollment[]
 
   // Essential index only
   @@index([emailVerified])
@@ -68,6 +78,7 @@ model LtiDeployment {
 
   platform   LtiPlatform   @relation(fields: [platformId], references: [id], onDelete: Cascade)
   identities LtiIdentity[]
+  courses    Course[]
 
   @@unique([platformId, deploymentId])
 }
@@ -139,3 +150,39 @@ model Post {
   @@index([authorId])
 }
 
+model Course {
+  id             String   @id @default(uuid())
+  // LTI context claim fields
+  ltiContextId   String   // context.id from LTI claim
+  label          String?  // context.label (course code, e.g., "CPS 435")
+  title          String?  // context.title
+
+  // Canvas-specific custom variables (optional, set via LTI config)
+  canvasCourseId String?  // $Canvas.course.id
+  workflowState  String?  // $Canvas.course.workflowState
+
+  // Relationships
+  deploymentId   String
+  deployment     LtiDeployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  enrollments    Enrollment[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([deploymentId, ltiContextId])
+}
+
+model Enrollment {
+  id        String     @id @default(uuid())
+  userId    String
+  courseId  String
+  role      CourseRole
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([userId, courseId])
+}

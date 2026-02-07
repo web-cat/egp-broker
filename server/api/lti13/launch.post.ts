@@ -53,49 +53,14 @@ export default defineEventHandler(async (event: H3Event) => {
     const firstName = claims.given_name || claims.name?.split(' ')[0] || 'LTI'
     const lastName = claims.family_name || claims.name?.split(' ').slice(1).join(' ') || 'User'
 
-    // Find or create user and identity
+    // Find or create user and identity, then upsert course and enrollment
     const ltiUser = await prisma.$transaction(async (tx) => {
-      // 1. Find existing identity
-      const identity = await tx.ltiIdentity.findUnique({
-        where: {
-          platformId_ltiSub: {
-            platformId: platform.id,
-            ltiSub: sub
-          }
-        },
-        include: { user: true }
-      })
-
-      if (identity) {
-        return identity.user
-      }
-
-      // 2. If no identity, find user by email or create new
-      let user = null
-      if (email) {
-        user = await tx.user.findUnique({ where: { email } })
-      }
-
-      if (!user) {
-        user = await tx.user.create({
-          data: {
-            email: email || `${sub}@lti.${platform.issuer.replace(/https?:\/\//, '')}`,
-            firstName,
-            lastName,
-            emailVerified: true,
-            emailVerifiedAt: new Date()
-          }
-        })
-      }
-
-      const platformUserId =
-        String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null
       const deploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
       const deploymentHost =
         claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid || null
 
-      // 3. Upsert deployment to store deploymentHost
-      await tx.ltiDeployment.upsert({
+      // 1. Upsert deployment to store deploymentHost and get its ID
+      const deployment = await tx.ltiDeployment.upsert({
         where: {
           platformId_deploymentId: {
             platformId: platform.id,
@@ -110,16 +75,100 @@ export default defineEventHandler(async (event: H3Event) => {
         }
       })
 
-      // 4. Create LTI identity linked to user and deployment
-      await tx.ltiIdentity.create({
-        data: {
-          userId: user.id,
-          platformId: platform.id,
-          ltiSub: sub,
-          platformUserId,
-          deploymentId
-        }
+      // 2. Find or create user and identity
+      let user
+      const existingIdentity = await tx.ltiIdentity.findUnique({
+        where: {
+          platformId_ltiSub: {
+            platformId: platform.id,
+            ltiSub: sub
+          }
+        },
+        include: { user: true }
       })
+
+      if (existingIdentity) {
+        user = existingIdentity.user
+      } else {
+        // Find user by email or create new
+        if (email) {
+          user = await tx.user.findUnique({ where: { email } })
+        }
+
+        if (!user) {
+          user = await tx.user.create({
+            data: {
+              email: claims.email as string,
+              firstName,
+              lastName,
+              emailVerified: true,
+              emailVerifiedAt: new Date()
+            }
+          })
+        }
+
+        const platformUserId =
+          String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null
+
+        // Create LTI identity linked to user and deployment
+        await tx.ltiIdentity.create({
+          data: {
+            userId: user.id,
+            platformId: platform.id,
+            ltiSub: sub,
+            platformUserId,
+            deploymentId
+          }
+        })
+      }
+
+      // 3. Upsert Course and Enrollment if context is present (for all users)
+      const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
+      if (context?.id) {
+        const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom']
+
+        const course = await tx.course.upsert({
+          where: {
+            deploymentId_ltiContextId: {
+              deploymentId: deployment.id,
+              ltiContextId: context.id
+            }
+          },
+          update: {
+            label: context.label,
+            title: context.title,
+            canvasCourseId: customClaims?.canvas_course_id?.toString(),
+            workflowState: customClaims?.canvas_course_workflow_state
+          },
+          create: {
+            deploymentId: deployment.id,
+            ltiContextId: context.id,
+            label: context.label,
+            title: context.title,
+            canvasCourseId: customClaims?.canvas_course_id?.toString(),
+            workflowState: customClaims?.canvas_course_workflow_state
+          }
+        })
+
+        // Parse user role from LTI roles claim
+        const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles']
+        const courseRole = parseCourseRole(roles)
+
+        await tx.enrollment.upsert({
+          where: {
+            userId_courseId: {
+              userId: user.id,
+              courseId: course.id
+            }
+          },
+          update: { role: courseRole },
+          create: {
+            userId: user.id,
+            courseId: course.id,
+            role: courseRole
+          }
+        })
+      }
 
       return user
     })

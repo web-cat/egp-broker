@@ -26,7 +26,8 @@ export async function createUser(userData: RegisterData): Promise<PublicUser> {
       data: {
         email: userData.email,
         password: hashedPassword,
-        name: userData.name
+        firstName: userData.firstName,
+        lastName: userData.lastName
       }
     })
 

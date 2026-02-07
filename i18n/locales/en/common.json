@@ -200,13 +200,22 @@
             "required": "Email address is required"
           }
         },
-        "name": {
-          "label": "Full name",
-          "placeholder": "Enter your full name",
+        "firstName": {
+          "label": "First name",
+          "placeholder": "Enter your first name",
           "validation": {
-            "maxLength": "Name cannot exceed 50 characters",
-            "minLength": "Name must be at least 2 characters long",
-            "required": "Name is required"
+            "maxLength": "First name cannot exceed 50 characters",
+            "minLength": "First name must be at least 2 characters long",
+            "required": "First name is required"
+          }
+        },
+        "lastName": {
+          "label": "Last name",
+          "placeholder": "Enter your last name",
+          "validation": {
+            "maxLength": "Last name cannot exceed 50 characters",
+            "minLength": "Last name must be at least 2 characters long",
+            "required": "Last name is required"
           }
         },
         "password": {

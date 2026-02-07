@@ -60,13 +60,25 @@ export const createRegisterSchema = (t: (key: string) => string) =>
       confirmPassword: z.string(),
       firstName: z
         .string()
-        .min(TEXT_FIELD_LIMITS.FIRST_NAME.MIN, t('auth.register.fields.firstName.validation.minLength'))
-        .max(TEXT_FIELD_LIMITS.FIRST_NAME.MAX, t('auth.register.fields.firstName.validation.maxLength'))
+        .min(
+          TEXT_FIELD_LIMITS.FIRST_NAME.MIN,
+          t('auth.register.fields.firstName.validation.minLength')
+        )
+        .max(
+          TEXT_FIELD_LIMITS.FIRST_NAME.MAX,
+          t('auth.register.fields.firstName.validation.maxLength')
+        )
         .trim(),
       lastName: z
         .string()
-        .min(TEXT_FIELD_LIMITS.LAST_NAME.MIN, t('auth.register.fields.lastName.validation.minLength'))
-        .max(TEXT_FIELD_LIMITS.LAST_NAME.MAX, t('auth.register.fields.lastName.validation.maxLength'))
+        .min(
+          TEXT_FIELD_LIMITS.LAST_NAME.MIN,
+          t('auth.register.fields.lastName.validation.minLength')
+        )
+        .max(
+          TEXT_FIELD_LIMITS.LAST_NAME.MAX,
+          t('auth.register.fields.lastName.validation.maxLength')
+        )
         .trim()
     })
     .refine((data) => data.password === data.confirmPassword, {

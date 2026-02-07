@@ -10,7 +10,7 @@
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email, password, confirmPassword, name, termsAccepted, termsOfSaleAccepted, privacyAccepted]
+ *             required: [email, password, confirmPassword, firstName, lastName]
  *             properties:
  *               email:
  *                 type: string
@@ -20,7 +20,9 @@
  *                 minLength: 8
  *               confirmPassword:
  *                 type: string
- *               name:
+ *               firstName:
+ *                 type: string
+ *               lastName:
  *                 type: string
  *               termsAccepted:
  *                 type: boolean

@@ -1,4 +1,34 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
+import { CourseRole } from '@prisma/client'
+
+// LTI 1.3 Role URIs mapped to CourseRole enum
+const LTI_ROLE_MAPPINGS: { pattern: string; role: CourseRole }[] = [
+  { pattern: 'membership/Instructor#TeachingAssistant', role: CourseRole.TA },
+  { pattern: 'membership#Instructor', role: CourseRole.TEACHER },
+  { pattern: 'membership#Learner', role: CourseRole.STUDENT },
+  { pattern: 'membership#Mentor', role: CourseRole.OBSERVER },
+  { pattern: 'membership#ContentDeveloper', role: CourseRole.DESIGNER },
+  { pattern: 'institution/person#Administrator', role: CourseRole.ADMIN }
+]
+
+/**
+ * Parses LTI 1.3 role URIs and returns the most appropriate CourseRole.
+ * Priority: TA > Teacher > Designer > Observer > Admin > Student (default)
+ */
+export function parseCourseRole(roles?: string[]): CourseRole {
+  if (!roles || roles.length === 0) {
+    return CourseRole.STUDENT
+  }
+
+  // Check each mapping in priority order
+  for (const mapping of LTI_ROLE_MAPPINGS) {
+    if (roles.some(role => role.includes(mapping.pattern))) {
+      return mapping.role
+    }
+  }
+
+  return CourseRole.STUDENT
+}
 
 export interface LtiLaunchClaims {
   iss: string

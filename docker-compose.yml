@@ -24,7 +24,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-P@ssw0rd}
     ports:
-      - ${POSTGRES_PORT:-5432}:5432
+      - 127.0.0.1:${POSTGRES_PORT:-5432}:5432
     volumes:
       - ./volumes/postgres_data:/var/lib/postgresql
       - ./.docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -47,7 +47,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-P@ssw0rd}
     ports:
-      - ${ADMINER_PORT:-8080}:8080
+      - 127.0.0.1:${ADMINER_PORT:-8080}:8080
 
   # The main application running in development mode with HMR and volume mounting.
   app-dev:
@@ -61,7 +61,7 @@ services:
       - .:/app
       - /app/node_modules
     ports:
-      - 3000:3000
+      - 127.0.0.1:3000:3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,7 +79,7 @@ services:
     image: egp-broker:${APP_VERSION:-latest}
     container_name: egp-broker
     ports:
-      - 8081:3000 # Changed from 8080 to avoid conflict with Adminer
+      - 127.0.0.1:8081:3000 # Changed from 8080 to avoid conflict with Adminer
     depends_on:
       postgres:
         condition: service_healthy

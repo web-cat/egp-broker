@@ -16,9 +16,14 @@ describe('Validation Constants', () => {
       expect(TEXT_FIELD_LIMITS.EMAIL.MAX).toBe(254)
     })
 
-    it('should have correct name limits', () => {
-      expect(TEXT_FIELD_LIMITS.NAME.MIN).toBe(2)
-      expect(TEXT_FIELD_LIMITS.NAME.MAX).toBe(50)
+    it('should have correct firstName limits', () => {
+      expect(TEXT_FIELD_LIMITS.FIRST_NAME.MIN).toBe(2)
+      expect(TEXT_FIELD_LIMITS.FIRST_NAME.MAX).toBe(50)
+    })
+
+    it('should have correct lastName limits', () => {
+      expect(TEXT_FIELD_LIMITS.LAST_NAME.MIN).toBe(2)
+      expect(TEXT_FIELD_LIMITS.LAST_NAME.MAX).toBe(50)
     })
   })
 
