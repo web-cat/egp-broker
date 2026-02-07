@@ -165,6 +165,7 @@ model Course {
   deploymentId   String
   deployment     LtiDeployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
   enrollments    Enrollment[]
+  assignments    Assignment[]
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -185,4 +186,22 @@ model Enrollment {
   updatedAt DateTime   @updatedAt
 
   @@unique([userId, courseId])
+}
+
+model Assignment {
+  id             String   @id @default(uuid())
+  resourceLinkId String   // resource_link.id from LTI claim
+  title          String?  // resource_link.title
+  
+  // Canvas-specific custom variables
+  canvasAssignmentId String? // $Canvas.assignment.id
+  
+  // Relationships
+  courseId       String
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([courseId, resourceLinkId])
 }

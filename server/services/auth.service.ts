@@ -21,7 +21,13 @@ export async function registerUser(
 
   // Send verification email via queue
   const locale = getCookie(event, 'i18n_redirected') || 'fr'
-  await sendVerificationEmail(event, user.email, `${user.firstName} ${user.lastName}`, token, locale)
+  await sendVerificationEmail(
+    event,
+    user.email,
+    `${user.firstName} ${user.lastName}`,
+    token,
+    locale
+  )
 
   return {
     message: 'Account created successfully. Please check your email to verify your account.',
@@ -96,7 +102,13 @@ export async function resendVerificationEmail(
     const { token } = await createToken(user.id, TokenType.EMAIL_VERIFICATION)
 
     // Send verification email
-    await sendVerificationEmail(event, user.email, `${user.firstName} ${user.lastName}`, token, locale)
+    await sendVerificationEmail(
+      event,
+      user.email,
+      `${user.firstName} ${user.lastName}`,
+      token,
+      locale
+    )
 
     return {
       message: 'Verification email sent successfully',
@@ -135,7 +147,13 @@ export async function requestPasswordReset(
       const { token } = await createToken(user.id, TokenType.PASSWORD_RESET)
 
       // Send password reset email
-      await sendPasswordResetEmail(event, user.email, `${user.firstName} ${user.lastName}`, token, locale)
+      await sendPasswordResetEmail(
+        event,
+        user.email,
+        `${user.firstName} ${user.lastName}`,
+        token,
+        locale
+      )
     }
 
     // Always return the same message regardless of whether user exists

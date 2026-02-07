@@ -22,7 +22,7 @@ export function parseCourseRole(roles?: string[]): CourseRole {
 
   // Check each mapping in priority order
   for (const mapping of LTI_ROLE_MAPPINGS) {
-    if (roles.some(role => role.includes(mapping.pattern))) {
+    if (roles.some((role) => role.includes(mapping.pattern))) {
       return mapping.role
     }
   }

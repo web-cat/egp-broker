@@ -168,6 +168,29 @@ export default defineEventHandler(async (event: H3Event) => {
             role: courseRole
           }
         })
+
+        // 4. Upsert Assignment if resource_link is present
+        const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
+        if (resourceLink?.id) {
+          await tx.assignment.upsert({
+            where: {
+              courseId_resourceLinkId: {
+                courseId: course.id,
+                resourceLinkId: resourceLink.id
+              }
+            },
+            update: {
+              title: resourceLink.title,
+              canvasAssignmentId: customClaims?.canvas_assignment_id?.toString()
+            },
+            create: {
+              courseId: course.id,
+              resourceLinkId: resourceLink.id,
+              title: resourceLink.title,
+              canvasAssignmentId: customClaims?.canvas_assignment_id?.toString()
+            }
+          })
+        }
       }
 
       return user
