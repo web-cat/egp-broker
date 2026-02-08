@@ -27,7 +27,6 @@ const seedUsers = [
   }
 ]
 
-
 async function main() {
   console.log('🌱 Starting database seeding...')
 
