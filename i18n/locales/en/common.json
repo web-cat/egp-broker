@@ -428,8 +428,51 @@
         "title": "Statistics",
         "totalPosts": "Total articles"
       },
+      "list": {
+        "title": "My Courses",
+        "empty": "No active courses to list",
+        "select": "Select a Course",
+        "enrolledAs": "Enrolled as {role}"
+      },
       "subtitle": "Discover and manage your article collection",
-      "title": "My articles"
+      "title": "My articles",
+      "teacher": {
+        "title": "Teacher Dashboard: {course}",
+        "subtitle": "Manage assignments, extensions, and student progress.",
+        "stats": {
+          "activeAssignments": "Active Assignments",
+          "pendingRequests": "Pending Requests",
+          "enrolledStudents": "Enrolled Students"
+        },
+        "tools": {
+          "newAssignment": "New Assignment",
+          "manageStudents": "Manage Students",
+          "extensionPolicy": "Extension Policy",
+          "gradingLog": "Grading Log"
+        }
+      },
+      "notLoggedIn": {
+        "header": "Please Login Through Your LMS",
+        "title": "Welcome to EGP Broker",
+        "description": "To access your courses and assignments, please log in through your institution's Learning Management System (e.g., Canvas, Blackboard, or Moodle)."
+      },
+      "student": {
+        "title": "Student Dashboard: {course}",
+        "subtitle": "Track your assignments and token usage.",
+        "stats": {
+          "availableTokens": "Available Tokens",
+          "nextDeadline": "Next Deadline"
+        },
+        "assignments": {
+          "title": "My Assignments",
+          "empty": "No assignments assigned yet."
+        }
+      }
+    },
+    "admin": {
+      "link": "Go to Admin Dashboard",
+      "title": "Site Administration",
+      "subtitle": "Manage global platforms, deployments, and users."
     },
     "hero": {
       "feature": "Managing free passes for resubmitting work",

@@ -84,6 +84,12 @@ async function main() {
   console.log('🌱 Starting database seeding...')
 
   // Clean up existing data
+  await prisma.assignment.deleteMany()
+  await prisma.enrollment.deleteMany()
+  await prisma.course.deleteMany()
+  await prisma.ltiIdentity.deleteMany()
+  await prisma.ltiDeployment.deleteMany()
+  await prisma.ltiPlatform.deleteMany()
   await prisma.post.deleteMany()
   await prisma.user.deleteMany()
   console.log('✅ Existing data deleted')
@@ -105,6 +111,75 @@ async function main() {
     createdUsers.push(user)
   }
   console.log(`✅ ${createdUsers.length} test users created`)
+
+  // Create LTI Platform and Deployment
+  const platform = await prisma.ltiPlatform.create({
+    data: {
+      issuer: 'https://canvas.instructure.com',
+      clientId: 'broker-client-id',
+      authEndpoint: 'https://canvas.instructure.com/api/lti/authorize_redirect',
+      tokenEndpoint: 'https://canvas.instructure.com/login/oauth2/token',
+      jwksEndpoint: 'https://canvas.instructure.com/api/lti/security/jwks',
+      name: 'Canvas Main'
+    }
+  })
+
+  const deployment = await prisma.ltiDeployment.create({
+    data: {
+      platformId: platform.id,
+      deploymentId: 'deployment-1'
+    }
+  })
+  console.log('✅ LTI platform and deployment created')
+
+  // Create Courses
+  const course1 = await prisma.course.create({
+    data: {
+      deploymentId: deployment.id,
+      ltiContextId: 'course-101',
+      label: 'CS 101',
+      title: 'Introduction to Computer Science',
+      workflowState: 'active'
+    }
+  })
+
+  const course2 = await prisma.course.create({
+    data: {
+      deploymentId: deployment.id,
+      ltiContextId: 'course-201',
+      label: 'CS 201',
+      title: 'Data Structures and Algorithms',
+      workflowState: 'active'
+    }
+  })
+  console.log('✅ 2 courses created')
+
+  // Enrollments
+  // Admin (index 0) as TEACHER in both
+  // Demo (index 1) as STUDENT in both
+  const admin = createdUsers[0]
+  const demo = createdUsers[1]
+
+  await prisma.enrollment.createMany({
+    data: [
+      { userId: admin.id, courseId: course1.id, role: 'TEACHER' },
+      { userId: admin.id, courseId: course2.id, role: 'TEACHER' },
+      { userId: demo.id, courseId: course1.id, role: 'STUDENT' },
+      { userId: demo.id, courseId: course2.id, role: 'STUDENT' }
+    ]
+  })
+  console.log('✅ Enrollments created (Admin as Teacher, Demo as Student)')
+
+  // Create Assignments
+  await prisma.assignment.createMany({
+    data: [
+      { courseId: course1.id, resourceLinkId: 'link-1', title: 'Hello World in Python' },
+      { courseId: course1.id, resourceLinkId: 'link-2', title: 'Variables and Loops' },
+      { courseId: course2.id, resourceLinkId: 'link-3', title: 'Implementing a Linked List' },
+      { courseId: course2.id, resourceLinkId: 'link-4', title: 'Recursive Binary Search' }
+    ]
+  })
+  console.log('✅ 4 assignments created (2 per course)')
 
   // Create posts and associate them with random users
   for (let i = 0; i < seedPosts.length; i++) {

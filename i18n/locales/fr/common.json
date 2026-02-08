@@ -428,13 +428,56 @@
         "title": "Statistiques",
         "totalPosts": "Total des articles"
       },
+      "list": {
+        "title": "Mes Cours",
+        "empty": "Aucun cours actif à afficher",
+        "select": "Choisir un cours",
+        "enrolledAs": "Inscrit en tant que {role}"
+      },
       "subtitle": "Découvrez et gérez votre collection d'articles",
-      "title": "Mes articles"
+      "title": "Mes articles",
+      "teacher": {
+        "title": "Tableau de Bord Enseignant : {course}",
+        "subtitle": "Gérez les devoirs, les extensions et les progrès des étudiants.",
+        "stats": {
+          "activeAssignments": "Devoirs Actifs",
+          "pendingRequests": "Demandes en Attente",
+          "enrolledStudents": "Étudiants Inscrits"
+        },
+        "tools": {
+          "newAssignment": "Nouveau Devoir",
+          "manageStudents": "Gérer les Étudiants",
+          "extensionPolicy": "Politique d'Extension",
+          "gradingLog": "Journal de Notation"
+        }
+      },
+      "notLoggedIn": {
+        "header": "Veuillez vous connecter via votre LMS",
+        "title": "Bienvenue sur EGP Broker",
+        "description": "Pour accéder à vos cours et devoirs, veuillez vous connecter via l'Espace Numérique de Travail de votre établissement (ex : Canvas, Blackboard ou Moodle)."
+      },
+      "student": {
+        "title": "Tableau de Bord Étudiant : {course}",
+        "subtitle": "Suivez vos devoirs et l'utilisation de vos jetons.",
+        "stats": {
+          "availableTokens": "Jetons Disponibles",
+          "nextDeadline": "Prochaine Échéance"
+        },
+        "assignments": {
+          "title": "Mes Devoirs",
+          "empty": "Aucun devoir n'est encore assigné."
+        }
+      }
+    },
+    "admin": {
+      "link": "Aller au Tableau de Bord Admin",
+      "title": "Administration du Site",
+      "subtitle": "Gérez les plateformes, les déploiements et les utilisateurs globaux."
     },
     "hero": {
-      "feature": "Interface moderne et intuitive",
-      "subtitle": "Un point de départ simple et efficace",
-      "title": "Nuxt Boilerplate"
+      "feature": "Gestion des passes gratuits pour la soumission de travaux",
+      "subtitle": "Transformer les pratiques de notation dans l'enseignement de l'informatique",
+      "title": "EGP Broker"
     }
   },
   "preferences": {

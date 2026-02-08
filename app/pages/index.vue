@@ -1,252 +1,184 @@
 <template>
   <UPage class="bg-primary-50/30 dark:bg-primary-950/30 min-h-screen">
-    <!-- Hero section -->
-    <UPageHero
-      :title="t('pages.hero.title')"
+    <!-- Header section -->
+    <UPageHeader
+      :title="displayTitle"
       :description="t('pages.hero.subtitle')"
-      :headline="t('pages.hero.feature')"
-      color="primary"
-      :links="heroLinks"
+      :headline="displayHeadline"
     />
 
-    <USeparator color="primary" />
+    <UPageBody>
+      <!-- Loading state -->
+      <div
+        v-if="status === 'pending'"
+        class="flex flex-col items-center justify-center py-24 space-y-4"
+      >
+        <UIcon name="i-lucide-loader-2" class="w-10 h-10 animate-spin text-primary-500" />
+        <p class="text-neutral-500 font-medium">{{ t('global.status.loading') }}</p>
+      </div>
 
-    <!-- Main content -->
-    <UContainer class="py-12">
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <!-- Sidebar -->
-        <div class="lg:col-span-1 space-y-6">
-          <!-- User preferences -->
-          <div
-            class="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-secondary-200/60 dark:border-secondary-700/60 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
-          >
-            <LayoutPreferencesControls />
-          </div>
-
-          <!-- Statistics -->
-          <UCard
-            class="bg-white dark:bg-neutral-900 shadow-sm border-primary-200/60 dark:border-primary-700/60 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
-          >
-            <template #header>
-              <div class="flex items-center gap-3">
-                <div
-                  class="p-2 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center"
-                >
-                  <UIcon
-                    name="i-lucide-bar-chart-3"
-                    class="w-5 h-5 text-primary-600 dark:text-primary-400"
-                  />
+      <!-- Dashboard dynamic rendering -->
+      <template v-else-if="enrollment && enrollment.data">
+        <DashboardTeacher
+          v-if="enrollment.data.role === 'TEACHER' || enrollment.data.role === 'TA'"
+          :course-title="enrollment.data.courseTitle"
+          :is-admin="enrollment.data.globalRole === 'ADMIN'"
+        />
+        <DashboardStudent
+          v-else-if="enrollment.data.role === 'STUDENT'"
+          :course-title="enrollment.data.courseTitle"
+          :is-admin="enrollment.data.globalRole === 'ADMIN'"
+        />
+        <!-- Fallback for users with No active course context -->
+        <div v-else class="max-w-4xl mx-auto py-12">
+          <div v-if="enrollment.data.globalRole === 'ADMIN'" class="mb-12">
+            <UCard class="bg-secondary-50/50 dark:bg-secondary-950/50 border-secondary-200">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-xl font-bold">{{ t('pages.admin.title') }}</h3>
+                  <p class="text-neutral-600">{{ t('pages.admin.subtitle') }}</p>
                 </div>
-                <h3 class="font-semibold text-neutral-900 dark:text-neutral-100">
-                  {{ t('pages.dashboard.stats.title') }}
-                </h3>
-              </div>
-            </template>
-
-            <div class="space-y-4">
-              <div
-                class="flex justify-between items-center p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-100 dark:border-neutral-700/50"
-              >
-                <div class="flex items-center gap-2">
-                  <UIcon
-                    name="i-lucide-file-text"
-                    class="w-4 h-4 text-neutral-500 dark:text-neutral-400"
-                  />
-                  <span class="text-sm font-medium text-neutral-700 dark:text-neutral-300">{{
-                    t('pages.dashboard.stats.totalPosts')
-                  }}</span>
-                </div>
-                <UBadge :label="posts?.length.toString()" color="primary" variant="soft" />
-              </div>
-              <div
-                class="flex justify-between items-center p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-100 dark:border-neutral-700/50"
-              >
-                <div class="flex items-center gap-2">
-                  <UIcon
-                    name="i-lucide-layout-grid"
-                    class="w-4 h-4 text-neutral-500 dark:text-neutral-400"
-                  />
-                  <span class="text-sm font-medium text-neutral-700 dark:text-neutral-300">{{
-                    t('preferences.displayMode.label')
-                  }}</span>
-                </div>
-                <UBadge
-                  :label="t(`preferences.displayMode.${postViewMode}`)"
+                <UButton
+                  to="/admin"
+                  icon="i-lucide-settings"
                   color="secondary"
-                  variant="soft"
+                  :label="t('pages.admin.link')"
                 />
               </div>
-            </div>
+            </UCard>
+          </div>
+
+          <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+            <UIcon name="i-lucide-graduation-cap" class="text-primary-500" />
+            {{ t('pages.dashboard.list.title') }}
+          </h2>
+
+          <!-- Course Grid -->
+          <div
+            v-if="courses && courses.data && courses.data.length > 0"
+            class="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            <UCard
+              v-for="course in courses.data"
+              :key="course.id"
+              class="hover:border-primary-500 transition-colors cursor-pointer group"
+              @click="selectCourse(course.courseId)"
+            >
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="font-bold text-lg group-hover:text-primary-600">
+                    {{ course.courseTitle || course.courseLabel }}
+                  </h3>
+                  <p class="text-sm text-neutral-500 mt-1">
+                    {{ t('pages.dashboard.list.enrolledAs', { role: course.role }) }}
+                  </p>
+                </div>
+                <UButton
+                  variant="ghost"
+                  color="primary"
+                  icon="i-lucide-chevron-right"
+                  :loading="selecting === course.courseId"
+                />
+              </div>
+            </UCard>
+          </div>
+
+          <!-- Empty Courses State -->
+          <UCard v-else class="text-center py-12">
+            <UIcon name="i-lucide-book-open-x" class="w-12 h-12 mx-auto mb-4 text-neutral-300" />
+            <p class="text-neutral-500 font-medium">{{ t('pages.dashboard.list.empty') }}</p>
           </UCard>
         </div>
+      </template>
 
-        <!-- Posts section -->
-        <div ref="postsRef" class="lg:col-span-3">
-          <!-- Posts header -->
-          <div
-            class="mb-8 p-6 bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-primary-200/60 dark:border-primary-700/60 transition-all duration-300 hover:shadow-md"
-          >
-            <div class="flex items-center gap-3 mb-4">
-              <div
-                class="p-2 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center"
-              >
-                <UIcon
-                  name="i-lucide-newspaper"
-                  class="w-5 h-5 text-primary-600 dark:text-primary-400"
-                />
-              </div>
-              <div>
-                <h2 class="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
-                  {{ t('pages.dashboard.title') }}
-                </h2>
-                <p class="text-neutral-600 dark:text-neutral-400 mt-1">
-                  {{ t('pages.dashboard.subtitle') }}
-                </p>
-              </div>
-            </div>
-            <!-- Stats inline -->
-            <div
-              class="flex items-center gap-4 pt-4 border-t border-neutral-100 dark:border-neutral-700/50"
-            >
-              <div class="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
-                <UIcon name="i-lucide-archive" class="w-4 h-4" />
-                <span
-                  >{{ posts?.length || 0 }} {{ posts?.length === 1 ? 'article' : 'articles' }}</span
-                >
-              </div>
-              <div class="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
-                <UIcon name="i-lucide-eye" class="w-4 h-4" />
-                <span>{{ t(`preferences.displayMode.${postViewMode}`) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Posts container -->
-          <div
-            class="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200/60 dark:border-neutral-700/60 overflow-hidden transition-all duration-300 hover:shadow-lg"
-          >
-            <!-- Posts grid/list with fixed height and scroll -->
-            <div v-if="posts && posts.length > 0" class="h-[400px] overflow-y-auto p-6">
-              <div
-                :class="[
-                  'gap-6',
-                  postViewMode === 'grid'
-                    ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
-                    : 'space-y-4'
-                ]"
-              >
-                <FeaturesPostCard
-                  v-for="post in posts"
-                  :key="post.id"
-                  :post="post"
-                  :display-mode="postDisplayMode"
-                  :view-mode="postViewMode"
-                  @refresh="refreshPosts"
-                />
-              </div>
-            </div>
-
-            <!-- Empty state -->
-            <div
-              v-else
-              class="h-[400px] text-center py-16 px-6 bg-neutral-50 dark:bg-neutral-800 rounded-lg m-6"
-            >
-              <div
-                class="inline-flex p-4 bg-primary-100 dark:bg-primary-900 rounded-full mb-6 shadow-sm transition-transform duration-300 hover:scale-105"
-              >
-                <UIcon
-                  name="i-lucide-file-plus"
-                  class="w-8 h-8 text-primary-600 dark:text-primary-400"
-                />
-              </div>
-              <h3 class="text-xl font-semibold mb-3 text-neutral-900 dark:text-neutral-100">
-                {{ t('pages.dashboard.empty.title') }}
-              </h3>
-              <p class="text-neutral-600 dark:text-neutral-400 mb-8 max-w-md mx-auto">
-                {{ t('pages.dashboard.empty.subtitle') }}
-              </p>
-              <UButton
-                :label="t('articles.form.create.title')"
-                icon="i-lucide-plus"
-                color="primary"
-                size="lg"
-                class="transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
-                @click="handleCreatePost"
-              />
-            </div>
-          </div>
-        </div>
+      <!-- Error/Not Logged In state -->
+      <div v-else class="max-w-2xl mx-auto py-24 text-center">
+        <UIcon name="i-lucide-shield-alert" class="w-16 h-16 mx-auto mb-6 text-primary-500/50" />
+        <h2 class="text-3xl font-bold mb-4">{{ t('pages.dashboard.notLoggedIn.title') }}</h2>
+        <p class="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed">
+          {{ t('pages.dashboard.notLoggedIn.description') }}
+        </p>
       </div>
-    </UContainer>
+    </UPageBody>
   </UPage>
 </template>
 
 <script lang="ts" setup>
-import { FeaturesPostCreateModal } from '#components'
-import type { ButtonProps } from '@nuxt/ui'
+import type { EnrollmentInfo } from '@@/server/api/me/enrollment.get'
+import type { SimpleEnrollment } from '@@/server/api/me/enrollments.get'
+import type { ApiResponse } from '@@/shared/types/api'
 
-// Composables and utilities
+// Composables
 const { t } = useI18n()
-const { postViewMode, postDisplayMode } = usePreferences()
-const { user } = useUserSession()
-const localePath = useLocalePath()
+const { loggedIn } = useUserSession()
 
-// SEO configuration
+// SEO
 useSeo('home')
 
-// Modal management with overlay
-const overlay = useOverlay()
-const createModal = overlay.create(FeaturesPostCreateModal)
-
-// Template refs
-const postsRef = ref<HTMLElement>()
-
 // Data fetching
-const { data: response, refresh: refreshPosts } =
-  await useFetch<ApiResponse<PostWithAuthor[]>>('/api/posts')
-const posts = computed(() => response.value?.data)
+const {
+  data: enrollment,
+  status,
+  refresh: refreshEnrollment
+} = await useAsyncData<ApiResponse<EnrollmentInfo>>(
+  'enrollment',
+  () => $fetch('/api/me/enrollment'),
+  {
+    immediate: loggedIn.value,
+    watch: [loggedIn]
+  }
+)
 
-// Navigation and actions
-const scrollToPosts = () => {
-  postsRef.value?.scrollIntoView({ behavior: 'smooth' })
+// Fetch all available courses ONLY if no course is currently active
+const { data: courses } = await useAsyncData<ApiResponse<SimpleEnrollment[]>>(
+  'courses',
+  () => $fetch('/api/me/enrollments'),
+  {
+    immediate: computed(() => loggedIn.value && !enrollment.value?.data?.role),
+    watch: [loggedIn, enrollment]
+  }
+)
+
+// Course selection
+const selecting = ref<string | null>(null)
+const selectCourse = async (courseId: string) => {
+  selecting.value = courseId
+  try {
+    await $fetch('/api/me/context', {
+      method: 'POST',
+      body: { courseId }
+    })
+    // Refresh the enrollment data to show the dashboard
+    await refreshEnrollment()
+  } catch (e) {
+    console.error('Failed to select course', e)
+  } finally {
+    selecting.value = null
+  }
 }
 
-const handleCreatePost = async () => {
-  if (!user.value) {
-    await navigateTo(localePath('/auth/login'))
-    return
+// Header Title and Headline
+const displayHeadline = computed(() => t('pages.hero.title'))
+const displayTitle = computed(() => {
+  if (!loggedIn.value) {
+    return t('pages.dashboard.notLoggedIn.header')
   }
-
-  const result = await createModal.open({
-    mode: 'create',
-    open: false
-  }).result
-
-  if (result?.success) {
-    refreshPosts()
+  if (enrollment.value?.data?.courseTitle) {
+    return enrollment.value.data.courseTitle
   }
-}
+  return t('pages.dashboard.list.title')
+})
 
-// Hero configuration
-const heroLinks: ButtonProps[] = [
-  {
-    label: t('articles.form.create.title'),
-    icon: 'i-lucide-plus',
-    color: 'primary',
-    class: 'cursor-pointer transition-transform duration-300 hover:scale-102',
-    onClick() {
-      handleCreatePost()
+useHead({
+  title: computed(() => {
+    const base = t('pages.hero.title')
+    if (!loggedIn.value) {
+      return `${base} | ${t('pages.dashboard.notLoggedIn.header')}`
     }
-  },
-  {
-    label: t('global.actions.viewPosts'),
-    icon: 'i-lucide-arrow-down',
-    color: 'secondary',
-    variant: 'outline',
-    class: 'cursor-pointer transition-transform duration-300 hover:scale-102',
-    onClick() {
-      scrollToPosts()
+    if (enrollment.value?.data?.courseTitle) {
+      return `${base} | ${enrollment.value.data.courseTitle}`
     }
-  }
-]
+    return base
+  })
+})
 </script>

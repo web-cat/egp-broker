@@ -101,9 +101,13 @@ Nuxt 4 is high-performance by default; don't break it with poor patterns.
 
 ## 📋 6. Developer Workflow
 
-1.  **Syncing Schema:** `docker compose exec app-dev pnpm prisma db push` or `docker compose exec app-dev pnpm prisma migrate dev`.
-2.  **Code Style:** ESLint runs via Husky hooks inside the container. You can also run it manually: `docker compose exec app-dev pnpm run lint`.
-3.  **Local Dev:** Always run `docker compose up`. Nuxt 4's file watcher is optimized for the `app/` directory mounted inside the container.
+> [!IMPORTANT]
+> **Schema Changes & Migrations**: Never use `db push` for permanent schema changes. Whenever a model is added or a field is modified, you **must** generate a Prisma migration:
+> `docker compose exec app-dev pnpm prisma migrate dev --name <description>`
+
+1.  **Syncing Schema**: Use migrations for development and production consistency.
+2.  **Code Style**: ESLint runs via Husky hooks inside the container. You can also run it manually: `docker compose exec app-dev pnpm run lint`.
+3.  **Local Dev**: Always run `docker compose up`. Nuxt 4's file watcher is optimized for the `app/` directory mounted inside the container.
 
 ---
 

@@ -35,17 +35,17 @@ services:
   # A web-based database management interface (accessible on port 8080).
   adminer:
     <<: *defaults
-    image: adminer:latest
+    image: shyim/adminerevo
     container_name: egp-adminer
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      ADMINER_DEFAULT_SERVER: postgres
-      ADMINER_DESIGN: dracula
+      ADMINER_DEFAULT_DRIVER: pgsql
+      ADMINER_DEFAULT_SERVER: postgres:5432
       ADMINER_DEFAULT_DB: ${POSTGRES_DB:-database}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-P@ssw0rd}
+      ADMINER_DEFAULT_USER: ${POSTGRES_USER:-postgres}
+      ADMINER_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD:-P@ssw0rd}
     ports:
       - 127.0.0.1:${ADMINER_PORT:-8080}:8080
 
