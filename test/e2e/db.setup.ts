@@ -4,7 +4,7 @@ import { promisify } from 'node:util'
 
 const execAsync = promisify(exec)
 const DB_URL =
-  process.env.TEST_DATABASE_URL || 'postgresql://postgres:P@ssw0rd@localhost:5432/test_database'
+  process.env.TEST_DATABASE_URL || 'postgresql://postgres:P@ssw0rd@postgres:5432/test_database'
 
 async function globalSetup() {
   console.log('🗄️  E2E Setup: Resetting test database...')

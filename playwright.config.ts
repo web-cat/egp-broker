@@ -17,10 +17,13 @@ export default defineConfig({
   reporter: isCI ? [['github'], ['html']] : 'html',
 
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://app-dev:3000',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure'
+    video: 'retain-on-failure',
+    connectOptions: process.env.PW_TEST_CONNECT_WS_ENDPOINT
+      ? { wsEndpoint: process.env.PW_TEST_CONNECT_WS_ENDPOINT }
+      : undefined
   },
 
   globalSetup: './test/e2e/db.setup.ts',
@@ -53,7 +56,7 @@ export default defineConfig({
     env: {
       NUXT_DATABASE_URL:
         process.env.TEST_DATABASE_URL ||
-        'postgresql://postgres:P@ssw0rd@localhost:5432/test_database',
+        'postgresql://postgres:P@ssw0rd@postgres:5432/test_database',
       CI: process.env.CI || 'true',
       NODE_ENV: 'test'
     },
