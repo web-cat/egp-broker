@@ -17,7 +17,9 @@ export default defineConfig({
   reporter: isCI ? [['github'], ['html']] : 'html',
 
   use: {
-    baseURL: 'http://app-dev:3000',
+    baseURL: process.env.PW_TEST_CONNECT_WS_ENDPOINT
+      ? 'http://app-dev:3000'
+      : 'http://localhost:3000',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

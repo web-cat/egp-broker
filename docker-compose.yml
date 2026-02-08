@@ -20,7 +20,7 @@ services:
     image: postgres:18-alpine
     container_name: egp-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-database}
+      POSTGRES_DB: ${POSTGRES_DB:-egpbroker}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-P@ssw0rd}
     ports:
@@ -57,6 +57,8 @@ services:
       target: development
     image: egp-broker-dev:${APP_VERSION:-latest}
     container_name: egp-broker-dev
+    environment:
+      PW_TEST_CONNECT_WS_ENDPOINT: ${PW_TEST_CONNECT_WS_ENDPOINT:-ws://playwright:3001/}
     volumes:
       - .:/app
       - /app/node_modules
