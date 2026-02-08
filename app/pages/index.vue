@@ -139,6 +139,8 @@ const { data: courses } = await useAsyncData<ApiResponse<SimpleEnrollment[]>>(
   }
 )
 
+const toast = useToast()
+
 // Course selection
 const selecting = ref<string | null>(null)
 const selectCourse = async (courseId: string) => {
@@ -151,7 +153,11 @@ const selectCourse = async (courseId: string) => {
     // Refresh the enrollment data to show the dashboard
     await refreshEnrollment()
   } catch (e) {
-    console.error('Failed to select course', e)
+    toast.add({
+      title: t('global.status.error'),
+      description: e instanceof Error ? e.message : String(e),
+      color: 'red'
+    })
   } finally {
     selecting.value = null
   }
