@@ -43,17 +43,17 @@ export default defineEventHandler(async (event): Promise<ApiResponse<{ success: 
   }
 
   // Update session with the selected course context
-  // We mimic the LTI structure so that index.vue doesn't need to distinguish
+  // Update user with the selected course context in the database
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { currentCourseId: enrollment.course.id }
+  })
+
+  // Update the session with the new currentCourseId so the client knows
   await setUserSession(event, {
-    ...session,
-    lti: {
-      ...session.lti,
-      deploymentId: enrollment.course.deploymentId,
-      context: {
-        id: enrollment.course.ltiContextId,
-        title: enrollment.course.title || undefined,
-        label: enrollment.course.label || undefined
-      }
+    user: {
+      ...session.user,
+      currentCourseId: enrollment.course.id
     }
   })
 

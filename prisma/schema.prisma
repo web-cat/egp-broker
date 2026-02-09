@@ -51,6 +51,10 @@ model User {
   tokens        Token[]
   ltiIdentities LtiIdentity[]
   enrollments   Enrollment[]
+  
+  // Current context
+  currentCourseId String?
+  currentCourse   Course? @relation("UserCurrentCourse", fields: [currentCourseId], references: [id], onDelete: SetNull)
 
   // Essential index only
   @@index([emailVerified])
@@ -167,6 +171,7 @@ model Course {
   deployment     LtiDeployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
   enrollments    Enrollment[]
   assignments    Assignment[]
+  usersWithCurrent User[] @relation("UserCurrentCourse")
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

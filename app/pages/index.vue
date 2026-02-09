@@ -163,7 +163,7 @@ const {
   refresh: refreshEnrollment
 } = await useFetch<ApiResponse<SimpleEnrollment>>('/api/me/enrollment', {
   immediate: loggedIn.value,
-  watch: [loggedIn]
+  watch: [loggedIn, user]
 })
 
 // Helper to check for unauthorized errors (handles both .status and .statusCode)
@@ -194,8 +194,6 @@ const {
   watch: [loggedIn, enrollment]
 })
 
-const toast = useToast()
-
 // Course selection
 const selecting = ref<string | null>(null)
 const selectCourse = async (courseId: string) => {
@@ -208,11 +206,7 @@ const selectCourse = async (courseId: string) => {
     // Refresh the enrollment data to show the dashboard
     await refreshEnrollment()
   } catch (e) {
-    toast.add({
-      title: t('global.status.error'),
-      description: e instanceof Error ? e.message : String(e),
-      color: 'red'
-    })
+    console.error('Failed to select course:', e)
   } finally {
     selecting.value = null
   }

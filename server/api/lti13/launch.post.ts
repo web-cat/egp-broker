@@ -193,6 +193,11 @@ export default defineEventHandler(async (event: H3Event) => {
             }
           })
         }
+        // 5. Update user's current course context
+        user = await tx.user.update({
+          where: { id: user.id },
+          data: { currentCourseId: course.id }
+        })
       }
 
       return user
@@ -205,7 +210,8 @@ export default defineEventHandler(async (event: H3Event) => {
         email: ltiUser.email,
         firstName: ltiUser.firstName,
         lastName: ltiUser.lastName,
-        avatarUrl: ltiUser.avatarUrl
+        avatarUrl: ltiUser.avatarUrl,
+        currentCourseId: ltiUser.currentCourseId
       },
       // Pass along LTI context if needed
       lti: {

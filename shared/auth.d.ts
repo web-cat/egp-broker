@@ -1,11 +1,31 @@
 // auth.d.ts
 declare module '#auth-utils' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  interface User extends PublicUser {}
+  interface User extends PublicUser {
+    currentCourseId?: string | null
+  }
+
+  interface LtiContext {
+    platformId?: string
+    issuer?: string
+    deploymentId?: string
+    state?: string
+    nonce?: string
+    targetLinkUri?: string
+    context?: {
+      id: string
+      title?: string
+      label?: string
+    }
+    resourceLink?: {
+      id: string
+      title?: string
+    }
+  }
 
   interface UserSession {
     user: User
     loggedInAt: Date
+    lti?: LtiContext
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type

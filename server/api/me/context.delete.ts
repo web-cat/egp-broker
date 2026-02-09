@@ -1,4 +1,5 @@
 import { defineEventHandler } from 'h3'
+import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<{ success: boolean }>> => {
@@ -11,11 +12,30 @@ export default defineEventHandler(async (event): Promise<ApiResponse<{ success: 
     })
   }
 
-  // Clear lti context from the session
-  await setUserSession(event, {
-    ...session,
-    lti: undefined
+  // Clear current course context from the user record in database
+  const updatedUser = await prisma.user.update({
+    where: { id: session.user.id },
+    data: { currentCourseId: null }
   })
+
+  //  console.log('[context.delete] updatedUser = ', updatedUser)
+
+  // Update session to reflect the change
+  // Explicitly remove currentCourseId from the old user object before constructing the new one
+  // to ensure we don't have duplicate keys and the null value takes precedence
+  const { user: _oldUser, ...sessionWithoutUser } = session
+
+  // const newSession =
+  await replaceUserSession(event, {
+    user: updatedUser,
+    ...sessionWithoutUser
+    // user: {
+    //   ...userWithoutCourse,
+    //   currentCourseId: null
+    // }
+  })
+
+  // console.log('[context.delete] newSession = ', newSession)
 
   return {
     statusCode: 200,

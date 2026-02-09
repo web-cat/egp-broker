@@ -27,7 +27,7 @@
         </UButton>
 
         <UButton
-          v-if="loggedIn && hasContext"
+          v-if="loggedIn"
           variant="ghost"
           color="neutral"
           icon="i-lucide-library"
@@ -71,28 +71,22 @@
 <script lang="ts" setup>
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-const { loggedIn, user, clear, session, fetch } = useUserSession()
+const { loggedIn, user, clear, fetch: refreshSession } = useUserSession()
 const { locale, locales, t } = useI18n()
 const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
 const { success } = useNotifications()
 
-const toast = useToast()
-
-const hasContext = computed(() => !!session.value?.lti?.context?.id)
+// const hasContext = computed(() => !!user.value?.currentCourseId)
 
 const handleChangeCourse = async () => {
   try {
     await $fetch('/api/me/context', { method: 'DELETE' })
-    await fetch()
-    await navigateTo(localePath('/'))
+    // Hard refresh to ensure all client state is properly reset
+    await refreshSession()
+    await navigateTo('/')
   } catch (e) {
-    //    console.error('Failed to clear context:', e)
-    toast.add({
-      title: t('global.status.error'),
-      description: e instanceof Error ? e.message : String(e),
-      color: 'red'
-    })
+    console.error('Failed to clear context:', e)
   }
 }
 

@@ -14,9 +14,31 @@ export default defineEventHandler(async (event): Promise<ApiResponse<SimpleEnrol
     })
   }
 
-  let enrollment: Enrollment
+  let enrollment: Enrollment | null = null
 
-  if (session.lti?.context?.id && session.lti?.deploymentId) {
+  // Check if user has a selected course context in DB
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { currentCourseId: true }
+  })
+
+  // 1. Try DB context first
+  if (user?.currentCourseId) {
+    enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId: session.user.id,
+          courseId: user.currentCourseId
+        }
+      },
+      include: {
+        course: true
+      }
+    })
+  }
+
+  // 2. Fallback to LTI session context if no DB context
+  if (!enrollment && session.lti?.context?.id && session.lti?.deploymentId) {
     // Find course in this deployment
     const course = await prisma.course.findUnique({
       where: {

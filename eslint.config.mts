@@ -3,7 +3,7 @@ import withNuxt from './.nuxt/eslint.config.mjs'
 export default withNuxt({
   rules: {
     // Basic rules (Prettier handles most formatting)
-    'no-console': 'warn',
+    // 'no-console': 'warn',
     quotes: ['error', 'single'],
     semi: ['error', 'never'],
 
