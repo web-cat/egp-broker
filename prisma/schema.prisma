@@ -13,11 +13,6 @@ datasource db {
   extensions = [uuid_ossp(map: "uuid-ossp")]
 }
 
-enum TokenType {
-  EMAIL_VERIFICATION
-  PASSWORD_RESET
-}
-
 enum GlobalRole {
   ADMIN
   INSTRUCTOR
@@ -34,8 +29,8 @@ enum CourseRole {
 }
 
 model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
+  id              String     @id @default(uuid())
+  email           String     @unique
   password        String?
   firstName       String
   lastName        String
@@ -43,15 +38,15 @@ model User {
   emailVerified   Boolean    @default(false)
   emailVerifiedAt DateTime?
   avatarUrl       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   // Relations
   posts         Post[]
-  tokens        Token[]
   ltiIdentities LtiIdentity[]
   enrollments   Enrollment[]
-  
+  tokenPools    StudentTokenPool[]
+
   // Current context
   currentCourseId String?
   currentCourse   Course? @relation("UserCurrentCourse", fields: [currentCourseId], references: [id], onDelete: SetNull)
@@ -84,15 +79,17 @@ model LtiDeployment {
   platform   LtiPlatform   @relation(fields: [platformId], references: [id], onDelete: Cascade)
   identities LtiIdentity[]
   courses    Course[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 
   @@unique([platformId, deploymentId])
 }
 
 model LtiIdentity {
-  id           String @id @default(uuid())
-  userId       String
-  platformId   String
-  ltiSub       String // sub claim (unique user id in the platform)
+  id             String  @id @default(uuid())
+  userId         String
+  platformId     String
+  ltiSub         String // sub claim (unique user id in the platform)
   platformUserId String? // Optional platform-specific numeric ID (e.g. from Canvas legacy_user_id claim)
   platformApiKey String? // Optional API key for this user on the platform
 
@@ -108,35 +105,19 @@ model LtiIdentity {
 }
 
 model LoginAttempt {
-  id             String    @id @default(uuid())
-  email          String
-  ipAddress      String
-  attemptCount   Int       @default(1)
-  blockedUntil   DateTime?
-  lastAttemptAt  DateTime  @default(now())
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String    @id @default(uuid())
+  email         String
+  ipAddress     String
+  attemptCount  Int       @default(1)
+  blockedUntil  DateTime?
+  lastAttemptAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@unique([email, ipAddress])
   @@index([email])
   @@index([ipAddress])
   @@index([lastAttemptAt])
-}
-
-model Token {
-  id        String    @id @default(uuid())
-  userId    String
-  type      TokenType
-  token     String    @unique
-  expiresAt DateTime
-  createdAt DateTime  @default(now())
-
-  // Relations
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([expiresAt])
-  @@index([userId, type])
 }
 
 model Post {
@@ -148,7 +129,7 @@ model Post {
   updatedAt DateTime @updatedAt
 
   // Relations
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   // Essential indexes only
   @@index([createdAt])
@@ -156,58 +137,184 @@ model Post {
 }
 
 model Course {
-  id             String   @id @default(uuid())
+  id           String  @id @default(uuid())
   // LTI context claim fields
-  ltiContextId   String   // context.id from LTI claim
-  label          String?  // context.label (course code, e.g., "CPS 435")
-  title          String?  // context.title
+  ltiContextId String // context.id from LTI claim
+  label        String? // context.label (course code, e.g., "CPS 435")
+  title        String? // context.title
 
   // Canvas-specific custom variables (optional, set via LTI config)
-  canvasCourseId String?  // $Canvas.course.id
-  workflowState  String?  // $Canvas.course.workflowState
+  canvasCourseId String? // $Canvas.course.id
+  workflowState  String? // $Canvas.course.workflowState
 
   // Relationships
-  deploymentId   String
-  deployment     LtiDeployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
-  enrollments    Enrollment[]
-  assignments    Assignment[]
-  usersWithCurrent User[] @relation("UserCurrentCourse")
+  deploymentId     String?
+  deployment       LtiDeployment? @relation(fields: [deploymentId], references: [id], onDelete: SetNull)
+  enrollments      Enrollment[]
+  assignments      Assignment[]
+  tokenTypes       TokenType[]
+  usersWithCurrent User[]         @relation("UserCurrentCourse")
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([deploymentId, ltiContextId])
 }
 
 model Enrollment {
-  id        String     @id @default(uuid())
-  userId    String
-  courseId  String
-  role      CourseRole
+  id       String     @id @default(uuid())
+  userId   String
+  courseId String
+  role     CourseRole
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, courseId])
 }
 
 model Assignment {
-  id             String   @id @default(uuid())
-  resourceLinkId String   // resource_link.id from LTI claim
-  title          String?  // resource_link.title
-  
+  id             String  @id @default(uuid())
+  resourceLinkId String // resource_link.id from LTI claim
+  title          String? // resource_link.title
+
   // Canvas-specific custom variables
   canvasAssignmentId String? // $Canvas.assignment.id
-  
+
   // Relationships
-  courseId       String
-  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Resubmission token relations
+  tokenEligibilities TokenEligibility[]
+  tokenRedemptions   TokenRedemption[]
+
+  availableFrom DateTime?
+  dueDate       DateTime?
+  acceptUntil   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([courseId, resourceLinkId])
+}
+
+// ─────────────────────────────────────────────────────────
+// Resubmission Token Models
+// ─────────────────────────────────────────────────────────
+
+/// Teacher-defined token template, scoped to a single course.
+model TokenType {
+  id       String @id @default(uuid())
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  name        String // e.g. "Quiz Retry Pass", "Late Day"
+  description String? // Optional teacher-facing note
+
+  // Policy
+  extensionOnly  Boolean @default(false)
+  initialBalance Int     @default(3) // Tokens each student starts with
+  allowRequests  Boolean @default(false) // Can a student request more?
+  hoursPerToken  Float   @default(24) // Hours of extension each token buys
+
+  /// Max days in the past an assignment's due date can be
+  /// for this token to apply (null = no limit).
+  minDaysPastDue Int?
+  maxDaysPastDue Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  eligibilities TokenEligibility[]
+  prompts       TokenPrompt[]
+  pools         StudentTokenPool[]
+
+  @@index([courseId])
+}
+
+/// Defines which assignments a token type can be used on.
+/// No rows = usable on all assignments in the course (subject to maxDaysPastDue).
+model TokenEligibility {
+  id          String    @id @default(uuid())
+  tokenTypeId String
+  tokenType   TokenType @relation(fields: [tokenTypeId], references: [id], onDelete: Cascade)
+
+  // Option A: Direct assignment reference
+  assignmentId String?
+  assignment   Assignment? @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  // Option B: Pattern-based matching (SQL LIKE / ILIKE against Assignment.title)
+  titlePattern String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tokenTypeId])
+}
+
+/// Supplemental choices a student must make when redeeming a token.
+model TokenPrompt {
+  id          String    @id @default(uuid())
+  tokenTypeId String
+  tokenType   TokenType @relation(fields: [tokenTypeId], references: [id], onDelete: Cascade)
+
+  label       String // Prompt label shown to student
+  choicesJson Json // Array of allowed values
+
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tokenTypeId])
+}
+
+/// Per-student balance for each token type.
+model StudentTokenPool {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenTypeId String
+  tokenType   TokenType @relation(fields: [tokenTypeId], references: [id], onDelete: Cascade)
+
+  balance Int // Current remaining tokens
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  redemptions TokenRedemption[]
+
+  @@unique([userId, tokenTypeId])
+}
+
+/// Receipt created each time a student spends a token.
+model TokenRedemption {
+  id     String           @id @default(uuid())
+  poolId String
+  pool   StudentTokenPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  // What action was taken
+  tokensCost Int @default(1) // Number of tokens deducted
+
+  // New deadline window
+  availableFrom DateTime? // New "available from" time (nullable if unchanged)
+  dueDate       DateTime? // New "due at" time
+  acceptUntil   DateTime? // New "accept until" cutoff
+
+  /// JSON object mapping TokenPrompt.id → chosen value (null if no prompts).
+  promptResponsesJson Json?
+
+  // Audit
+  redeemedAt DateTime @default(now())
+
+  @@index([poolId])
+  @@index([assignmentId])
 }

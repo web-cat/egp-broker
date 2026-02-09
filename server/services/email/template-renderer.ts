@@ -18,7 +18,7 @@ async function loadTemplate(templateName: string): Promise<string> {
       return content as string
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
+     
     console.error(`Failed to load template ${templateName}:`, error)
   }
 
@@ -100,7 +100,7 @@ export async function renderEmailTemplate(
     // Render final email
     return baseTemplate(finalData)
   } catch (error) {
-    // eslint-disable-next-line no-console
+     
     console.error(
       'Email template rendering failed:',
       error instanceof Error ? error.message : String(error)

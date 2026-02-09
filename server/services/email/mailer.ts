@@ -54,7 +54,7 @@ export async function sendEmailTemplate(
 
     await transporter.sendMail(mailOptions)
   } catch (error: any) {
-    // eslint-disable-next-line no-console
+     
     console.error('Email send failed:', error.message)
 
     if (error.message === 'Email template rendering failed') {
