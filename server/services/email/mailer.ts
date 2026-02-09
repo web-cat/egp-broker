@@ -54,7 +54,6 @@ export async function sendEmailTemplate(
 
     await transporter.sendMail(mailOptions)
   } catch (error: any) {
-     
     console.error('Email send failed:', error.message)
 
     if (error.message === 'Email template rendering failed') {

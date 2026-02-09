@@ -2,9 +2,9 @@ import { vi } from 'vitest'
 import { ref, reactive } from 'vue'
 
 // Mock console.warn to suppress Vue warnings during tests
- 
+
 const originalWarn = console.warn
- 
+
 console.warn = (message: string, ...args: any[]) => {
   if (
     message.includes('injection "Symbol(nuxt-ui.') ||

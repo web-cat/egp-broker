@@ -99,7 +99,6 @@ export async function checkLoginAttempt(
       remainingAttempts: Math.max(0, remainingAttempts)
     }
   } catch (error: any) {
-     
     console.error('Rate limit check failed:', error)
     const { loginMaxAttempts } = getRateLimitConfig()
     return { isBlocked: false, remainingAttempts: loginMaxAttempts }
@@ -159,7 +158,6 @@ export async function recordLoginAttempt(
       })
     }
   } catch (error: any) {
-     
     console.error('Failed to record login attempt:', error)
   }
 }

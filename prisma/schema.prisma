@@ -13,6 +13,11 @@ datasource db {
   extensions = [uuid_ossp(map: "uuid-ossp")]
 }
 
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 enum GlobalRole {
   ADMIN
   INSTRUCTOR
@@ -43,9 +48,10 @@ model User {
 
   // Relations
   posts         Post[]
+  tokens        Token[]
   ltiIdentities LtiIdentity[]
   enrollments   Enrollment[]
-  tokenPools    StudentTokenPool[]
+  passPools     StudentPassPool[]
 
   // Current context
   currentCourseId String?
@@ -120,6 +126,22 @@ model LoginAttempt {
   @@index([lastAttemptAt])
 }
 
+model Token {
+  id        String    @id @default(uuid())
+  userId    String
+  type      TokenType
+  token     String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([expiresAt])
+  @@index([userId, type])
+}
+
 model Post {
   id        String   @id @default(uuid())
   title     String
@@ -152,7 +174,7 @@ model Course {
   deployment       LtiDeployment? @relation(fields: [deploymentId], references: [id], onDelete: SetNull)
   enrollments      Enrollment[]
   assignments      Assignment[]
-  tokenTypes       TokenType[]
+  passTypes        PassType[]
   usersWithCurrent User[]         @relation("UserCurrentCourse")
 
   createdAt DateTime @default(now())
@@ -188,9 +210,9 @@ model Assignment {
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  // Resubmission token relations
-  tokenEligibilities TokenEligibility[]
-  tokenRedemptions   TokenRedemption[]
+  // Resubmission pass relations
+  passEligibilities PassEligibility[]
+  passRedemptions   PassRedemption[]
 
   availableFrom DateTime?
   dueDate       DateTime?
@@ -203,11 +225,11 @@ model Assignment {
 }
 
 // ─────────────────────────────────────────────────────────
-// Resubmission Token Models
+// Resubmission Pass Models
 // ─────────────────────────────────────────────────────────
 
-/// Teacher-defined token template, scoped to a single course.
-model TokenType {
+/// Teacher-defined pass template, scoped to a single course.
+model PassType {
   id       String @id @default(uuid())
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -217,12 +239,12 @@ model TokenType {
 
   // Policy
   extensionOnly  Boolean @default(false)
-  initialBalance Int     @default(3) // Tokens each student starts with
+  initialBalance Int     @default(3) // Passes each student starts with
   allowRequests  Boolean @default(false) // Can a student request more?
-  hoursPerToken  Float   @default(24) // Hours of extension each token buys
+  hoursPerPass   Float   @default(24) // Hours of extension each pass buys
 
   /// Max days in the past an assignment's due date can be
-  /// for this token to apply (null = no limit).
+  /// for this pass to apply (null = no limit).
   minDaysPastDue Int?
   maxDaysPastDue Int?
 
@@ -230,19 +252,19 @@ model TokenType {
   updatedAt DateTime @updatedAt
 
   // Relations
-  eligibilities TokenEligibility[]
-  prompts       TokenPrompt[]
-  pools         StudentTokenPool[]
+  eligibilities PassEligibility[]
+  prompts       PassPrompt[]
+  pools         StudentPassPool[]
 
   @@index([courseId])
 }
 
-/// Defines which assignments a token type can be used on.
+/// Defines which assignments a pass type can be used on.
 /// No rows = usable on all assignments in the course (subject to maxDaysPastDue).
-model TokenEligibility {
+model PassEligibility {
   id          String    @id @default(uuid())
-  tokenTypeId String
-  tokenType   TokenType @relation(fields: [tokenTypeId], references: [id], onDelete: Cascade)
+  passTypeId String
+  passType   PassType @relation(fields: [passTypeId], references: [id], onDelete: Cascade)
 
   // Option A: Direct assignment reference
   assignmentId String?
@@ -254,14 +276,14 @@ model TokenEligibility {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([tokenTypeId])
+  @@index([passTypeId])
 }
 
-/// Supplemental choices a student must make when redeeming a token.
-model TokenPrompt {
+/// Supplemental choices a student must make when redeeming a pass.
+model PassPrompt {
   id          String    @id @default(uuid())
-  tokenTypeId String
-  tokenType   TokenType @relation(fields: [tokenTypeId], references: [id], onDelete: Cascade)
+  passTypeId String
+  passType   PassType @relation(fields: [passTypeId], references: [id], onDelete: Cascade)
 
   label       String // Prompt label shown to student
   choicesJson Json // Array of allowed values
@@ -270,46 +292,46 @@ model TokenPrompt {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([tokenTypeId])
+  @@index([passTypeId])
 }
 
-/// Per-student balance for each token type.
-model StudentTokenPool {
+/// Per-student balance for each pass type.
+model StudentPassPool {
   id          String    @id @default(uuid())
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenTypeId String
-  tokenType   TokenType @relation(fields: [tokenTypeId], references: [id], onDelete: Cascade)
+  passTypeId String
+  passType   PassType @relation(fields: [passTypeId], references: [id], onDelete: Cascade)
 
-  balance Int // Current remaining tokens
+  balance Int // Current remaining passes
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  redemptions TokenRedemption[]
+  redemptions PassRedemption[]
 
-  @@unique([userId, tokenTypeId])
+  @@unique([userId, passTypeId])
 }
 
-/// Receipt created each time a student spends a token.
-model TokenRedemption {
+/// Receipt created each time a student spends a pass.
+model PassRedemption {
   id     String           @id @default(uuid())
   poolId String
-  pool   StudentTokenPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  pool   StudentPassPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
 
   assignmentId String
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
   // What action was taken
-  tokensCost Int @default(1) // Number of tokens deducted
+  cost Int @default(1) // Number of passes deducted
 
   // New deadline window
   availableFrom DateTime? // New "available from" time (nullable if unchanged)
   dueDate       DateTime? // New "due at" time
   acceptUntil   DateTime? // New "accept until" cutoff
 
-  /// JSON object mapping TokenPrompt.id → chosen value (null if no prompts).
+  /// JSON object mapping PassPrompt.id → chosen value (null if no prompts).
   promptResponsesJson Json?
 
   // Audit

@@ -60,14 +60,14 @@ class Logger {
     // In development: pretty print
     if (this.isDevelopment) {
       const prefix = this.getColoredPrefix(level)
-       
+
       console[level === 'info' || level === 'debug' ? 'log' : level](
         `${prefix} ${message}`,
         context ? context : ''
       )
     } else {
       // In production: JSON format for log aggregation services
-       
+
       console[level === 'info' || level === 'debug' ? 'log' : level](JSON.stringify(logEntry))
     }
   }

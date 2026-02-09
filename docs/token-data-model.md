@@ -1,5 +1,7 @@
 # Resubmission Token Data Model
 
+***Note**: The current data model uses "Pass" (without a PassType enum) for the naming instead of "Token" (clashes with the existing table used for email verification and password reset tokens) or "ResubToken" (as shown below). This info describes the basic modeling strategy in decent detail, however, and is still useful for understanding the basic model entities and relationships.*
+
 This document describes the Prisma schema additions required to support resubmission tokens (a.k.a. "free passes" / "timebank days").
 
 ---
@@ -8,13 +10,13 @@ This document describes the Prisma schema additions required to support resubmis
 
 The model is composed of five new tables:
 
-| Model | Purpose |
-|---|---|
-| **TokenType** | Teacher-defined template: name, policy rules, initial balance |
-| **TokenTypeEligibility** | Which assignments (or assignment patterns) a token type may be used on |
-| **TokenTypePrompt** | Supplemental choices a student must make when redeeming (e.g., date/time slots) |
-| **StudentTokenPool** | Per-student balance for each token type in a course |
-| **TokenRedemption** | Receipt recording each use of a token |
+| Model                          | Purpose                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------- |
+| **TokenType**            | Teacher-defined template: name, policy rules, initial balance                   |
+| **TokenTypeEligibility** | Which assignments (or assignment patterns) a token type may be used on          |
+| **TokenTypePrompt**      | Supplemental choices a student must make when redeeming (e.g., date/time slots) |
+| **StudentTokenPool**     | Per-student balance for each token type in a course                             |
+| **TokenRedemption**      | Receipt recording each use of a token                                           |
 
 ```mermaid
 erDiagram
@@ -83,16 +85,16 @@ model ResubTokenType {
 
 **Design notes**
 
-* `initialBalance` is the number of tokens every student receives by default when their pool is provisioned.
-* `allowRequests` governs whether the UI should surface a "Request additional token" action.
-* `hoursPerToken` defines how much extension time one token buys. Application logic divides the requested extension by this value (rounding up) to compute the cost. For example, with `hoursPerToken = 24`, a student redeeming on day 2 past the deadline pays ⌈48 / 24⌉ = **2 tokens**.
-* `maxDaysPastDue` provides a simple temporal guard without requiring per-assignment rows in the eligibility table.
+- `initialBalance` is the number of tokens every student receives by default when their pool is provisioned.
+- `allowRequests` governs whether the UI should surface a "Request additional token" action.
+- `hoursPerToken` defines how much extension time one token buys. Application logic divides the requested extension by this value (rounding up) to compute the cost. For example, with `hoursPerToken = 24`, a student redeeming on day 2 past the deadline pays ⌈48 / 24⌉ = **2 tokens**.
+- `maxDaysPastDue` provides a simple temporal guard without requiring per-assignment rows in the eligibility table.
 
 ---
 
 ### `ResubTokenEligibility`
 
-Defines *which* assignments a token type can be used on. A token type with **no eligibility rows** is usable on *all* assignments in the course (subject to `maxDaysPastDue`). Adding rows restricts usage to only those matching assignments.
+Defines _which_ assignments a token type can be used on. A token type with **no eligibility rows** is usable on _all_ assignments in the course (subject to `maxDaysPastDue`). Adding rows restricts usage to only those matching assignments.
 
 ```prisma
 model ResubTokenEligibility {
@@ -116,7 +118,7 @@ model ResubTokenEligibility {
 
 **How eligibility is evaluated (application logic)**
 
-1. If zero `ResubTokenEligibility` rows exist → the token type applies to *every* assignment.
+1. If zero `ResubTokenEligibility` rows exist → the token type applies to _every_ assignment.
 2. Otherwise, an assignment is eligible if **any** eligibility row matches:
    - `assignmentId` equals the assignment's id, **OR**
    - `titlePattern` matches the assignment's title (case-insensitive LIKE).
@@ -146,9 +148,9 @@ model ResubTokenPrompt {
 
 **Design notes**
 
-* `choicesJson` is a `Json` column holding an array of strings. This keeps the schema simple while supporting arbitrarily typed options.
-* Multiple prompts can exist per token type (e.g., pick a date *and* pick a room), ordered by `sortOrder`.
-* The student's chosen values are stored in `TokenRedemption.promptResponsesJson`.
+- `choicesJson` is a `Json` column holding an array of strings. This keeps the schema simple while supporting arbitrarily typed options.
+- Multiple prompts can exist per token type (e.g., pick a date _and_ pick a room), ordered by `sortOrder`.
+- The student's chosen values are stored in `TokenRedemption.promptResponsesJson`.
 
 ---
 
@@ -245,30 +247,33 @@ The new models reference `Course`, `User`, and `Assignment`. The following back-
 
 ## Index & Constraint Summary
 
-| Table | Indexes / Constraints |
-|---|---|
-| `ResubTokenType` | `@@index([courseId])` |
-| `ResubTokenEligibility` | `@@index([tokenTypeId])` |
-| `ResubTokenPrompt` | `@@index([tokenTypeId])` |
-| `StudentTokenPool` | `@@unique([userId, tokenTypeId])` |
-| `TokenRedemption` | `@@index([poolId])`, `@@index([assignmentId])` |
+| Table                     | Indexes / Constraints                              |
+| ------------------------- | -------------------------------------------------- |
+| `ResubTokenType`        | `@@index([courseId])`                            |
+| `ResubTokenEligibility` | `@@index([tokenTypeId])`                         |
+| `ResubTokenPrompt`      | `@@index([tokenTypeId])`                         |
+| `StudentTokenPool`      | `@@unique([userId, tokenTypeId])`                |
+| `TokenRedemption`       | `@@index([poolId])`, `@@index([assignmentId])` |
 
 ---
 
 ## Example Scenarios
 
 ### 1. "Late Day" token (extend deadline, variable cost)
+
 - **ResubTokenType**: `usage = EXTEND`, `initialBalance = 5`, `hoursPerToken = 24`, `allowRequests = false`, no eligibility rows, `maxDaysPastDue = null`.
 - **StudentTokenPool**: Each student gets a pool with `balance = 5`.
 - **Redemption on day 1**: `tokensCost = 1`, `dueAt` shifted by +24 h.
 - **Redemption on day 2**: `tokensCost = 2`, `dueAt` shifted by +48 h. Student's remaining balance drops by 2.
 
 ### 2. "Quiz Retry Pass" (reopen specific quizzes with date selection)
+
 - **ResubTokenType**: `usage = REOPEN`, `initialBalance = 1`, `allowRequests = true`, `maxDaysPastDue = 14`.
 - **ResubTokenEligibility**: One row per quiz assignment, or a single row with `titlePattern = 'Quiz%'`.
 - **ResubTokenPrompt**: `label = "Choose a make-up date"`, `choicesJson = ["2026-02-15T10:00", "2026-02-17T14:00"]`.
 - **TokenRedemption**: Records the chosen make-up date in `promptResponsesJson`, plus new `availableFrom` / `dueAt` / `acceptUntil`.
 
 ### 3. "Free Pass" (extend or reopen recent assignments)
+
 - **ResubTokenType**: `usage = BOTH`, `initialBalance = 2`, `allowRequests = false`, no eligibility rows, `maxDaysPastDue = 7`.
 - **TokenRedemption**: `usage` is set to whichever action the student selected at redemption time.
