@@ -1,6 +1,6 @@
 # Resubmission Token Data Model
 
-***Note**: The current data model uses "Pass" (without a PassType enum) for the naming instead of "Token" (clashes with the existing table used for email verification and password reset tokens) or "ResubToken" (as shown below). This info describes the basic modeling strategy in decent detail, however, and is still useful for understanding the basic model entities and relationships.*
+**\*Note**: The current data model uses "Pass" (without a PassType enum) for the naming instead of "Token" (clashes with the existing table used for email verification and password reset tokens) or "ResubToken" (as shown below). This info describes the basic modeling strategy in decent detail, however, and is still useful for understanding the basic model entities and relationships.\*
 
 This document describes the Prisma schema additions required to support resubmission tokens (a.k.a. "free passes" / "timebank days").
 
@@ -10,8 +10,8 @@ This document describes the Prisma schema additions required to support resubmis
 
 The model is composed of five new tables:
 
-| Model                          | Purpose                                                                         |
-| ------------------------------ | ------------------------------------------------------------------------------- |
+| Model                    | Purpose                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------- |
 | **TokenType**            | Teacher-defined template: name, policy rules, initial balance                   |
 | **TokenTypeEligibility** | Which assignments (or assignment patterns) a token type may be used on          |
 | **TokenTypePrompt**      | Supplemental choices a student must make when redeeming (e.g., date/time slots) |
@@ -247,12 +247,12 @@ The new models reference `Course`, `User`, and `Assignment`. The following back-
 
 ## Index & Constraint Summary
 
-| Table                     | Indexes / Constraints                              |
-| ------------------------- | -------------------------------------------------- |
-| `ResubTokenType`        | `@@index([courseId])`                            |
-| `ResubTokenEligibility` | `@@index([tokenTypeId])`                         |
-| `ResubTokenPrompt`      | `@@index([tokenTypeId])`                         |
-| `StudentTokenPool`      | `@@unique([userId, tokenTypeId])`                |
+| Table                   | Indexes / Constraints                          |
+| ----------------------- | ---------------------------------------------- |
+| `ResubTokenType`        | `@@index([courseId])`                          |
+| `ResubTokenEligibility` | `@@index([tokenTypeId])`                       |
+| `ResubTokenPrompt`      | `@@index([tokenTypeId])`                       |
+| `StudentTokenPool`      | `@@unique([userId, tokenTypeId])`              |
 | `TokenRedemption`       | `@@index([poolId])`, `@@index([assignmentId])` |
 
 ---
