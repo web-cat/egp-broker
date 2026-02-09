@@ -23,14 +23,6 @@
               </p>
             </div>
           </div>
-          <UButton
-            v-if="isAdmin"
-            to="/admin"
-            icon="i-lucide-settings"
-            color="secondary"
-            variant="outline"
-            :label="t('pages.admin.link')"
-          />
         </div>
       </template>
 

@@ -158,6 +158,7 @@
         "error": {
           "emailNotVerified": "Your email is not verified. Check your inbox or request a new link.",
           "invalidCredentials": "Invalid email or password",
+          "sessionExpired": "Your session has expired. Please log in again.",
           "title": "Login error"
         },
         "rateLimit": {
@@ -397,6 +398,7 @@
     "actions": {
       "back": "Back",
       "cancel": "Cancel",
+      "changeCourse": "Change Course",
       "continueNow": "Continue now",
       "delete": "Delete",
       "edit": "Edit",
@@ -407,13 +409,19 @@
       "viewPosts": "View articles"
     },
     "app": {
-      "description": "A simple and efficient starting point",
-      "footer": "Created by William Fontaine",
-      "name": "Nuxt Boilerplate"
+      "description": "Transforming grading practices in CS education",
+      "footer": "(c) 2026 Virginia Tech, All rights reserved.",
+      "name": "EGP Broker"
+    },
+    "empty": {
+      "noActivity": "No recent activity found",
+      "noCourses": "You are not enrolled in any courses yet",
+      "noEnrollments": "No enrollments found"
     },
     "status": {
       "error": "Error",
       "loading": "Loading...",
+      "loadingFailed": "An error occurred while loading data",
       "success": "Successful",
       "warning": "Warning"
     }

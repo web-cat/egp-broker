@@ -158,6 +158,7 @@
         "error": {
           "emailNotVerified": "Votre email n'est pas vérifié. Vérifiez votre boîte de réception ou demandez un nouveau lien.",
           "invalidCredentials": "Email ou mot de passe incorrect",
+          "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
           "title": "Erreur de connexion"
         },
         "rateLimit": {
@@ -397,6 +398,7 @@
     "actions": {
       "back": "Retour",
       "cancel": "Annuler",
+      "changeCourse": "Changer de cours",
       "continueNow": "Continuer maintenant",
       "delete": "Supprimer",
       "edit": "Modifier",
@@ -407,13 +409,19 @@
       "viewPosts": "Voir les articles"
     },
     "app": {
-      "description": "Un point de départ simple et efficace",
-      "footer": "Créé par William Fontaine",
-      "name": "Nuxt Boilerplate"
+      "description": "Transformer les pratiques d'évaluation dans l'enseignement de l'informatique",
+      "footer": "(c) 2026 Virginia Tech, Tous droits réservés.",
+      "name": "EGP Broker"
+    },
+    "empty": {
+      "noActivity": "Aucune activité récente trouvée",
+      "noCourses": "Vous n'êtes inscrit à aucun cours pour le moment",
+      "noEnrollments": "Aucune inscription trouvée"
     },
     "status": {
       "error": "Erreur",
       "loading": "Chargement...",
+      "loadingFailed": "Une erreur est survenue lors du chargement des données",
       "success": "Réussi",
       "warning": "Avertissement"
     }

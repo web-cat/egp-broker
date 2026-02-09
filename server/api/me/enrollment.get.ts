@@ -1,15 +1,10 @@
 import { defineEventHandler } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
-import type { Enrollment, CourseRole } from '@prisma/client'
+import type { SimpleEnrollment, Enrollment } from '@@/shared/models/enrollment'
+import { toSimpleEnrollment } from '@@/shared/models/enrollment'
 
-export interface EnrollmentInfo {
-  role: CourseRole | null
-  courseTitle: string | null
-  globalRole: string
-}
-
-export default defineEventHandler(async (event): Promise<ApiResponse<EnrollmentInfo>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<SimpleEnrollment>> => {
   const session = await getUserSession(event)
 
   if (!session.user) {
@@ -19,18 +14,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<EnrollmentI
     })
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id }
-  })
-
-  if (!user) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'User not found'
-    })
-  }
-
-  let enrollment: (Enrollment & { course: { title: string | null } }) | null = null
+  let enrollment: Enrollment
 
   if (session.lti?.context?.id && session.lti?.deploymentId) {
     // Find course in this deployment
@@ -47,25 +31,26 @@ export default defineEventHandler(async (event): Promise<ApiResponse<EnrollmentI
       enrollment = await prisma.enrollment.findUnique({
         where: {
           userId_courseId: {
-            userId: user.id,
+            userId: session.user.id,
             courseId: course.id
           }
         },
         include: {
-          course: {
-            select: { title: true }
-          }
+          course: true
         }
       })
     }
   }
 
+  if (!enrollment) {
+    return {
+      statusCode: 200,
+      data: null
+    }
+  }
+
   return {
     statusCode: 200,
-    data: {
-      role: enrollment?.role || null,
-      courseTitle: enrollment?.course?.title || null,
-      globalRole: user.globalRole
-    }
+    data: toSimpleEnrollment(enrollment)
   }
 })

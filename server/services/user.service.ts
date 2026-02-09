@@ -1,4 +1,5 @@
 import prisma from '@@/lib/prisma'
+import { getGravatarUrl } from '@@/server/utils/gravatar'
 
 /**
  * User Service - Pure business logic without validation
@@ -27,7 +28,8 @@ export async function createUser(userData: RegisterData): Promise<PublicUser> {
         email: userData.email,
         password: hashedPassword,
         firstName: userData.firstName,
-        lastName: userData.lastName
+        lastName: userData.lastName,
+        avatarUrl: getGravatarUrl(userData.email)
       }
     })
 

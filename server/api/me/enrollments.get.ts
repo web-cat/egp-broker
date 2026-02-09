@@ -1,15 +1,8 @@
 import { defineEventHandler } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
-import type { CourseRole } from '@prisma/client'
-
-export interface SimpleEnrollment {
-  id: string
-  courseId: string
-  courseTitle: string | null
-  courseLabel: string | null
-  role: CourseRole
-}
+import type { Enrollment, SimpleEnrollment } from '@@/shared/models/enrollment'
+import { toSimpleEnrollment } from '@@/shared/models/enrollment'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<SimpleEnrollment[]>> => {
   const session = await getUserSession(event)
@@ -29,23 +22,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<SimpleEnrol
       }
     },
     include: {
-      course: {
-        select: {
-          id: true,
-          title: true,
-          label: true
-        }
-      }
+      course: true
     }
   })
 
-  const data: SimpleEnrollment[] = enrollments.map((e) => ({
-    id: e.id,
-    courseId: e.courseId,
-    courseTitle: e.course.title,
-    courseLabel: e.course.label,
-    role: e.role
-  }))
+  const data: SimpleEnrollment[] = enrollments.map((e: Enrollment) => toSimpleEnrollment(e))
 
   return {
     statusCode: 200,

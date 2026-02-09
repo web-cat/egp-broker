@@ -37,7 +37,8 @@
     "changelog": "pnpm exec git-cliff --output CHANGELOG.md",
     "release:patch": "pnpm version patch && git push --follow-tags",
     "release:minor": "pnpm version minor && git push --follow-tags",
-    "release:major": "pnpm version major && git push --follow-tags"
+    "release:major": "pnpm version major && git push --follow-tags",
+    "restart": "pkill -f /node_modules/"
   },
   "dependencies": {
     "@casl/ability": "^6.8.0",

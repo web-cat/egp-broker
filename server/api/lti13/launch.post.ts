@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import prisma from '@@/lib/prisma'
+import { getGravatarUrl } from '@@/server/utils/gravatar'
 
 export default defineEventHandler(async (event: H3Event) => {
   const body = await readBody(event)
@@ -102,7 +103,8 @@ export default defineEventHandler(async (event: H3Event) => {
               firstName,
               lastName,
               emailVerified: true,
-              emailVerifiedAt: new Date()
+              emailVerifiedAt: new Date(),
+              avatarUrl: getGravatarUrl(claims.email as string)
             }
           })
         }
@@ -202,7 +204,8 @@ export default defineEventHandler(async (event: H3Event) => {
         id: ltiUser.id,
         email: ltiUser.email,
         firstName: ltiUser.firstName,
-        lastName: ltiUser.lastName
+        lastName: ltiUser.lastName,
+        avatarUrl: ltiUser.avatarUrl
       },
       // Pass along LTI context if needed
       lti: {

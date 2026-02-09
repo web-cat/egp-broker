@@ -34,7 +34,7 @@ export default defineEventHandler(async (event: H3Event) => {
     { pathPrefix: '/api/posts', methods: ['GET'] }, // Allow /api/posts and subpaths
     { pathPrefix: '/api/docs', methods: ['GET'] }, // Allow /api/docs and subpaths
     { pathPrefix: '/api/lti13', methods: ['GET', 'POST'] }, // LTI endpoints
-    ...(process.dev ? [{ pathPrefix: '/api/dev', methods: ['POST'] }] : []) // Mock endpoints
+    ...(import.meta.dev ? [{ pathPrefix: '/api/dev', methods: ['POST'] }] : []) // Mock endpoints
   ]
 
   const isPublicRoute = publicRoutes.some((route) => {

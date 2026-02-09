@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -38,7 +39,7 @@ ENV PORT=3000
 
 # Run prepare steps and migrations at runtime to ensure the .nuxt directory,
 # Prisma client, and database schema are in sync with the mounted volume.
-CMD pnpm run postinstall && pnpm prisma migrate dev && pnpm run dev
+CMD pnpm run postinstall && pnpm prisma migrate dev && scripts/dev-run.sh
 
 
 # --- Build Stage ---

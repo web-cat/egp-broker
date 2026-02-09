@@ -11,12 +11,7 @@
       <template #right>
         <!-- User menu when logged in -->
         <UDropdownMenu v-if="loggedIn" :items="items">
-          <UAvatar
-            :alt="user?.name"
-            :src="'https://i.pravatar.cc/150?u=' + user?.email"
-            size="sm"
-            class="cursor-pointer"
-          />
+          <UAvatar :alt="user?.name" :src="avatarSrc" size="sm" class="cursor-pointer" />
         </UDropdownMenu>
 
         <!-- Login button when not logged in -->
@@ -31,15 +26,25 @@
           {{ t('auth.login.title') }}
         </UButton>
 
-        <UColorModeButton />
         <UButton
-          color="neutral"
+          v-if="loggedIn && hasContext"
           variant="ghost"
-          to="https://github.com/WilliamFontaine/nuxt-boilerplate"
-          target="_blank"
-          icon="i-simple-icons-github"
-          aria-label="GitHub"
+          color="neutral"
+          icon="i-lucide-library"
+          :title="t('global.actions.changeCourse')"
+          @click="handleChangeCourse"
         />
+
+        <UButton
+          v-if="user?.globalRole === 'ADMIN'"
+          variant="ghost"
+          color="neutral"
+          icon="i-lucide-wrench"
+          :to="localePath('/admin')"
+          :title="t('pages.admin.title')"
+        />
+
+        <UColorModeButton />
       </template>
     </UHeader>
 
@@ -66,14 +71,35 @@
 <script lang="ts" setup>
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-const { loggedIn, user, clear } = useUserSession()
+const { loggedIn, user, clear, session, fetch } = useUserSession()
 const { locale, locales, t } = useI18n()
 const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
 const { success } = useNotifications()
 
+const toast = useToast()
+
+const hasContext = computed(() => !!session.value?.lti?.context?.id)
+
+const handleChangeCourse = async () => {
+  try {
+    await $fetch('/api/me/context', { method: 'DELETE' })
+    await fetch()
+    await navigateTo(localePath('/'))
+  } catch (e) {
+    //    console.error('Failed to clear context:', e)
+    toast.add({
+      title: t('global.status.error'),
+      description: e instanceof Error ? e.message : String(e),
+      color: 'red'
+    })
+  }
+}
+
 // Available locales for the selector
-const availableLocales = computed(() => locales.value.map((l) => ({ code: l.code, name: l.name })))
+const availableLocales = computed(() =>
+  locales.value.map((l: any) => ({ code: l.code, name: l.name }))
+)
 
 const handleLogout = async () => {
   try {
@@ -105,13 +131,20 @@ const appVersion = computed(() => {
   return config.public.version || '1.0.0'
 })
 
-const items = ref<DropdownMenuItem[][]>([
+const avatarSrc = computed(() => {
+  const base =
+    user.value?.avatarUrl ||
+    'https://0.gravatar.com/avatar/0000000000000000000000000000000000000000000000000000000000000000?d=robohash'
+  return `${base}&s=150`
+})
+
+const items = computed<DropdownMenuItem[][]>(() => [
   [
     {
       label: user.value?.name || user.value?.email,
       type: 'label',
       avatar: {
-        src: `https://i.pravatar.cc/150?u=${user.value?.email}`
+        src: avatarSrc.value
       }
     }
   ],
