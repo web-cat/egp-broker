@@ -34,6 +34,7 @@ The `Dockerfile` uses a multi-stage build process to optimize for both speed and
    ```
 
    Configure your secrets in `.env`. Shared non-secret variables are already configured in `.env.common`. Values set in `.env` will override those in `.env.common`.
+
 2. **Launch the Development Stack**
 
    ```bash
@@ -47,6 +48,7 @@ The `Dockerfile` uses a multi-stage build process to optimize for both speed and
    The [Adminer](https://adminer.org/) application for directly managing the
    database will be accessible at **http://localhost:8080**. The login info and
    database access info can be found in `.env.common`.
+
 3. **Synchronization**
    The first time you start the container, `docker compose` will run the `postinstall` script (Prisma generation and Nuxt preparation) automatically at startup. Scripts
    are defined in `package.json` and summarized below.
@@ -90,8 +92,8 @@ affect.
 
 ### 🛠️ Key Commands
 
-| Command                                             | Description                       |
-| :-------------------------------------------------- | :-------------------------------- |
+| Command                                           | Description                       |
+| :------------------------------------------------ | :-------------------------------- |
 | `docker compose up -d app-dev`                    | Start the development environment |
 | `docker compose exec app-dev bash`                | Open a shell in the dev container |
 | `docker compose stop`                             | Stop all services                 |
@@ -102,30 +104,30 @@ affect.
 
 Sometimes when developing, you may make changes that are big enough you need to "reset" the app, the database, or whatever. This can be particularly true when merging in changes from other branches where there have been significant changes to data models. Here are some commands to consider and what they are for.
 
-* `scripts/restart-app.sh`: Uses `docker compose exec` to kill the application and restart it within the container, without forcing you to kill the entire stack and restart it.
-* `docker compose exec app-dev pnpm prisma migrate reset`: Perform a "hard reset" on the database by completely dropping and recreating all tables and re-seeding the database with its initial dev contents (see `prisma/seed.ts`).
-* Restart the whole stack: If you are running the stack interactively using `docker compose up`, just use Ctrl-C to terminate the whole stack. If you are running in detached mode, use `docker compose down`.
-* Rebuild the docker image: This isn't needed very often, but if there are significant changes to any application dependencies, it might be needed. Shut down the application stack if it is running and use `docker compose build app-dev` to rebuild the docker image.
+- `scripts/restart-app.sh`: Uses `docker compose exec` to kill the application and restart it within the container, without forcing you to kill the entire stack and restart it.
+- `docker compose exec app-dev pnpm prisma migrate reset`: Perform a "hard reset" on the database by completely dropping and recreating all tables and re-seeding the database with its initial dev contents (see `prisma/seed.ts`).
+- Restart the whole stack: If you are running the stack interactively using `docker compose up`, just use Ctrl-C to terminate the whole stack. If you are running in detached mode, use `docker compose down`.
+- Rebuild the docker image: This isn't needed very often, but if there are significant changes to any application dependencies, it might be needed. Shut down the application stack if it is running and use `docker compose build app-dev` to rebuild the docker image.
 
 ### 📜 Script Reference
 
 The following scripts are available in `package.json` and can be executed using `pnpm <script-name>` within the development image (or use `docker compose exec app-dev pnpm <script-name>`, or `run` instead of `exec` if the image isn't already running).
 
-| Script                    | Command               | Description                                                           |
-| :------------------------ | :-------------------- | :-------------------------------------------------------------------- |
-| **`dev`**         | `nuxt dev`          | Starts the development server with Hot Module Replacement (HMR).      |
+| Script            | Command             | Description                                                         |
+| :---------------- | :------------------ | :------------------------------------------------------------------ |
+| **`dev`**         | `nuxt dev`          | Starts the development server with Hot Module Replacement (HMR).    |
 | **`build`**       | `nuxt build`        | Compiles the application for production. Output is in `.output/`.   |
-| **`preview`**     | `nuxt preview`      | Locally boots the production build for testing.                       |
-| **`lint`**        | `run lint:*`        | Runs both ESLint and Prettier to ensure code quality.                 |
-| **`test`**        | `run test:*`        | Runs the full test suite (Unit + E2E).                                |
+| **`preview`**     | `nuxt preview`      | Locally boots the production build for testing.                     |
+| **`lint`**        | `run lint:*`        | Runs both ESLint and Prettier to ensure code quality.               |
+| **`test`**        | `run test:*`        | Runs the full test suite (Unit + E2E).                              |
 | **`test:unit`**   | `vitest run`        | Runs unit tests once. Use `:watch` for TDD mode.                    |
 | **`test:e2e`**    | `playwright test`   | Runs end-to-end tests. Use `:ui` for the interactive runner.        |
-| **`db:generate`** | `prisma generate`   | Generates the Prisma Client based on your schema.                     |
-| **`db:push`**     | `prisma db push`    | Syncs schema to the DB without creating a migration file.             |
-| **`db:seed`**     | `prisma db seed`    | populates the database with initial/test data.                        |
+| **`db:generate`** | `prisma generate`   | Generates the Prisma Client based on your schema.                   |
+| **`db:push`**     | `prisma db push`    | Syncs schema to the DB without creating a migration file.           |
+| **`db:seed`**     | `prisma db seed`    | populates the database with initial/test data.                      |
 | **`postinstall`** | `db:gen && prepare` | Automatically runs after `pnpm install` to set up your environment. |
 | **`changelog`**   | `git-cliff`         | Generates a `CHANGELOG.md` based on conventional commits.           |
-| **`release:*`**   | `pnpm version`      | Increments version (patch/minor/major) and pushes tags.               |
+| **`release:*`**   | `pnpm version`      | Increments version (patch/minor/major) and pushes tags.             |
 
 ---
 
