@@ -71,14 +71,8 @@ const totalPages = computed(() => Math.max(1, Math.ceil(totalRows.value / props.
     <!-- Pagination footer -->
     <template v-if="hasData && totalPages > 1" #footer>
       <div class="flex items-center justify-between">
-        <p class="text-sm text-neutral-500">
-          {{ totalRows }} rows
-        </p>
-        <UPagination
-          v-model:page="page"
-          :items-per-page="pageSize"
-          :total="totalRows"
-        />
+        <p class="text-sm text-neutral-500">{{ totalRows }} rows</p>
+        <UPagination v-model:page="page" :items-per-page="pageSize" :total="totalRows" />
       </div>
     </template>
   </UCard>

@@ -161,7 +161,7 @@ model Post {
 model Course {
   id           String  @id @default(uuid())
   // LTI context claim fields
-  ltiContextId String // context.id from LTI claim
+  ltiContextId String? // context.id from LTI claim
   label        String? // context.label (course code, e.g., "CPS 435")
   title        String? // context.title
 

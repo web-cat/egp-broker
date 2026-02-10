@@ -1,6 +1,14 @@
 {
   "seo": {
     "pages": {
+      "admin": {
+        "description": "Gérer les plateformes, déploiements, utilisateurs et paramètres système.",
+        "og": {
+          "description": "Panneau d'administration pour la gestion de la plateforme EGP Broker.",
+          "title": "Administration - EGP Broker"
+        },
+        "title": "Administration"
+      },
       "error": {
         "404": {
           "description": "La page que vous cherchez n'existe pas. Retournez à notre page d'accueil pour continuer la navigation.",
