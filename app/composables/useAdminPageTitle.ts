@@ -9,17 +9,17 @@
  * The parent admin.vue reads the reactive title and falls back to the default.
  */
 export function useAdminPageTitle() {
-    const title = useState<string | null>('admin-page-title', () => null)
+  const title = useState<string | null>('admin-page-title', () => null)
 
-    function setTitle(value: string | null) {
-        title.value = value
-    }
+  function setTitle(value: string | null) {
+    title.value = value
+  }
 
-    // Reset title when the composable's component unmounts,
-    // so navigating away clears the override.
-    onUnmounted(() => {
-        title.value = null
-    })
+  // Reset title when the composable's component unmounts,
+  // so navigating away clears the override.
+  onUnmounted(() => {
+    title.value = null
+  })
 
-    return { title, setTitle }
+  return { title, setTitle }
 }

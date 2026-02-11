@@ -13,18 +13,18 @@ export type { Course } from '@prisma/client'
 // =============================================================================
 
 export const createCourseSchema = z.object({
-    ltiContextId: z.string().nullable().optional(),
-    label: z.string().nullable().optional(),
-    title: z.string().nullable().optional(),
-    canvasCourseId: z.string().nullable().optional(),
-    workflowState: z.string().nullable().optional()
+  ltiContextId: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  canvasCourseId: z.string().nullable().optional(),
+  workflowState: z.string().nullable().optional()
 })
 
 export const updateCourseSchema = z.object({
-    label: z.string().nullable().optional(),
-    title: z.string().nullable().optional(),
-    canvasCourseId: z.string().nullable().optional(),
-    workflowState: z.string().nullable().optional()
+  label: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  canvasCourseId: z.string().nullable().optional(),
+  workflowState: z.string().nullable().optional()
 })
 
 // =============================================================================
@@ -39,9 +39,9 @@ export type UpdateCourseData = z.infer<typeof updateCourseSchema>
 // =============================================================================
 
 export const initialCourseState: CreateCourseData = {
-    ltiContextId: '',
-    label: '',
-    title: '',
-    canvasCourseId: '',
-    workflowState: ''
+  ltiContextId: '',
+  label: '',
+  title: '',
+  canvasCourseId: '',
+  workflowState: ''
 }

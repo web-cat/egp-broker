@@ -47,7 +47,6 @@ model User {
   updatedAt       DateTime   @updatedAt
 
   // Relations
-  posts         Post[]
   tokens        Token[]
   ltiIdentities LtiIdentity[]
   enrollments   Enrollment[]
@@ -140,22 +139,6 @@ model Token {
   @@index([token])
   @@index([expiresAt])
   @@index([userId, type])
-}
-
-model Post {
-  id        String   @id @default(uuid())
-  title     String
-  content   String?
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
-  // Essential indexes only
-  @@index([createdAt])
-  @@index([authorId])
 }
 
 model Course {

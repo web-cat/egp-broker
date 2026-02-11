@@ -10,58 +10,58 @@ The following decisions must be gathered from the developer before generating a 
 
 ### Model Identity
 
-| Question | Example |
-|---|---|
-| Prisma model name? | `Course`, `Assignment`, `LtiPlatform` |
+| Question                      | Example                               |
+| ----------------------------- | ------------------------------------- |
+| Prisma model name?            | `Course`, `Assignment`, `LtiPlatform` |
 | URL slug (kebab-case plural)? | `courses`, `assignments`, `platforms` |
-| Sidebar icon (`i-lucide-*`)? | `i-lucide-book-open` |
-| Sidebar label? | `Courses` |
+| Sidebar icon (`i-lucide-*`)?  | `i-lucide-book-open`                  |
+| Sidebar label?                | `Courses`                             |
 
 ### Page Title
 
 By default, the page header shows the plural model name (e.g. "Courses"). If the page supports filtering via query parameters, the title can be contextual.
 
-| Question | Example |
-|---|---|
-| Default title (plural model name)? | `Assignments` |
-| Dynamic title when filtered? | `Assignments: CS 101 — Intro to CS` |
-| Which filter triggers the dynamic title? | `?c=` (course code) |
+| Question                                 | Example                             |
+| ---------------------------------------- | ----------------------------------- |
+| Default title (plural model name)?       | `Assignments`                       |
+| Dynamic title when filtered?             | `Assignments: CS 101 — Intro to CS` |
+| Which filter triggers the dynamic title? | `?c=` (course code)                 |
 
 ### Table Columns
 
 For each visible column, specify:
 
-| Question | Example |
-|---|---|
-| Accessor key (field name from API row)? | `label`, `enrollmentCount` |
-| Column header label? | `Code`, `Enrollments` |
-| Renderer type? | `text` (default), `date`, `countBadge`, or custom |
-| Badge color (if countBadge)? | `success` (default), `info`, `warning` |
+| Question                                | Example                                           |
+| --------------------------------------- | ------------------------------------------------- |
+| Accessor key (field name from API row)? | `label`, `enrollmentCount`                        |
+| Column header label?                    | `Code`, `Enrollments`                             |
+| Renderer type?                          | `text` (default), `date`, `countBadge`, or custom |
+| Badge color (if countBadge)?            | `success` (default), `info`, `warning`            |
 
 ### Filtering
 
-| Question | Example |
-|---|---|
-| Query parameter name(s)? | `?d=`, `?p=`, `?c=` |
-| What does each filter on? | `d` → `deploymentId`, `c` → `course.label` |
+| Question                                                   | Example                                                    |
+| ---------------------------------------------------------- | ---------------------------------------------------------- |
+| Query parameter name(s)?                                   | `?d=`, `?p=`, `?c=`                                        |
+| What does each filter on?                                  | `d` → `deploymentId`, `c` → `course.label`                 |
 | Is the filter a direct field match or a relational lookup? | Direct: `where.courseId`; Relational: `where.course.label` |
 
 ### Row Actions
 
-| Question | Example |
-|---|---|
-| Edit action? | Always included (opens edit panel) |
+| Question       | Example                             |
+| -------------- | ----------------------------------- |
+| Edit action?   | Always included (opens edit panel)  |
 | Delete action? | Always included (styled as `error`) |
 
 #### Relationship Navigation Actions
 
 List the Prisma relations on the model below. For each relation the developer wants as a row action, specify the target admin page and how the filter parameter is derived from the current row:
 
-| Relation Field | Include? | Target Page | Filter Param | Row Value |
-|---|---|---|---|---|
-| `assignments` | ✅ | `/admin/assignments` | `?c=` | `row.label` |
-| `enrollments` | ✅ | `/admin/enrollments` | `?c=` | `row.label` |
-| `deployment` | ❌ | — | — | — |
+| Relation Field | Include? | Target Page          | Filter Param | Row Value   |
+| -------------- | -------- | -------------------- | ------------ | ----------- |
+| `assignments`  | ✅       | `/admin/assignments` | `?c=`        | `row.label` |
+| `enrollments`  | ✅       | `/admin/enrollments` | `?c=`        | `row.label` |
+| `deployment`   | ❌       | —                    | —            | —           |
 
 > **How to fill this out:** Run `grep -A2 'model {Model}' prisma/schema.prisma` to list relations. For each one-to-many or many-to-many relation, ask: "Should this appear as a 'View {related}' action in the row dropdown?" If yes, identify the target admin page (must already exist or be planned) and the query parameter + row field that links them.
 
@@ -69,25 +69,25 @@ List the Prisma relations on the model below. For each relation the developer wa
 
 For each editable field, specify:
 
-| Question | Example |
-|---|---|
-| Field key? | `title`, `dueDate` |
-| Label? | `Title`, `Due Date` |
-| Input type? | `text` (default), `datetime-local` |
-| Placeholder? | `e.g. Homework 1`, `Optional` |
-| Required? | Yes/No |
-| Create-only? (hidden in edit mode) | Yes/No |
-| Edit-only? (hidden in create mode) | Yes/No |
+| Question                           | Example                            |
+| ---------------------------------- | ---------------------------------- |
+| Field key?                         | `title`, `dueDate`                 |
+| Label?                             | `Title`, `Due Date`                |
+| Input type?                        | `text` (default), `datetime-local` |
+| Placeholder?                       | `e.g. Homework 1`, `Optional`      |
+| Required?                          | Yes/No                             |
+| Create-only? (hidden in edit mode) | Yes/No                             |
+| Edit-only? (hidden in create mode) | Yes/No                             |
 
 ### API Behavior
 
-| Question | Example |
-|---|---|
-| Fields that need auto-generation on create? | `resourceLinkId: manual-${Date.now()}` |
-| Fields restricted to API-only updates? (never shown in panel) | `ltiContextId` |
-| Date fields that need `String ↔ Date` conversion? | `dueDate`, `availableFrom` |
-| Default sort order? | `createdAt: 'desc'` |
-| Related data to include? | `course: { select: { label, title } }` |
+| Question                                                      | Example                                |
+| ------------------------------------------------------------- | -------------------------------------- |
+| Fields that need auto-generation on create?                   | `resourceLinkId: manual-${Date.now()}` |
+| Fields restricted to API-only updates? (never shown in panel) | `ltiContextId`                         |
+| Date fields that need `String ↔ Date` conversion?            | `dueDate`, `availableFrom`             |
+| Default sort order?                                           | `createdAt: 'desc'`                    |
+| Related data to include?                                      | `course: { select: { label, title } }` |
 
 ---
 
@@ -97,12 +97,12 @@ Each admin model page uses three shared modules plus five model-specific files.
 
 ### Shared Modules (already exist)
 
-| Module | Location | Purpose |
-|---|---|---|
-| `useAdminCrud<T>()` | [useAdminCrud.ts](file:///Users/edwards/git/egp-broker/app/composables/useAdminCrud.ts) | CRUD state: data fetching, edit panel toggle, in-place row updates, full refetch on create |
-| `useAdminPageTitle()` | [useAdminPageTitle.ts](file:///Users/edwards/git/egp-broker/app/composables/useAdminPageTitle.ts) | Lets child pages override the admin layout header title; auto-resets on unmount |
-| Table helpers | [tableHelpers.ts](file:///Users/edwards/git/egp-broker/app/utils/tableHelpers.ts) | `countBadgeCell()`, `actionsColumn()`, `dateCellRenderer()` |
-| Date formatting | [date.ts](file:///Users/edwards/git/egp-broker/app/utils/date.ts) | Locale-aware `formatDate()` (auto-imported) |
+| Module                | Location                                                                                          | Purpose                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `useAdminCrud<T>()`   | [useAdminCrud.ts](file:///Users/edwards/git/egp-broker/app/composables/useAdminCrud.ts)           | CRUD state: data fetching, edit panel toggle, in-place row updates, full refetch on create |
+| `useAdminPageTitle()` | [useAdminPageTitle.ts](file:///Users/edwards/git/egp-broker/app/composables/useAdminPageTitle.ts) | Lets child pages override the admin layout header title; auto-resets on unmount            |
+| Table helpers         | [tableHelpers.ts](file:///Users/edwards/git/egp-broker/app/utils/tableHelpers.ts)                 | `countBadgeCell()`, `actionsColumn()`, `dateCellRenderer()`                                |
+| Date formatting       | [date.ts](file:///Users/edwards/git/egp-broker/app/utils/date.ts)                                 | Locale-aware `formatDate()` (auto-imported)                                                |
 
 ### Model-Specific Files (to create)
 

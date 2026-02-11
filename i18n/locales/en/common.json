@@ -1,100 +1,4 @@
 {
-  "articles": {
-    "fieldLimits": {
-      "content": {
-        "maxLength": "Content cannot exceed 1000 characters",
-        "minLength": "Content must contain at least 10 characters",
-        "required": "Content is required"
-      },
-      "title": {
-        "maxLength": "Title cannot exceed 100 characters",
-        "minLength": "Title must contain at least 3 characters",
-        "required": "Title is required"
-      }
-    },
-    "form": {
-      "analytics": {
-        "characterCount": "No characters | {count} character | {count} characters",
-        "readingTime": "{count} minute read | {count} minutes read",
-        "wordCount": "No words | {count} word | {count} words"
-      },
-      "badgeLabels": {
-        "long": "Long",
-        "medium": "Medium",
-        "short": "Short"
-      },
-      "create": {
-        "autoSaveInfo": "Changes will be saved automatically",
-        "description": "Fill in the fields below to create an article.",
-        "submit": "Create article",
-        "title": "Create new article"
-      },
-      "delete": {
-        "confirm": "Delete",
-        "description": "Are you sure you want to delete this article? This action is irreversible.",
-        "info": "This action will permanently delete the article",
-        "title": "Delete article"
-      },
-      "edit": {
-        "autoSaveInfo": "Changes will be saved automatically",
-        "description": "Edit your article content here.",
-        "save": "Save changes",
-        "title": "Edit article"
-      },
-      "fields": {
-        "content": {
-          "label": "Article content",
-          "placeholder": "Write your article content here"
-        },
-        "title": {
-          "label": "Article title",
-          "placeholder": "Enter article title"
-        }
-      },
-      "messages": {
-        "error": {
-          "create": {
-            "message": "An error occurred while creating the article",
-            "title": "Failed to create article"
-          },
-          "delete": {
-            "message": "An error occurred while deleting the article",
-            "title": "Failed to delete article"
-          },
-          "notFound": "The article could not be found or has been deleted",
-          "unauthorized": "You don't have permission to perform this action",
-          "update": {
-            "message": "An error occurred while updating the article",
-            "title": "Failed to update article"
-          },
-          "validation": "Invalid input data. Please check and try again."
-        },
-        "success": {
-          "create": {
-            "message": "Your article has been created successfully",
-            "title": "Article created successfully"
-          },
-          "delete": {
-            "message": "Your article has been deleted successfully",
-            "title": "Article deleted successfully"
-          },
-          "update": {
-            "message": "Your article has been updated successfully",
-            "title": "Article updated successfully"
-          }
-        }
-      }
-    },
-    "list": {
-      "empty": {
-        "subtitle": "Start by creating your first article.",
-        "title": "No articles"
-      },
-      "subtitle": "Discover and manage your article collection",
-      "title": "My articles",
-      "type": "Article"
-    }
-  },
   "auth": {
     "forgotPassword": {
       "fields": {
@@ -405,8 +309,7 @@
       "home": "Home",
       "reset": "Reset",
       "save": "Save changes",
-      "submit": "Submit",
-      "viewPosts": "View articles"
+      "submit": "Submit"
     },
     "app": {
       "description": "Transforming grading practices in CS education",
@@ -428,13 +331,8 @@
   },
   "pages": {
     "dashboard": {
-      "empty": {
-        "subtitle": "Start by creating your first article.",
-        "title": "No articles"
-      },
       "stats": {
-        "title": "Statistics",
-        "totalPosts": "Total articles"
+        "title": "Statistics"
       },
       "list": {
         "title": "My Courses",
@@ -442,8 +340,6 @@
         "select": "Select a Course",
         "enrolledAs": "Enrolled as {role}"
       },
-      "subtitle": "Discover and manage your article collection",
-      "title": "My articles",
       "teacher": {
         "title": "Teacher Dashboard: {course}",
         "subtitle": "Manage assignments, extensions, and student progress.",

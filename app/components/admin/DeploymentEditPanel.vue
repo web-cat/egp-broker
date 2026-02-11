@@ -1,5 +1,9 @@
 <template>
-  <USlideover v-model:open="open" :title="isEdit ? 'Edit Deployment' : 'Add Deployment'" :description="panelDescription">
+  <USlideover
+    v-model:open="open"
+    :title="isEdit ? 'Edit Deployment' : 'Add Deployment'"
+    :description="panelDescription"
+  >
     <template #body>
       <UForm ref="formRef" :state="state" @submit="handleSubmit">
         <div class="space-y-6">
@@ -36,7 +40,6 @@
 </template>
 
 <script setup lang="ts">
-
 interface DeploymentItem {
   id: string
   deploymentId: string
@@ -59,7 +62,9 @@ const open = defineModel<boolean>('open', { default: false })
 
 const isEdit = computed(() => !!props.deployment)
 const panelDescription = computed(() =>
-  isEdit.value ? `Editing deployment ${props.deployment?.deploymentId}` : 'Create a new deployment registration'
+  isEdit.value
+    ? `Editing deployment ${props.deployment?.deploymentId}`
+    : 'Create a new deployment registration'
 )
 
 const state = reactive({

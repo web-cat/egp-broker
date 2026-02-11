@@ -94,8 +94,7 @@ const courseColumns: TableColumn<CourseRow>[] = [
       {
         label: 'View assignments',
         icon: 'i-lucide-clipboard-list',
-        onSelect: () =>
-          navigateTo({ path: '/admin/assignments', query: { c: row.original.label } })
+        onSelect: () => navigateTo({ path: '/admin/assignments', query: { c: row.original.label } })
       },
       { label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEdit(row.original) }
     ],

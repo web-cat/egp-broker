@@ -13,14 +13,14 @@ export type { LtiDeployment } from '@prisma/client'
 // =============================================================================
 
 export const createDeploymentSchema = z.object({
-    platformId: z.string().min(1, 'Platform is required'),
-    deploymentId: z.string().min(1, 'Deployment ID is required'),
-    deploymentHost: z.string().nullable().optional()
+  platformId: z.string().min(1, 'Platform is required'),
+  deploymentId: z.string().min(1, 'Deployment ID is required'),
+  deploymentHost: z.string().nullable().optional()
 })
 
 export const updateDeploymentSchema = z.object({
-    deploymentId: z.string().optional(),
-    deploymentHost: z.string().nullable().optional()
+  deploymentId: z.string().optional(),
+  deploymentHost: z.string().nullable().optional()
 })
 
 // =============================================================================
@@ -35,6 +35,6 @@ export type UpdateDeploymentData = z.infer<typeof updateDeploymentSchema>
 // =============================================================================
 
 export const initialDeploymentState: Omit<CreateDeploymentData, 'platformId'> = {
-    deploymentId: '',
-    deploymentHost: ''
+  deploymentId: '',
+  deploymentHost: ''
 }

@@ -105,9 +105,7 @@ const assignmentColumns: TableColumn<AssignmentRow>[] = [
     cell: dateCellRenderer('createdAt')
   },
   actionsColumn<AssignmentRow>((row) => [
-    [
-      { label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEdit(row.original) }
-    ],
+    [{ label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEdit(row.original) }],
     [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const }]
   ])
 ]

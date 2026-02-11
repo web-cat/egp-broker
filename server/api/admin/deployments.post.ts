@@ -4,23 +4,23 @@ import type { ApiResponse } from '@@/shared/types/api'
 import { createDeploymentSchema } from '@@/shared/models/deployment'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
-    const session = await getUserSession(event)
+  const session = await getUserSession(event)
 
-    if (!session.user || session.user.globalRole !== 'ADMIN') {
-        throw createError({
-            statusCode: 403,
-            statusMessage: 'Forbidden'
-        })
-    }
-
-    const body = await readValidatedBody(event, createDeploymentSchema.parse)
-
-    const deployment = await prisma.ltiDeployment.create({
-        data: body
+  if (!session.user || session.user.globalRole !== 'ADMIN') {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Forbidden'
     })
+  }
 
-    return {
-        statusCode: 201,
-        data: deployment
-    }
+  const body = await readValidatedBody(event, createDeploymentSchema.parse)
+
+  const deployment = await prisma.ltiDeployment.create({
+    data: body
+  })
+
+  return {
+    statusCode: 201,
+    data: deployment
+  }
 })

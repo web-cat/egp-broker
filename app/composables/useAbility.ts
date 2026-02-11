@@ -6,7 +6,7 @@ import type { AppAbility } from '@@/shared/utils/abilities'
  *
  * Provides `can` and `cannot` methods for permission checks:
  * const { can } = useAbility()
- * if (can('delete', 'Post')) { ... }
+ * if (can('update', 'User')) { ... }
  */
 export const useAbility = () => {
   return useCaslAbility<AppAbility>()

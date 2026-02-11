@@ -66,7 +66,17 @@ watchEffect(() => {
   const firstRow = data.value?.data?.[0]
   const name = firstRow?.platformName
   const issuer = firstRow?.platformIssuer
-  const host = name || (issuer ? (() => { try { return new URL(issuer).hostname } catch { return issuer } })() : null)
+  const host =
+    name ||
+    (issuer
+      ? (() => {
+          try {
+            return new URL(issuer).hostname
+          } catch {
+            return issuer
+          }
+        })()
+      : null)
   setTitle(host ? `Deployments: ${host}` : 'Deployments')
 })
 
@@ -113,7 +123,8 @@ const deploymentColumns: TableColumn<DeploymentRow>[] = [
       {
         label: 'View courses',
         icon: 'i-lucide-book-open',
-        onSelect: () => navigateTo({ path: '/admin/courses', query: { d: row.original.deploymentId } })
+        onSelect: () =>
+          navigateTo({ path: '/admin/courses', query: { d: row.original.deploymentId } })
       },
       { label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEdit(row.original) }
     ],

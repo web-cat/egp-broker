@@ -9,7 +9,7 @@ export type Action = 'manage' | 'create' | 'read' | 'update' | 'delete'
 /**
  * Available subjects in the application
  */
-export type Subject = 'all' | 'Post' | 'User'
+export type Subject = 'all' | 'User'
 
 /**
  * CASL MongoAbility type for TypeScript safety
@@ -30,16 +30,13 @@ export function defineAbilitiesFor(user?: PublicUser) {
   } else if (user?.globalRole === 'INSTRUCTOR') {
     // Instructor rules
     can('read', 'all')
-    can('manage', 'Post')
     can('manage', 'User', { id: user.id })
   } else if (user?.globalRole === 'USER') {
     // User-specific rules
     can('read', 'all')
-    can('manage', 'Post', { authorId: user.id })
     can('manage', 'User', { id: user.id })
   } else {
     // Anonymous/Guest rules
-    can('read', 'Post')
   }
 
   return build()
