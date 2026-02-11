@@ -15,7 +15,6 @@
 </template>
 
 <script setup lang="ts">
-import { h, resolveComponent } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import type { ApiResponse } from '@@/shared/types/api'
 
@@ -28,8 +27,9 @@ interface PlatformRow {
   createdAt: string
 }
 
-const UBadge = resolveComponent('UBadge')
-const RowActions = resolveComponent('UiDataRowActions')
+// --- Page title ---
+const { setTitle } = useAdminPageTitle()
+setTitle('Platforms')
 
 const { data: platforms, status: platformsStatus } = await useFetch<ApiResponse<PlatformRow[]>>(
   '/api/admin/platforms',
@@ -61,38 +61,29 @@ const platformColumns: TableColumn<PlatformRow>[] = [
   {
     accessorKey: 'deploymentCount',
     header: 'Deployments',
-    cell: ({ row }) => {
-      const count = row.getValue('deploymentCount') as number
-      return h(UBadge, { variant: 'subtle', color: count > 0 ? 'success' : 'neutral' }, () =>
-        String(count)
-      )
-    },
+    cell: countBadgeCell('deploymentCount'),
     meta: { class: { th: 'text-center', td: 'text-center' } }
   },
   {
     accessorKey: 'createdAt',
     header: 'Created',
-    cell: ({ row }) =>
-      new Date(row.getValue('createdAt') as string).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      })
+    cell: dateCellRenderer('createdAt')
   },
-  {
-    id: 'actions',
-    header: '',
-    meta: { class: { td: 'text-right' } },
-    cell: () =>
-      h(RowActions, {
-        items: [
-          [
-            { label: 'View deployments', icon: 'i-lucide-share-2' },
-            { label: 'Edit', icon: 'i-lucide-pencil' }
-          ],
-          [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const }]
-        ]
-      })
-  }
+  actionsColumn<PlatformRow>((row) => [
+    [
+      {
+        label: 'View courses',
+        icon: 'i-lucide-book-open',
+        onSelect: () => navigateTo({ path: '/admin/courses', query: { p: row.original.id } })
+      },
+      {
+        label: 'View deployments',
+        icon: 'i-lucide-share-2',
+        onSelect: () => navigateTo({ path: '/admin/deployments', query: { p: row.original.id } })
+      },
+      { label: 'Edit', icon: 'i-lucide-pencil' }
+    ],
+    [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const }]
+  ])
 ]
 </script>

@@ -1,14 +1,7 @@
 import { defineEventHandler, getRouterParam } from 'h3'
-import { z } from 'zod'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
-
-const updateCourseSchema = z.object({
-  label: z.string().nullable().optional(),
-  title: z.string().nullable().optional(),
-  canvasCourseId: z.string().nullable().optional(),
-  workflowState: z.string().nullable().optional()
-})
+import { updateCourseSchema } from '@@/shared/models/course'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   const session = await getUserSession(event)

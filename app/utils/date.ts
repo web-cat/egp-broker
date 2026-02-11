@@ -11,7 +11,10 @@ export const formatDate = (dateString: string | Date | null, locale?: string): s
     return date.toLocaleDateString(finalLocale, {
       day: 'numeric',
       month: 'short',
-      year: 'numeric'
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     })
   } catch {
     return ''

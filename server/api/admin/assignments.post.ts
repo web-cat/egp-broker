@@ -1,16 +1,7 @@
 import { defineEventHandler } from 'h3'
-import { z } from 'zod'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
-
-const createAssignmentSchema = z.object({
-  title: z.string().nullable().optional(),
-  canvasAssignmentId: z.string().nullable().optional(),
-  courseId: z.string().min(1, 'Course is required'),
-  dueDate: z.string().nullable().optional(),
-  availableFrom: z.string().nullable().optional(),
-  acceptUntil: z.string().nullable().optional()
-})
+import { createAssignmentSchema } from '@@/shared/models/assignment'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   const session = await getUserSession(event)

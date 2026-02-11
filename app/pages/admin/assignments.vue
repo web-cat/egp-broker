@@ -2,9 +2,9 @@
   <div>
     <UiDataTable
       :key="tableKey"
-      :data="assignments?.data"
+      :data="data?.data"
       :columns="assignmentColumns"
-      :loading="assignmentsStatus === 'pending'"
+      :loading="status === 'pending'"
       searchable
       search-placeholder="Search assignments…"
       empty-icon="i-lucide-clipboard-list"
@@ -17,18 +17,16 @@
 
     <AdminAssignmentEditPanel
       v-model:open="editOpen"
-      :assignment="editingAssignment"
+      :assignment="editingItem"
       :course-id="createCourseId"
       @saved="onRowUpdated"
-      @created="onAssignmentCreated"
+      @created="onItemCreated"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { h, resolveComponent } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
-import type { ApiResponse } from '@@/shared/types/api'
 
 interface AssignmentRow {
   id: string
@@ -43,56 +41,34 @@ interface AssignmentRow {
   createdAt: string
 }
 
-const RowActions = resolveComponent('UiDataRowActions')
-
-const editOpen = ref(false)
-const editingAssignment = ref<AssignmentRow | null>(null)
-const createCourseId = ref<string | null>(null)
-const tableKey = ref(0)
-
 const route = useRoute()
 const courseFilter = computed(() => route.query.c as string | undefined)
+const createCourseId = ref<string | null>(null)
 
-const { data: assignments, status: assignmentsStatus } = await useFetch<
-  ApiResponse<AssignmentRow[]>
->('/api/admin/assignments', { lazy: true, query: { c: courseFilter } })
+const {
+  data,
+  status,
+  editOpen,
+  editingItem,
+  tableKey,
+  openCreate,
+  openEdit,
+  onRowUpdated,
+  onItemCreated
+} = useAdminCrud<AssignmentRow>('/api/admin/assignments', { c: courseFilter })
 
-function openCreate() {
-  editingAssignment.value = null
-  editOpen.value = true
-}
+const { setTitle } = useAdminPageTitle()
 
-function openEdit(assignment: AssignmentRow) {
-  editingAssignment.value = assignment
-  editOpen.value = true
-}
-
-function onRowUpdated(id: string, updates: Partial<AssignmentRow>) {
-  const rows = assignments.value?.data
-  if (!rows) return
-  const idx = rows.findIndex((r) => r.id === id)
-  if (idx !== -1) {
-    rows[idx] = { ...rows[idx], ...updates }
-    tableKey.value++
+watchEffect(() => {
+  if (!courseFilter.value) {
+    setTitle('Assignments')
+    return
   }
-}
-
-async function onAssignmentCreated() {
-  const fresh = await $fetch<ApiResponse<AssignmentRow[]>>('/api/admin/assignments', {
-    query: { c: courseFilter.value }
-  })
-  assignments.value = fresh
-  tableKey.value++
-}
-
-function formatDate(iso: string | null) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
-}
+  const firstRow = data.value?.data?.[0]
+  const label = courseFilter.value
+  const name = firstRow?.courseTitle
+  setTitle(name ? `Assignments: ${label} — ${name}` : `Assignments: ${label}`)
+})
 
 const assignmentColumns: TableColumn<AssignmentRow>[] = [
   {
@@ -116,32 +92,23 @@ const assignmentColumns: TableColumn<AssignmentRow>[] = [
   {
     accessorKey: 'dueDate',
     header: 'Due Date',
-    cell: ({ row }) => formatDate(row.getValue('dueDate') as string | null)
+    cell: dateCellRenderer('dueDate')
   },
   {
     accessorKey: 'availableFrom',
     header: 'Available From',
-    cell: ({ row }) => formatDate(row.getValue('availableFrom') as string | null)
+    cell: dateCellRenderer('availableFrom')
   },
   {
     accessorKey: 'createdAt',
     header: 'Created',
-    cell: ({ row }) => formatDate(row.getValue('createdAt') as string)
+    cell: dateCellRenderer('createdAt')
   },
-  {
-    id: 'actions',
-    header: '',
-    meta: { class: { td: 'text-right' } },
-    cell: ({ row }) =>
-      h(RowActions, {
-        items: [
-          [
-            { label: 'View course', icon: 'i-lucide-book-open' },
-            { label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEdit(row.original) }
-          ],
-          [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const }]
-        ]
-      })
-  }
+  actionsColumn<AssignmentRow>((row) => [
+    [
+      { label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEdit(row.original) }
+    ],
+    [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const }]
+  ])
 ]
 </script>
