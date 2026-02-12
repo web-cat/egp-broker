@@ -57,6 +57,7 @@
     "nuxt-security": "^2.4.0",
     "pinia": "^3.0.3",
     "pinia-plugin-persistedstate": "^4.5.0",
+    "typescript-pluralize": "^1.0.1",
     "zod": "^4.0.17"
   },
   "devDependencies": {

@@ -1,113 +1,201 @@
 <template>
-  <div class="space-y-6">
-    <UCard
-      class="bg-white dark:bg-neutral-900 shadow-sm border-primary-200/60 dark:border-primary-700/60"
-    >
-      <template #header>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div
-              class="p-2 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center"
-            >
-              <UIcon
-                name="i-lucide-graduation-cap"
-                class="w-6 h-6 text-primary-600 dark:text-primary-400"
-              />
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                {{ t('pages.dashboard.teacher.title', { course: courseTitle }) }}
-              </h2>
-              <p class="text-neutral-600 dark:text-neutral-400">
-                {{ t('pages.dashboard.teacher.subtitle') }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </template>
+    <UPageHeader
+      :title="courseCode ? `${courseCode}: ${courseTitle}` : courseTitle"
+      :description="t('pages.dashboard.teacher.subtitle')"
+      class="pb-0"
+    />
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Quick Stats -->
-        <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
-          <div class="text-center py-4">
-            <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
-              {{ t('pages.dashboard.teacher.stats.activeAssignments') }}
-            </p>
-            <p class="text-4xl font-bold text-primary-600 dark:text-primary-400 mt-1">0</p>
-          </div>
-        </UCard>
-
-        <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
-          <div class="text-center py-4">
-            <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
-              {{ t('pages.dashboard.teacher.stats.pendingRequests') }}
-            </p>
-            <p class="text-4xl font-bold text-secondary-600 dark:text-secondary-400 mt-1">0</p>
-          </div>
-        </UCard>
-
-        <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
-          <div class="text-center py-4">
-            <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
-              {{ t('pages.dashboard.teacher.stats.enrolledStudents') }}
-            </p>
-            <p class="text-4xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">0</p>
-          </div>
-        </UCard>
-      </div>
-    </UCard>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Recent Activity -->
-      <UCard title="Recent Activity">
-        <div class="text-center py-12 text-neutral-500">
-          <UIcon name="i-lucide-history" class="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p>{{ t('global.empty.noActivity') }}</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Quick Stats -->
+      <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+        <div class="text-center py-4">
+          <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
+            {{ t('pages.dashboard.teacher.stats.activeAssignments') }}
+          </p>
+          <p class="text-4xl font-bold text-primary-600 dark:text-primary-400 mt-1">0</p>
         </div>
       </UCard>
 
-      <!-- Course Settings Quick Access -->
-      <UCard title="Course Tools">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UButton
-            block
-            icon="i-lucide-plus-circle"
-            variant="ghost"
-            class="justify-start"
-            :label="t('pages.dashboard.teacher.tools.newAssignment')"
-          />
-          <UButton
-            block
-            icon="i-lucide-users"
-            variant="ghost"
-            class="justify-start"
-            :label="t('pages.dashboard.teacher.tools.manageStudents')"
-          />
-          <UButton
-            block
-            icon="i-lucide-clock"
-            variant="ghost"
-            class="justify-start"
-            :label="t('pages.dashboard.teacher.tools.extensionPolicy')"
-          />
-          <UButton
-            block
-            icon="i-lucide-clipboard-list"
-            variant="ghost"
-            class="justify-start"
-            :label="t('pages.dashboard.teacher.tools.gradingLog')"
-          />
+      <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+        <div class="text-center py-4">
+          <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
+            {{ t('pages.dashboard.teacher.stats.pendingRequests') }}
+          </p>
+          <p class="text-4xl font-bold text-secondary-600 dark:text-secondary-400 mt-1">0</p>
+        </div>
+      </UCard>
+
+      <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+        <div class="text-center py-4">
+          <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
+            {{ t('pages.dashboard.teacher.stats.enrolledStudents') }}
+          </p>
+          <p class="text-4xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">0</p>
         </div>
       </UCard>
     </div>
-  </div>
+
+    <!-- Pass Types Management -->
+    <div class="space-y-4 pt-8">
+      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">Pass Types</h3>
+      <UiDataTable
+        :key="passTypesTableKey"
+        :data="passTypesData?.data"
+        :columns="passTypeColumns"
+        :loading="passTypesStatus === 'pending'"
+        searchable
+        search-placeholder="Search pass types…"
+        empty-icon="i-lucide-coins"
+        empty-text="No pass types configured yet."
+      >
+        <template #toolbar>
+          <UButton icon="i-lucide-plus" label="Add Pass Type" @click="openPassTypeCreate" />
+        </template>
+      </UiDataTable>
+    </div>
+
+    <!-- Assignments Management -->
+    <div class="space-y-4 pt-8">
+      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">Assignments</h3>
+      <UiDataTable
+        :key="assignmentsTableKey"
+        :data="assignmentsData?.data"
+        :columns="assignmentColumns"
+        :loading="assignmentsStatus === 'pending'"
+        searchable
+        search-placeholder="Search assignments…"
+        empty-icon="i-lucide-clipboard-list"
+        empty-text="No assignments found."
+      >
+        <template #toolbar>
+          <UButton icon="i-lucide-plus" label="Add Assignment" @click="openAssignmentCreate" />
+        </template>
+      </UiDataTable>
+    </div>
+
+    <AdminPassTypeEditPanel
+      v-model:open="passTypeEditOpen"
+      :pass-type="editingPassType"
+      @saved="onPassTypeRowUpdated"
+      @created="onPassTypeItemCreated"
+    />
+
+    <AdminAssignmentEditPanel
+      v-model:open="assignmentEditOpen"
+      :assignment="editingAssignment"
+      @saved="onAssignmentRowUpdated"
+      @created="onAssignmentItemCreated"
+    />
 </template>
 
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui'
+import type { PassTypeData } from '@@/shared/models/pass'
+import type { AssignmentRow } from '@@/server/api/me/assignments.get'
+
 const { t } = useI18n()
 
 defineProps<{
   courseTitle: string | null
+  courseCode: string | null
   isAdmin: boolean
 }>()
+
+// Pass Types Data
+const {
+  data: passTypesData,
+  status: passTypesStatus,
+  editOpen: passTypeEditOpen,
+  editingItem: editingPassType,
+  tableKey: passTypesTableKey,
+  openCreate: openPassTypeCreate,
+  openEdit: openPassTypeEdit,
+  onRowUpdated: onPassTypeRowUpdated,
+  onItemCreated: onPassTypeItemCreated
+} = useAdminCrud<PassTypeData>('/api/me/pass-types')
+
+// Assignments Data
+const {
+  data: assignmentsData,
+  status: assignmentsStatus,
+  editOpen: assignmentEditOpen,
+  editingItem: editingAssignment,
+  tableKey: assignmentsTableKey,
+  openCreate: openAssignmentCreate,
+  openEdit: openAssignmentEdit,
+  onRowUpdated: onAssignmentRowUpdated,
+  onItemCreated: onAssignmentItemCreated
+} = useAdminCrud<AssignmentRow>('/api/me/assignments')
+
+const passTypeColumns: TableColumn<PassTypeData>[] = [
+  {
+    accessorKey: 'name',
+    header: 'Name'
+  },
+  {
+    accessorKey: 'initialBalance',
+    header: 'Initial Balance'
+  },
+  {
+    accessorKey: 'hoursPerPass',
+    header: 'Hours/Pass'
+  },
+  {
+    accessorKey: 'extensionOnly',
+    header: 'Policy',
+    cell: ({ row }) => {
+      const ext = row.original.extensionOnly
+      const req = row.original.allowRequests
+      const tags = []
+      if (ext) tags.push('Extension Only')
+      if (req) tags.push('Requests Allowed')
+      return tags.join(', ') || 'Standard'
+    }
+  },
+  actionsColumn<PassTypeData>((row) => [
+    [{ label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openPassTypeEdit(row.original) }],
+    [
+      {
+        label: 'Delete',
+        icon: 'i-lucide-trash-2',
+        color: 'error' as const,
+        onSelect: async () => {
+          if (confirm('Are you sure you want to delete this pass type?')) {
+            await $fetch(`/api/me/pass-types/${row.original.id}`, { method: 'DELETE' })
+            onPassTypeItemCreated() // Refresh table
+          }
+        }
+      }
+    ]
+  ])
+]
+
+const assignmentColumns: TableColumn<AssignmentRow>[] = [
+  {
+    accessorKey: 'title',
+    header: 'Title',
+    cell: ({ row }) => row.getValue('title') || '—'
+  },
+  {
+    accessorKey: 'eligiblePassTypeNames',
+    header: 'Eligible Pass Types',
+    cell: ({ row }) => {
+      const names = row.original.eligiblePassTypeNames || []
+      return names.join(', ') || 'None'
+    }
+  },
+  {
+    accessorKey: 'dueDate',
+    header: 'Due Date',
+    cell: dateCellRenderer('dueDate')
+  },
+  {
+    accessorKey: 'availableFrom',
+    header: 'Available From',
+    cell: dateCellRenderer('availableFrom')
+  },
+  actionsColumn<AssignmentRow>((row) => [
+    [{ label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openAssignmentEdit(row.original) }]
+  ])
+]
 </script>

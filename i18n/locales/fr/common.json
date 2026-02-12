@@ -319,7 +319,8 @@
     "empty": {
       "noActivity": "Aucune activité récente trouvée",
       "noCourses": "Vous n'êtes inscrit à aucun cours pour le moment",
-      "noEnrollments": "Aucune inscription trouvée"
+      "noEnrollments": "Aucune inscription trouvée",
+      "noUpcoming": "Aucune échéance à venir"
     },
     "status": {
       "error": "Erreur",
@@ -347,12 +348,6 @@
           "activeAssignments": "Devoirs Actifs",
           "pendingRequests": "Demandes en Attente",
           "enrolledStudents": "Étudiants Inscrits"
-        },
-        "tools": {
-          "newAssignment": "Nouveau Devoir",
-          "manageStudents": "Gérer les Étudiants",
-          "extensionPolicy": "Politique d'Extension",
-          "gradingLog": "Journal de Notation"
         }
       },
       "notLoggedIn": {
@@ -369,7 +364,11 @@
         },
         "assignments": {
           "title": "Mes Devoirs",
-          "empty": "Aucun devoir n'est encore assigné."
+          "empty": "Aucun devoir à afficher."
+        },
+        "redemptions": {
+          "title": "Mes Échanges",
+          "empty": "Aucun échange de laissez-passer trouvé."
         }
       }
     },

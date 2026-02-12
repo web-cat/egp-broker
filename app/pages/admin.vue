@@ -1,22 +1,23 @@
 <template>
   <UPage class="bg-primary-50/30 dark:bg-primary-950/30 min-h-screen">
-    <UContainer>
-      <div class="flex items-center justify-between gap-4 py-8">
-        <UPageHeader :title="adminPageTitle || t('pages.admin.title')" class="!pb-0" />
+    <UPageBody
+      ><UContainer>
+        <div class="flex items-center justify-between gap-4 pb-8">
+          <UPageHeader :title="adminPageTitle || t('pages.admin.title')" class="!pb-0" />
 
-        <UDropdownMenu :items="dropdownItems">
-          <UButton
-            :label="currentPageLabel"
-            icon="i-lucide-chevron-down"
-            trailing
-            variant="outline"
-            color="neutral"
-          />
-        </UDropdownMenu>
-      </div>
+          <UDropdownMenu :items="dropdownItems">
+            <UButton
+              :label="currentPageLabel"
+              icon="i-lucide-chevron-down"
+              trailing
+              variant="outline"
+              color="neutral"
+            />
+          </UDropdownMenu>
+        </div>
 
-      <NuxtPage />
-    </UContainer>
+        <NuxtPage /> </UContainer
+    ></UPageBody>
   </UPage>
 </template>
 

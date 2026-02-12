@@ -107,7 +107,7 @@ Sometimes when developing, you may make changes that are big enough you need to 
 - `scripts/restart-app.sh`: Uses `docker compose exec` to kill the application and restart it within the container, without forcing you to kill the entire stack and restart it.
 - `docker compose exec app-dev pnpm prisma migrate reset`: Perform a "hard reset" on the database by completely dropping and recreating all tables and re-seeding the database with its initial dev contents (see `prisma/seed.ts`).
 - Restart the whole stack: If you are running the stack interactively using `docker compose up`, just use Ctrl-C to terminate the whole stack. If you are running in detached mode, use `docker compose down`.
-- Rebuild the docker image: This isn't needed very often, but if there are significant changes to any application dependencies, it might be needed. Shut down the application stack if it is running and use `docker compose build app-dev` to rebuild the docker image.
+- Rebuild the docker image: This isn't needed very often, but if there are significant changes to any application dependencies, it might be needed. **Note:** check the date on **pnpm-lock.yaml** on GitHub to find out if any dependency changes have occurred. Shut down the application stack if it is running and use `docker compose build app-dev` to rebuild the docker image. Restart the stack. You may also need to use `docker compose exec app-dev pnpm install --frozen-lockfile` to rebuild the `node_modules` directory to make sure it has the correct contents for the correct architecture if the app reports any issues like: `WARN  [unimport] failed to resolve "/app/node_modules/...`.
 
 ### 📜 Script Reference
 

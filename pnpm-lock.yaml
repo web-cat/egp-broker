@@ -56,6 +56,9 @@ importers:
       pinia-plugin-persistedstate:
         specifier: ^4.5.0
         version: 4.5.0(@nuxt/kit@4.2.0(magicast@0.3.5))(@pinia/nuxt@0.11.2(magicast@0.3.5)(pinia@3.0.3(typescript@5.9.3)(vue@3.5.22(typescript@5.9.3))))(pinia@3.0.3(typescript@5.9.3)(vue@3.5.22(typescript@5.9.3)))
+      typescript-pluralize:
+        specifier: ^1.0.1
+        version: 1.0.1
       zod:
         specifier: ^4.0.17
         version: 4.1.12
@@ -6058,6 +6061,9 @@ packages:
 
   type-level-regexp@0.1.17:
     resolution: {integrity: sha512-wTk4DH3cxwk196uGLK/E9pE45aLfeKJacKmcEgEOA/q5dnPGNxXt0cfYdFxb57L+sEpf1oJH4Dnx/pnRcku9jg==}
+
+  typescript-pluralize@1.0.1:
+    resolution: {integrity: sha512-kZlNdRrHqRSJa0aDcyAucGfyYKf0I0MaDenQ3QRV1xEfPMC0D92hn5houKTbLkFbWIIaA16iUa20IazE8r2xNQ==}
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
@@ -13808,6 +13814,8 @@ snapshots:
       tagged-tag: 1.0.0
 
   type-level-regexp@0.1.17: {}
+
+  typescript-pluralize@1.0.1: {}
 
   typescript@5.9.3: {}
 

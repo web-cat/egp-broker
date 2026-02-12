@@ -1,92 +1,174 @@
 <template>
-  <div class="space-y-6">
-    <UCard
-      class="bg-white dark:bg-neutral-900 shadow-sm border-primary-200/60 dark:border-primary-700/60"
-    >
-      <template #header>
+    <UPageHeader
+      :title="courseCode ? `${courseCode}: ${courseTitle}` : courseTitle"
+      :description="t('pages.dashboard.student.subtitle')"
+      icon="i-lucide-book-open"
+      :ui="{ wrapper: 'py-2' }"
+    />
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Pass Pools -->
+      <UCard
+        v-for="pool in passPools?.data"
+        :key="pool.id"
+        variant="ghost"
+        class="bg-neutral-50 dark:bg-neutral-800/50"
+      >
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div
-              class="p-2 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center"
-            >
-              <UIcon
-                name="i-lucide-book-open"
-                class="w-6 h-6 text-primary-600 dark:text-primary-400"
-              />
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                {{ t('pages.dashboard.student.title', { course: courseTitle }) }}
-              </h2>
-              <p class="text-neutral-600 dark:text-neutral-400">
-                {{ t('pages.dashboard.student.subtitle') }}
-              </p>
-            </div>
+          <div>
+            <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
+              {{ $plural(pool.name, pool.balance) }}
+            </p>
+            <p class="text-4xl font-bold text-primary-600 dark:text-primary-400 mt-1">
+              {{ pool.balance }}
+            </p>
           </div>
-          <UButton
-            v-if="isAdmin"
-            to="/admin"
-            icon="i-lucide-settings"
-            color="secondary"
-            variant="outline"
-            :label="t('pages.admin.link')"
-          />
+          <div class="p-4 bg-primary-100 dark:bg-primary-900/50 rounded-full">
+            <UIcon name="i-lucide-coins" class="w-8 h-8 text-primary-600 dark:text-primary-400" />
+          </div>
         </div>
-      </template>
+      </UCard>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Tokens -->
-        <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
-                {{ t('pages.dashboard.student.stats.availableTokens') }}
-              </p>
-              <p class="text-4xl font-bold text-primary-600 dark:text-primary-400 mt-1">3</p>
-            </div>
-            <div class="p-4 bg-primary-100 dark:bg-primary-900/50 rounded-full">
-              <UIcon name="i-lucide-coins" class="w-8 h-8 text-primary-600 dark:text-primary-400" />
-            </div>
+      <!-- Next Deadline -->
+      <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
+              {{ t('pages.dashboard.student.stats.nextDeadline') }}
+            </p>
+            <p class="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">
+              {{ t('global.empty.noUpcoming') }}
+            </p>
           </div>
-        </UCard>
-
-        <!-- Next Deadline -->
-        <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
-                {{ t('pages.dashboard.student.stats.nextDeadline') }}
-              </p>
-              <p class="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">
-                {{ t('global.empty.noUpcoming') }}
-              </p>
-            </div>
-            <div class="p-4 bg-secondary-100 dark:bg-secondary-900/50 rounded-full">
-              <UIcon
-                name="i-lucide-calendar-clock"
-                class="w-8 h-8 text-secondary-600 dark:text-secondary-400"
-              />
-            </div>
+          <div class="p-4 bg-secondary-100 dark:bg-secondary-900/50 rounded-full">
+            <UIcon
+              name="i-lucide-calendar-clock"
+              class="w-8 h-8 text-secondary-600 dark:text-secondary-400"
+            />
           </div>
-        </UCard>
-      </div>
-    </UCard>
+        </div>
+      </UCard>
+    </div>
 
     <!-- My Assignments -->
-    <UCard :title="t('pages.dashboard.student.assignments.title')">
-      <div class="text-center py-12 text-neutral-500">
-        <UIcon name="i-lucide-clipboard-check" class="w-12 h-12 mx-auto mb-4 opacity-20" />
-        <p>{{ t('pages.dashboard.student.assignments.empty') }}</p>
-      </div>
-    </UCard>
-  </div>
+    <div class="space-y-4 pt-8">
+      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">{{ t('pages.dashboard.student.assignments.title') }}</h3>
+      <UiDataTable
+        :data="assignmentsData?.data"
+        :columns="assignmentColumns"
+        :loading="assignmentsStatus === 'pending'"
+        searchable
+        search-placeholder="Search assignments…"
+        empty-icon="i-lucide-clipboard-list"
+        :empty-text="t('pages.dashboard.student.assignments.empty')"
+      />
+    </div>
+
+    <!-- My Redemptions -->
+    <div class="space-y-4 pt-8">
+      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">{{ t('pages.dashboard.student.redemptions.title') }}</h3>
+      <UiDataTable
+        :data="redemptionsData?.data"
+        :columns="redemptionColumns"
+        :loading="redemptionsStatus === 'pending'"
+        searchable
+        search-placeholder="Search redemptions…"
+        empty-icon="i-lucide-history"
+        :empty-text="t('pages.dashboard.student.redemptions.empty')"
+      />
+    </div>
 </template>
 
 <script setup lang="ts">
+import type { SimplePassPool } from '@@/shared/models/pass'
+import type { ApiResponse } from '@@/shared/types/api'
+import type { TableColumn } from '@nuxt/ui'
+import type { AssignmentRow } from '@@/server/api/me/assignments.get'
+
+import type { RedemptionRow } from '@@/server/api/me/redemptions.get'
+
 const { t } = useI18n()
 
 defineProps<{
   courseTitle: string | null
+  courseCode: string | null
   isAdmin: boolean
 }>()
+
+// Fetch pass pools for the current course
+const { data: passPools } = await useFetch<ApiResponse<SimplePassPool[]>>('/api/me/pass-pools')
+
+// Fetch assignments for the current course
+const { data: assignmentsData, status: assignmentsStatus } = await useFetch<ApiResponse<AssignmentRow[]>>('/api/me/assignments')
+
+// Fetch redemptions for the current course
+const { data: redemptionsData, status: redemptionsStatus } = await useFetch<ApiResponse<RedemptionRow[]>>('/api/me/redemptions')
+
+const assignmentColumns: TableColumn<AssignmentRow>[] = [
+  {
+    accessorKey: 'title',
+    header: 'Title',
+    cell: ({ row }) => row.getValue('title') || '—'
+  },
+  {
+    accessorKey: 'eligiblePassTypeNames',
+    header: 'Eligible Pass Types',
+    cell: ({ row }) => {
+      const names = row.original.eligiblePassTypeNames || []
+      return names.join(', ') || 'None'
+    }
+  },
+  {
+    accessorKey: 'dueDate',
+    header: 'Due Date',
+    cell: dateCellRenderer('dueDate')
+  },
+  {
+    accessorKey: 'availableFrom',
+    header: 'Available From',
+    cell: dateCellRenderer('availableFrom')
+  }
+]
+
+const redemptionColumns: TableColumn<RedemptionRow>[] = [
+  {
+    accessorKey: 'assignmentTitle',
+    header: 'Assignment',
+    cell: ({ row }) => row.getValue('assignmentTitle') || '—'
+  },
+  {
+    accessorKey: 'redeemedAt',
+    header: 'Redeemed',
+    cell: dateCellRenderer('redeemedAt')
+  },
+  {
+    accessorKey: 'cost',
+    header: 'Cost',
+    cell: ({ row }) => `${row.getValue('cost')} pass(es)`
+  },
+  {
+    accessorKey: 'hoursPerPass',
+    header: 'Hours/Pass',
+    cell: ({ row }) => `${row.getValue('hoursPerPass')}h`
+  },
+  {
+    accessorKey: 'acceptUntil',
+    header: 'New Deadline',
+    cell: dateCellRenderer('acceptUntil')
+  },
+  {
+    accessorKey: 'isActive',
+    header: 'Status',
+    cell: ({ row }) => {
+      const active = row.getValue('isActive')
+      return h('div', { class: 'flex items-center gap-2' }, [
+        h('div', {
+          class: ['w-2 h-2 rounded-full', active ? 'bg-green-500' : 'bg-neutral-300 dark:bg-neutral-600']
+        }),
+        h('span', { class: active ? 'text-green-600 dark:text-green-400 font-medium' : 'text-neutral-500' }, 
+          active ? 'Active' : 'Expired')
+      ])
+    }
+  }
+]
 </script>

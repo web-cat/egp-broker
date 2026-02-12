@@ -39,6 +39,7 @@ interface AssignmentRow {
   availableFrom: string | null
   acceptUntil: string | null
   createdAt: string
+  [key: string]: any
 }
 
 const route = useRoute()
@@ -65,9 +66,9 @@ watchEffect(() => {
     return
   }
   const firstRow = data.value?.data?.[0]
-  const label = courseFilter.value
+  const label = firstRow?.courseLabel || courseFilter.value
   const name = firstRow?.courseTitle
-  setTitle(name ? `Assignments: ${label} — ${name}` : `Assignments: ${label}`)
+  setTitle(name ? `Assignments: ${label}: ${name}` : `Assignments: ${label}`)
 })
 
 const assignmentColumns: TableColumn<AssignmentRow>[] = [

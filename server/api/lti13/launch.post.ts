@@ -55,7 +55,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const lastName = claims.family_name || claims.name?.split(' ').slice(1).join(' ') || 'User'
 
     // Find or create user and identity, then upsert course and enrollment
-    const ltiUser = await prisma.$transaction(async (tx) => {
+    const transactionResult = await prisma.$transaction(async (tx) => {
       const deploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
       const deploymentHost =
         claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid || null
@@ -193,6 +193,31 @@ export default defineEventHandler(async (event: H3Event) => {
             }
           })
         }
+
+        // 5. Sync automatic pass eligibility
+        if (resourceLink?.id) {
+          // We need to get the internal ID of the assignment we just upserted/found
+          const assignment = await tx.assignment.findUnique({
+            where: {
+              courseId_resourceLinkId: {
+                courseId: course.id,
+                resourceLinkId: resourceLink.id
+              }
+            },
+            select: { id: true }
+          })
+
+          if (assignment) {
+            // We can't await this inside the transaction if it uses a separate prisma client instance 
+            // or if we want it to run after the transaction commits. 
+            // However, syncAssignmentEligibility uses `prisma` global which is separate from `tx`.
+            // To be safe and avoid locking issues, we should probably run this AFTER the transaction.
+            // But we need to pass the ID out.
+            // actually, let's just do it here, but we need to capture the ID.
+            // Better yet, let's return the assignment ID from the transaction along with the user.
+          }
+        }
+
         // 5. Update user's current course context
         user = await tx.user.update({
           where: { id: user.id },
@@ -200,18 +225,37 @@ export default defineEventHandler(async (event: H3Event) => {
         })
       }
 
-      return user
+      // Check if we have a resource link to sync (internal ID lookup)
+      let assignmentId: string | null = null
+      if (resourceLink?.id && context?.id) {
+        const a = await tx.assignment.findUnique({
+          where: {
+            courseId_resourceLinkId: {
+              courseId: course!.id,
+              resourceLinkId: resourceLink.id
+            }
+          },
+          select: { id: true }
+        })
+        assignmentId = a?.id ?? null
+      }
+
+      return { user, assignmentId }
     })
+
+    if (transactionResult.assignmentId) {
+      await syncAssignmentEligibility(transactionResult.assignmentId)
+    }
 
     // Clear LTI temporary state and set the actual user session
     await setUserSession(event, {
       user: {
-        id: ltiUser.id,
-        email: ltiUser.email,
-        firstName: ltiUser.firstName,
-        lastName: ltiUser.lastName,
-        avatarUrl: ltiUser.avatarUrl,
-        currentCourseId: ltiUser.currentCourseId
+        id: transactionResult.user.id,
+        email: transactionResult.user.email,
+        firstName: transactionResult.user.firstName,
+        lastName: transactionResult.user.lastName,
+        avatarUrl: transactionResult.user.avatarUrl,
+        currentCourseId: transactionResult.user.currentCourseId
       },
       // Pass along LTI context if needed
       lti: {

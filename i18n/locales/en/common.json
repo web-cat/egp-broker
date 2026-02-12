@@ -319,7 +319,8 @@
     "empty": {
       "noActivity": "No recent activity found",
       "noCourses": "You are not enrolled in any courses yet",
-      "noEnrollments": "No enrollments found"
+      "noEnrollments": "No enrollments found",
+      "noUpcoming": "No upcoming deadlines"
     },
     "status": {
       "error": "Error",
@@ -347,12 +348,6 @@
           "activeAssignments": "Active Assignments",
           "pendingRequests": "Pending Requests",
           "enrolledStudents": "Enrolled Students"
-        },
-        "tools": {
-          "newAssignment": "New Assignment",
-          "manageStudents": "Manage Students",
-          "extensionPolicy": "Extension Policy",
-          "gradingLog": "Grading Log"
         }
       },
       "notLoggedIn": {
@@ -369,7 +364,11 @@
         },
         "assignments": {
           "title": "My Assignments",
-          "empty": "No assignments assigned yet."
+          "empty": "No assignments to show."
+        },
+        "redemptions": {
+          "title": "My Redemptions",
+          "empty": "No pass redemptions found."
         }
       }
     },

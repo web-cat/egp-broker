@@ -201,10 +201,19 @@ model Assignment {
   dueDate       DateTime?
   acceptUntil   DateTime?
 
+  eligibleFrom  DateTime?
+  eligibleUntil DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([courseId, resourceLinkId])
+}
+
+enum PassCoolDownUnit {
+  HOUR
+  DAY
+  WEEK
 }
 
 // ─────────────────────────────────────────────────────────
@@ -225,11 +234,18 @@ model PassType {
   initialBalance Int     @default(3) // Passes each student starts with
   allowRequests  Boolean @default(false) // Can a student request more?
   hoursPerPass   Float   @default(24) // Hours of extension each pass buys
+  titlePattern   String? // Pattern-based matching (regex against Assignment.title)
 
   /// Max days in the past an assignment's due date can be
   /// for this pass to apply (null = no limit).
   minDaysPastDue Int?
   maxDaysPastDue Int?
+
+  // Cool down period
+  coolDownPeriod Int?
+  coolDownUnit   PassCoolDownUnit?
+  coolDownReset  PassCoolDownUnit?
+  coolDownResetOffset Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -248,13 +264,11 @@ model PassEligibility {
   id          String    @id @default(uuid())
   passTypeId String
   passType   PassType @relation(fields: [passTypeId], references: [id], onDelete: Cascade)
-
-  // Option A: Direct assignment reference
   assignmentId String?
   assignment   Assignment? @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
-  // Option B: Pattern-based matching (SQL LIKE / ILIKE against Assignment.title)
-  titlePattern String?
+  // Track if this was created automatically by a pattern matcher
+  isAutomatic Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

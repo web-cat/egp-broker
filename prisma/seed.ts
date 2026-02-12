@@ -30,6 +30,11 @@ async function main() {
   console.log('🌱 Starting database seeding...')
 
   // Clean up existing data
+  await prisma.passRedemption.deleteMany()
+  await prisma.studentPassPool.deleteMany()
+  await prisma.passPrompt.deleteMany()
+  await prisma.passEligibility.deleteMany()
+  await prisma.passType.deleteMany()
   await prisma.assignment.deleteMany()
   await prisma.enrollment.deleteMany()
   await prisma.course.deleteMany()
@@ -114,6 +119,49 @@ async function main() {
     ]
   })
   console.log('✅ Enrollments created (Admin as Teacher, Demo as Student)')
+
+  // Create Pass Types
+  const passType1 = await prisma.passType.create({
+    data: {
+      courseId: course1.id,
+      name: 'Late Day Pass',
+      description: 'Exchange 1 pass for a 24-hour extension on any assignment.',
+      initialBalance: 3,
+      hoursPerPass: 24,
+      allowRequests: true
+    }
+  })
+
+  const passType2 = await prisma.passType.create({
+    data: {
+      courseId: course2.id,
+      name: 'Exam Resubmission',
+      description: 'Allows one resubmission of a major exam.',
+      initialBalance: 1,
+      hoursPerPass: 0,
+      allowRequests: false
+    }
+  })
+  console.log('✅ 2 pass types created')
+
+  // Seed Student Pass Pools
+  const studentEnrollments = await prisma.enrollment.findMany({
+    where: { role: 'STUDENT' },
+    include: { course: { include: { passTypes: true } } }
+  })
+
+  for (const enrollment of studentEnrollments) {
+    for (const passType of enrollment.course.passTypes) {
+      await prisma.studentPassPool.create({
+        data: {
+          userId: enrollment.userId,
+          passTypeId: passType.id,
+          balance: passType.initialBalance
+        }
+      })
+    }
+  }
+  console.log(`✅ Seeded pass pools for ${studentEnrollments.length} student enrollments`)
 
   // Create Assignments
   await prisma.assignment.createMany({

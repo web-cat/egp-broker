@@ -42,6 +42,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     }
   })
 
+  // Sync automatic pass eligibility
+  if (body.title) {
+    await syncAssignmentEligibility(assignment.id)
+  }
+
   return {
     statusCode: 200,
     data: assignment
