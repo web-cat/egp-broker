@@ -2,25 +2,7 @@ import { defineEventHandler } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
 
-export interface AdminPlatformSummary {
-  id: string
-  issuer: string
-  name: string | null
-}
-
-export interface AdminDeploymentSummary {
-  id: string
-  deploymentId: string
-}
-
-export interface AdminStats {
-  platforms: number
-  deployments: number
-  courses: number
-  users: number
-  platformList: AdminPlatformSummary[]
-  deploymentList: AdminDeploymentSummary[]
-}
+import type { AdminStats } from '@@/shared/models/stats'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<AdminStats>> => {
   const session = await getUserSession(event)

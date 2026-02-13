@@ -33,8 +33,9 @@ enum CourseRole {
   ADMIN
 }
 
+/// A user of the system (Student, Teacher, or Admin).
 model User {
-  id              String     @id @default(uuid())
+  id              String     @id @default(cuid())
   email           String     @unique
   password        String?
   firstName       String
@@ -60,8 +61,9 @@ model User {
   @@index([emailVerified])
 }
 
+/// An LTI 1.3 Platform (e.g., Canvas instance).
 model LtiPlatform {
-  id            String   @id @default(uuid())
+  id            String   @id @default(cuid())
   issuer        String   @unique // iss claim (e.g., https://canvas.instructure.com)
   clientId      String // aud claim
   authEndpoint  String // OIDC auth initiation endpoint
@@ -75,8 +77,9 @@ model LtiPlatform {
   identities  LtiIdentity[]
 }
 
+/// A specific installation/deployment of the tool within an LTI Platform.
 model LtiDeployment {
-  id             String  @id @default(uuid())
+  id             String  @id @default(cuid())
   platformId     String
   deploymentId   String // LTI deployment_id claim
   deploymentHost String? // Optional guid/host from tool_platform claim
@@ -90,8 +93,9 @@ model LtiDeployment {
   @@unique([platformId, deploymentId])
 }
 
+/// Linkage between a local User and an LTI Platform Identity.
 model LtiIdentity {
-  id             String  @id @default(uuid())
+  id             String  @id @default(cuid())
   userId         String
   platformId     String
   ltiSub         String // sub claim (unique user id in the platform)
@@ -110,7 +114,7 @@ model LtiIdentity {
 }
 
 model LoginAttempt {
-  id            String    @id @default(uuid())
+  id            String    @id @default(cuid())
   email         String
   ipAddress     String
   attemptCount  Int       @default(1)
@@ -126,12 +130,13 @@ model LoginAttempt {
 }
 
 model Token {
-  id        String    @id @default(uuid())
+  id        String    @id @default(cuid())
   userId    String
   type      TokenType
   token     String    @unique
   expiresAt DateTime
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -142,7 +147,7 @@ model Token {
 }
 
 model Course {
-  id           String  @id @default(uuid())
+  id           String  @id @default(cuid())
   // LTI context claim fields
   ltiContextId String? // context.id from LTI claim
   label        String? // context.label (course code, e.g., "CPS 435")
@@ -167,7 +172,7 @@ model Course {
 }
 
 model Enrollment {
-  id       String     @id @default(uuid())
+  id       String     @id @default(cuid())
   userId   String
   courseId String
   role     CourseRole
@@ -182,7 +187,7 @@ model Enrollment {
 }
 
 model Assignment {
-  id             String  @id @default(uuid())
+  id             String  @id @default(cuid())
   resourceLinkId String // resource_link.id from LTI claim
   title          String? // resource_link.title
 
@@ -222,7 +227,7 @@ enum PassCoolDownUnit {
 
 /// Teacher-defined pass template, scoped to a single course.
 model PassType {
-  id       String @id @default(uuid())
+  id       String @id @default(cuid())
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
@@ -259,9 +264,9 @@ model PassType {
 }
 
 /// Defines which assignments a pass type can be used on.
-/// No rows = usable on all assignments in the course (subject to maxDaysPastDue).
+/// NOTE: All eligibility relationships are explicitly stored. Implicit/wildcard eligibility is not supported.
 model PassEligibility {
-  id          String    @id @default(uuid())
+  id          String    @id @default(cuid())
   passTypeId String
   passType   PassType @relation(fields: [passTypeId], references: [id], onDelete: Cascade)
   assignmentId String?
@@ -278,7 +283,7 @@ model PassEligibility {
 
 /// Supplemental choices a student must make when redeeming a pass.
 model PassPrompt {
-  id          String    @id @default(uuid())
+  id          String    @id @default(cuid())
   passTypeId String
   passType   PassType @relation(fields: [passTypeId], references: [id], onDelete: Cascade)
 
@@ -294,7 +299,7 @@ model PassPrompt {
 
 /// Per-student balance for each pass type.
 model StudentPassPool {
-  id          String    @id @default(uuid())
+  id          String    @id @default(cuid())
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   passTypeId String
@@ -313,7 +318,7 @@ model StudentPassPool {
 
 /// Receipt created each time a student spends a pass.
 model PassRedemption {
-  id     String           @id @default(uuid())
+  id     String           @id @default(cuid())
   poolId String
   pool   StudentPassPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
 
@@ -332,7 +337,8 @@ model PassRedemption {
   promptResponsesJson Json?
 
   // Audit
-  redeemedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([poolId])
   @@index([assignmentId])

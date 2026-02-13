@@ -1,7 +1,7 @@
 <template>
   <USlideover
     v-model:open="open"
-    :title="isEdit ? 'Edit Pass Type' : 'Add Pass Type'"
+    :title="isEdit ? $t('admin.passType.panelTitleEdit') : $t('admin.passType.panelTitleCreate')"
     :description="panelDescription"
   >
     <template #body>
@@ -10,37 +10,37 @@
           <UiFormInput
             v-model="state.name"
             name="name"
-            label="Name"
-            placeholder="e.g. Quiz Retry Pass"
+            :label="$t('admin.passType.nameLabel')"
+            :placeholder="$t('admin.passType.namePlaceholder')"
             required
           />
           <UiFormInput
             v-model="state.description"
             name="description"
-            label="Description"
-            placeholder="Optional teacher-facing note"
+            :label="$t('admin.passType.descriptionLabel')"
+            :placeholder="$t('admin.passType.descriptionPlaceholder')"
           />
 
           <UiFormInput
             v-model="state.titlePattern"
             name="titlePattern"
-            label="Assignment Title Pattern"
-            placeholder="e.g. Lab %, Homework *"
-            description="Use % or * as wildcard characters to match multiple assignments."
+            :label="$t('admin.passType.titlePatternLabel')"
+            :placeholder="$t('admin.passType.titlePatternPlaceholder')"
+            :description="$t('admin.passType.titlePatternDescription')"
           />
 
           <div class="grid grid-cols-2 gap-4">
             <UiFormInput
               v-model.number="state.initialBalance"
               name="initialBalance"
-              label="Initial Balance"
+              :label="$t('admin.passType.initialBalanceLabel')"
               type="number"
               min="0"
             />
             <UiFormInput
               v-model.number="state.hoursPerPass"
               name="hoursPerPass"
-              label="Hours per Pass"
+              :label="$t('admin.passType.hoursPerPassLabel')"
               type="number"
               step="0.5"
               min="0"
@@ -51,61 +51,69 @@
             <UiFormInput
               v-model.number="state.minDaysPastDue"
               name="minDaysPastDue"
-              label="Min Days Past Due"
+              :label="$t('admin.passType.minDaysPastDueLabel')"
               type="number"
-              placeholder="None"
+              :placeholder="$t('admin.passType.nonePlaceholder')"
             />
             <UiFormInput
               v-model.number="state.maxDaysPastDue"
               name="maxDaysPastDue"
-              label="Max Days Past Due"
+              :label="$t('admin.passType.maxDaysPastDueLabel')"
               type="number"
-              placeholder="None"
+              :placeholder="$t('admin.passType.nonePlaceholder')"
             />
           </div>
 
           <div class="border-t pt-4">
-            <h3 class="text-sm font-semibold mb-3">Cool Down Settings</h3>
-            <div class="grid grid-cols-3 gap-4">
+            <h3 class="text-sm font-semibold mb-3">{{ $t('admin.passType.coolDownSettingsTitle') }}</h3>
+            <div class="grid grid-cols-2 gap-4">
               <UiFormInput
                 v-model.number="state.coolDownPeriod"
                 name="coolDownPeriod"
-                label="Period"
+                :label="$t('admin.passType.periodLabel')"
                 type="number"
                 min="0"
-                placeholder="None"
+                :placeholder="$t('admin.passType.nonePlaceholder')"
               />
-              <UFormField label="Unit" name="coolDownUnit">
+              <UFormField :label="$t('admin.passType.unitLabel')" name="coolDownUnit">
                 <USelect
                   v-model="state.coolDownUnit"
                   :items="['HOUR', 'DAY', 'WEEK']"
-                  placeholder="None"
+                  :placeholder="$t('admin.passType.nonePlaceholder')"
                 />
               </UFormField>
-              <UFormField label="Reset" name="coolDownReset">
+              <UFormField :label="$t('admin.passType.resetLabel')" name="coolDownReset">
                 <USelect
                   v-model="state.coolDownReset"
                   :items="['HOUR', 'DAY', 'WEEK']"
-                  placeholder="None"
+                  :placeholder="$t('admin.passType.nonePlaceholder')"
                 />
               </UFormField>
+              <UiFormInput
+                v-model.number="state.coolDownResetOffset"
+                name="coolDownResetOffset"
+                :label="$t('admin.passType.resetOffsetLabel')"
+                type="number"
+                min="0"
+                :placeholder="$t('admin.passType.nonePlaceholder')"
+              />
             </div>
             <p class="text-xs text-neutral-500 mt-2">
-              Limits how often students can request this pass type.
+              {{ $t('admin.passType.coolDownDescription') }}
             </p>
           </div>
 
           <div class="flex flex-col gap-4">
             <UFormField
-              label="Extension Only"
-              description="Can this pass only be used for extensions?"
+              :label="$t('admin.passType.extensionOnlyLabel')"
+              :description="$t('admin.passType.extensionOnlyDescription')"
             >
               <USwitch v-model="state.extensionOnly" />
             </UFormField>
 
             <UFormField
-              label="Allow Requests"
-              description="Can students request more of these passes?"
+              :label="$t('admin.passType.allowRequestsLabel')"
+              :description="$t('admin.passType.allowRequestsDescription')"
             >
               <USwitch v-model="state.allowRequests" />
             </UFormField>
@@ -119,14 +127,14 @@
         <UButton
           color="neutral"
           variant="outline"
-          label="Cancel"
+          :label="$t('global.actions.cancel')"
           icon="i-lucide-x"
           :disabled="saving"
           @click="open = false"
         />
         <UButton
           color="primary"
-          :label="isEdit ? 'Save' : 'Create'"
+          :label="isEdit ? $t('global.actions.save') : $t('global.actions.submit')"
           :icon="isEdit ? 'i-lucide-save' : 'i-lucide-plus'"
           :loading="saving"
           :disabled="saving"
@@ -141,6 +149,7 @@
 import type { PassTypeData } from '@@/shared/models/pass'
 
 const { success, error: showError } = useNotifications()
+const { t } = useI18n()
 
 const props = defineProps<{
   passType: PassTypeData | null
@@ -159,7 +168,7 @@ const saving = ref(false)
 const isEdit = computed(() => !!props.passType)
 const panelDescription = computed(() => {
   if (isEdit.value) return props.passType?.name || 'Pass Type'
-  return 'Create a new pass type configuration'
+  return t('admin.passType.panelDescriptionCreate')
 })
 
 const state = reactive({
@@ -172,9 +181,10 @@ const state = reactive({
   allowRequests: false,
   minDaysPastDue: null as number | null,
   maxDaysPastDue: null as number | null,
-  coolDownPeriod: null as number | null,
-  coolDownUnit: null as string | null,
-  coolDownReset: null as string | null
+  coolDownPeriod: undefined as any,
+  coolDownUnit: undefined as string | undefined,
+  coolDownReset: undefined as string | undefined,
+  coolDownResetOffset: undefined as any
 })
 
 // Sync form state when the passType prop changes or the panel opens
@@ -191,9 +201,10 @@ watch(
       state.allowRequests = passType.allowRequests
       state.minDaysPastDue = passType.minDaysPastDue
       state.maxDaysPastDue = passType.maxDaysPastDue
-      state.coolDownPeriod = passType.coolDownPeriod
-      state.coolDownUnit = passType.coolDownUnit
-      state.coolDownReset = passType.coolDownReset
+      state.coolDownPeriod = passType.coolDownPeriod ?? undefined
+      state.coolDownUnit = passType.coolDownUnit ?? undefined
+      state.coolDownReset = passType.coolDownReset ?? undefined
+      state.coolDownResetOffset = passType.coolDownResetOffset ?? undefined
     } else if (isOpen && !passType) {
       state.name = ''
       state.description = ''
@@ -204,9 +215,10 @@ watch(
       state.allowRequests = false
       state.minDaysPastDue = null
       state.maxDaysPastDue = null
-      state.coolDownPeriod = null
-      state.coolDownUnit = null
-      state.coolDownReset = null
+      state.coolDownPeriod = undefined
+      state.coolDownUnit = undefined
+      state.coolDownReset = undefined
+      state.coolDownResetOffset = undefined
     }
   },
   { immediate: true }
@@ -225,9 +237,10 @@ const handleSubmit = async () => {
       allowRequests: state.allowRequests,
       minDaysPastDue: state.minDaysPastDue,
       maxDaysPastDue: state.maxDaysPastDue,
-      coolDownPeriod: state.coolDownPeriod,
-      coolDownUnit: state.coolDownUnit,
-      coolDownReset: state.coolDownReset
+      coolDownPeriod: state.coolDownPeriod ? Number(state.coolDownPeriod) : null,
+      coolDownUnit: (state.coolDownUnit as 'HOUR' | 'DAY' | 'WEEK' | undefined) ?? null,
+      coolDownReset: (state.coolDownReset as 'HOUR' | 'DAY' | 'WEEK' | undefined) ?? null,
+      coolDownResetOffset: state.coolDownResetOffset ? Number(state.coolDownResetOffset) : null
     }
 
     if (isEdit.value) {
@@ -236,8 +249,8 @@ const handleSubmit = async () => {
         body
       })
       success({
-        title: 'Pass Type updated',
-        message: 'The configuration has been saved successfully.'
+        title: t('admin.passType.notifications.updatedTitle'),
+        message: t('admin.passType.notifications.updatedMessage')
       })
       emit('saved', props.passType!.id, body)
     } else {
@@ -246,16 +259,16 @@ const handleSubmit = async () => {
         body
       })
       success({
-        title: 'Pass Type created',
-        message: 'the new pass type has been created successfully.'
+        title: t('admin.passType.notifications.createdTitle'),
+        message: t('admin.passType.notifications.createdMessage')
       })
       emit('created')
     }
     open.value = false
   } catch (err: any) {
     showError({
-      title: isEdit.value ? 'Update failed' : 'Create failed',
-      message: err?.data?.message || 'An unexpected error occurred.'
+      title: isEdit.value ? t('admin.passType.notifications.updateFailedTitle') : t('admin.passType.notifications.createFailedTitle'),
+      message: err?.data?.message || t('admin.passType.notifications.errorDefault')
     })
   } finally {
     saving.value = false

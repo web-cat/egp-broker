@@ -17,6 +17,18 @@ export interface SimplePassPool {
   balance: number
 }
 
+export interface RedemptionRow {
+  id: string
+  assignmentTitle: string | null
+  createdAt: string
+  cost: number
+  hoursPerPass: number
+  availableFrom: string | null
+  acceptUntil: string | null
+  isActive: boolean
+  [key: string]: any
+}
+
 /**
  * PassType data for dashboard
  */
@@ -32,6 +44,7 @@ export interface PassTypeData {
   coolDownPeriod: number | null
   coolDownUnit: 'HOUR' | 'DAY' | 'WEEK' | null
   coolDownReset: 'HOUR' | 'DAY' | 'WEEK' | null
+  coolDownResetOffset: number | null
   minDaysPastDue: number | null
   maxDaysPastDue: number | null
   createdAt: string
@@ -48,6 +61,7 @@ export const createPassTypeSchema = z.object({
   coolDownPeriod: z.number().int().min(0).optional().nullable(),
   coolDownUnit: z.enum(['HOUR', 'DAY', 'WEEK']).optional().nullable(),
   coolDownReset: z.enum(['HOUR', 'DAY', 'WEEK']).optional().nullable(),
+  coolDownResetOffset: z.number().int().min(0).optional().nullable(),
   minDaysPastDue: z.number().int().min(0).optional().nullable(),
   maxDaysPastDue: z.number().int().min(0).optional().nullable()
 })

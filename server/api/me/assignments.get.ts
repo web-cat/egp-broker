@@ -1,21 +1,9 @@
 import { defineEventHandler } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
+import { matchesTitlePattern } from '@@/server/utils/assignments'
 
-export interface AssignmentRow {
-  id: string
-  resourceLinkId: string
-  title: string | null
-  canvasAssignmentId: string | null
-  courseLabel: string | null
-  courseTitle: string | null
-  dueDate: string | null
-  availableFrom: string | null
-  acceptUntil: string | null
-  createdAt: string
-  eligiblePassTypeNames?: string[]
-  [key: string]: any
-}
+import type { AssignmentRow } from '@@/shared/models/assignment'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentRow[]>> => {
   const session = await getUserSession(event)
@@ -42,50 +30,21 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
     }
   }
 
-  // Fetch assignments and pass types for this course
-  const [assignments, passTypes] = await Promise.all([
-    prisma.assignment.findMany({
-      where: { courseId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        course: { select: { label: true, title: true } }
+  // Fetch assignments (including pass eligibilities) for this course
+  const assignments = await prisma.assignment.findMany({
+    where: { courseId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      course: { select: { label: true, title: true } },
+      passEligibilities: {
+        include: { passType: true }
       }
-    }),
-    prisma.passType.findMany({
-      where: { courseId },
-      include: {
-        eligibilities: true
-      }
-    })
-  ])
+    }
+  })
 
   const data: AssignmentRow[] = assignments.map((a) => {
     // Determine which pass types are eligible for this assignment
-    const eligiblePassTypeNames = passTypes
-      .filter((pt) => {
-        // 1. Direct Eligibility Records (White-listing)
-        // If specific direct assignment eligibility records exist, they must be checked first
-        const directEligibilities = pt.eligibilities.filter((e) => e.assignmentId !== null)
-        if (directEligibilities.length > 0) {
-          if (directEligibilities.some((e) => e.assignmentId === a.id)) return true
-        }
-
-        // 2. Pattern Match
-        if (pt.titlePattern && a.title) {
-          const pattern = pt.titlePattern
-            .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-            .replace(/[%*]/g, '.*')
-          const regex = new RegExp(`^${pattern}$`, 'i')
-          if (regex.test(a.title)) return true
-        }
-
-        // 3. Fallback: If there are NO direct IDs and there's no pattern,
-        // it's usable for all assignments in the course.
-        if (directEligibilities.length === 0 && !pt.titlePattern) return true
-
-        return false
-      })
-      .map((pt) => pt.name)
+    const eligiblePassTypeNames = a.passEligibilities.map((pe) => pe.passType.name)
 
     return {
       id: a.id,

@@ -34,7 +34,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<null>> => {
     }
   })
 
-  const isAuthorized = user?.enrollments.length! > 0 || session.user.globalRole === 'ADMIN'
+  const isAuthorized = (user?.enrollments.length ?? 0) > 0 || session.user.globalRole === 'ADMIN'
 
   if (!isAuthorized) {
     throw createError({

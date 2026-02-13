@@ -2,14 +2,7 @@ import { defineEventHandler } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
 
-export interface PlatformRow {
-  id: string
-  issuer: string
-  clientId: string
-  name: string | null
-  deploymentCount: number
-  createdAt: string
-}
+import type { PlatformRow } from '@@/shared/models/platform'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<PlatformRow[]>> => {
   const session = await getUserSession(event)

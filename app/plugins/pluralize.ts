@@ -17,7 +17,7 @@ class PluralizeFix extends (Pluralize as any) {
   }
 }
 
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin((_nuxtApp) => {
   const instance = new PluralizeFix()
   const plural = (word: string) => {
     const replaceWord = instance.replaceWord(

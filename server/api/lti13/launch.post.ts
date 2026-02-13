@@ -208,8 +208,8 @@ export default defineEventHandler(async (event: H3Event) => {
           })
 
           if (assignment) {
-            // We can't await this inside the transaction if it uses a separate prisma client instance 
-            // or if we want it to run after the transaction commits. 
+            // We can't await this inside the transaction if it uses a separate prisma client instance
+            // or if we want it to run after the transaction commits.
             // However, syncAssignmentEligibility uses `prisma` global which is separate from `tx`.
             // To be safe and avoid locking issues, we should probably run this AFTER the transaction.
             // But we need to pass the ID out.

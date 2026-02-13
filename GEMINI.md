@@ -111,6 +111,91 @@ Nuxt 4 is high-performance by default; don't break it with poor patterns.
 
 ---
 
+## 7. Prisma Schema Best Practices
+
+### 7.1. Naming Conventions
+
+Consistency is key for a clean developer experience.
+
+- **Models:** Use **PascalCase** and **singular** nouns (e.g., `User`, not `users` or `user_profile`).
+- **Fields:** Use **camelCase** (e.g., `firstName`, not `first_name`).
+- **Enums:** Use **PascalCase** for the name and **UPPERCASE** for the values.
+
+```prisma
+model UserProfile {
+  id    String @id @default(cuid())
+  role  UserRole @default(USER)
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  GUEST
+}
+
+```
+
+### 7.2. Standardize "Housekeeping" Fields
+
+Every model should track its own lifecycle. This is non-negotiable for debugging and auditing in production.
+
+- Always include `createdAt` and `updatedAt`.
+- Consider a `deletedAt` field for **Soft Deletes**, as Prisma doesn't have a native "trash" feature yet.
+
+```prisma
+model Post {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // For soft deletes
+}
+
+```
+
+### 7.3. Use CUID2 for Identifiers
+
+As we discussed earlier, String IDs are superior for distributed systems. In 2026, **CUID2** is the preferred choice over the original CUID or UUID because it is more secure, collision-resistant, and smaller.
+
+- **CUID2:** `@default(cuid())` (Prisma's internal implementation).
+
+### 7.4. Optimize with Indexes
+
+Don't wait for your app to slow down to add indexes. If you frequently query a field (like `email` or `slug`), index it.
+
+- **`@@index`**: For fields used in `WHERE` clauses.
+- **`@@unique`**: For fields that must be unique across the table.
+- **`@@fulltext`**: If you need search capabilities (specific to some DB providers).
+
+### 7.5. Define Explicit Relations
+
+While Prisma supports "Implicit Many-to-Many" relationships, it is often better to be explicit about your relation names if a model has multiple connections to the same table (e.g., a `User` who is both a "Sender" and a "Receiver" of a `Message`).
+
+```prisma
+model Message {
+  id         String @id @default(cuid())
+  sender     User   @relation("SentMessages", fields: [senderId], references: [id])
+  senderId   String
+  receiver   User   @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId String
+}
+
+```
+
+### 7.6. Use Documentation Comments
+
+Prisma supports "Rich Comments" using `///`. These comments actually carry over into the generated Prisma Client, meaning you’ll see your documentation in VS Code via IntelliSense while you're coding.
+
+```prisma
+model Product {
+  id    String @id @default(cuid())
+  /// The price in cents to avoid floating point errors
+  price Int
+}
+
+```
+
+---
+
 > **Tip for Gemini/AI Collaborators:** When adding new features, always check `server/utils/` for existing database helpers before creating new ones. Ensure all new API endpoints follow the `defineEventHandler` pattern.
 
 ---

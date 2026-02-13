@@ -9,6 +9,20 @@ import { z } from 'zod'
 export type { Course } from '@prisma/client'
 
 // =============================================================================
+// INTERFACES
+// =============================================================================
+
+export interface CourseRow {
+  id: string
+  ltiContextId: string
+  label: string | null
+  title: string | null
+  enrollmentCount: number
+  assignmentCount: number
+  createdAt: string
+}
+
+// =============================================================================
 // VALIDATION SCHEMAS
 // =============================================================================
 

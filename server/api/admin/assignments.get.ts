@@ -2,19 +2,6 @@ import { defineEventHandler, getQuery } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
 
-export interface AssignmentRow {
-  id: string
-  resourceLinkId: string
-  title: string | null
-  canvasAssignmentId: string | null
-  courseLabel: string | null
-  courseTitle: string | null
-  dueDate: string | null
-  availableFrom: string | null
-  acceptUntil: string | null
-  createdAt: string
-}
-
 export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentRow[]>> => {
   const session = await getUserSession(event)
 

@@ -2,15 +2,7 @@ import { defineEventHandler } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
 
-export interface CourseRow {
-  id: string
-  ltiContextId: string
-  label: string | null
-  title: string | null
-  enrollmentCount: number
-  assignmentCount: number
-  createdAt: string
-}
+import type { CourseRow } from '@@/shared/models/course'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<CourseRow[]>> => {
   const session = await getUserSession(event)

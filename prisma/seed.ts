@@ -121,7 +121,7 @@ async function main() {
   console.log('✅ Enrollments created (Admin as Teacher, Demo as Student)')
 
   // Create Pass Types
-  const passType1 = await prisma.passType.create({
+  const _passType1 = await prisma.passType.create({
     data: {
       courseId: course1.id,
       name: 'Late Day Pass',
@@ -132,7 +132,7 @@ async function main() {
     }
   })
 
-  const passType2 = await prisma.passType.create({
+  const _passType2 = await prisma.passType.create({
     data: {
       courseId: course2.id,
       name: 'Exam Resubmission',

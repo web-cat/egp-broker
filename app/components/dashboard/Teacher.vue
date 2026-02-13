@@ -1,97 +1,97 @@
 <template>
-    <UPageHeader
-      :title="courseCode ? `${courseCode}: ${courseTitle}` : courseTitle"
-      :description="t('pages.dashboard.teacher.subtitle')"
-      class="pb-0"
-    />
+  <UPageHeader
+    :title="courseCode ? `${courseCode}: ${courseTitle}` : courseTitle"
+    :description="t('pages.dashboard.teacher.subtitle')"
+    class="pb-0"
+  />
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Quick Stats -->
-      <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
-        <div class="text-center py-4">
-          <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
-            {{ t('pages.dashboard.teacher.stats.activeAssignments') }}
-          </p>
-          <p class="text-4xl font-bold text-primary-600 dark:text-primary-400 mt-1">0</p>
-        </div>
-      </UCard>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Quick Stats -->
+    <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+      <div class="text-center py-4">
+        <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
+          {{ t('pages.dashboard.teacher.stats.activeAssignments') }}
+        </p>
+        <p class="text-4xl font-bold text-primary-600 dark:text-primary-400 mt-1">0</p>
+      </div>
+    </UCard>
 
-      <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
-        <div class="text-center py-4">
-          <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
-            {{ t('pages.dashboard.teacher.stats.pendingRequests') }}
-          </p>
-          <p class="text-4xl font-bold text-secondary-600 dark:text-secondary-400 mt-1">0</p>
-        </div>
-      </UCard>
+    <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+      <div class="text-center py-4">
+        <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
+          {{ t('pages.dashboard.teacher.stats.pendingRequests') }}
+        </p>
+        <p class="text-4xl font-bold text-secondary-600 dark:text-secondary-400 mt-1">0</p>
+      </div>
+    </UCard>
 
-      <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
-        <div class="text-center py-4">
-          <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
-            {{ t('pages.dashboard.teacher.stats.enrolledStudents') }}
-          </p>
-          <p class="text-4xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">0</p>
-        </div>
-      </UCard>
-    </div>
+    <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+      <div class="text-center py-4">
+        <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
+          {{ t('pages.dashboard.teacher.stats.enrolledStudents') }}
+        </p>
+        <p class="text-4xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">0</p>
+      </div>
+    </UCard>
+  </div>
 
-    <!-- Pass Types Management -->
-    <div class="space-y-4 pt-8">
-      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">Pass Types</h3>
-      <UiDataTable
-        :key="passTypesTableKey"
-        :data="passTypesData?.data"
-        :columns="passTypeColumns"
-        :loading="passTypesStatus === 'pending'"
-        searchable
-        search-placeholder="Search pass types…"
-        empty-icon="i-lucide-coins"
-        empty-text="No pass types configured yet."
-      >
-        <template #toolbar>
-          <UButton icon="i-lucide-plus" label="Add Pass Type" @click="openPassTypeCreate" />
-        </template>
-      </UiDataTable>
-    </div>
+  <!-- Pass Types Management -->
+  <div class="space-y-4 pt-8">
+    <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">Pass Types</h3>
+    <UiDataTable
+      :key="passTypesTableKey"
+      :data="passTypesData?.data"
+      :columns="passTypeColumns"
+      :loading="passTypesStatus === 'pending'"
+      searchable
+      search-placeholder="Search pass types…"
+      empty-icon="i-lucide-coins"
+      empty-text="No pass types configured yet."
+    >
+      <template #toolbar>
+        <UButton icon="i-lucide-plus" label="Add Pass Type" @click="openPassTypeCreate" />
+      </template>
+    </UiDataTable>
+  </div>
 
-    <!-- Assignments Management -->
-    <div class="space-y-4 pt-8">
-      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">Assignments</h3>
-      <UiDataTable
-        :key="assignmentsTableKey"
-        :data="assignmentsData?.data"
-        :columns="assignmentColumns"
-        :loading="assignmentsStatus === 'pending'"
-        searchable
-        search-placeholder="Search assignments…"
-        empty-icon="i-lucide-clipboard-list"
-        empty-text="No assignments found."
-      >
-        <template #toolbar>
-          <UButton icon="i-lucide-plus" label="Add Assignment" @click="openAssignmentCreate" />
-        </template>
-      </UiDataTable>
-    </div>
+  <!-- Assignments Management -->
+  <div class="space-y-4 pt-8">
+    <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">Assignments</h3>
+    <UiDataTable
+      :key="assignmentsTableKey"
+      :data="assignmentsData?.data"
+      :columns="assignmentColumns"
+      :loading="assignmentsStatus === 'pending'"
+      searchable
+      search-placeholder="Search assignments…"
+      empty-icon="i-lucide-clipboard-list"
+      empty-text="No assignments found."
+    >
+      <template #toolbar>
+        <UButton icon="i-lucide-plus" label="Add Assignment" @click="openAssignmentCreate" />
+      </template>
+    </UiDataTable>
+  </div>
 
-    <AdminPassTypeEditPanel
-      v-model:open="passTypeEditOpen"
-      :pass-type="editingPassType"
-      @saved="onPassTypeRowUpdated"
-      @created="onPassTypeItemCreated"
-    />
+  <AdminPassTypeEditPanel
+    v-model:open="passTypeEditOpen"
+    :pass-type="editingPassType"
+    @saved="onPassTypeRowUpdated"
+    @created="onPassTypeItemCreated"
+  />
 
-    <AdminAssignmentEditPanel
-      v-model:open="assignmentEditOpen"
-      :assignment="editingAssignment"
-      @saved="onAssignmentRowUpdated"
-      @created="onAssignmentItemCreated"
-    />
+  <AdminAssignmentEditPanel
+    v-model:open="assignmentEditOpen"
+    :assignment="editingAssignment"
+    @saved="onAssignmentRowUpdated"
+    @created="onAssignmentItemCreated"
+  />
 </template>
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type { PassTypeData } from '@@/shared/models/pass'
-import type { AssignmentRow } from '@@/server/api/me/assignments.get'
+import type { AssignmentRow } from '@@/shared/models/assignment'
 
 const { t } = useI18n()
 
@@ -178,7 +178,7 @@ const assignmentColumns: TableColumn<AssignmentRow>[] = [
   },
   {
     accessorKey: 'eligiblePassTypeNames',
-    header: 'Eligible Pass Types',
+    header: 'Pass Type(s)',
     cell: ({ row }) => {
       const names = row.original.eligiblePassTypeNames || []
       return names.join(', ') || 'None'

@@ -9,6 +9,25 @@ import { z } from 'zod'
 export type { Assignment } from '@prisma/client'
 
 // =============================================================================
+// INTERFACES
+// =============================================================================
+
+export interface AssignmentRow {
+  id: string
+  resourceLinkId: string
+  title: string | null
+  canvasAssignmentId: string | null
+  courseLabel: string | null
+  courseTitle: string | null
+  dueDate: string | null
+  availableFrom: string | null
+  acceptUntil: string | null
+  createdAt: string
+  eligiblePassTypeNames?: string[]
+  [key: string]: any
+}
+
+// =============================================================================
 // VALIDATION SCHEMAS
 // =============================================================================
 

@@ -1,4 +1,42 @@
 {
+  "admin": {
+    "passType": {
+      "panelTitleEdit": "Edit Pass Type",
+      "panelTitleCreate": "Add Pass Type",
+      "panelDescriptionCreate": "Create a new pass type configuration",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Quiz Retry Pass",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional teacher-facing note",
+      "titlePatternLabel": "Assignment Title Pattern",
+      "titlePatternPlaceholder": "e.g. ^Program\\s[0-9]+",
+      "titlePatternDescription": "Use regex patterns to automatically apply to matching assignments",
+      "initialBalanceLabel": "Initial Balance",
+      "hoursPerPassLabel": "Hours per Pass",
+      "minDaysPastDueLabel": "Min Days Past Due",
+      "maxDaysPastDueLabel": "Max Days Past Due",
+      "nonePlaceholder": "None",
+      "coolDownSettingsTitle": "Cool Down Settings",
+      "periodLabel": "Period",
+      "unitLabel": "Unit",
+      "resetLabel": "Reset",
+      "resetOffsetLabel": "Reset Offset",
+      "coolDownDescription": "Limits how often students can request this pass type.",
+      "extensionOnlyLabel": "Extension Only",
+      "extensionOnlyDescription": "Can this pass only be used for extensions?",
+      "allowRequestsLabel": "Allow Requests",
+      "allowRequestsDescription": "Can students request more of these passes?",
+      "notifications": {
+        "updatedTitle": "Pass Type updated",
+        "updatedMessage": "The configuration has been saved successfully.",
+        "createdTitle": "Pass Type created",
+        "createdMessage": "The new pass type has been created successfully.",
+        "updateFailedTitle": "Update failed",
+        "createFailedTitle": "Create failed",
+        "errorDefault": "An unexpected error occurred."
+      }
+    }
+  },
   "auth": {
     "forgotPassword": {
       "fields": {
