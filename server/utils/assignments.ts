@@ -8,7 +8,7 @@ export function matchesTitlePattern(pattern: string, title: string): boolean {
   if (!pattern || !title) return false
 
   try {
-    const regex = new RegExp(`^${pattern}$`, 'i')
+    const regex = new RegExp(`${pattern}`, 'i')
     return regex.test(title)
   } catch (e) {
     console.error(`Invalid regex pattern: ${pattern}`, e)
@@ -16,18 +16,96 @@ export function matchesTitlePattern(pattern: string, title: string): boolean {
   }
 }
 
+
+/**
+ * Recalculates `eligibleFrom` and `eligibleUntil` for a given assignment based on its pass eligibilities.
+ *
+ * Rules:
+ * - eligibleFrom = MIN(dueDate + minDaysPastDue) across all eligible pass types.
+ *   - If minDaysPastDue is null, treat as 0.
+ *   - If dueDate is null, result is null.
+ *
+ * - eligibleUntil = MAX(dueDate + maxDaysPastDue) across all eligible pass types.
+ *   - If ANY eligible pass type has maxDaysPastDue == null (infinite), result is null (infinite).
+ *
+ * @param assignmentId ID of the assignment to update
+ * @param tx Optional transaction client (uses global prisma if not provided)
+ */
+export async function recalculateAssignmentEligibleDates(assignmentId: string, tx: any = prisma) {
+  const assignment = await tx.assignment.findUnique({
+    where: { id: assignmentId },
+    include: {
+      passEligibilities: {
+        include: { passType: true }
+      }
+    }
+  })
+
+  if (!assignment || !assignment.dueDate) {
+    // If no assignment or no due date, we can't calculate offsets.
+    // Reset to null.
+    await tx.assignment.update({
+      where: { id: assignmentId },
+      data: { eligibleFrom: null, eligibleUntil: null }
+    })
+    return
+  }
+
+  const eligibilities = assignment.passEligibilities
+
+  if (eligibilities.length === 0) {
+    // No eligibilities -> No extension possible.
+    await tx.assignment.update({
+      where: { id: assignmentId },
+      data: { eligibleFrom: null, eligibleUntil: null }
+    })
+    return
+  }
+
+  let minFrom: Date | null = null
+  let maxUntil: Date | null = null
+  let isUntilInfinite = false
+
+  for (const e of eligibilities) {
+    const pt = e.passType
+
+    // --- Calculate From Date ---
+    // minDaysPastDue default 0
+    const minDays = pt.minDaysPastDue ?? 0
+    const fromDate = new Date(assignment.dueDate.getTime() + minDays * 24 * 60 * 60 * 1000)
+
+    if (minFrom === null || fromDate < minFrom) {
+      minFrom = fromDate
+    }
+
+    // --- Calculate Until Date ---
+    if (pt.maxDaysPastDue === null) {
+      // One pass type allows infinite extension -> Agreement is infinite
+      isUntilInfinite = true
+    } else if (!isUntilInfinite) {
+      const maxDays = pt.maxDaysPastDue
+      const untilDate = new Date(assignment.dueDate.getTime() + maxDays * 24 * 60 * 60 * 1000)
+
+      if (maxUntil === null || untilDate > maxUntil) {
+        maxUntil = untilDate
+      }
+    }
+  }
+
+  // If infinite, eligibleUntil is null
+  const finalUntil = isUntilInfinite ? null : maxUntil
+
+  await tx.assignment.update({
+    where: { id: assignmentId },
+    data: {
+      eligibleFrom: minFrom,
+      eligibleUntil: finalUntil
+    }
+  })
+}
+
 /**
  * Synchronizes the eligibility of an assignment for various pass types based on pattern matching.
- *
- * This function:
- * 1. Fetches the assignment and all pass types for its course.
- * 2. Fetches all existing eligibility records for the assignment.
- * 3. Iterates through each pass type:
- *    - If the pass type uses pattern matching and the assignment title matches the pattern:
- *      - Creates a new eligibility record with `isAutomatic: true` if one doesn't exist.
- *      - Does NOTHING if a record already exists (to preserve manual overrides or existing automatic links).
- *    - If the pass type does NOT match:
- *      - Deletes the eligibility record ONLY if it was created automatically (`isAutomatic: true`).
  */
 export async function syncAssignmentEligibility(assignmentId: string) {
   const assignment = await prisma.assignment.findUnique({
@@ -51,6 +129,8 @@ export async function syncAssignmentEligibility(assignmentId: string) {
   const eligibilityMap = new Map(existingEligibilities.map((e) => [e.passTypeId, e]))
 
   const operations = []
+  // We need to track if we changed anything to know if we should recalculate dates
+  let dirty = false
 
   for (const pt of passTypes) {
     let matches = false
@@ -73,6 +153,7 @@ export async function syncAssignmentEligibility(assignmentId: string) {
             }
           })
         )
+        dirty = true
       }
       // If matches and existing, do NOT update. Preserve valid existing link.
     } else {
@@ -83,14 +164,21 @@ export async function syncAssignmentEligibility(assignmentId: string) {
             where: { id: existing.id }
           })
         )
+        dirty = true
       }
       // If not matching and existing is manual (isAutomatic: false), preserve it.
     }
   }
 
+  // Execute operations in transaction
   if (operations.length > 0) {
     await prisma.$transaction(operations)
   }
+
+  // Recalculate dates if we changed eligibilities, OR if we just want to ensure consistency.
+  // Ideally we do it in the transaction, but our helper is distinct.
+  // It's safer to just run it.
+  await recalculateAssignmentEligibleDates(assignmentId)
 }
 
 /**
@@ -107,71 +195,78 @@ export async function syncPassTypeEligibility(passTypeId: string) {
 
   const assignments = passType.course.assignments
   const operations: any[] = []
+  const affectedAssignmentIds = new Set<string>()
 
   // If no pattern, we should remove ALL automatic eligibilities for this pass type
-  // because it no longer targets specific assignments automatically.
-  // Manual eligibilities should be preserved.
   if (!passType.titlePattern) {
-    // Find automatic eligibilities to delete
     const autoEligibilities = await prisma.passEligibility.findMany({
       where: {
         passTypeId: passType.id,
         isAutomatic: true
       },
-      select: { id: true }
+      select: { id: true, assignmentId: true }
     })
 
     if (autoEligibilities.length > 0) {
+      // Mark all affected assignments
+      autoEligibilities.forEach((e) => {
+        if (e.assignmentId) affectedAssignmentIds.add(e.assignmentId)
+      })
+
+      // Delete eligibilities
       await prisma.passEligibility.deleteMany({
         where: {
           id: { in: autoEligibilities.map((e) => e.id) }
         }
       })
     }
-    return
-  }
+  } else {
+    // Pattern exists, sync logic
+    const existingEligibilities = await prisma.passEligibility.findMany({
+      where: { passTypeId: passType.id },
+      select: { id: true, assignmentId: true, isAutomatic: true }
+    })
 
-  // Get existing eligibilities for this pass type to know what to add/remove
-  const existingEligibilities = await prisma.passEligibility.findMany({
-    where: { passTypeId: passType.id },
-    select: { id: true, assignmentId: true, isAutomatic: true }
-  })
+    const eligibilityMap = new Map(existingEligibilities.map((e) => [e.assignmentId, e]))
 
-  // Map assignmentId -> eligibility
-  const eligibilityMap = new Map(existingEligibilities.map((e) => [e.assignmentId, e]))
+    for (const assignment of assignments) {
+      if (!assignment.title) continue
 
-  for (const assignment of assignments) {
-    if (!assignment.title) continue
+      const matches = matchesTitlePattern(passType.titlePattern, assignment.title)
+      const existing = eligibilityMap.get(assignment.id)
 
-    const matches = matchesTitlePattern(passType.titlePattern, assignment.title)
-    const existing = eligibilityMap.get(assignment.id)
-
-    if (matches) {
-      if (!existing) {
-        // Match found, no eligibility -> Create automatic
-        operations.push(
-          prisma.passEligibility.create({
-            data: {
-              passTypeId: passType.id,
-              assignmentId: assignment.id,
-              isAutomatic: true
-            }
-          })
-        )
-      }
-    } else {
-      if (existing && existing.isAutomatic) {
-        // No match, but exists automatically -> Delete
-        operations.push(
-          prisma.passEligibility.delete({
-            where: { id: existing.id }
-          })
-        )
+      if (matches) {
+        if (!existing) {
+          operations.push(
+            prisma.passEligibility.create({
+              data: {
+                passTypeId: passType.id,
+                assignmentId: assignment.id,
+                isAutomatic: true
+              }
+            })
+          )
+          affectedAssignmentIds.add(assignment.id)
+        }
+      } else {
+        if (existing && existing.isAutomatic) {
+          operations.push(
+            prisma.passEligibility.delete({
+              where: { id: existing.id }
+            })
+          )
+          affectedAssignmentIds.add(assignment.id!) // assignmentId should be present
+        }
       }
     }
   }
 
   if (operations.length > 0) {
     await prisma.$transaction(operations)
+  }
+
+  // Recalculate dates for ALL affected assignments
+  for (const assignmentId of affectedAssignmentIds) {
+    await recalculateAssignmentEligibleDates(assignmentId)
   }
 }
