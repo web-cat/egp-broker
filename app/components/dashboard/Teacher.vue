@@ -68,6 +68,16 @@
       empty-text="No assignments found."
     >
       <template #toolbar>
+        <UButton
+          v-if="canSync"
+          :loading="syncing"
+          icon="i-lucide-refresh-cw"
+          label="Sync assignments"
+          variant="ghost"
+          color="white"
+          class="mr-2"
+          @click="syncAssignments"
+        />
         <UButton icon="i-lucide-plus" label="Add Assignment" @click="openAssignmentCreate" />
       </template>
     </UiDataTable>
@@ -126,6 +136,46 @@ const {
   onRowUpdated: onAssignmentRowUpdated,
   onItemCreated: onAssignmentItemCreated
 } = useAdminCrud<AssignmentRow>('/api/me/assignments')
+
+// Sync Logic
+const { data: syncStatus } = await useFetch<{ data: { canSync: boolean } }>('/api/me/sync-status', {
+  lazy: true
+})
+const canSync = computed(() => syncStatus.value?.data?.canSync ?? false)
+const syncing = ref(false)
+
+async function syncAssignments() {
+  if (!confirm('This will fetch assignments from the LMS and update the list. Continue?')) return
+
+  syncing.value = true
+  try {
+    const { data } = await $fetch<{ data: AssignmentRow[] }>('/api/me/assignments/sync', {
+      method: 'POST'
+    })
+
+    // Update the table data directly manually since useAdminCrud might not expose a refresh easily
+    // or we can just trigger a refresh if we had access to refresh.
+    // assignmentsData is a Ref returned by useAdminCrud.
+    // We can overwrite it if it's not readonly.
+    // useAdminCrud returns `data` which is a ref.
+    if (assignmentsData.value) {
+      assignmentsData.value.data = data
+    }
+
+    const toast = useToast()
+    toast.add({ title: 'Assignments synced successfully', color: 'success' })
+  } catch (err: any) {
+    console.error(err)
+    const toast = useToast()
+    toast.add({
+      title: 'Sync failed',
+      description: err.data?.message || err.message,
+      color: 'error'
+    })
+  } finally {
+    syncing.value = false
+  }
+}
 
 const passTypeColumns: TableColumn<PassTypeData>[] = [
   {

@@ -126,6 +126,8 @@ export default defineEventHandler(async (event: H3Event) => {
 
       // 3. Upsert Course and Enrollment if context is present (for all users)
       const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
+      const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
+
       if (context?.id) {
         const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom']
 
@@ -172,26 +174,65 @@ export default defineEventHandler(async (event: H3Event) => {
         })
 
         // 4. Upsert Assignment if resource_link is present
-        const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
         if (resourceLink?.id) {
-          await tx.assignment.upsert({
+          const canvasAssignmentId = customClaims?.canvas_assignment_id?.toString()
+          const title = resourceLink.title
+
+          // Strategy:
+          // 1. Try finding by resourceLinkId (standard LTI)
+          // 2. Try finding by canvasAssignmentId (synced but never launched)
+          // 3. Try finding by title where IDs are null (synced legacy fallback)
+
+          let assignment = await tx.assignment.findUnique({
             where: {
               courseId_resourceLinkId: {
                 courseId: course.id,
                 resourceLinkId: resourceLink.id
               }
-            },
-            update: {
-              title: resourceLink.title,
-              canvasAssignmentId: customClaims?.canvas_assignment_id?.toString()
-            },
-            create: {
-              courseId: course.id,
-              resourceLinkId: resourceLink.id,
-              title: resourceLink.title,
-              canvasAssignmentId: customClaims?.canvas_assignment_id?.toString()
             }
           })
+
+          if (!assignment && canvasAssignmentId) {
+            assignment = await tx.assignment.findFirst({
+              where: {
+                courseId: course.id,
+                canvasAssignmentId: canvasAssignmentId
+              }
+            })
+          }
+
+          if (!assignment && title) {
+            assignment = await tx.assignment.findFirst({
+              where: {
+                courseId: course.id,
+                title: title,
+                resourceLinkId: null,
+                canvasAssignmentId: null
+              }
+            })
+          }
+
+          if (assignment) {
+            // Update existing
+            await tx.assignment.update({
+              where: { id: assignment.id },
+              data: {
+                resourceLinkId: resourceLink.id, // Ensure this is set
+                canvasAssignmentId: canvasAssignmentId,
+                title: title
+              }
+            })
+          } else {
+            // Create new
+            await tx.assignment.create({
+              data: {
+                courseId: course.id,
+                resourceLinkId: resourceLink.id,
+                title: title,
+                canvasAssignmentId: canvasAssignmentId
+              }
+            })
+          }
         }
 
         // 5. Sync automatic pass eligibility

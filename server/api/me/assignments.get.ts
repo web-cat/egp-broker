@@ -32,7 +32,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
   // Fetch assignments (including pass eligibilities) for this course
   const assignments = await prisma.assignment.findMany({
     where: { courseId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ dueDate: 'desc' }, { title: 'asc' }],
     include: {
       course: { select: { label: true, title: true } },
       passEligibilities: {

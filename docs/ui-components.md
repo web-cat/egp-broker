@@ -5,6 +5,7 @@ This document analyzes the components and composables used in the main landing p
 ## Components
 
 ### Nuxt UI Components
+
 These components are part of the [@nuxt/ui](https://ui.nuxt.com/) (v3) library, providing a unified design system based on Tailwind CSS.
 
 - **`<UPage>`**: A layout wrapper that provides standard page padding and structure.
@@ -17,6 +18,7 @@ These components are part of the [@nuxt/ui](https://ui.nuxt.com/) (v3) library, 
 - **`<UButton>`**: The standard button component used for user interactions like "Create article".
 
 ### Custom Project Components
+
 These are specific to the EGP Broker application and are defined within the `app/components` directory.
 
 - **`<LayoutPreferencesControls>`**
@@ -32,6 +34,7 @@ These are specific to the EGP Broker application and are defined within the `app
 ## Composables
 
 ### Module & Core Composables
+
 - **`useI18n()`** ([@nuxtjs/i18n](https://i18n.nuxtjs.org/)): Provides the `t` function for translating text based on the active locale.
 - **`useUserSession()`** ([nuxt-auth-utils](https://github.com/atinux/nuxt-auth-utils)): Manages the current user's authentication state and session data.
 - **`useLocalePath()`** ([@nuxtjs/i18n](https://i18n.nuxtjs.org/)): Helper to resolve routes correctly with the current language prefix.
@@ -39,6 +42,7 @@ These are specific to the EGP Broker application and are defined within the `app
 - **`useFetch()`** (Nuxt Core): Handled SSR-friendly data fetching from the backend API (e.g., retrieving the posts list).
 
 ### Custom Project Composables
+
 - **`usePreferences()`**
   - **Path**: [`app/composables/stores/usePreferences.ts`](file:///Users/edwards/git/egp-broker/app/composables/stores/usePreferences.ts)
   - **Purpose**: A bridge to the Pinia store (`usePreferencesStore`) that tracks user UI settings across the application.

@@ -75,6 +75,32 @@ model LtiPlatform {
 
   deployments LtiDeployment[]
   identities  LtiIdentity[]
+  tools       LtiTool[]
+}
+
+enum Protocol {
+  LTI11
+  LTI13
+  SPLICE
+}
+
+/// An external LTI tool configuration (e.g. Gradescope, Piazza).
+model LtiTool {
+  id                 String      @id @default(cuid())
+  platformId         String?
+  platform           LtiPlatform? @relation(fields: [platformId], references: [id], onDelete: SetNull)
+
+  name               String?
+  baseUrl            String
+  protocol           Protocol
+  key                String?
+  secret             String?
+  supportsExtensionApi Boolean   @default(false)
+
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([platformId])
 }
 
 /// A specific installation/deployment of the tool within an LTI Platform.
@@ -111,6 +137,7 @@ model LtiIdentity {
   updatedAt DateTime @updatedAt
 
   @@unique([platformId, ltiSub])
+  @@unique([userId, platformId])
 }
 
 model LoginAttempt {
@@ -188,7 +215,7 @@ model Enrollment {
 
 model Assignment {
   id             String  @id @default(cuid())
-  resourceLinkId String // resource_link.id from LTI claim
+  resourceLinkId String? // resource_link.id from LTI claim
   title          String? // resource_link.title
 
   // Canvas-specific custom variables

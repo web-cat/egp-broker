@@ -1,48 +1,48 @@
 Creating a simple admin CRUD (Create, Read, Update, Delete) interface in Nuxt 4 involves leveraging its full-stack capabilities, using server routes for API logic and Vue components for the frontend interface. This tutorial assumes you have a basic Nuxt 4 project set up. [1, 2, 3, 4, 5]  
-Prerequisites 
+Prerequisites
 
-• A running Nuxt 4 project. If you don't have one, run  in your terminal. 
-• A database (e.g., SQLite, PostgreSQL) and a means to interact with it (e.g., Drizzle ORM, Prisma). The specifics of database setup are beyond this tutorial, but Nuxt can connect to various backends. [6, 7, 8, 9, 10]  
+• A running Nuxt 4 project. If you don't have one, run in your terminal.
+• A database (e.g., SQLite, PostgreSQL) and a means to interact with it (e.g., Drizzle ORM, Prisma). The specifics of database setup are beyond this tutorial, but Nuxt can connect to various backends. [6, 7, 8, 9, 10]
 
 Step 1: Define the Data Model and Server API Routes [11, 12, 13]  
-First, you need an API to perform the CRUD operations. Nuxt automatically detects and serves files in the  directory. For a data model called "Item", you would create the following files: 
+First, you need an API to perform the CRUD operations. Nuxt automatically detects and serves files in the directory. For a data model called "Item", you would create the following files:
 
-• : To list all items. 
-• : To create a new item. 
-• : To read a single item. 
-• : To update an item. 
-• : To delete an item. [16]  
+• : To list all items.
+• : To create a new item.
+• : To read a single item.
+• : To update an item.
+• : To delete an item. [16]
 
-Example:  (Read all items) 
- [2, 14]  
-Step 2: Create the Admin Layout 
-An admin area often has a different layout than the main application. You can create a custom layout file in the  directory. 
+Example: (Read all items)
+[2, 14]  
+Step 2: Create the Admin Layout
+An admin area often has a different layout than the main application. You can create a custom layout file in the directory.
 
-• Create . [18, 19, 20]  
+• Create . [18, 19, 20]
 
- [1]  
+[1]  
 Step 3: Create the Admin Pages (Frontend) [21]  
-Use Nuxt's file-system routing in the  directory to create the admin interface. You can nest pages inside an  folder to organize them. 
+Use Nuxt's file-system routing in the directory to create the admin interface. You can nest pages inside an folder to organize them.
 
-• Create  (List items). 
-• Create  (Create item). 
-• Create  (Edit/Update item). [25, 26, 27, 28, 29]  
+• Create (List items).
+• Create (Create item).
+• Create (Edit/Update item). [25, 26, 27, 28, 29]
 
-Example:  (List items and use the admin layout) 
- [22, 30]  
+Example: (List items and use the admin layout)
+[22, 30]  
 Step 4: Add Authentication (Optional but Recommended) [31]  
-For a production-ready admin panel, you will need authentication and authorization to protect these routes. You can use Nuxt's middleware for this purpose. 
+For a production-ready admin panel, you will need authentication and authorization to protect these routes. You can use Nuxt's middleware for this purpose.
 
-1. Protect routes using middleware: 
+1. Protect routes using middleware:
 
-	• Create  to check if a user is authenticated on every route. 
-	• Add authentication logic (e.g., check for a session cookie or token). 
+   • Create to check if a user is authenticated on every route.
+   • Add authentication logic (e.g., check for a session cookie or token).
 
-2. Redirect unauthorized users: 
+2. Redirect unauthorized users:
 
-	• If a user is not authorized, use  within the middleware. [34, 35, 36, 37, 38]  
+   • If a user is not authorized, use within the middleware. [34, 35, 36, 37, 38]
 
-The Nuxt authentication recipes documentation provides a good starting point for securing routes. [34]  
+The Nuxt authentication recipes documentation provides a good starting point for securing routes. [34]
 
 AI responses may include mistakes.
 
@@ -84,4 +84,3 @@ AI responses may include mistakes.
 [36] https://www.scalekit.com/blog/passwordless-authentication-vue3-nuxt4
 [37] https://docs.nuxsaas.com/how-and-why/authentication
 [38] https://masteringnuxt.com/blog/10-dev-tricks-to-build-your-nuxt-app-faster
-

@@ -38,12 +38,12 @@ definePageMeta({
 
 const adminLinks = [
   { label: 'Overview', icon: 'i-lucide-layout-dashboard', to: '/admin' },
-  { label: 'Platforms', icon: 'i-lucide-layers', to: '/admin/platforms' },
-  { label: 'Deployments', icon: 'i-lucide-share-2', to: '/admin/deployments' },
-  { label: 'Courses', icon: 'i-lucide-book-open', to: '/admin/courses' },
   { label: 'Assignments', icon: 'i-lucide-clipboard-list', to: '/admin/assignments' },
-  { label: 'Users', icon: 'i-lucide-users', to: '/admin/users' },
-  { label: 'System Logs', icon: 'i-lucide-terminal', to: '/admin/logs' }
+  { label: 'Courses', icon: 'i-lucide-book-open', to: '/admin/courses' },
+  { label: 'Deployments', icon: 'i-lucide-share-2', to: '/admin/deployments' },
+  { label: 'LTI Tools', icon: 'i-lucide-wrench', to: '/admin/tools' },
+  { label: 'Platforms', icon: 'i-lucide-layers', to: '/admin/platforms' },
+  { label: 'Users', icon: 'i-lucide-users', to: '/admin/users' }
 ]
 
 const dropdownItems = computed(() =>

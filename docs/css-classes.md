@@ -4,7 +4,7 @@ This document breaks down the Tailwind CSS utility classes used in the main land
 
 ## Layout & Positioning
 
-- **Display**: 
+- **Display**:
   - `grid`, `inline-flex`, `flex`: Core layout modes for alignment.
   - `grid-cols-1`, `md:grid-cols-2`, `lg:grid-cols-4`, `xl:grid-cols-3`: Defines responsive column layouts for the grid.
   - `lg:col-span-1`, `lg:col-span-3`: Spans components across grid columns on larger screens.

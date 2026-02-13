@@ -31,6 +31,7 @@ A pattern for building dashboard table views on top of **Nuxt UI v4 `UTable`** (
 ```
 
 Each page provides **only** what varies:
+
 1. The `columns` definition array (using helpers)
 2. The endpoint URL passed to `useAdminCrud`
 3. The Edit/Create modal component
@@ -47,10 +48,12 @@ Everything else — fetching, state management, filtering, pagination, loading s
 Encapsulates the standard data-fetching and state management logic for admin tables.
 
 Arguments:
+
 - `url`: The API endpoint (e.g., `/api/admin/courses`)
 - `queryParams`: Optional object of reactive refs for filtering
 
 Returns:
+
 - `data`: The fetched array of items (reactive)
 - `status`: Loading status ('idle', 'pending', 'success', 'error')
 - `editOpen`: Boolean ref for modal visibility
@@ -163,11 +166,11 @@ const columns: TableColumn<CourseRow>[] = [
 
 ## File Summary
 
-| File | Type | Purpose |
-|---|---|---|
-| `app/components/ui/data/DataTable.vue` | **Component** | Auto-imported as `<UiDataTable>`. Generic table card. |
-| `app/composables/useAdminCrud.ts` | **Composable** | Standardizes state management code. |
-| `app/utils/tableHelpers.ts` | **Utility** | Standardizes column definitions. |
+| File                                   | Type           | Purpose                                               |
+| -------------------------------------- | -------------- | ----------------------------------------------------- |
+| `app/components/ui/data/DataTable.vue` | **Component**  | Auto-imported as `<UiDataTable>`. Generic table card. |
+| `app/composables/useAdminCrud.ts`      | **Composable** | Standardizes state management code.                   |
+| `app/utils/tableHelpers.ts`            | **Utility**    | Standardizes column definitions.                      |
 
 ---
 

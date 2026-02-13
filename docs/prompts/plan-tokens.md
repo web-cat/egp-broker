@@ -4,10 +4,10 @@ A resubmission token is a virtual token that a student can apply to an eligible 
 
 A teacher can set up different kinds of tokens wth different usage policies. Policy choices include:
 
-* how many tokens a student starts with
-* whether the token allows extending an existing deadline (i.e., can only be used to extend a deadline), or can be used to reopen/retry a past assignment, or both
-* Which assignments the token can be used on (possibly defined by specifying the assignments, or any assignments matching specified properties for name/type/how far in the past)
-* whether a student can ask for an additional token if they run out
+- how many tokens a student starts with
+- whether the token allows extending an existing deadline (i.e., can only be used to extend a deadline), or can be used to reopen/retry a past assignment, or both
+- Which assignments the token can be used on (possibly defined by specifying the assignments, or any assignments matching specified properties for name/type/how far in the past)
+- whether a student can ask for an additional token if they run out
 
 Each token type is associated with a single course.
 

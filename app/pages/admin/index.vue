@@ -88,6 +88,7 @@ const stats = computed(() => data.value?.data)
 const simpleCards = computed(() => {
   const s = stats.value
   return [
+    { label: 'LTI Tools', value: s?.tools ?? '—', to: '/admin/tools' },
     { label: 'Courses', value: s?.courses ?? '—', to: '/admin/courses' },
     { label: 'Users', value: s?.users ?? '—', to: '/admin/users' }
   ]
