@@ -1,7 +1,6 @@
 import { defineEventHandler } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
-import { matchesTitlePattern } from '@@/server/utils/assignments'
 
 import type { AssignmentRow } from '@@/shared/models/assignment'
 

@@ -13,12 +13,12 @@ export type { LtiPlatform } from '@prisma/client'
 // =============================================================================
 
 export interface PlatformRow {
-    id: string
-    issuer: string
-    clientId: string
-    name: string | null
-    deploymentCount: number
-    createdAt: string
+  id: string
+  issuer: string
+  clientId: string
+  name: string | null
+  deploymentCount: number
+  createdAt: string
 }
 
 // =============================================================================

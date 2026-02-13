@@ -9,21 +9,21 @@
 // =============================================================================
 
 export interface AdminPlatformSummary {
-    id: string
-    issuer: string
-    name: string | null
+  id: string
+  issuer: string
+  name: string | null
 }
 
 export interface AdminDeploymentSummary {
-    id: string
-    deploymentId: string
+  id: string
+  deploymentId: string
 }
 
 export interface AdminStats {
-    platforms: number
-    deployments: number
-    courses: number
-    users: number
-    platformList: AdminPlatformSummary[]
-    deploymentList: AdminDeploymentSummary[]
+  platforms: number
+  deployments: number
+  courses: number
+  users: number
+  platformList: AdminPlatformSummary[]
+  deploymentList: AdminDeploymentSummary[]
 }

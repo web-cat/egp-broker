@@ -30,7 +30,7 @@ services:
       - ./.docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       <<: *healthcheck-defaults
-      test: [ 'CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB' ]
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
 
   # A web-based database management interface (accessible on port 8080).
   adminer:
@@ -90,7 +90,7 @@ services:
   # Run with `docker compose --profile production up app-prod`
   app-prod:
     <<: *defaults
-    profiles: [ 'production' ]
+    profiles: ['production']
     build:
       context: .
       target: production
@@ -106,5 +106,4 @@ networks:
   nuxt-boilerplate:
     driver: bridge
     name: nuxt-boilerplate_network
-
 # No named volumes; using bind mounts for persistence

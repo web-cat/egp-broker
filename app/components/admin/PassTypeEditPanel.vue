@@ -65,7 +65,9 @@
           </div>
 
           <div class="border-t pt-4">
-            <h3 class="text-sm font-semibold mb-3">{{ $t('admin.passType.coolDownSettingsTitle') }}</h3>
+            <h3 class="text-sm font-semibold mb-3">
+              {{ $t('admin.passType.coolDownSettingsTitle') }}
+            </h3>
             <div class="grid grid-cols-2 gap-4">
               <UiFormInput
                 v-model.number="state.coolDownPeriod"
@@ -267,7 +269,9 @@ const handleSubmit = async () => {
     open.value = false
   } catch (err: any) {
     showError({
-      title: isEdit.value ? t('admin.passType.notifications.updateFailedTitle') : t('admin.passType.notifications.createFailedTitle'),
+      title: isEdit.value
+        ? t('admin.passType.notifications.updateFailedTitle')
+        : t('admin.passType.notifications.createFailedTitle'),
       message: err?.data?.message || t('admin.passType.notifications.errorDefault')
     })
   } finally {

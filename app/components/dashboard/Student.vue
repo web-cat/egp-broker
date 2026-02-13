@@ -84,12 +84,10 @@
 </template>
 
 <script setup lang="ts">
-import type { SimplePassPool } from '@@/shared/models/pass'
+import type { SimplePassPool, RedemptionRow } from '@@/shared/models/pass'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { TableColumn } from '@nuxt/ui'
 import type { AssignmentRow } from '@@/shared/models/assignment'
-
-import type { RedemptionRow } from '@@/shared/models/pass'
 
 const { t } = useI18n()
 
