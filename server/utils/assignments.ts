@@ -1,4 +1,5 @@
 import prisma from '@@/lib/prisma'
+import type { AssignmentRow } from '@@/shared/models/assignment'
 
 /**
  * Checks if an assignment title matches a given regex pattern.
@@ -264,4 +265,35 @@ export async function syncPassTypeEligibility(passTypeId: string) {
   for (const assignmentId of affectedAssignmentIds) {
     await recalculateAssignmentEligibleDates(assignmentId)
   }
+}
+
+/**
+ * Fetches all assignments for a course with their pass eligibilities.
+ * strictly conforms to the `AssignmentRow` shared schema.
+ */
+export async function getCourseAssignments(courseId: string): Promise<AssignmentRow[]> {
+  const assignments = await prisma.assignment.findMany({
+    where: { courseId },
+    orderBy: [{ dueDate: 'desc' }, { title: 'asc' }],
+    include: {
+      course: { select: { label: true, title: true } },
+      passEligibilities: {
+        include: { passType: true }
+      }
+    }
+  })
+
+  return assignments.map((a) => ({
+    id: a.id,
+    resourceLinkId: a.resourceLinkId,
+    title: a.title ?? null,
+    canvasAssignmentId: a.canvasAssignmentId ?? null,
+    courseLabel: a.course.label ?? null,
+    courseTitle: a.course.title ?? null,
+    dueDate: a.dueDate?.toISOString() ?? null,
+    availableFrom: a.availableFrom?.toISOString() ?? null,
+    acceptUntil: a.acceptUntil?.toISOString() ?? null,
+    createdAt: a.createdAt.toISOString(),
+    eligiblePassTypeNames: a.passEligibilities.map((pe) => pe.passType.name)
+  }))
 }

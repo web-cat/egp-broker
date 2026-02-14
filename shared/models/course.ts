@@ -12,15 +12,17 @@ export type { Course } from '@prisma/client'
 // INTERFACES
 // =============================================================================
 
-export interface CourseRow {
-  id: string
-  ltiContextId: string
-  label: string | null
-  title: string | null
-  enrollmentCount: number
-  assignmentCount: number
-  createdAt: string
-}
+export const courseRowSchema = z.object({
+  id: z.string(),
+  ltiContextId: z.string().nullable(),
+  label: z.string().nullable(),
+  title: z.string().nullable(),
+  enrollmentCount: z.number(),
+  assignmentCount: z.number(),
+  createdAt: z.string()
+})
+
+export type CourseRow = z.infer<typeof courseRowSchema>
 
 // =============================================================================
 // VALIDATION SCHEMAS

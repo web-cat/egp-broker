@@ -12,20 +12,21 @@ export type { Assignment } from '@prisma/client'
 // INTERFACES
 // =============================================================================
 
-export interface AssignmentRow {
-  id: string
-  resourceLinkId: string
-  title: string | null
-  canvasAssignmentId: string | null
-  courseLabel: string | null
-  courseTitle: string | null
-  dueDate: string | null
-  availableFrom: string | null
-  acceptUntil: string | null
-  createdAt: string
-  eligiblePassTypeNames?: string[]
-  [key: string]: any
-}
+export const assignmentRowSchema = z.object({
+  id: z.string(),
+  resourceLinkId: z.string(),
+  title: z.string().nullable(),
+  canvasAssignmentId: z.string().nullable(),
+  courseLabel: z.string().nullable(),
+  courseTitle: z.string().nullable(),
+  dueDate: z.string().nullable(),
+  availableFrom: z.string().nullable(),
+  acceptUntil: z.string().nullable(),
+  createdAt: z.string(),
+  eligiblePassTypeNames: z.array(z.string()).optional()
+})
+
+export type AssignmentRow = z.infer<typeof assignmentRowSchema>
 
 // =============================================================================
 // VALIDATION SCHEMAS

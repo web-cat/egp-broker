@@ -1,203 +1,115 @@
-This `GEMINI.md` file is designed to serve as a "Source of Truth" for any developer (or AI collaborator) working on this codebase. It emphasizes the structural changes in Nuxt 4, particularly the new `app/` directory and Nitro-first server patterns.
+# 🚀 GEMINI.md: The Nuxt 4 Full-Stack Constitution
+
+This document is the **Source of Truth** for this codebase. It merges Nuxt 4's structural requirements with strict architectural principles to ensure the system remains clean, maintainable, and extensible.
+
+## ⚖️ I. Core Design Principles
+
+- **Single Source of Truth (SSoT):** Every business rule or design constraint must reside in exactly one location.
+- **Zero Implicit Coupling:** Components must not have "secret" knowledge of API structures or global states.
+- **Layered Sovereignty:** Data flows down; events flow up. The server never trusts the client.
+- **Open-Closed Principle:** Base components and Shared schemas are open for extension (e.g., Zod `.extend()`) but closed for modification to prevent "sweeping effects".
+- **Fail Fast:** Validation must occur at the earliest possible boundary (API entry or Form submission) using Zod.
 
 ---
 
-# 🚀 GEMINI.md: Nuxt 4 Full-Stack Best Practices
+## 🏗️ II. Project Structure & Sovereignty
 
-This document outlines the architectural standards and software engineering principles for this project. Adhering to these ensures maximum maintainability, type safety, and performance.
-
----
-
-## 🐳 0. Docker-based Development (Mandatory)
-
-This project is developed and executed entirely within Docker. **All development commands must be run inside the `app-dev` container.**
-
-- **Initialize**: `cp .env.example .env` and configure accordingly.
-- **Startup**: `docker compose up` starts the Nuxt app (port 3000), Postgres, and Adminer (port 8080).
-- **Interactive Terminal**: `docker compose exec app-dev bash`
-- **Running Commands**:
-  ```bash
-  docker compose exec app-dev pnpm install <package>
-  docker compose exec app-dev pnpm prisma migrate dev
-  docker compose exec app-dev pnpm test
-  ```
-- **Committing**: Ensure the container is running when you `git commit`, as Husky hooks run linting inside the container.
-
----
-
-## 🏗️ 1. Project Structure (The Nuxt 4 Way)
-
-Nuxt 4 introduces a strict separation between the frontend application and the server engine.
+We adhere to the strict Nuxt 4 directory separation.
 
 ```text
-├── app/                # All frontend-facing code
-│   ├── components/     # Auto-imported Vue components
-│   ├── composables/    # Business logic & state (auto-imported)
+├── app/                # Frontend (Presenter Layer)
+│   ├── components/
+│   │   ├── base/       # Stateless, context-unaware UI atoms (Pure Presenters, No stores/APIs)
+│   │   └── features/   # Stateful Organisms (Orchestrators)
+│   ├── composables/    # Explicit Transport (Feature-specific)
 │   ├── pages/          # File-based routing
 │   ├── layouts/        # Page wrappers
 │   ├── middleware/     # Client-side route guards
 │   └── plugins/        # Client-side initialization
-├── server/             # Nitro Engine (Backend)
-│   ├── api/            # JSON Endpoints
+├── server/             # Nitro Engine (Domain Layer & Data)
+│   ├── api/            # JSON Endpoints (Inputs/Outputs ONLY - Use Zod, Strictly Projected)
+│   ├── utils/          # **Core Business Logic** & Helpers (Grading, Auth, Prisma)
 │   ├── routes/         # Custom server routes (e.g., RSS, Webhooks)
-│   ├── middleware/     # Server-side request interceptors
-│   └── utils/          # Server-only helper functions (Prisma, Auth)
-├── shared/             # Code shared by both App and Server (Types, Constants)
+│   └── middleware/     # Server-side request interceptors
+├── shared/             # Universal Truths (Zod schemas, TS Interfaces, Constants)
 └── prisma/             # Database schema and migrations
-
 ```
 
----
+### 1. The Component Hierarchy
+To prevent "sweeping effects," components must follow a strict taxonomy:
+- **`base/` (Atoms):** Stateless, context-unaware UI elements (Buttons, Inputs). They never access the store or perform API calls.
+- **`features/` (Molecules/Organisms):** Business-specific components. These are the *only* components allowed to interact with Pinia stores or composables.
+- **`layouts/`:** Define the "shell" only. No business logic allowed.
 
-## 🔐 2. Authentication & Security
-
-We use **`nuxt-auth-utils`** for sealed, session-based authentication.
-
-- **Session Management:** Always use `setUserSession(event, { user })` on the server and the `useUserSession()` composable on the client.
-- **Environment Variables:** Sensitive keys (like `NUXT_SESSION_PASSWORD`) must never be hardcoded. Use `.env` and access them via `runtimeConfig`.
-- **LTI 1.3 Handshake:** For LMS integration, validate OIDC tokens in `server/api/lti13/launch.post.ts` before calling `setUserSession`.
-
----
-
-## 💾 3. Data Layer (Prisma & Nitro)
-
-- **Singleton Pattern:** Database connections must be managed as a singleton in `server/utils/db.ts` to prevent "Too many connections" errors during HMR.
-- **Type Safety:** Always run `pnpm prisma generate` after schema changes. Use the generated types in your server handlers.
-- **Validation:** Use **Zod** for validating incoming request bodies in server handlers.
-
-```typescript
-// Example: server/api/user.post.ts
-export default defineEventHandler(async (event) => {
-  const body = await readValidatedBody(
-    event,
-    z.object({
-      email: z.string().email()
-    }).parse
-  )
-
-  return await prisma.user.create({ data: body })
-})
-```
+### 2. Composable Logic
+Use `composables/` to extract stateful logic from UI. If a piece of logic is used in two places, or exceeds 30 lines, it belongs in a composable.
 
 ---
 
-## ⚡ 4. Performance & Rendering
+## 🐳 III. Docker-based Development (Mandatory)
 
-Nuxt 4 is high-performance by default; don't break it with poor patterns.
+All commands must be executed within the `app-dev` container to ensure environment parity.
 
-- **Data Fetching:** Prefer `useFetch` or `useAsyncData` over raw `$fetch` in components to prevent double-fetching during Hydration.
-- **Hybrid Rendering:** Use `routeRules` in `nuxt.config.ts` to define SWR (Stale-While-Revalidate) for content-heavy pages and `ssr: false` for purely administrative dashboards.
-- **Server Components:** Use `.server.vue` components for complex UI parts that don't need interactivity to reduce the client-side JS bundle.
-
----
-
-## 🛠️ 5. Maintenance & Quality
-
-- **Strict TypeScript:** Ensure `typescript.typeCheck: true` is enabled in `nuxt.config.ts`. Avoid `any` at all costs.
-- **Error Handling:** Use `throw createError({ statusCode: 404, message: '...' })` in server routes to ensure the frontend receives a clean error object.
-- **Testing:** Place unit tests in `tests/` and use `@nuxt/test-utils` for E2E testing of the Nitro server and Vue components.
+- **Startup:** `docker compose up` starts Nuxt (port 3000), Postgres, and Adminer (port 8080).
+- **Execution:** `docker compose exec app-dev pnpm <command>`
+- **Testing:** `docker compose exec app-dev pnpm test`
+- **Migrations:** Never use `db push`. Use: `docker compose exec app-dev pnpm prisma migrate dev --name <description>`
 
 ---
 
-## 📋 6. Developer Workflow
+## 💾 IV. Data & Security Standards
 
-> [!IMPORTANT]
-> **Schema Changes & Migrations**: Never use `db push` for permanent schema changes. Whenever a model is added or a field is modified, you **must** generate a Prisma migration:
-> `docker compose exec app-dev pnpm prisma migrate dev --name <description>`
-
-1.  **Syncing Schema**: Use migrations for development and production consistency.
-2.  **Code Style**: ESLint runs via Husky hooks inside the container. You can also run it manually: `docker compose exec app-dev pnpm run lint`.
-3.  **Local Dev**: Always run `docker compose up`. Nuxt 4's file watcher is optimized for the `app/` directory mounted inside the container.
-
----
-
-## 7. Prisma Schema Best Practices
-
-### 7.1. Naming Conventions
-
-Consistency is key for a clean developer experience.
-
-- **Models:** Use **PascalCase** and **singular** nouns (e.g., `User`, not `users` or `user_profile`).
-- **Fields:** Use **camelCase** (e.g., `firstName`, not `first_name`).
-- **Enums:** Use **PascalCase** for the name and **UPPERCASE** for the values.
-
-```prisma
-model UserProfile {
-  id    String @id @default(cuid())
-  role  UserRole @default(USER)
-}
-
-enum UserRole {
-  ADMIN
-  USER
-  GUEST
-}
-
-```
-
-### 7.2. Standardize "Housekeeping" Fields
-
-Every model should track its own lifecycle. This is non-negotiable for debugging and auditing in production.
-
-- Always include `createdAt` and `updatedAt`.
-- Consider a `deletedAt` field for **Soft Deletes**, as Prisma doesn't have a native "trash" feature yet.
-
-```prisma
-model Post {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime? // For soft deletes
-}
-
-```
-
-### 7.3. Use CUID2 for Identifiers
-
-As we discussed earlier, String IDs are superior for distributed systems. In 2026, **CUID2** is the preferred choice over the original CUID or UUID because it is more secure, collision-resistant, and smaller.
-
-- **CUID2:** `@default(cuid())` (Prisma's internal implementation).
-
-### 7.4. Optimize with Indexes
-
-Don't wait for your app to slow down to add indexes. If you frequently query a field (like `email` or `slug`), index it.
-
-- **`@@index`**: For fields used in `WHERE` clauses.
-- **`@@unique`**: For fields that must be unique across the table.
-- **`@@fulltext`**: If you need search capabilities (specific to some DB providers).
-
-### 7.5. Define Explicit Relations
-
-While Prisma supports "Implicit Many-to-Many" relationships, it is often better to be explicit about your relation names if a model has multiple connections to the same table (e.g., a `User` who is both a "Sender" and a "Receiver" of a `Message`).
-
-```prisma
-model Message {
-  id         String @id @default(cuid())
-  sender     User   @relation("SentMessages", fields: [senderId], references: [id])
-  senderId   String
-  receiver   User   @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  receiverId String
-}
-
-```
-
-### 7.6. Use Documentation Comments
-
-Prisma supports "Rich Comments" using `///`. These comments actually carry over into the generated Prisma Client, meaning you’ll see your documentation in VS Code via IntelliSense while you're coding.
-
-```prisma
-model Product {
-  id    String @id @default(cuid())
-  /// The price in cents to avoid floating point errors
-  price Int
-}
-
-```
+- **Interface Segregation:** Server endpoints must use Prisma `select` to return only the fields defined in a `shared/` projection.
+- **Server-Side Validation:** All `server/api` entries must validate input using **Zod**. We do not trust the client.
+- **The "Transport" Rule:** Components should not know the details of an `useFetch` call. Wrap data fetching in a feature-specific composable.
+- **Explicit State:** Avoid "prop drilling." Use Pinia for global state, and Nuxt’s `useState` for local, cross-component state within a feature.
+- **CUID2 Identifiers:** Use `@default(cuid())` for all model IDs.
+- **Housekeeping:** Every model must include `createdAt`, `updatedAt` (and `deletedAt` if needed).
+- **Prisma Singleton:** Database connections must be managed via `server/utils/db.ts` to prevent connection exhaustion.
+- **Session Management:** Use `setUserSession(event, { user })` on the server and `useUserSession()` on the client.
+- **LTI 1.3 Handshake:** Validate OIDC tokens in `server/api/lti13/launch.post.ts` before calling `setUserSession`.
 
 ---
 
-> **Tip for Gemini/AI Collaborators:** When adding new features, always check `server/utils/` for existing database helpers before creating new ones. Ensure all new API endpoints follow the `defineEventHandler` pattern.
+## 🧪 V. Maintenance & Quality Assurance
+
+**Architect’s Note:** We favor **clarity over cleverness** and **explicitness over magic**.
+
+### 1. The Mandatory Testing Mandate
+- **100% Behavioral Coverage:** Every new feature, composable, and server utility must have a Vitest unit test.
+- **Contract Verification:** All schemas in `shared/` must be tested.
+- **Base Component Isolation:** Tests for `base/` components must verify UI behavior without mocking external APIs.
+
+### 2. Programming Practices
+- **Defensive TypeScript:** No `any`. Use `unknown` with Type Guards if needed. Prefer `interface` over `type` for public APIs.
+- **Predictable Side Effects:** Avoid `watch`/`watchEffect` in favor of explicit function calls. Clean up in `onUnmounted`.
+- **Modularity via "Colocation":** Keep assets (CSS, tests, docs) close to the code. Use Nuxt Layers for large feature sets.
+
+### 3. The "Reuse First" Audit
+Before creating new assets, check `shared/` schemas, `app/components/base/` atoms, and `app/composables/features/` logic.
+
+### 4. Performance & Rendering
+- **Data Fetching:** Prefer `useFetch` or `useAsyncData` to prevent double-fetching.
+- **Hybrid Rendering:** Use `routeRules` for SWR or `ssr: false` where appropriate.
 
 ---
 
-**Would you like me to generate a specific `server/utils/db.ts` file that follows the Prisma singleton pattern mentioned in Section 3?**
+## 🛠️ VI. Prisma Schema Best Practices
+
+1.  **Naming Conventions:** PascalCase singular for Models (`UserProfile`). camelCase for fields (`firstName`). PascalCase/UPPERCASE for Enums (`UserRole`).
+2.  **Tracking Fields:** Always include `createdAt` and `updatedAt`.
+3.  **Indexes:** Index frequently queried fields (`@@index`) and unique fields (`@@unique`).
+4.  **Explicit Relations:** Define explicit relation names for multiple connections to the same table.
+5.  **Documentation:** Use `///` comments for rich documentation in the Prisma Client.
+
+---
+
+## 📋 VII. The Definition of Done (DoD)
+
+- [ ] **Unit Tests:** Are there Vitest files covering all new logic?
+- [ ] **Projected API:** Does the server return a shared interface instead of the raw model?
+- [ ] **No `any`:** Are all types derived from Zod schemas or explicit interfaces?
+- [ ] **Campsite Rule:** Has the code been left cleaner than it was found?
+- [ ] **Clarity:** Can a developer who joined today understand the intent of this file without reading the implementation?
+- [ ] **Endpoint Rule:** If an API endpoint changes, will you only need to update the Shared Schema and the Feature Composable?
+- [ ] **Database changes:** If I change the name of a database column, how many files do I have to touch? (The goal is: **One**).

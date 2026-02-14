@@ -12,14 +12,16 @@ export type { LtiPlatform } from '@prisma/client'
 // INTERFACES
 // =============================================================================
 
-export interface PlatformRow {
-  id: string
-  issuer: string
-  clientId: string
-  name: string | null
-  deploymentCount: number
-  createdAt: string
-}
+export const platformRowSchema = z.object({
+  id: z.string(),
+  issuer: z.string(),
+  clientId: z.string(),
+  name: z.string().nullable(),
+  deploymentCount: z.number(),
+  createdAt: z.string()
+})
+
+export type PlatformRow = z.infer<typeof platformRowSchema>
 
 // =============================================================================
 // VALIDATION SCHEMAS

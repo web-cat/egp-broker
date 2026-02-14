@@ -55,7 +55,7 @@ The `Dockerfile` uses a multi-stage build process to optimize for both speed and
 
 ### Interactive Development
 
-Since the environment is fully containerized, you should run all development commands (like adding packages or running migrations) **inside** the container to ensure consistency.
+Since the environment is fully containerized, you should run all development commands (all pnpm commands, prisma commands, etc.) **inside the container** to ensure consistency.
 
 - **Open an Interactive Terminal**:
   ```bash
@@ -69,20 +69,22 @@ Since the environment is fully containerized, you should run all development com
   docker compose exec app-dev pnpm test
   ```
 
-### Production Simulation
+### 🏗️ Docker Compose: Local Orchestration
 
-To verify the production build locally before deployment:
+The `docker-compose.yml` file manages our microservices stack.
 
-```bash
-docker compose --profile production up -d app-prod
-```
-
-The production version will be accessible at **http://localhost:8081**.
+- **Services**:
+  - `app-dev`: The main Nuxt application with Hot Module Replacement (HMR).
+  - `postgres`: Persistent database using bind mounts (`./volumes/postgres_data`).
+  - `adminer`: Web UI for direct database management.
+  - `playwright`: Dedicated container for E2E testing.
+- **Bind Mounts**: The source code is mounted to `/app`. An anonymous volume for `node_modules` is used to prevent the container's Linux-based binaries from conflicting with your host machine (Mac/Windows).
+- **Healthchecks**: The application service waits for the database to be "healthy" (accepting connections) before starting.
 
 ### Git Conventional Commits
 
-The project uses Husky hooks to lint the code (and fix any issues) prior to any git commit. This is done inside the development docker image, so be sure to have the
-application stack running (so the app-dev container is available) when committing.
+The project uses Husky hooks to lint the code (and fix any issues) prior to any git commit. This is done inside the development docker image, so **be sure to have the
+application stack running** (so the app-dev container is available) when committing.
 
 The Husky hooks also use commitlint to double-check your commit messages against the conventional commits specification. See https://www.conventionalcommits.org/en/v1.0.0/
 for full details. The basics: be sure each commit starts with a type prefix (e.g. "fix: ", "feat: ", "chore: ", "docs: ", "style: ", "refactor: ", "test: ", "perf: ", "ci: ", "build: ", "release: ", "workflow: ", "revert: "). Be sure to include both the colon and
@@ -92,13 +94,13 @@ affect.
 
 ### 🛠️ Key Commands
 
-| Command                                           | Description                       |
-| :------------------------------------------------ | :-------------------------------- |
-| `docker compose up -d app-dev`                    | Start the development environment |
-| `docker compose exec app-dev bash`                | Open a shell in the dev container |
-| `docker compose stop`                             | Stop all services                 |
-| `docker compose logs -f app-dev`                  | View real-time application logs   |
-| `docker compose --profile production up app-prod` | Test the production build         |
+| Command                                           | Description                                               |
+| :------------------------------------------------ | :-------------------------------------------------------- |
+| `docker compose up`                               | Start the development environment (can add -d if desired) |
+| `docker compose exec app-dev bash`                | Open a shell in the dev container                         |
+| `docker compose stop`                             | Stop all services                                         |
+| `docker compose logs -f app-dev`                  | View real-time application logs                           |
+| `docker compose --profile production up app-prod` | Test the production build                                 |
 
 ### Resetting After Big Changes
 

@@ -17,38 +17,41 @@ export interface SimplePassPool {
   balance: number
 }
 
-export interface RedemptionRow {
-  id: string
-  assignmentTitle: string | null
-  createdAt: string
-  cost: number
-  hoursPerPass: number
-  availableFrom: string | null
-  acceptUntil: string | null
-  isActive: boolean
-  [key: string]: any
-}
+export const redemptionRowSchema = z.object({
+  id: z.string(),
+  assignmentTitle: z.string().nullable(),
+  createdAt: z.string(),
+  cost: z.number(),
+  hoursPerPass: z.number(),
+  availableFrom: z.string().nullable(),
+  acceptUntil: z.string().nullable(),
+  isActive: z.boolean()
+})
+
+export type RedemptionRow = z.infer<typeof redemptionRowSchema>
 
 /**
  * PassType data for dashboard
  */
-export interface PassTypeData {
-  id: string
-  name: string
-  description: string | null
-  extensionOnly: boolean
-  initialBalance: number
-  allowRequests: boolean
-  hoursPerPass: number
-  titlePattern: string | null
-  coolDownPeriod: number | null
-  coolDownUnit: 'HOUR' | 'DAY' | 'WEEK' | null
-  coolDownReset: 'HOUR' | 'DAY' | 'WEEK' | null
-  coolDownResetOffset: number | null
-  minDaysPastDue: number | null
-  maxDaysPastDue: number | null
-  createdAt: string
-}
+export const passTypeDataSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  extensionOnly: z.boolean(),
+  initialBalance: z.number(),
+  allowRequests: z.boolean(),
+  hoursPerPass: z.number(),
+  titlePattern: z.string().nullable(),
+  coolDownPeriod: z.number().nullable(),
+  coolDownUnit: z.enum(['HOUR', 'DAY', 'WEEK']).nullable(),
+  coolDownReset: z.enum(['HOUR', 'DAY', 'WEEK']).nullable(),
+  coolDownResetOffset: z.number().nullable(),
+  minDaysPastDue: z.number().nullable(),
+  maxDaysPastDue: z.number().nullable(),
+  createdAt: z.string()
+})
+
+export type PassTypeData = z.infer<typeof passTypeDataSchema>
 
 export const createPassTypeSchema = z.object({
   name: z.string().min(1, 'Name is required'),

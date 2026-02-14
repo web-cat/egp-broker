@@ -12,18 +12,19 @@ export type { LtiTool, Protocol } from '@prisma/client'
 // INTERFACES
 // =============================================================================
 
-export interface ToolRow {
-  id: string
-  name: string | null
-  baseUrl: string
-  protocol: 'LTI11' | 'LTI13' | 'SPLICE'
-  key: string | null
-  secret: string | null
-  supportsExtensionApi: boolean
-  platformId: string | null
-  platformIssuer: string | null
-  createdAt: string
-}
+export const toolRowSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  baseUrl: z.string(),
+  protocol: z.enum(['LTI11', 'LTI13', 'SPLICE']),
+  key: z.string().nullable(),
+  supportsExtensionApi: z.boolean(),
+  platformId: z.string().nullable(),
+  platformIssuer: z.string().nullable(),
+  createdAt: z.string()
+})
+
+export type ToolRow = z.infer<typeof toolRowSchema>
 
 // =============================================================================
 // VALIDATION SCHEMAS

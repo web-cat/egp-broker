@@ -167,3 +167,20 @@ export function toPublicUser(user: User): PublicUser {
   const { password, ...rest } = user
   return rest
 }
+
+// =============================================================================
+// ROW SCHEMAS (API Responses)
+// =============================================================================
+
+export const userRowSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  firstName: z.string(),
+  lastName: z.string(),
+  globalRole: z.enum(['ADMIN', 'INSTRUCTOR', 'USER']),
+  avatarUrl: z.string().nullable(),
+  createdAt: z.string(),
+  emailVerified: z.boolean()
+})
+
+export type UserRow = z.infer<typeof userRowSchema>

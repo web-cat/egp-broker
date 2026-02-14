@@ -11,6 +11,16 @@ export type { LtiDeployment } from '@prisma/client'
 // =============================================================================
 // VALIDATION SCHEMAS
 // =============================================================================
+export const deploymentRowSchema = z.object({
+  id: z.string(),
+  platformId: z.string(),
+  platformIssuer: z.string(),
+  deploymentId: z.string(),
+  deploymentHost: z.string().nullable(),
+  createdAt: z.string()
+})
+
+export type DeploymentRow = z.infer<typeof deploymentRowSchema>
 
 export const createDeploymentSchema = z.object({
   platformId: z.string().min(1, 'Platform is required'),

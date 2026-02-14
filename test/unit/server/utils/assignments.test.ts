@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   syncAssignmentEligibility,
   syncPassTypeEligibility,
-  recalculateAssignmentEligibleDates
+  recalculateAssignmentEligibleDates,
+  getCourseAssignments
 } from '../../../../server/utils/assignments'
 import prisma from '../../../../lib/prisma'
 
@@ -11,6 +12,7 @@ vi.mock('../../../../lib/prisma', () => ({
   default: {
     assignment: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       update: vi.fn()
     },
     passType: {
@@ -190,6 +192,51 @@ describe('Assignment Eligibility Logic', () => {
 
       expect(prisma.passEligibility.create).toHaveBeenCalledTimes(1) // Only for a1
       expect(prisma.assignment.update).toHaveBeenCalledTimes(1) // Only for a1
+    })
+  })
+
+  describe('getCourseAssignments', () => {
+    it('should fetch and map modifiers correctly', async () => {
+      const mockDate = new Date('2023-01-01T00:00:00.000Z')
+      const mockAssignments = [
+        {
+          id: 'a1',
+          resourceLinkId: 'rl1',
+          title: 'A1',
+          canvasAssignmentId: 'c1',
+          dueDate: mockDate,
+          availableFrom: mockDate,
+          acceptUntil: mockDate,
+          createdAt: mockDate,
+          course: { label: 'C1', title: 'Course 1' },
+          passEligibilities: [
+            { passType: { name: 'Late Pass' } }
+          ]
+        }
+      ]
+
+      vi.mocked(prisma.assignment.findMany).mockResolvedValue(mockAssignments as any)
+
+      const result = await getCourseAssignments('course1')
+
+      expect(prisma.assignment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: { courseId: 'course1' },
+      }))
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toEqual({
+        id: 'a1',
+        resourceLinkId: 'rl1',
+        title: 'A1',
+        canvasAssignmentId: 'c1',
+        courseLabel: 'C1',
+        courseTitle: 'Course 1',
+        dueDate: mockDate.toISOString(),
+        availableFrom: mockDate.toISOString(),
+        acceptUntil: mockDate.toISOString(),
+        createdAt: mockDate.toISOString(),
+        eligiblePassTypeNames: ['Late Pass']
+      })
     })
   })
 })
