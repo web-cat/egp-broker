@@ -52,9 +52,19 @@
 
   <!-- My Assignments -->
   <div class="space-y-4 pt-8">
-    <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">
-      {{ t('pages.dashboard.student.assignments.title') }}
-    </h3>
+    <div class="flex items-center justify-between px-1">
+      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+        {{ t('pages.dashboard.student.assignments.title') }}
+      </h3>
+      <UButton
+        icon="i-lucide-refresh-cw"
+        variant="ghost"
+        color="neutral"
+        size="sm"
+        :loading="assignmentsStatus === 'pending'"
+        @click="refreshAssignments"
+      />
+    </div>
     <UiDataTable
       :data="assignmentsData?.data"
       :columns="assignmentColumns"
@@ -101,8 +111,11 @@ defineProps<{
 const { data: passPools } = await useFetch<ApiResponse<SimplePassPool[]>>('/api/me/pass-pools')
 
 // Fetch assignments for the current course
-const { data: assignmentsData, status: assignmentsStatus } =
-  await useFetch<ApiResponse<AssignmentRow[]>>('/api/me/assignments')
+const {
+  data: assignmentsData,
+  status: assignmentsStatus,
+  refresh: refreshAssignments
+} = await useFetch<ApiResponse<AssignmentRow[]>>('/api/me/assignments')
 
 // Fetch redemptions for the current course
 const { data: redemptionsData, status: redemptionsStatus } =

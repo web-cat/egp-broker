@@ -16,7 +16,6 @@ export function matchesTitlePattern(pattern: string, title: string): boolean {
   }
 }
 
-
 /**
  * Recalculates `eligibleFrom` and `eligibleUntil` for a given assignment based on its pass eligibilities.
  *
@@ -129,8 +128,6 @@ export async function syncAssignmentEligibility(assignmentId: string) {
   const eligibilityMap = new Map(existingEligibilities.map((e) => [e.passTypeId, e]))
 
   const operations = []
-  // We need to track if we changed anything to know if we should recalculate dates
-  let dirty = false
 
   for (const pt of passTypes) {
     let matches = false
@@ -153,7 +150,6 @@ export async function syncAssignmentEligibility(assignmentId: string) {
             }
           })
         )
-        dirty = true
       }
       // If matches and existing, do NOT update. Preserve valid existing link.
     } else {
@@ -164,7 +160,6 @@ export async function syncAssignmentEligibility(assignmentId: string) {
             where: { id: existing.id }
           })
         )
-        dirty = true
       }
       // If not matching and existing is manual (isAutomatic: false), preserve it.
     }
