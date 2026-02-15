@@ -11,7 +11,7 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <!-- Platforms Card -->
-      <UCard class="text-center">
+      <BaseCard class="text-center">
         <p class="text-sm font-medium uppercase">
           <NuxtLink
             to="/admin/platforms"
@@ -32,10 +32,10 @@
             {{ p.issuer ?? p.name }}
           </li>
         </ul>
-      </UCard>
+      </BaseCard>
 
       <!-- Deployments Card -->
-      <UCard class="text-center">
+      <BaseCard class="text-center">
         <p class="text-sm font-medium uppercase">
           <NuxtLink
             to="/admin/deployments"
@@ -56,10 +56,10 @@
             {{ d.deploymentId }}
           </li>
         </ul>
-      </UCard>
+      </BaseCard>
 
       <!-- Simple count cards -->
-      <UCard v-for="stat in simpleCards" :key="stat.label" class="text-center">
+      <BaseCard v-for="stat in simpleCards" :key="stat.label" class="text-center">
         <p class="text-sm font-medium uppercase">
           <NuxtLink
             :to="stat.to"
@@ -72,7 +72,7 @@
           <USkeleton v-if="status === 'pending'" class="h-9 w-16 mx-auto" />
           <span v-else>{{ stat.value }}</span>
         </p>
-      </UCard>
+      </BaseCard>
     </div>
   </div>
 </template>

@@ -1,14 +1,24 @@
 <template>
-  <UPage class="bg-primary-50/30 dark:bg-primary-950/30 min-h-screen">
-    <UPageBody
-      ><UContainer>
+  <UPage class="bg-transparent">
+    <UPageBody>
+      <UContainer>
         <!-- Case 1: Not Logged In -->
-        <div v-if="!loggedIn" class="max-w-2xl mx-auto py-24 text-center">
-          <UIcon name="i-lucide-shield-alert" class="w-16 h-16 mx-auto mb-6 text-primary-500/50" />
-          <h2 class="text-3xl font-bold mb-4">{{ t('pages.dashboard.notLoggedIn.title') }}</h2>
-          <p class="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed">
+        <div v-if="!loggedIn" class="max-w-2xl mx-auto py-24 text-center animate-fade-up">
+          <UIcon name="i-lucide-shield-alert" class="w-20 h-20 mx-auto mb-8 text-primary-500/50" />
+          <h2 class="text-4xl font-bold mb-6 tracking-tight">
+            {{ t('pages.dashboard.notLoggedIn.title') }}
+          </h2>
+          <p class="text-xl text-gray-600 dark:text-gray-400 leading-relaxed mb-10">
             {{ t('pages.dashboard.notLoggedIn.description') }}
           </p>
+          <BaseButton
+            :to="localePath('/auth/login')"
+            color="primary"
+            size="lg"
+            icon="i-lucide-log-in"
+          >
+            {{ t('auth.login.title') }}
+          </BaseButton>
         </div>
 
         <!-- Case 2: Logged In -->
@@ -16,14 +26,14 @@
           <!-- Initial Loading state (Wait for enrollment response) -->
           <div
             v-if="enrollmentStatus === 'pending' && !enrollment"
-            class="flex flex-col items-center justify-center py-24 space-y-4"
+            class="flex flex-col items-center justify-center py-32 space-y-6"
           >
-            <UIcon name="i-lucide-loader-2" class="w-10 h-10 animate-spin text-primary-500" />
-            <p class="text-neutral-500 font-medium">{{ t('global.status.loading') }}</p>
+            <UIcon name="i-lucide-loader-2" class="w-12 h-12 animate-spin text-primary-500" />
+            <p class="text-gray-500 font-medium">{{ t('global.status.loading') }}</p>
           </div>
 
           <!-- Enrollment Data Ready -->
-          <div v-else-if="enrollmentStatus === 'success' && enrollment">
+          <div v-else-if="enrollmentStatus === 'success' && enrollment" class="animate-fade-up">
             <!-- Sub-case: Active Course Selected -->
             <div v-if="enrollment.data">
               <DashboardTeacher
@@ -42,12 +52,12 @@
 
             <!-- Sub-case: No Active Course (Show List) -->
             <div v-else>
-              <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold flex items-center gap-2">
+              <div class="flex items-center justify-between mb-8">
+                <h2 class="text-3xl font-bold flex items-center gap-3">
                   <UIcon name="i-lucide-graduation-cap" class="text-primary-500" />
                   {{ t('pages.dashboard.list.title') }}
                 </h2>
-                <UButton
+                <BaseButton
                   v-if="coursesStatus === 'success'"
                   variant="ghost"
                   icon="i-lucide-refresh-cw"
@@ -59,47 +69,26 @@
               <!-- Loading courses list -->
               <div v-if="coursesStatus === 'pending'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <UCard v-for="i in 2" :key="i" class="animate-pulse">
-                  <div class="h-16 bg-neutral-100 dark:bg-neutral-800 rounded" />
+                  <div class="h-16 bg-gray-100 dark:bg-gray-800 rounded" />
                 </UCard>
               </div>
 
-              <!-- Course Grid -->
-              <div
+              <!-- Course Grid Feature Component -->
+              <CourseGrid
                 v-else-if="
                   coursesStatus === 'success' && courses && courses.data && courses.data.length > 0
                 "
-                class="grid grid-cols-1 md:grid-cols-2 gap-6"
-              >
-                <UCard
-                  v-for="course in courses.data"
-                  :key="course.id"
-                  class="hover:border-primary-500 transition-colors cursor-pointer group"
-                  @click="selectCourse(course.courseId)"
-                >
-                  <div class="flex justify-between items-start">
-                    <div>
-                      <h3 class="font-bold text-lg group-hover:text-primary-600">
-                        {{ course.courseTitle || course.courseLabel }}
-                      </h3>
-                      <p class="text-sm text-neutral-500 mt-1">
-                        {{ t('pages.dashboard.list.enrolledAs', { role: course.role }) }}
-                      </p>
-                    </div>
-                    <UButton
-                      variant="ghost"
-                      color="primary"
-                      icon="i-lucide-chevron-right"
-                      :loading="selecting === course.courseId"
-                    />
-                  </div>
-                </UCard>
-              </div>
+                :courses="courses.data"
+              />
 
               <!-- Error courses list -->
-              <UCard v-else-if="coursesStatus === 'error'" class="text-center py-12 border-red-200">
+              <BaseCard
+                v-else-if="coursesStatus === 'error'"
+                class="text-center py-12 border-red-200"
+              >
                 <UIcon name="i-lucide-alert-circle" class="w-12 h-12 mx-auto mb-4 text-red-500" />
                 <p class="text-red-500 font-medium">{{ t('global.status.loadingFailed') }}</p>
-                <UButton
+                <BaseButton
                   class="mt-4"
                   variant="ghost"
                   color="red"
@@ -108,17 +97,14 @@
                   @click="() => refreshCourses()"
                 >
                   {{ t('global.actions.reset') }}
-                </UButton>
-              </UCard>
+                </BaseButton>
+              </BaseCard>
 
               <!-- Empty Courses State -->
-              <UCard v-else-if="coursesStatus === 'success'" class="text-center py-12">
-                <UIcon
-                  name="i-lucide-book-open-x"
-                  class="w-12 h-12 mx-auto mb-4 text-neutral-300"
-                />
-                <p class="text-neutral-500 font-medium">{{ t('global.empty.noCourses') }}</p>
-              </UCard>
+              <BaseCard v-else-if="coursesStatus === 'success'" class="text-center py-12">
+                <UIcon name="i-lucide-book-open-x" class="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p class="text-gray-500 font-medium">{{ t('global.empty.noCourses') }}</p>
+              </BaseCard>
             </div>
           </div>
 
@@ -126,24 +112,24 @@
           <div v-else-if="enrollmentStatus === 'error'" class="max-w-2xl mx-auto py-24 text-center">
             <UIcon name="i-lucide-alert-triangle" class="w-16 h-16 mx-auto mb-6 text-red-500" />
             <h2 class="text-3xl font-bold mb-4">{{ t('global.status.error') }}</h2>
-            <p class="text-lg text-neutral-600 dark:text-neutral-400">
+            <p class="text-lg text-gray-600 dark:text-gray-400">
               {{
                 isUnauthorized(enrollmentError)
                   ? t('auth.login.messages.error.sessionExpired')
                   : t('global.status.loadingFailed')
               }}
             </p>
-            <UButton
+            <BaseButton
               v-if="!isUnauthorized(enrollmentError)"
               class="mt-8"
               icon="i-lucide-refresh-cw"
               @click="refreshEnrollment"
             >
               {{ t('global.actions.reset') }}
-            </UButton>
-            <UButton v-else class="mt-8" icon="i-lucide-log-in" to="/auth/login">
+            </BaseButton>
+            <BaseButton v-else class="mt-8" icon="i-lucide-log-in" to="/auth/login">
               {{ t('auth.login.submit') }}
-            </UButton>
+            </BaseButton>
           </div>
         </template>
       </UContainer></UPageBody
@@ -154,10 +140,12 @@
 <script lang="ts" setup>
 import type { SimpleEnrollment } from '@@/shared/models/enrollment'
 import type { ApiResponse } from '@@/shared/types/api'
+import CourseGrid from '~/components/features/course/CourseGrid.vue'
 
 // Composables
 const { t } = useI18n()
 const { loggedIn, user, clear } = useUserSession()
+const localePath = useLocalePath()
 
 // SEO
 useSeo('home')
@@ -200,24 +188,6 @@ const {
   immediate: loggedIn.value && !enrollment.value?.data?.role,
   watch: [loggedIn, enrollment]
 })
-
-// Course selection
-const selecting = ref<string | null>(null)
-const selectCourse = async (courseId: string) => {
-  selecting.value = courseId
-  try {
-    await $fetch('/api/me/context', {
-      method: 'POST',
-      body: { courseId }
-    })
-    // Refresh the enrollment data to show the dashboard
-    await refreshEnrollment()
-  } catch (e) {
-    console.error('Failed to select course:', e)
-  } finally {
-    selecting.value = null
-  }
-}
 
 useHead({
   title: computed(() => {

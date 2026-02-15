@@ -3,16 +3,14 @@
     :title="courseCode ? `${courseCode}: ${courseTitle}` : courseTitle"
     :description="t('pages.dashboard.student.subtitle')"
     icon="i-lucide-book-open"
-    :ui="{ wrapper: 'py-2' }"
+    class="border-b-0"
   />
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
     <!-- Pass Pools -->
-    <UCard
+    <BaseCard
       v-for="pool in passPools?.data"
       :key="pool.id"
-      variant="ghost"
-      class="bg-neutral-50 dark:bg-neutral-800/50"
     >
       <div class="flex items-center justify-between">
         <div>
@@ -27,10 +25,10 @@
           <UIcon name="i-lucide-coins" class="w-8 h-8 text-primary-600 dark:text-primary-400" />
         </div>
       </div>
-    </UCard>
+    </BaseCard>
 
     <!-- Next Deadline -->
-    <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+    <BaseCard>
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
@@ -47,7 +45,7 @@
           />
         </div>
       </div>
-    </UCard>
+    </BaseCard>
   </div>
 
   <!-- My Assignments -->

@@ -2,37 +2,37 @@
   <UPageHeader
     :title="courseCode ? `${courseCode}: ${courseTitle}` : courseTitle"
     :description="t('pages.dashboard.teacher.subtitle')"
-    class="pb-0"
+    class="border-b-0"
   />
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <!-- Quick Stats -->
-    <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+    <BaseCard>
       <div class="text-center py-4">
         <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
           {{ t('pages.dashboard.teacher.stats.activeAssignments') }}
         </p>
         <p class="text-4xl font-bold text-primary-600 dark:text-primary-400 mt-1">0</p>
       </div>
-    </UCard>
+    </BaseCard>
 
-    <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+    <BaseCard>
       <div class="text-center py-4">
         <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
           {{ t('pages.dashboard.teacher.stats.pendingRequests') }}
         </p>
         <p class="text-4xl font-bold text-secondary-600 dark:text-secondary-400 mt-1">0</p>
       </div>
-    </UCard>
+    </BaseCard>
 
-    <UCard variant="ghost" class="bg-neutral-50 dark:bg-neutral-800/50">
+    <BaseCard>
       <div class="text-center py-4">
         <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
           {{ t('pages.dashboard.teacher.stats.enrolledStudents') }}
         </p>
         <p class="text-4xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">0</p>
       </div>
-    </UCard>
+    </BaseCard>
   </div>
 
   <!-- Pass Types Management -->
