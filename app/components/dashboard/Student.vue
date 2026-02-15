@@ -1,6 +1,6 @@
 <template>
   <UPageHeader
-    :title="courseCode ? `${courseCode}: ${courseTitle}` : courseTitle"
+    :title="courseCode ? `${courseCode}: ${courseTitle || ''}` : courseTitle || ''"
     :description="t('pages.dashboard.student.subtitle')"
     icon="i-lucide-book-open"
     class="border-b-0"
@@ -8,14 +8,11 @@
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
     <!-- Pass Pools -->
-    <BaseCard
-      v-for="pool in passPools?.data"
-      :key="pool.id"
-    >
+    <BaseCard v-for="pool in passPools?.data" :key="pool.id">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
-            {{ $plural(pool.name, pool.balance) }}
+            {{ pool.balance === 1 ? pool.name : $plural(pool.name) }}
           </p>
           <p class="text-4xl font-bold text-primary-600 dark:text-primary-400 mt-1">
             {{ pool.balance }}
@@ -60,7 +57,7 @@
         color="neutral"
         size="sm"
         :loading="assignmentsStatus === 'pending'"
-        @click="refreshAssignments"
+        @click="() => refreshAssignments()"
       />
     </div>
     <UiDataTable
@@ -92,43 +89,36 @@
 </template>
 
 <script setup lang="ts">
-import type { SimplePassPool, RedemptionRow } from '@@/shared/models/pass'
-import type { ApiResponse } from '@@/shared/types/api'
-import type { TableColumn } from '@nuxt/ui'
-import type { AssignmentRow } from '@@/shared/models/assignment'
+// Feature Composable
+import { useStudentDashboard } from '~/composables/features/useStudentDashboard'
 
 const { t } = useI18n()
 
 defineProps<{
-  courseTitle: string | null
-  courseCode: string | null
+  courseTitle?: string | null
+  courseCode?: string | null
   isAdmin: boolean
 }>()
 
-// Fetch pass pools for the current course
-const { data: passPools } = await useFetch<ApiResponse<SimplePassPool[]>>('/api/me/pass-pools')
-
-// Fetch assignments for the current course
 const {
-  data: assignmentsData,
-  status: assignmentsStatus,
-  refresh: refreshAssignments
-} = await useFetch<ApiResponse<AssignmentRow[]>>('/api/me/assignments')
+  passPools,
+  assignmentsData,
+  assignmentsStatus,
+  refreshAssignments,
+  redemptionsData,
+  redemptionsStatus
+} = useStudentDashboard()
 
-// Fetch redemptions for the current course
-const { data: redemptionsData, status: redemptionsStatus } =
-  await useFetch<ApiResponse<RedemptionRow[]>>('/api/me/redemptions')
-
-const assignmentColumns: TableColumn<AssignmentRow>[] = [
+const assignmentColumns: any[] = [
   {
     accessorKey: 'title',
     header: 'Title',
-    cell: ({ row }) => row.getValue('title') || '—'
+    cell: ({ row }: { row: any }) => row.getValue('title') || '—'
   },
   {
     accessorKey: 'eligiblePassTypeNames',
     header: 'Eligible Pass Types',
-    cell: ({ row }) => {
+    cell: ({ row }: { row: any }) => {
       const names = row.original.eligiblePassTypeNames || []
       return names.join(', ') || 'None'
     }
@@ -145,11 +135,11 @@ const assignmentColumns: TableColumn<AssignmentRow>[] = [
   }
 ]
 
-const redemptionColumns: TableColumn<RedemptionRow>[] = [
+const redemptionColumns: any[] = [
   {
     accessorKey: 'assignmentTitle',
     header: 'Assignment',
-    cell: ({ row }) => row.getValue('assignmentTitle') || '—'
+    cell: ({ row }: { row: any }) => row.getValue('assignmentTitle') || '—'
   },
   {
     accessorKey: 'redeemedAt',
@@ -159,12 +149,12 @@ const redemptionColumns: TableColumn<RedemptionRow>[] = [
   {
     accessorKey: 'cost',
     header: 'Cost',
-    cell: ({ row }) => `${row.getValue('cost')} pass(es)`
+    cell: ({ row }: { row: any }) => `${row.getValue('cost')} pass(es)`
   },
   {
     accessorKey: 'hoursPerPass',
     header: 'Hours/Pass',
-    cell: ({ row }) => `${row.getValue('hoursPerPass')}h`
+    cell: ({ row }: { row: any }) => `${row.getValue('hoursPerPass')}h`
   },
   {
     accessorKey: 'acceptUntil',
@@ -174,7 +164,7 @@ const redemptionColumns: TableColumn<RedemptionRow>[] = [
   {
     accessorKey: 'isActive',
     header: 'Status',
-    cell: ({ row }) => {
+    cell: ({ row }: { row: any }) => {
       const active = row.getValue('isActive')
       return h('div', { class: 'flex items-center gap-2' }, [
         h('div', {

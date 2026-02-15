@@ -17,7 +17,7 @@ export function useAdminCrud<T extends HasId>(
   url: string,
   queryParams?: Record<string, Ref<string | undefined> | ComputedRef<string | undefined>>
 ) {
-  const { data, status } = useFetch<ApiResponse<T[]>>(url, {
+  const { data, status, refresh } = useFetch<ApiResponse<T[]>>(url, {
     lazy: true,
     query: queryParams
   })
@@ -68,6 +68,7 @@ export function useAdminCrud<T extends HasId>(
     openCreate,
     openEdit,
     onRowUpdated,
-    onItemCreated
+    onItemCreated,
+    refresh
   }
 }

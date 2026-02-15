@@ -91,10 +91,11 @@ All commands must be executed within the `app-dev` container to ensure environme
 - **Modularity via "Colocation":** Keep assets (CSS, tests, docs) close to the code. Use Nuxt Layers for large feature sets.
 - **Before writing any code**:
   1. State how you will verify this change works (vitest unit test, playwright e2e test, browser check, etc.).
-  1. Write the test or verification step first.
-  1. Then implement the code.
-  1. Run verification and iterate until it passes.
-  1. Run all unit tests to confirm other features have not been affected and iterate until they all pass.
+  2. Write the test or verification step first.
+  3. Then implement the code.
+  4. Run lint checks (use "docker compose exec app-dev pnpm lint"), fixing any errors and iterating until they are resolved.
+  5. Run verification and iterate until it passes.
+  6. Run all unit tests to confirm other features have not been affected and iterate until they all pass.
 
 ### 3. The "Reuse First" Audit
 

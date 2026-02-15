@@ -1,6 +1,6 @@
 <template>
   <UPageHeader
-    :title="courseCode ? `${courseCode}: ${courseTitle}` : courseTitle"
+    :title="courseCode ? `${courseCode}: ${courseTitle || ''}` : courseTitle || ''"
     :description="t('pages.dashboard.teacher.subtitle')"
     class="border-b-0"
   />
@@ -74,7 +74,7 @@
           icon="i-lucide-refresh-cw"
           label="Sync assignments"
           variant="ghost"
-          color="white"
+          color="neutral"
           class="mr-2"
           @click="syncAssignments"
         />
@@ -99,85 +99,50 @@
 </template>
 
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui'
 import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
+
+// Feature Composable
+import { useTeacherDashboard } from '~/composables/features/useTeacherDashboard'
 
 const { t } = useI18n()
 
 defineProps<{
-  courseTitle: string | null
-  courseCode: string | null
+  courseTitle?: string | null
+  courseCode?: string | null
   isAdmin: boolean
 }>()
 
-// Pass Types Data
 const {
-  data: passTypesData,
-  status: passTypesStatus,
-  editOpen: passTypeEditOpen,
-  editingItem: editingPassType,
-  tableKey: passTypesTableKey,
-  openCreate: openPassTypeCreate,
-  openEdit: openPassTypeEdit,
-  onRowUpdated: onPassTypeRowUpdated,
-  onItemCreated: onPassTypeItemCreated
-} = useAdminCrud<PassTypeData>('/api/me/pass-types')
+  // Pass Types
+  passTypesData,
+  passTypesStatus,
+  passTypeEditOpen,
+  editingPassType,
+  passTypesTableKey,
+  openPassTypeCreate,
+  openPassTypeEdit,
+  onPassTypeRowUpdated,
+  onPassTypeItemCreated,
 
-// Assignments Data
-const {
-  data: assignmentsData,
-  status: assignmentsStatus,
-  editOpen: assignmentEditOpen,
-  editingItem: editingAssignment,
-  tableKey: assignmentsTableKey,
-  openCreate: openAssignmentCreate,
-  openEdit: openAssignmentEdit,
-  onRowUpdated: onAssignmentRowUpdated,
-  onItemCreated: onAssignmentItemCreated
-} = useAdminCrud<AssignmentRow>('/api/me/assignments')
+  // Assignments
+  assignmentsData,
+  assignmentsStatus,
+  assignmentEditOpen,
+  editingAssignment,
+  assignmentsTableKey,
+  openAssignmentCreate,
+  openAssignmentEdit,
+  onAssignmentRowUpdated,
+  onAssignmentItemCreated,
 
-// Sync Logic
-const { data: syncStatus } = await useFetch<{ data: { canSync: boolean } }>('/api/me/sync-status', {
-  lazy: true
-})
-const canSync = computed(() => syncStatus.value?.data?.canSync ?? false)
-const syncing = ref(false)
+  // Sync
+  canSync,
+  syncing,
+  syncAssignments
+} = useTeacherDashboard()
 
-async function syncAssignments() {
-  if (!confirm('This will fetch assignments from the LMS and update the list. Continue?')) return
-
-  syncing.value = true
-  try {
-    const { data } = await $fetch<{ data: AssignmentRow[] }>('/api/me/assignments/sync', {
-      method: 'POST'
-    })
-
-    // Update the table data directly manually since useAdminCrud might not expose a refresh easily
-    // or we can just trigger a refresh if we had access to refresh.
-    // assignmentsData is a Ref returned by useAdminCrud.
-    // We can overwrite it if it's not readonly.
-    // useAdminCrud returns `data` which is a ref.
-    if (assignmentsData.value) {
-      assignmentsData.value.data = data
-    }
-
-    const toast = useToast()
-    toast.add({ title: 'Assignments synced successfully', color: 'success' })
-  } catch (err: any) {
-    console.error(err)
-    const toast = useToast()
-    toast.add({
-      title: 'Sync failed',
-      description: err.data?.message || err.message,
-      color: 'error'
-    })
-  } finally {
-    syncing.value = false
-  }
-}
-
-const passTypeColumns: TableColumn<PassTypeData>[] = [
+const passTypeColumns: any[] = [
   {
     accessorKey: 'name',
     header: 'Name'
@@ -193,7 +158,7 @@ const passTypeColumns: TableColumn<PassTypeData>[] = [
   {
     accessorKey: 'extensionOnly',
     header: 'Policy',
-    cell: ({ row }) => {
+    cell: ({ row }: { row: any }) => {
       const ext = row.original.extensionOnly
       const req = row.original.allowRequests
       const tags = []
@@ -220,16 +185,16 @@ const passTypeColumns: TableColumn<PassTypeData>[] = [
   ])
 ]
 
-const assignmentColumns: TableColumn<AssignmentRow>[] = [
+const assignmentColumns: any[] = [
   {
     accessorKey: 'title',
     header: 'Title',
-    cell: ({ row }) => row.getValue('title') || '—'
+    cell: ({ row }: { row: any }) => row.getValue('title') || '—'
   },
   {
     accessorKey: 'eligiblePassTypeNames',
     header: 'Pass Type(s)',
-    cell: ({ row }) => {
+    cell: ({ row }: { row: any }) => {
       const names = row.original.eligiblePassTypeNames || []
       return names.join(', ') || 'None'
     }
