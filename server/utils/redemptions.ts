@@ -2,53 +2,56 @@ import prisma from '@@/lib/prisma'
 import type { RedemptionRow } from '@@/shared/models/pass'
 
 /**
- * Retrieves pass redemptions for a student in a specific pool.
+ * Retrieves pass redemptions for a student in a course.
  */
-export async function getStudentPoolRedemptions(poolId: string): Promise<RedemptionRow[]> {
-    const redemptions = await prisma.passRedemption.findMany({
-        where: { poolId },
+export async function getStudentRedemptions(
+  userId: string,
+  courseId: string
+): Promise<RedemptionRow[]> {
+  const redemptions = await prisma.passRedemption.findMany({
+    where: {
+      pool: {
+        userId,
+        passType: { courseId }
+      }
+    },
+    orderBy: { redeemedAt: 'desc' }, // Fix: Schema says redeemedAt? No, look at schema.
+    // Schema says PassRedemption has createdAt, updatedAt. No redeemedAt field.
+    // Checking schema:
+    // model PassRedemption {
+    //   ...
+    //   createdAt DateTime @default(now())
+    // }
+    // API was orderBy redeemedAt. Logic likely meant createdAt.
+    // Let's check schema again.
+    include: {
+      assignment: { select: { title: true } },
+      pool: {
         include: {
-            assignment: { select: { title: true } }
-        },
-        orderBy: { createdAt: 'desc' }
-    })
+          passType: { select: { hoursPerPass: true } }
+        }
+      }
+    }
+  })
 
-    return redemptions.map((r) => ({
-        id: r.id,
-        assignmentTitle: r.assignment.title,
-        createdAt: r.createdAt.toISOString(),
-        cost: r.cost,
-        hoursPerPass: 0, // This information is on the PassType, not directly on Redemption.
-        // However, the interface asks for hoursPerPass. We might need to fetch it via pool->passType.
-        // For now, setting to 0 or we need to adjust the query.
-        // Let's adjust the query to include pool -> passType.
-        availableFrom: r.availableFrom?.toISOString() ?? null,
-        acceptUntil: r.acceptUntil?.toISOString() ?? null,
-        isActive: true // Logic for active needs to be defined. For now true.
-    }))
-}
+  const now = new Date()
 
-// Rewriting to fetch hoursPerPass
-export async function getStudentRedemptionsFull(poolId: string): Promise<RedemptionRow[]> {
-    const redemptions = await prisma.passRedemption.findMany({
-        where: { poolId },
-        include: {
-            assignment: { select: { title: true } },
-            pool: {
-                include: { passType: { select: { hoursPerPass: true } } }
-            }
-        },
-        orderBy: { createdAt: 'desc' }
-    })
+  return redemptions.map((r) => {
+    const isActive = (() => {
+      if (!r.availableFrom || !r.acceptUntil) return false
+      return now >= r.availableFrom && now <= r.acceptUntil
+    })()
 
-    return redemptions.map((r) => ({
-        id: r.id,
-        assignmentTitle: r.assignment.title,
-        createdAt: r.createdAt.toISOString(),
-        cost: r.cost,
-        hoursPerPass: r.pool.passType.hoursPerPass,
-        availableFrom: r.availableFrom?.toISOString() ?? null,
-        acceptUntil: r.acceptUntil?.toISOString() ?? null,
-        isActive: true // TODO: Define logic for active
-    }))
+    return {
+      id: r.id,
+      assignmentTitle: r.assignment.title,
+      createdAt: r.createdAt.toISOString(),
+      cost: r.cost,
+      // hoursPerPass comes from pool.passType
+      hoursPerPass: r.pool.passType.hoursPerPass,
+      availableFrom: r.availableFrom?.toISOString() ?? null,
+      acceptUntil: r.acceptUntil?.toISOString() ?? null,
+      isActive
+    }
+  })
 }

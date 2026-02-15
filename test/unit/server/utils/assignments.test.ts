@@ -209,9 +209,7 @@ describe('Assignment Eligibility Logic', () => {
           acceptUntil: mockDate,
           createdAt: mockDate,
           course: { label: 'C1', title: 'Course 1' },
-          passEligibilities: [
-            { passType: { name: 'Late Pass' } }
-          ]
+          passEligibilities: [{ passType: { name: 'Late Pass' } }]
         }
       ]
 
@@ -219,9 +217,11 @@ describe('Assignment Eligibility Logic', () => {
 
       const result = await getCourseAssignments('course1')
 
-      expect(prisma.assignment.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: { courseId: 'course1' },
-      }))
+      expect(prisma.assignment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { courseId: 'course1' }
+        })
+      )
 
       expect(result).toHaveLength(1)
       expect(result[0]).toEqual({

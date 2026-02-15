@@ -1,6 +1,6 @@
-import { defineEventHandler } from 'h3'
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, getRouterParam, createError } from 'h3'
 import type { ApiResponse } from '@@/shared/types/api'
+import { deleteTool } from '@@/server/utils/lti-tools'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<null>> => {
   const session = await getUserSession(event)
@@ -13,9 +13,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<null>> => {
     })
   }
 
-  await prisma.ltiTool.delete({
-    where: { id }
-  })
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Tool ID is required'
+    })
+  }
+
+  await deleteTool(id)
 
   return {
     statusCode: 200,

@@ -1,10 +1,10 @@
-import { defineEventHandler } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
-import type { SimpleEnrollment, Enrollment } from '@@/shared/models/enrollment'
-import { toSimpleEnrollment } from '@@/shared/models/enrollment'
+import type { SimpleEnrollment } from '@@/shared/models/enrollment'
+import { getCurrentEnrollment } from '@@/server/utils/enrollments'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<SimpleEnrollment>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<SimpleEnrollment | null>> => {
   const session = await getUserSession(event)
 
   if (!session.user) {
@@ -14,65 +14,19 @@ export default defineEventHandler(async (event): Promise<ApiResponse<SimpleEnrol
     })
   }
 
-  let enrollment: Enrollment | null = null
-
-  // Check if user has a selected course context in DB
+  // Fetch user to get currentCourseId (could be optimized if session had it, but DB is safer)
+  // Actually, we need to fetch user to see *latest* currentCourseId, session might be stale?
+  // But session strategy is usually DB backed or JWT?
+  // Assuming we fetch from DB to be sure.
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { currentCourseId: true }
   })
 
-  // 1. Try DB context first
-  if (user?.currentCourseId) {
-    enrollment = await prisma.enrollment.findUnique({
-      where: {
-        userId_courseId: {
-          userId: session.user.id,
-          courseId: user.currentCourseId
-        }
-      },
-      include: {
-        course: true
-      }
-    })
-  }
-
-  // 2. Fallback to LTI session context if no DB context
-  if (!enrollment && session.lti?.context?.id && session.lti?.deploymentId) {
-    // Find course in this deployment
-    const course = await prisma.course.findUnique({
-      where: {
-        deploymentId_ltiContextId: {
-          deploymentId: session.lti.deploymentId,
-          ltiContextId: session.lti.context.id
-        }
-      }
-    })
-
-    if (course) {
-      enrollment = await prisma.enrollment.findUnique({
-        where: {
-          userId_courseId: {
-            userId: session.user.id,
-            courseId: course.id
-          }
-        },
-        include: {
-          course: true
-        }
-      })
-    }
-  }
-
-  if (!enrollment) {
-    return {
-      statusCode: 200,
-      data: null
-    }
-  }
+  const enrollment = await getCurrentEnrollment(session.user.id, user?.currentCourseId, session.lti)
 
   return {
     statusCode: 200,
-    data: toSimpleEnrollment(enrollment)
+    data: enrollment
   }
 })

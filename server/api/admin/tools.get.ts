@@ -1,7 +1,8 @@
-import { defineEventHandler, getQuery } from 'h3'
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, getValidatedQuery, createError } from 'h3'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { ToolRow } from '@@/shared/models/tool'
+import { adminToolQuerySchema } from '@@/shared/models/tool'
+import { getAllTools } from '@@/server/utils/lti-tools'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<ToolRow[]>> => {
   const session = await getUserSession(event)
@@ -13,36 +14,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<ToolRow[]>>
     })
   }
 
-  const query = getQuery(event)
-  const platformFilter = query.p as string | undefined
-
-  const where: Record<string, unknown> = {}
-  if (platformFilter) {
-    where.platformId = platformFilter
-  }
-
-  const tools = await prisma.ltiTool.findMany({
-    where,
-    include: {
-      platform: {
-        select: {
-          issuer: true
-        }
-      }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
+  const query = await getValidatedQuery(event, adminToolQuerySchema.parse)
+  const tools = await getAllTools(query)
 
   return {
     statusCode: 200,
-    data: tools.map((t) => ({
-      id: t.id,
-      name: t.name,
-      baseUrl: t.baseUrl,
-      protocol: t.protocol,
-      platformId: t.platformId,
-      platformIssuer: t.platform?.issuer ?? null,
-      createdAt: t.createdAt.toISOString()
-    }))
+    data: tools
   }
 })

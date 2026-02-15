@@ -1,9 +1,9 @@
-import { defineEventHandler } from 'h3'
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import type { ApiResponse } from '@@/shared/types/api'
-import { createCourseSchema } from '@@/shared/models/course'
+import { createCourseSchema, type CourseRow } from '@@/shared/models/course'
+import { createCourse } from '@@/server/utils/courses'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<CourseRow>> => {
   const session = await getUserSession(event)
 
   if (!session.user || session.user.globalRole !== 'ADMIN') {
@@ -14,10 +14,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   }
 
   const body = await readValidatedBody(event, createCourseSchema.parse)
-
-  const course = await prisma.course.create({
-    data: body
-  })
+  const course = await createCourse(body)
 
   return {
     statusCode: 201,

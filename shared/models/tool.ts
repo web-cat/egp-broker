@@ -42,12 +42,17 @@ export const createToolSchema = z.object({
 
 export const updateToolSchema = createToolSchema.partial()
 
+export const adminToolQuerySchema = z.object({
+  p: z.string().optional() // platformId
+})
+
 // =============================================================================
 // TYPE EXPORTS
 // =============================================================================
 
 export type CreateToolData = z.infer<typeof createToolSchema>
 export type UpdateToolData = z.infer<typeof updateToolSchema>
+export type AdminToolQuery = z.infer<typeof adminToolQuerySchema>
 
 // =============================================================================
 // INITIAL STATES

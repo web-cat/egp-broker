@@ -1,8 +1,10 @@
-import { defineEventHandler, getQuery } from 'h3'
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, getValidatedQuery, createError } from 'h3'
 import type { ApiResponse } from '@@/shared/types/api'
+import type { DeploymentRow } from '@@/shared/models/deployment'
+import { adminDeploymentQuerySchema } from '@@/shared/models/deployment'
+import { getAllDeployments } from '@@/server/utils/lti-deployments'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<DeploymentRow[]>> => {
   const session = await getUserSession(event)
 
   if (!session.user || session.user.globalRole !== 'ADMIN') {
@@ -12,41 +14,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
-  const query = getQuery(event)
-  const platformFilter = query.p as string | undefined
-
-  const where: Record<string, unknown> = {}
-  if (platformFilter) {
-    where.platformId = platformFilter
-  }
-
-  const deployments = await prisma.ltiDeployment.findMany({
-    where,
-    include: {
-      platform: {
-        select: {
-          name: true,
-          issuer: true
-        }
-      },
-      _count: {
-        select: { courses: true }
-      }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
+  const query = await getValidatedQuery(event, adminDeploymentQuerySchema.parse)
+  const deployments = await getAllDeployments(query)
 
   return {
     statusCode: 200,
-    data: deployments.map((d) => ({
-      id: d.id,
-      platformId: d.platformId,
-      deploymentId: d.deploymentId,
-      deploymentHost: d.deploymentHost,
-      platformName: d.platform.name,
-      platformIssuer: d.platform.issuer,
-      courseCount: d._count.courses,
-      createdAt: d.createdAt.toISOString()
-    }))
+    data: deployments
   }
 })

@@ -1,5 +1,9 @@
 import prisma from '@@/lib/prisma'
-import type { AssignmentRow } from '@@/shared/models/assignment'
+import type { AssignmentRow, CreateAssignmentData } from '@@/shared/models/assignment'
+
+/**
+ * Creates a new assignment.
+ */
 
 /**
  * Checks if an assignment title matches a given regex pattern.
@@ -296,4 +300,23 @@ export async function getCourseAssignments(courseId: string): Promise<Assignment
     createdAt: a.createdAt.toISOString(),
     eligiblePassTypeNames: a.passEligibilities.map((pe) => pe.passType.name)
   }))
+}
+
+export async function createAssignment(data: CreateAssignmentData) {
+  const assignment = await prisma.assignment.create({
+    data: {
+      resourceLinkId: `manual-${Date.now()}`,
+      title: data.title,
+      canvasAssignmentId: data.canvasAssignmentId,
+      courseId: data.courseId,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      availableFrom: data.availableFrom ? new Date(data.availableFrom) : null,
+      acceptUntil: data.acceptUntil ? new Date(data.acceptUntil) : null
+    }
+  })
+
+  // Sync automatic pass eligibility
+  await syncAssignmentEligibility(assignment.id)
+
+  return assignment
 }

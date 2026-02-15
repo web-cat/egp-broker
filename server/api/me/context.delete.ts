@@ -1,6 +1,6 @@
-import { defineEventHandler } from 'h3'
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, createError } from 'h3'
 import type { ApiResponse } from '@@/shared/types/api'
+import { updateUserCurrentCourse } from '@@/server/utils/users'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<{ success: boolean }>> => {
   const session = await getUserSession(event)
@@ -13,10 +13,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<{ success: 
   }
 
   // Clear current course context from the user record in database
-  const updatedUser = await prisma.user.update({
-    where: { id: session.user.id },
-    data: { currentCourseId: null }
-  })
+  const updatedUser = await updateUserCurrentCourse(session.user.id, null)
 
   //  console.log('[context.delete] updatedUser = ', updatedUser)
 

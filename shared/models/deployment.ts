@@ -17,6 +17,8 @@ export const deploymentRowSchema = z.object({
   platformIssuer: z.string(),
   deploymentId: z.string(),
   deploymentHost: z.string().nullable(),
+  platformName: z.string().nullable(),
+  courseCount: z.number().int().default(0),
   createdAt: z.string()
 })
 
@@ -33,12 +35,17 @@ export const updateDeploymentSchema = z.object({
   deploymentHost: z.string().nullable().optional()
 })
 
+export const adminDeploymentQuerySchema = z.object({
+  p: z.string().optional() // platformId
+})
+
 // =============================================================================
 // TYPE EXPORTS
 // =============================================================================
 
 export type CreateDeploymentData = z.infer<typeof createDeploymentSchema>
 export type UpdateDeploymentData = z.infer<typeof updateDeploymentSchema>
+export type AdminDeploymentQuery = z.infer<typeof adminDeploymentQuerySchema>
 
 // =============================================================================
 // INITIAL STATES

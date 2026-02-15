@@ -1,8 +1,7 @@
-import { defineEventHandler } from 'h3'
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, createError } from 'h3'
 import type { ApiResponse } from '@@/shared/types/api'
-
 import type { PlatformRow } from '@@/shared/models/platform'
+import { getAllPlatforms } from '@@/server/utils/lti-platforms'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<PlatformRow[]>> => {
   const session = await getUserSession(event)
@@ -14,23 +13,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<PlatformRow
     })
   }
 
-  const platforms = await prisma.ltiPlatform.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      _count: {
-        select: { deployments: true }
-      }
-    }
-  })
-
-  const data: PlatformRow[] = platforms.map((p) => ({
-    id: p.id,
-    issuer: p.issuer,
-    clientId: p.clientId,
-    name: p.name,
-    deploymentCount: p._count.deployments,
-    createdAt: p.createdAt.toISOString()
-  }))
+  const data = await getAllPlatforms()
 
   return {
     statusCode: 200,

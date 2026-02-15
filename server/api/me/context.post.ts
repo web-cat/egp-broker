@@ -1,6 +1,7 @@
-import { defineEventHandler, readBody } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
+import { updateUserCurrentCourse } from '@@/server/utils/users'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<{ success: boolean }>> => {
   const session = await getUserSession(event)
@@ -42,12 +43,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<{ success: 
     })
   }
 
-  // Update session with the selected course context
   // Update user with the selected course context in the database
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: { currentCourseId: enrollment.course.id }
-  })
+  await updateUserCurrentCourse(session.user.id, enrollment.course.id)
 
   // Update the session with the new currentCourseId so the client knows
   await setUserSession(event, {

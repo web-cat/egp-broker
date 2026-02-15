@@ -43,12 +43,18 @@ export const updateCourseSchema = z.object({
   workflowState: z.string().nullable().optional()
 })
 
+export const adminCourseQuerySchema = z.object({
+  d: z.string().optional(), // deploymentId (logical)
+  p: z.string().optional() // platformId (PK)
+})
+
 // =============================================================================
 // TYPE EXPORTS
 // =============================================================================
 
 export type CreateCourseData = z.infer<typeof createCourseSchema>
 export type UpdateCourseData = z.infer<typeof updateCourseSchema>
+export type AdminCourseQuery = z.infer<typeof adminCourseQuerySchema>
 
 // =============================================================================
 // INITIAL STATES

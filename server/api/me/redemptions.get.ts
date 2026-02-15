@@ -1,8 +1,9 @@
-import { defineEventHandler } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
-
 import type { RedemptionRow } from '@@/shared/models/pass'
+import { getStudentRedemptions } from '@@/server/utils/redemptions'
+import { getCurrentEnrollment } from '@@/server/utils/enrollments'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<RedemptionRow[]>> => {
   const session = await getUserSession(event)
@@ -20,65 +21,19 @@ export default defineEventHandler(async (event): Promise<ApiResponse<RedemptionR
     select: { currentCourseId: true }
   })
 
-  const courseId = user?.currentCourseId
+  const enrollment = await getCurrentEnrollment(session.user.id, user?.currentCourseId, session.lti)
 
-  if (!courseId) {
+  if (!enrollment) {
     return {
       statusCode: 200,
       data: []
     }
   }
 
-  // Fetch redemptions for the current user in the current course
-  const redemptions = await prisma.passRedemption.findMany({
-    where: {
-      pool: {
-        userId: session.user.id,
-        passType: {
-          courseId: courseId
-        }
-      }
-    },
-    orderBy: {
-      redeemedAt: 'desc'
-    },
-    include: {
-      assignment: {
-        select: { title: true }
-      },
-      pool: {
-        include: {
-          passType: {
-            select: { hoursPerPass: true }
-          }
-        }
-      }
-    }
-  })
-
-  const now = new Date()
-
-  const data: RedemptionRow[] = redemptions.map((r) => {
-    const isActive = (() => {
-      // Logic for "isActive": current time is between availableFrom and acceptUntil
-      if (!r.availableFrom || !r.acceptUntil) return false
-      return now >= r.availableFrom && now <= r.acceptUntil
-    })()
-
-    return {
-      id: r.id,
-      assignmentTitle: r.assignment.title,
-      redeemedAt: r.createdAt.toISOString(),
-      cost: r.cost,
-      hoursPerPass: r.pool.passType.hoursPerPass,
-      availableFrom: r.availableFrom?.toISOString() ?? null,
-      acceptUntil: r.acceptUntil?.toISOString() ?? null,
-      isActive
-    }
-  })
+  const redemptions = await getStudentRedemptions(session.user.id, enrollment.courseId)
 
   return {
     statusCode: 200,
-    data
+    data: redemptions
   }
 })

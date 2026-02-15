@@ -1,8 +1,8 @@
-import { defineEventHandler, readValidatedBody } from 'h3'
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { ToolRow } from '@@/shared/models/tool'
 import { createToolSchema } from '@@/shared/models/tool'
+import { createTool } from '@@/server/utils/lti-tools'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<ToolRow>> => {
   const session = await getUserSession(event)
@@ -15,28 +15,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<ToolRow>> =
   }
 
   const body = await readValidatedBody(event, createToolSchema.parse)
-
-  const tool = await prisma.ltiTool.create({
-    data: body,
-    include: {
-      platform: {
-        select: {
-          issuer: true
-        }
-      }
-    }
-  })
+  const tool = await createTool(body)
 
   return {
     statusCode: 201,
-    data: {
-      id: tool.id,
-      name: tool.name,
-      baseUrl: tool.baseUrl,
-      protocol: tool.protocol,
-      platformId: tool.platformId,
-      platformIssuer: tool.platform?.issuer ?? null,
-      createdAt: tool.createdAt.toISOString()
-    }
+    data: tool
   }
 })

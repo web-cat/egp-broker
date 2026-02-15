@@ -1,7 +1,8 @@
-import { defineEventHandler, readValidatedBody } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
 import { createAssignmentSchema } from '@@/shared/models/assignment'
+import { createAssignment } from '@@/server/utils/assignments'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   const session = await getUserSession(event)
@@ -38,23 +39,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   const body = await readValidatedBody(event, createAssignmentSchema.parse)
 
-  // courseId in body should match the current course context if provided,
-  // but we enforce the context's courseId for security in /api/me/...
-
-  const assignment = await prisma.assignment.create({
-    data: {
-      resourceLinkId: `manual-${Date.now()}`,
-      title: body.title,
-      canvasAssignmentId: body.canvasAssignmentId,
-      courseId: courseId, // Always use the teacher's current course
-      dueDate: body.dueDate ? new Date(body.dueDate) : null,
-      availableFrom: body.availableFrom ? new Date(body.availableFrom) : null,
-      acceptUntil: body.acceptUntil ? new Date(body.acceptUntil) : null
-    }
+  // Enforce the context's courseId
+  const assignment = await createAssignment({
+    ...body,
+    courseId
   })
-
-  // Sync automatic pass eligibility
-  await syncAssignmentEligibility(assignment.id)
 
   return {
     statusCode: 201,

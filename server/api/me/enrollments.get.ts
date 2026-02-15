@@ -1,8 +1,7 @@
-import { defineEventHandler } from 'h3'
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, createError } from 'h3'
 import type { ApiResponse } from '@@/shared/types/api'
-import type { Enrollment, SimpleEnrollment } from '@@/shared/models/enrollment'
-import { toSimpleEnrollment } from '@@/shared/models/enrollment'
+import type { SimpleEnrollment } from '@@/shared/models/enrollment'
+import { getUserEnrollments } from '@@/server/utils/enrollments'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<SimpleEnrollment[]>> => {
   const session = await getUserSession(event)
@@ -14,22 +13,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<SimpleEnrol
     })
   }
 
-  const enrollments = await prisma.enrollment.findMany({
-    where: {
-      userId: session.user.id,
-      course: {
-        OR: [{ workflowState: 'available' }, { workflowState: 'active' }, { workflowState: null }]
-      }
-    },
-    include: {
-      course: true
-    }
-  })
-
-  const data: SimpleEnrollment[] = enrollments.map((e: Enrollment) => toSimpleEnrollment(e))
+  const enrollments = await getUserEnrollments(session.user.id)
 
   return {
     statusCode: 200,
-    data
+    data: enrollments
   }
 })

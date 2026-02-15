@@ -36,12 +36,15 @@ We adhere to the strict Nuxt 4 directory separation.
 ```
 
 ### 1. The Component Hierarchy
+
 To prevent "sweeping effects," components must follow a strict taxonomy:
+
 - **`base/` (Atoms):** Stateless, context-unaware UI elements (Buttons, Inputs). They never access the store or perform API calls.
-- **`features/` (Molecules/Organisms):** Business-specific components. These are the *only* components allowed to interact with Pinia stores or composables.
+- **`features/` (Molecules/Organisms):** Business-specific components. These are the _only_ components allowed to interact with Pinia stores or composables.
 - **`layouts/`:** Define the "shell" only. No business logic allowed.
 
 ### 2. Composable Logic
+
 Use `composables/` to extract stateful logic from UI. If a piece of logic is used in two places, or exceeds 30 lines, it belongs in a composable.
 
 ---
@@ -76,19 +79,29 @@ All commands must be executed within the `app-dev` container to ensure environme
 **Architect’s Note:** We favor **clarity over cleverness** and **explicitness over magic**.
 
 ### 1. The Mandatory Testing Mandate
+
 - **100% Behavioral Coverage:** Every new feature, composable, and server utility must have a Vitest unit test.
 - **Contract Verification:** All schemas in `shared/` must be tested.
 - **Base Component Isolation:** Tests for `base/` components must verify UI behavior without mocking external APIs.
 
 ### 2. Programming Practices
+
 - **Defensive TypeScript:** No `any`. Use `unknown` with Type Guards if needed. Prefer `interface` over `type` for public APIs.
 - **Predictable Side Effects:** Avoid `watch`/`watchEffect` in favor of explicit function calls. Clean up in `onUnmounted`.
 - **Modularity via "Colocation":** Keep assets (CSS, tests, docs) close to the code. Use Nuxt Layers for large feature sets.
+- **Before writing any code**:
+  1. State how you will verify this change works (vitest unit test, playwright e2e test, browser check, etc.).
+  1. Write the test or verification step first.
+  1. Then implement the code.
+  1. Run verification and iterate until it passes.
+  1. Run all unit tests to confirm other features have not been affected and iterate until they all pass.
 
 ### 3. The "Reuse First" Audit
+
 Before creating new assets, check `shared/` schemas, `app/components/base/` atoms, and `app/composables/features/` logic.
 
 ### 4. Performance & Rendering
+
 - **Data Fetching:** Prefer `useFetch` or `useAsyncData` to prevent double-fetching.
 - **Hybrid Rendering:** Use `routeRules` for SWR or `ssr: false` where appropriate.
 
@@ -96,11 +109,11 @@ Before creating new assets, check `shared/` schemas, `app/components/base/` atom
 
 ## 🛠️ VI. Prisma Schema Best Practices
 
-1.  **Naming Conventions:** PascalCase singular for Models (`UserProfile`). camelCase for fields (`firstName`). PascalCase/UPPERCASE for Enums (`UserRole`).
-2.  **Tracking Fields:** Always include `createdAt` and `updatedAt`.
-3.  **Indexes:** Index frequently queried fields (`@@index`) and unique fields (`@@unique`).
-4.  **Explicit Relations:** Define explicit relation names for multiple connections to the same table.
-5.  **Documentation:** Use `///` comments for rich documentation in the Prisma Client.
+1. **Naming Conventions:** PascalCase singular for Models (`UserProfile`). camelCase for fields (`firstName`). PascalCase/UPPERCASE for Enums (`UserRole`).
+2. **Tracking Fields:** Always include `createdAt` and `updatedAt`.
+3. **Indexes:** Index frequently queried fields (`@@index`) and unique fields (`@@unique`).
+4. **Explicit Relations:** Define explicit relation names for multiple connections to the same table.
+5. **Documentation:** Use `///` comments for rich documentation in the Prisma Client.
 
 ---
 
