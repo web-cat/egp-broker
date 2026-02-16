@@ -38,7 +38,7 @@
   <!-- Pass Types Management -->
   <div class="space-y-4 pt-8">
     <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">Pass Types</h3>
-    <UiDataTable
+    <BaseDataTable
       :key="passTypesTableKey"
       :data="passTypesData?.data"
       :columns="passTypeColumns"
@@ -51,13 +51,13 @@
       <template #toolbar>
         <UButton icon="i-lucide-plus" label="Add Pass Type" @click="openPassTypeCreate" />
       </template>
-    </UiDataTable>
+    </BaseDataTable>
   </div>
 
   <!-- Assignments Management -->
   <div class="space-y-4 pt-8">
     <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">Assignments</h3>
-    <UiDataTable
+    <BaseDataTable
       :key="assignmentsTableKey"
       :data="assignmentsData?.data"
       :columns="assignmentColumns"
@@ -80,17 +80,17 @@
         />
         <UButton icon="i-lucide-plus" label="Add Assignment" @click="openAssignmentCreate" />
       </template>
-    </UiDataTable>
+    </BaseDataTable>
   </div>
 
-  <AdminPassTypeEditPanel
+  <FeaturesAdminPassTypeEditPanel
     v-model:open="passTypeEditOpen"
     :pass-type="editingPassType"
     @saved="onPassTypeRowUpdated"
     @created="onPassTypeItemCreated"
   />
 
-  <AdminAssignmentEditPanel
+  <FeaturesAdminAssignmentEditPanel
     v-model:open="assignmentEditOpen"
     :assignment="editingAssignment"
     @saved="onAssignmentRowUpdated"

@@ -1,6 +1,6 @@
 <template>
   <UFormField :label="label" :name="name" :required="required">
-    <UInput
+    <BaseInput
       :model-value="modelValue"
       :type="type"
       :placeholder="placeholder"
@@ -16,7 +16,7 @@
       <template v-if="$slots.trailing" #trailing>
         <slot name="trailing" />
       </template>
-    </UInput>
+    </BaseInput>
 
     <template #error="{ error }">
       <span class="text-error-400 text-sm">{{ error }}</span>

@@ -1,19 +1,14 @@
 import type { H3Event } from 'h3'
+import { getValidatedQuery } from 'h3'
 import prisma from '@@/lib/prisma'
+import { LtiLoginSchema } from '@@/shared/schemas/auth.schema'
 
 export default defineEventHandler(async (event: H3Event) => {
-  const query = getQuery(event)
-  const iss = query.iss as string
-  const loginHint = query.login_hint as string
-  const targetLinkUri = query.target_link_uri as string
-  const ltiMessageHint = query.lti_message_hint as string
-
-  if (!iss || !loginHint || !targetLinkUri) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Missing required OIDC parameters'
-    })
-  }
+  const query = await getValidatedQuery(event, LtiLoginSchema.parse)
+  const iss = query.iss
+  const loginHint = query.login_hint
+  const targetLinkUri = query.target_link_uri
+  const ltiMessageHint = query.lti_message_hint
 
   // Find the platform registration
   const platform = await prisma.ltiPlatform.findUnique({
@@ -48,7 +43,7 @@ export default defineEventHandler(async (event: H3Event) => {
     platform.clientId,
     `${process.env.NUXT_SITE_URL}/api/lti13/launch`,
     loginHint,
-    ltiMessageHint,
+    ltiMessageHint ?? '',
     nonce,
     state
   )

@@ -1,29 +1,22 @@
+import { defineEventHandler, createError, readValidatedBody } from 'h3'
 import type { H3Event } from 'h3'
 import prisma from '@@/lib/prisma'
 import { getGravatarUrl } from '@@/server/utils/gravatar'
+import { LtiLaunchSchema } from '@@/shared/schemas/auth.schema'
 
 export default defineEventHandler(async (event: H3Event) => {
-  const body = await readBody(event)
-  const idToken = body.id_token
-  const state = body.state
-
-  if (!idToken || !state) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Missing id_token or state'
-    })
-  }
+  const { id_token: idToken, state } = await readValidatedBody(event, LtiLaunchSchema.parse)
 
   // Get session to verify state
   const session = await getUserSession(event)
-  if (!session.lti || session.lti.state !== state) {
+  if (!session.lti || !session.lti.issuer || session.lti.state !== state) {
     throw createError({
       statusCode: 403,
       statusMessage: 'Invalid state or session expired'
     })
   }
 
-  const { issuer } = session.lti
+  const issuer = session.lti.issuer as string
 
   // Find the platform to get clientId and jwksUrl
   const platform = await prisma.ltiPlatform.findUnique({
@@ -269,16 +262,29 @@ export default defineEventHandler(async (event: H3Event) => {
       // Check if we have a resource link to sync (internal ID lookup)
       let assignmentId: string | null = null
       if (resourceLink?.id && context?.id) {
-        const a = await tx.assignment.findUnique({
+        // We need the internal course ID which was created/found in step 3
+        const course = await tx.course.findUnique({
           where: {
-            courseId_resourceLinkId: {
-              courseId: course!.id,
-              resourceLinkId: resourceLink.id
+            deploymentId_ltiContextId: {
+              deploymentId: deployment.id,
+              ltiContextId: context.id
             }
           },
           select: { id: true }
         })
-        assignmentId = a?.id ?? null
+
+        if (course) {
+          const a = await tx.assignment.findUnique({
+            where: {
+              courseId_resourceLinkId: {
+                courseId: course.id,
+                resourceLinkId: resourceLink.id
+              }
+            },
+            select: { id: true }
+          })
+          assignmentId = a?.id ?? null
+        }
       }
 
       return { user, assignmentId }

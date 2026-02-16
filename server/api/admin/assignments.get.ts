@@ -1,6 +1,7 @@
-import { defineEventHandler, getQuery } from 'h3'
+import { defineEventHandler, getValidatedQuery, createError } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
+import { AdminAssignmentQuerySchema } from '@@/shared/schemas/admin.schema'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentRow[]>> => {
   const session = await getUserSession(event)
@@ -12,8 +13,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
     })
   }
 
-  const query = getQuery(event)
-  const courseCodeParam = query.c as string | undefined
+  const query = await getValidatedQuery(event, AdminAssignmentQuerySchema.parse)
+  const courseCodeParam = query.c
 
   // Build the where clause: optionally filter by course label (code)
   const where: Record<string, unknown> = {}

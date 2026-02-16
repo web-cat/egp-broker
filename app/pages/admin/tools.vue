@@ -1,6 +1,6 @@
 <template>
   <div>
-    <UiDataTable
+    <BaseDataTable
       :key="tableKey"
       :data="data?.data"
       :columns="toolColumns"
@@ -13,9 +13,9 @@
       <template #toolbar>
         <UButton icon="i-lucide-plus" label="Add Tool" @click="openCreate" />
       </template>
-    </UiDataTable>
+    </BaseDataTable>
 
-    <AdminToolEditPanel
+    <FeaturesAdminToolEditPanel
       v-model:open="editOpen"
       :tool="editingItem"
       :platform-id="createPlatformId"
@@ -44,6 +44,8 @@ const {
   onRowUpdated,
   onItemCreated
 } = useAdminCrud<ToolRow>('/api/admin/tools', { p: platformFilter })
+
+const { deleteTool: apiDeleteTool } = useAdminTools()
 
 // --- Page title ---
 const { setTitle } = useAdminPageTitle()
@@ -103,7 +105,7 @@ async function deleteTool(row: ToolRow) {
   if (!confirm('Are you sure you want to delete this tool?')) return
 
   try {
-    await $fetch(`/api/admin/tools/${row.id}`, { method: 'DELETE' })
+    await apiDeleteTool(row.id)
     onItemCreated() // Refresh table
     useToast().add({ title: 'Tool deleted' })
   } catch {

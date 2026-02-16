@@ -60,7 +60,7 @@
         @click="() => refreshAssignments()"
       />
     </div>
-    <UiDataTable
+    <BaseDataTable
       :data="assignmentsData?.data"
       :columns="assignmentColumns"
       :loading="assignmentsStatus === 'pending'"
@@ -76,7 +76,7 @@
     <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">
       {{ t('pages.dashboard.student.redemptions.title') }}
     </h3>
-    <UiDataTable
+    <BaseDataTable
       :data="redemptionsData?.data"
       :columns="redemptionColumns"
       :loading="redemptionsStatus === 'pending'"

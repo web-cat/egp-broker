@@ -1,7 +1,8 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, createError, readValidatedBody } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
 import { updateUserCurrentCourse } from '@@/server/utils/users'
+import { CourseContextSchema } from '@@/shared/schemas/course.schema'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<{ success: boolean }>> => {
   const session = await getUserSession(event)
@@ -13,15 +14,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<{ success: 
     })
   }
 
-  const body = await readBody(event)
-  const { courseId } = body
-
-  if (!courseId) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Missing courseId'
-    })
-  }
+  const { courseId } = await readValidatedBody(event, CourseContextSchema.parse)
 
   // Verify the user is actually enrolled in this course
   const enrollment = await prisma.enrollment.findUnique({

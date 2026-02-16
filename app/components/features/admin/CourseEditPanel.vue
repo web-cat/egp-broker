@@ -7,25 +7,25 @@
     <template #body>
       <UForm ref="formRef" :state="state" @submit="handleSubmit">
         <div class="space-y-6">
-          <UiFormInput
+          <BaseFormInput
             v-model="state.label"
             name="label"
             label="Course Code"
             placeholder="e.g. CS 101"
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.title"
             name="title"
             label="Title"
             placeholder="e.g. Introduction to Computer Science"
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.canvasCourseId"
             name="canvasCourseId"
             label="Canvas Course ID"
             placeholder="Optional"
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.workflowState"
             name="workflowState"
             label="Workflow State"

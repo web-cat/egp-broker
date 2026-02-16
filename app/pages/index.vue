@@ -36,13 +36,13 @@
           <div v-else-if="enrollmentStatus === 'success' && enrollment" class="animate-fade-up">
             <!-- Sub-case: Active Course Selected -->
             <div v-if="enrollment.data">
-              <DashboardTeacher
+              <FeaturesDashboardTeacher
                 v-if="enrollment.data.role === 'TEACHER' || enrollment.data.role === 'TA'"
                 :course-title="enrollment.data.courseTitle"
                 :course-code="enrollment.data.courseLabel"
                 :is-admin="user?.globalRole === 'ADMIN'"
               />
-              <DashboardStudent
+              <FeaturesDashboardStudent
                 v-else-if="enrollment.data.role === 'STUDENT'"
                 :course-title="enrollment.data.courseTitle"
                 :course-code="enrollment.data.courseLabel"

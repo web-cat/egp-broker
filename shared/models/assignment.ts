@@ -14,7 +14,7 @@ export type { Assignment } from '@prisma/client'
 
 export const assignmentRowSchema = z.object({
   id: z.string(),
-  resourceLinkId: z.string(),
+  resourceLinkId: z.string().nullable(),
   title: z.string().nullable(),
   canvasAssignmentId: z.string().nullable(),
   courseLabel: z.string().nullable(),

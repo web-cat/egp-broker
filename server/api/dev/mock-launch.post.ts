@@ -1,6 +1,8 @@
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import type { H3Event } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { CourseRole } from '@prisma/client'
+import { MockLaunchSchema } from '@@/shared/schemas/dev.schema'
 
 export default defineEventHandler(async (event: H3Event) => {
   // Only allow in development mode
@@ -11,7 +13,7 @@ export default defineEventHandler(async (event: H3Event) => {
     })
   }
 
-  const body = await readBody(event)
+  const body = await readValidatedBody(event, MockLaunchSchema.parse)
   const {
     email = 'admin@example.com',
     courseId = 'course-101',

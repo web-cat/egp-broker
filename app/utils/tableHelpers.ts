@@ -1,6 +1,6 @@
 import { h } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
-import UiDataRowActions from '~/components/ui/data/RowActions.vue'
+import BaseRowActions from '~/components/base/BaseRowActions.vue'
 
 /**
  * Create a table column cell renderer that displays a numeric count as a
@@ -32,7 +32,7 @@ export function actionsColumn<T extends object>(
     id: 'actions',
     header: '',
     meta: { class: { td: 'text-right' } },
-    cell: ({ row }) => h(UiDataRowActions, { items: itemsFn(row) })
+    cell: ({ row }) => h(BaseRowActions, { items: itemsFn(row) })
   }
 }
 

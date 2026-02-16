@@ -32,6 +32,9 @@ We adhere to the strict Nuxt 4 directory separation.
 │   ├── routes/         # Custom server routes (e.g., RSS, Webhooks)
 │   └── middleware/     # Server-side request interceptors
 ├── shared/             # Universal Truths (Zod schemas, TS Interfaces, Constants)
+├── tests/              # Test cases
+│   ├── e2e/            # E2E tests
+│   └── unit/           # Unit tests
 └── prisma/             # Database schema and migrations
 ```
 

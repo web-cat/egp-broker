@@ -65,16 +65,17 @@ describe('API: Me Assignments GET', () => {
     expect(result.data).toEqual(mockAssignments)
   })
 
-  it('should return empty list if no course context', async () => {
+  it('should throw 403 if no course context', async () => {
     const event = mockEvent()
 
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       currentCourseId: null
     } as any)
 
-    const result = await assignmentsGet(event)
+    await expect(assignmentsGet(event)).rejects.toThrowError(
+      expect.objectContaining({ statusCode: 403 })
+    )
 
     expect(getCourseAssignments).not.toHaveBeenCalled()
-    expect(result.data).toEqual([])
   })
 })

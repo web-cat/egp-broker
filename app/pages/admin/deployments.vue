@@ -1,6 +1,6 @@
 <template>
   <div>
-    <UiDataTable
+    <BaseDataTable
       :key="tableKey"
       :data="data?.data"
       :columns="deploymentColumns"
@@ -13,9 +13,9 @@
       <template #toolbar>
         <UButton icon="i-lucide-plus" label="Add Deployment" @click="openCreate" />
       </template>
-    </UiDataTable>
+    </BaseDataTable>
 
-    <AdminDeploymentEditPanel
+    <FeaturesAdminDeploymentEditPanel
       v-model:open="editOpen"
       :deployment="editingItem"
       :platform-id="createPlatformId"

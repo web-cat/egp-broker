@@ -1,5 +1,5 @@
 <template>
-  <UiDataTable
+  <BaseDataTable
     :data="platforms?.data"
     :columns="platformColumns"
     :loading="platformsStatus === 'pending'"
@@ -11,12 +11,11 @@
     <template #toolbar>
       <UButton icon="i-lucide-plus" label="Add Platform" />
     </template>
-  </UiDataTable>
+  </BaseDataTable>
 </template>
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { ApiResponse } from '@@/shared/types/api'
 
 interface PlatformRow {
   id: string
@@ -31,10 +30,9 @@ interface PlatformRow {
 const { setTitle } = useAdminPageTitle()
 setTitle('Platforms')
 
-const { data: platforms, status: platformsStatus } = await useFetch<ApiResponse<PlatformRow[]>>(
-  '/api/admin/platforms',
-  { lazy: true }
-)
+// --- Data fetching ---
+const { fetchPlatforms } = useAdminPlatforms()
+const { data: platforms, status: platformsStatus } = await fetchPlatforms()
 
 const platformColumns: TableColumn<PlatformRow>[] = [
   {

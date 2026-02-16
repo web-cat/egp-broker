@@ -7,31 +7,31 @@
     <template #body>
       <UForm ref="formRef" :state="state" @submit="handleSubmit">
         <div class="space-y-6">
-          <UiFormInput
+          <BaseFormInput
             v-model="state.title"
             name="title"
             label="Title"
             placeholder="e.g. Homework 1"
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.canvasAssignmentId"
             name="canvasAssignmentId"
             label="Canvas Assignment ID"
             placeholder="Optional"
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.dueDate"
             name="dueDate"
             label="Due Date"
             type="datetime-local"
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.availableFrom"
             name="availableFrom"
             label="Available From"
             type="datetime-local"
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.acceptUntil"
             name="acceptUntil"
             label="Accept Until"

@@ -7,7 +7,7 @@
     <template #body>
       <UForm ref="formRef" :state="state" @submit="handleSubmit">
         <div class="space-y-6">
-          <UiFormInput
+          <BaseFormInput
             v-if="!isEdit"
             v-model="state.platformId"
             name="platformId"
@@ -15,14 +15,14 @@
             placeholder="Select a platform"
             required
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.deploymentId"
             name="deploymentId"
             label="Deployment ID"
             placeholder="e.g. 12345:abc"
             required
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.deploymentHost"
             name="deploymentHost"
             label="Deployment Host"

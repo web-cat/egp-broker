@@ -12,7 +12,7 @@
         @submit="onSubmit"
         @error="onError"
       >
-        <UiFormInput
+        <BaseFormInput
           v-model="state.name"
           name="name"
           label="Tool Name"
@@ -21,7 +21,7 @@
           autofocus
         />
 
-        <UiFormInput
+        <BaseFormInput
           v-model="state.baseUrl"
           name="baseUrl"
           label="Base URL"
@@ -47,14 +47,14 @@
           />
         </UFormField>
 
-        <UiFormInput
+        <BaseFormInput
           v-model="state.key"
           name="key"
           label="Consumer Key"
           placeholder="Consumer key (LTI 1.1)"
         />
 
-        <UiFormInput
+        <BaseFormInput
           v-model="state.secret"
           name="secret"
           label="Shared Secret"
@@ -77,7 +77,6 @@
 
 <script setup lang="ts">
 import { type ToolRow, createToolSchema, updateToolSchema } from '@@/shared/models/tool'
-import type { PlatformRow } from '@@/shared/models/platform'
 
 const props = defineProps<{
   tool: ToolRow | null
@@ -120,9 +119,9 @@ const state = reactive<LocalToolState>({
 })
 
 // Fetch platforms for select
-const { data: platforms } = await useFetch<{ data: PlatformRow[] }>('/api/admin/platforms', {
-  lazy: true
-})
+const { fetchPlatforms } = useAdminPlatforms()
+const { saveTool } = useAdminTools()
+const { data: platforms } = await fetchPlatforms()
 
 const platformOptions = computed(() => {
   return (
@@ -148,7 +147,7 @@ watch(
       state.baseUrl = tool.baseUrl
       state.protocol = tool.protocol
       state.key = tool.key ?? ''
-      state.secret = tool.secret ?? ''
+      state.secret = (tool as any).secret ?? ''
       state.supportsExtensionApi = tool.supportsExtensionApi
       state.platformId = tool.platformId ?? undefined
     } else {
@@ -174,7 +173,7 @@ watch(
         state.baseUrl = props.tool.baseUrl
         state.protocol = props.tool.protocol
         state.key = props.tool.key ?? ''
-        state.secret = props.tool.secret ?? ''
+        state.secret = (props.tool as any).secret ?? ''
         state.supportsExtensionApi = props.tool.supportsExtensionApi
         state.platformId = props.tool.platformId ?? undefined
       } else {
@@ -193,19 +192,15 @@ watch(
 async function onSubmit() {
   pending.value = true
   try {
+    const res = await saveTool(state, props.tool?.id)
+
     if (isEdit.value && props.tool) {
-      const res = await $fetch<{ data: ToolRow }>(`/api/admin/tools/${props.tool.id}`, {
-        method: 'PATCH',
-        body: state
-      })
-      emit('saved', props.tool.id, res.data)
+      if (res.data) {
+        emit('saved', props.tool.id, res.data)
+      }
       const toast = useToast()
       toast.add({ title: 'Tool updated' })
     } else {
-      await $fetch('/api/admin/tools', {
-        method: 'POST',
-        body: state
-      })
       emit('created')
       const toast = useToast()
       toast.add({ title: 'Tool created' })

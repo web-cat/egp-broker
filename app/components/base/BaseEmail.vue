@@ -1,5 +1,5 @@
 <template>
-  <UiFormInput
+  <BaseFormInput
     v-bind="$props"
     type="email"
     class="w-full"
@@ -8,7 +8,7 @@
     <template #leading>
       <UIcon name="i-lucide:mail" class="size-6" />
     </template>
-  </UiFormInput>
+  </BaseFormInput>
 </template>
 
 <script setup lang="ts">

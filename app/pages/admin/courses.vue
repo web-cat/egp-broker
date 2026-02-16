@@ -1,6 +1,6 @@
 <template>
   <div>
-    <UiDataTable
+    <BaseDataTable
       :key="tableKey"
       :data="data?.data"
       :columns="courseColumns"
@@ -13,9 +13,9 @@
       <template #toolbar>
         <UButton icon="i-lucide-plus" label="Add Course" @click="openCreate" />
       </template>
-    </UiDataTable>
+    </BaseDataTable>
 
-    <AdminCourseEditPanel
+    <FeaturesAdminCourseEditPanel
       v-model:open="editOpen"
       :course="editingItem"
       @saved="onRowUpdated"

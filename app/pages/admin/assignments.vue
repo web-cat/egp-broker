@@ -1,6 +1,6 @@
 <template>
   <div>
-    <UiDataTable
+    <BaseDataTable
       :key="tableKey"
       :data="data?.data"
       :columns="assignmentColumns"
@@ -13,9 +13,9 @@
       <template #toolbar>
         <UButton icon="i-lucide-plus" label="Add Assignment" @click="openCreate" />
       </template>
-    </UiDataTable>
+    </BaseDataTable>
 
-    <AdminAssignmentEditPanel
+    <FeaturesAdminAssignmentEditPanel
       v-model:open="editOpen"
       :assignment="editingItem"
       :course-id="createCourseId"

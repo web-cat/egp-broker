@@ -7,21 +7,21 @@
     <template #body>
       <UForm ref="formRef" :state="state" @submit="handleSubmit">
         <div class="space-y-6">
-          <UiFormInput
+          <BaseFormInput
             v-model="state.name"
             name="name"
             :label="$t('admin.passType.nameLabel')"
             :placeholder="$t('admin.passType.namePlaceholder')"
             required
           />
-          <UiFormInput
+          <BaseFormInput
             v-model="state.description"
             name="description"
             :label="$t('admin.passType.descriptionLabel')"
             :placeholder="$t('admin.passType.descriptionPlaceholder')"
           />
 
-          <UiFormInput
+          <BaseFormInput
             v-model="state.titlePattern"
             name="titlePattern"
             :label="$t('admin.passType.titlePatternLabel')"
@@ -30,14 +30,14 @@
           />
 
           <div class="grid grid-cols-2 gap-4">
-            <UiFormInput
+            <BaseFormInput
               v-model.number="state.initialBalance"
               name="initialBalance"
               :label="$t('admin.passType.initialBalanceLabel')"
               type="number"
               min="0"
             />
-            <UiFormInput
+            <BaseFormInput
               v-model.number="state.hoursPerPass"
               name="hoursPerPass"
               :label="$t('admin.passType.hoursPerPassLabel')"
@@ -48,14 +48,14 @@
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <UiFormInput
+            <BaseFormInput
               v-model.number="state.minDaysPastDue"
               name="minDaysPastDue"
               :label="$t('admin.passType.minDaysPastDueLabel')"
               type="number"
               :placeholder="$t('admin.passType.nonePlaceholder')"
             />
-            <UiFormInput
+            <BaseFormInput
               v-model.number="state.maxDaysPastDue"
               name="maxDaysPastDue"
               :label="$t('admin.passType.maxDaysPastDueLabel')"
@@ -69,7 +69,7 @@
               {{ $t('admin.passType.coolDownSettingsTitle') }}
             </h3>
             <div class="grid grid-cols-2 gap-4">
-              <UiFormInput
+              <BaseFormInput
                 v-model.number="state.coolDownPeriod"
                 name="coolDownPeriod"
                 :label="$t('admin.passType.periodLabel')"
@@ -91,7 +91,7 @@
                   :placeholder="$t('admin.passType.nonePlaceholder')"
                 />
               </UFormField>
-              <UiFormInput
+              <BaseFormInput
                 v-model.number="state.coolDownResetOffset"
                 name="coolDownResetOffset"
                 :label="$t('admin.passType.resetOffsetLabel')"

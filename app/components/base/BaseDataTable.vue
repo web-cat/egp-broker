@@ -1,8 +1,8 @@
 <script setup lang="ts">
 const props = withDefaults(
   defineProps<{
-    data: Record<string, unknown>[] | null | undefined
-    columns: Record<string, unknown>[]
+    data: any[] | null | undefined
+    columns: any[]
     loading?: boolean
     searchable?: boolean
     searchPlaceholder?: string
