@@ -14,8 +14,25 @@ export const useStudentDashboard = () => {
   } = useFetch<ApiResponse<AssignmentRow[]>>('/api/me/assignments')
 
   // Fetch redemptions for the current course
-  const { data: redemptionsData, status: redemptionsStatus } =
-    useFetch<ApiResponse<RedemptionRow[]>>('/api/me/redemptions')
+  const {
+    data: redemptionsData,
+    status: redemptionsStatus,
+    refresh: refreshRedemptions
+  } = useFetch<ApiResponse<RedemptionRow[]>>('/api/me/redemptions')
+
+  const redeemPass = async (assignmentId: string, passTypeId: string) => {
+    const { data, error } = await useFetch('/api/me/redemptions', {
+      method: 'POST',
+      body: { assignmentId, passTypeId }
+    })
+
+    if (!error.value) {
+      // Refresh data after successful redemption
+      await Promise.all([refreshAssignments(), refreshRedemptions()])
+    }
+
+    return { data, error }
+  }
 
   return {
     passPools,
@@ -23,6 +40,8 @@ export const useStudentDashboard = () => {
     assignmentsStatus,
     refreshAssignments,
     redemptionsData,
-    redemptionsStatus
+    redemptionsStatus,
+    refreshRedemptions,
+    redeemPass
   }
 }

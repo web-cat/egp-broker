@@ -15,15 +15,7 @@ export async function getStudentRedemptions(
         passType: { courseId }
       }
     },
-    orderBy: { redeemedAt: 'desc' }, // Fix: Schema says redeemedAt? No, look at schema.
-    // Schema says PassRedemption has createdAt, updatedAt. No redeemedAt field.
-    // Checking schema:
-    // model PassRedemption {
-    //   ...
-    //   createdAt DateTime @default(now())
-    // }
-    // API was orderBy redeemedAt. Logic likely meant createdAt.
-    // Let's check schema again.
+    orderBy: { createdAt: 'desc' },
     include: {
       assignment: { select: { title: true } },
       pool: {
@@ -36,7 +28,7 @@ export async function getStudentRedemptions(
 
   const now = new Date()
 
-  return redemptions.map((r) => {
+  return redemptions.map((r: any) => {
     const isActive = (() => {
       if (!r.availableFrom || !r.acceptUntil) return false
       return now >= r.availableFrom && now <= r.acceptUntil
@@ -53,5 +45,79 @@ export async function getStudentRedemptions(
       acceptUntil: r.acceptUntil?.toISOString() ?? null,
       isActive
     }
+  })
+}
+
+/**
+ * Redeems a pass for a student on an assignment.
+ */
+export async function redeemPass(
+  userId: string,
+  assignmentId: string,
+  passTypeId: string,
+  promptResponses?: Record<string, any>
+) {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Get pool and verify balance
+    const pool = await tx.studentPassPool.findUnique({
+      where: { userId_passTypeId: { userId, passTypeId } },
+      include: { passType: true }
+    })
+
+    if (!pool || pool.balance <= 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Insufficient pass balance'
+      })
+    }
+
+    // 2. Get assignment and verify eligibility
+    const assignment = await tx.assignment.findUnique({
+      where: { id: assignmentId },
+      include: {
+        passEligibilities: {
+          where: { passTypeId }
+        }
+      }
+    })
+
+    if (!assignment || assignment.passEligibilities.length === 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Assignment is not eligible for this pass type'
+      })
+    }
+
+    // 3. Calculate new dates
+    // For now, we only extend the due date and acceptUntil by hoursPerPass.
+    // In a more complex system, we might have different logic for availableFrom etc.
+    const hours = pool.passType.hoursPerPass
+    const msToAdd = hours * 60 * 60 * 1000
+
+    const currentDueDate = assignment.dueDate || new Date()
+    const currentAcceptUntil = assignment.acceptUntil || currentDueDate
+
+    const newDueDate = new Date(currentDueDate.getTime() + msToAdd)
+    const newAcceptUntil = new Date(currentAcceptUntil.getTime() + msToAdd)
+
+    // 4. Create redemption record
+    const redemption = await tx.passRedemption.create({
+      data: {
+        poolId: pool.id,
+        assignmentId,
+        cost: 1,
+        dueDate: newDueDate,
+        acceptUntil: newAcceptUntil,
+        promptResponsesJson: (promptResponses as any) || undefined
+      }
+    })
+
+    // 5. Deduct pass from pool
+    await tx.studentPassPool.update({
+      where: { id: pool.id },
+      data: { balance: { decrement: 1 } }
+    })
+
+    return redemption
   })
 }

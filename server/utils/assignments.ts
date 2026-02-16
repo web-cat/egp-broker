@@ -299,7 +299,11 @@ export async function getCourseAssignments(courseId: string): Promise<Assignment
     acceptUntil: a.acceptUntil?.toISOString() ?? null,
     eligibleUntil: a.eligibleUntil?.toISOString() ?? null,
     createdAt: a.createdAt.toISOString(),
-    eligiblePassTypeNames: a.passEligibilities.map((pe) => pe.passType.name)
+    eligiblePassTypeNames: a.passEligibilities.map((pe) => pe.passType.name),
+    eligiblePassTypes: a.passEligibilities.map((pe) => ({
+      id: pe.passType.id,
+      name: pe.passType.name
+    }))
   }))
 }
 

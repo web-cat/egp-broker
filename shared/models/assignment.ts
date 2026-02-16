@@ -25,6 +25,10 @@ export const assignmentRowSchema = z.object({
   eligibleUntil: z.string().nullable().optional(),
   createdAt: z.string(),
   eligiblePassTypeNames: z.array(z.string()).optional(),
+  eligiblePassTypes: z.array(z.object({
+    id: z.string(),
+    name: z.string()
+  })).optional(),
   highlight: z.boolean().optional()
 })
 

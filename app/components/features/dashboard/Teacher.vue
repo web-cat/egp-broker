@@ -103,7 +103,6 @@
 import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 
-import { UBadge } from '#components'
 import { formatDate } from '~/utils/date'
 // Feature Composable
 import { useTeacherDashboard } from '~/composables/features/useTeacherDashboard'
@@ -191,20 +190,21 @@ const passTypeColumns: any[] = [
 const sortedAssignments = computed(() => {
   if (!assignmentsData.value?.data) return []
 
-  return [...assignmentsData.value.data].sort((a, b) => {
-    // Priority 1: Eligible for redemption first
-    const aEligible = (a.eligiblePassTypeNames?.length ?? 0) > 0
-    const bEligible = (b.eligiblePassTypeNames?.length ?? 0) > 0
+  return [...assignmentsData.value.data]
+    .sort((a, b) => {
+      // Priority 1: Eligible for redemption first
+      const aEligible = (a.eligiblePassTypeNames?.length ?? 0) > 0
+      const bEligible = (b.eligiblePassTypeNames?.length ?? 0) > 0
 
-    if (aEligible && !bEligible) return -1
-    if (!aEligible && bEligible) return 1
+      if (aEligible && !bEligible) return -1
+      if (!aEligible && bEligible) return 1
 
-    // Priority 2: Due Date Ascending (Nulls last)
-    if (!a.dueDate) return 1
-    if (!b.dueDate) return -1
+      // Priority 2: Due Date Ascending (Nulls last)
+      if (!a.dueDate) return 1
+      if (!b.dueDate) return -1
 
-    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-  })
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+    })
     .map((a) => ({
       ...a,
       highlight: (a.eligiblePassTypeNames?.length ?? 0) > 0
@@ -246,10 +246,14 @@ const assignmentColumns: any[] = [
         'div',
         { class: 'flex flex-wrap gap-3' },
         names.map((name: string) =>
-          h('div', { class: 'flex items-center gap-1.5 text-primary-600 dark:text-primary-400 font-medium text-sm' }, [
-            h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-4 h-4' }),
-            name
-          ])
+          h(
+            'div',
+            {
+              class:
+                'flex items-center gap-1.5 text-primary-600 dark:text-primary-400 font-medium text-sm'
+            },
+            [h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-4 h-4' }), name]
+          )
         )
       )
     }

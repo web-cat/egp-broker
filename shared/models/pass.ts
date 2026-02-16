@@ -15,6 +15,8 @@ export interface SimplePassPool {
   id: string
   name: string
   balance: number
+  hoursPerPass: number
+  passTypeId: string
 }
 
 export const redemptionRowSchema = z.object({
@@ -78,6 +80,8 @@ export function toSimplePassPool(pool: StudentPassPool & { passType: PassType })
   return {
     id: pool.id,
     name: pool.passType.name,
-    balance: pool.balance
+    balance: pool.balance,
+    hoursPerPass: pool.passType.hoursPerPass,
+    passTypeId: pool.passType.id
   }
 }

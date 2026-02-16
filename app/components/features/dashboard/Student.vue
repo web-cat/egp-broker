@@ -87,10 +87,19 @@
       :empty-text="t('pages.dashboard.student.redemptions.empty')"
     />
   </div>
+
+  <FeaturesDashboardRedemptionConfirmationModal
+    v-if="selectedAssignment && selectedPassType"
+    v-model:open="showRedemptionModal"
+    :assignment="selectedAssignment"
+    :pass-type="selectedPassType"
+    :hours-per-pass="selectedPassHours"
+    :loading="redemptionLoading"
+    @confirm="handleConfirmRedemption"
+  />
 </template>
 
 <script setup lang="ts">
-import { UBadge } from '#components'
 import { formatDate } from '~/utils/date'
 // Feature Composable
 import { useStudentDashboard } from '~/composables/features/useStudentDashboard'
@@ -109,8 +118,37 @@ const {
   assignmentsStatus,
   refreshAssignments,
   redemptionsData,
-  redemptionsStatus
+  redemptionsStatus,
+  redeemPass
 } = useStudentDashboard()
+
+const showRedemptionModal = ref(false)
+const selectedAssignment = ref<any>(null)
+const selectedPassType = ref<{ id: string; name: string } | null>(null)
+const selectedPassHours = ref(24)
+const redemptionLoading = ref(false)
+
+const handleRedeemClick = (assignment: any, passType: { id: string; name: string }) => {
+  const pool = passPools.value?.data?.find((p) => p.name === passType.name)
+  if (!pool || pool.balance <= 0) return
+
+  selectedAssignment.value = assignment
+  selectedPassType.value = passType
+  selectedPassHours.value = pool.hoursPerPass
+  showRedemptionModal.value = true
+}
+
+const handleConfirmRedemption = async () => {
+  if (!selectedAssignment.value || !selectedPassType.value) return
+
+  redemptionLoading.value = true
+  try {
+    await redeemPass(selectedAssignment.value.id, selectedPassType.value.id)
+    showRedemptionModal.value = false
+  } finally {
+    redemptionLoading.value = false
+  }
+}
 
 const assignmentColumns: any[] = [
   {
@@ -130,21 +168,37 @@ const assignmentColumns: any[] = [
     }
   },
   {
-    accessorKey: 'eligiblePassTypeNames',
+    accessorKey: 'eligiblePassTypes',
     header: 'Eligible Pass Types',
     cell: ({ row }: { row: any }) => {
-      const names = row.original.eligiblePassTypeNames || []
-      if (!names.length) return '—'
+      const types = row.original.eligiblePassTypes || []
+      if (!types.length) return '—'
 
       return h(
         'div',
         { class: 'flex flex-wrap gap-3' },
-        names.map((name: string) =>
-          h('div', { class: 'flex items-center gap-1.5 text-primary-600 dark:text-primary-400 font-medium text-sm' }, [
-            h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-4 h-4' }),
-            name
-          ])
-        )
+        types.map((pt: any) => {
+          const pool = passPools.value?.data?.find((p) => p.name === pt.name)
+          const hasBalance = (pool?.balance ?? 0) > 0
+
+          return h(
+            'button',
+            {
+              class: [
+                'flex items-center gap-1.5 font-medium text-sm transition-colors',
+                hasBalance
+                  ? 'text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer'
+                  : 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+              ],
+              disabled: !hasBalance,
+              onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                handleRedeemClick(row.original, pt)
+              }
+            },
+            [h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-4 h-4' }), pt.name]
+          )
+        })
       )
     }
   },

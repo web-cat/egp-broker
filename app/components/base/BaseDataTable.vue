@@ -17,7 +17,8 @@ const props = withDefaults(
     searchPlaceholder: 'Search…',
     pageSize: 10,
     emptyIcon: 'i-lucide-inbox',
-    emptyText: 'No data found.'
+    emptyText: 'No data found.',
+    rowClass: undefined
   }
 )
 
