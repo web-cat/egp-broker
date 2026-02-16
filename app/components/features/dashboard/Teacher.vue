@@ -59,8 +59,9 @@
     <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 px-1">Assignments</h3>
     <BaseDataTable
       :key="assignmentsTableKey"
-      :data="assignmentsData?.data"
+      :data="sortedAssignments"
       :columns="assignmentColumns"
+      :row-class="assignmentRowClass"
       :loading="assignmentsStatus === 'pending'"
       searchable
       search-placeholder="Search assignments…"
@@ -102,6 +103,8 @@
 import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 
+import { UBadge } from '#components'
+import { formatDate } from '~/utils/date'
 // Feature Composable
 import { useTeacherDashboard } from '~/composables/features/useTeacherDashboard'
 
@@ -185,29 +188,89 @@ const passTypeColumns: any[] = [
   ])
 ]
 
+const sortedAssignments = computed(() => {
+  if (!assignmentsData.value?.data) return []
+
+  return [...assignmentsData.value.data].sort((a, b) => {
+    // Priority 1: Eligible for redemption first
+    const aEligible = (a.eligiblePassTypeNames?.length ?? 0) > 0
+    const bEligible = (b.eligiblePassTypeNames?.length ?? 0) > 0
+
+    if (aEligible && !bEligible) return -1
+    if (!aEligible && bEligible) return 1
+
+    // Priority 2: Due Date Ascending (Nulls last)
+    if (!a.dueDate) return 1
+    if (!b.dueDate) return -1
+
+    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+  })
+    .map((a) => ({
+      ...a,
+      highlight: (a.eligiblePassTypeNames?.length ?? 0) > 0
+    }))
+})
+
+const assignmentRowClass = (row: any) => {
+  if (row.original.highlight) {
+    return 'bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-l-primary-500 dark:border-l-primary-400'
+  }
+  return 'border-l-4 border-l-transparent opacity-75 hover:opacity-100 transition-opacity'
+}
+
 const assignmentColumns: any[] = [
   {
     accessorKey: 'title',
     header: 'Title',
-    cell: ({ row }: { row: any }) => row.getValue('title') || '—'
+    cell: ({ row }: { row: any }) => {
+      const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
+      return h(
+        'span',
+        {
+          class: isEligible
+            ? 'font-bold text-gray-900 dark:text-white'
+            : 'text-gray-500 dark:text-gray-400'
+        },
+        row.getValue('title') || '—'
+      )
+    }
   },
   {
     accessorKey: 'eligiblePassTypeNames',
     header: 'Pass Type(s)',
     cell: ({ row }: { row: any }) => {
       const names = row.original.eligiblePassTypeNames || []
-      return names.join(', ') || 'None'
+      if (!names.length) return '—'
+
+      return h(
+        'div',
+        { class: 'flex flex-wrap gap-3' },
+        names.map((name: string) =>
+          h('div', { class: 'flex items-center gap-1.5 text-primary-600 dark:text-primary-400 font-medium text-sm' }, [
+            h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-4 h-4' }),
+            name
+          ])
+        )
+      )
     }
   },
   {
     accessorKey: 'dueDate',
     header: 'Due Date',
-    cell: dateCellRenderer('dueDate')
+    cell: ({ row }: { row: any }) => {
+      const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
+      const content = formatDate(row.getValue('dueDate')) || '—'
+      return h('span', { class: isEligible ? '' : 'text-gray-400 dark:text-gray-500' }, content)
+    }
   },
   {
     accessorKey: 'availableFrom',
     header: 'Available From',
-    cell: dateCellRenderer('availableFrom')
+    cell: ({ row }: { row: any }) => {
+      const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
+      const content = formatDate(row.getValue('availableFrom')) || '—'
+      return h('span', { class: isEligible ? '' : 'text-gray-400 dark:text-gray-500' }, content)
+    }
   },
   actionsColumn<AssignmentRow>((row) => [
     [{ label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openAssignmentEdit(row.original) }]

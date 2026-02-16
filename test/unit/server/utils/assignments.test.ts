@@ -234,6 +234,7 @@ describe('Assignment Eligibility Logic', () => {
         dueDate: mockDate.toISOString(),
         availableFrom: mockDate.toISOString(),
         acceptUntil: mockDate.toISOString(),
+        eligibleUntil: null,
         createdAt: mockDate.toISOString(),
         eligiblePassTypeNames: ['Late Pass']
       })

@@ -9,6 +9,7 @@ const props = withDefaults(
     pageSize?: number
     emptyIcon?: string
     emptyText?: string
+    rowClass?: (row: any) => string
   }>(),
   {
     loading: false,
@@ -25,7 +26,17 @@ const page = ref(1)
 
 const hasData = computed(() => (props.data?.length ?? 0) > 0)
 const totalRows = computed(() => props.data?.length ?? 0)
+
 const totalPages = computed(() => Math.max(1, Math.ceil(totalRows.value / props.pageSize)))
+
+const tableMeta = computed(() => {
+  if (!props.rowClass) return undefined
+  return {
+    class: {
+      tr: (row: any) => props.rowClass?.(row) ?? ''
+    }
+  }
+})
 </script>
 
 <template>
@@ -54,6 +65,7 @@ const totalPages = computed(() => Math.max(1, Math.ceil(totalRows.value / props.
       :data="data!"
       :columns="columns"
       :loading="loading"
+      :meta="tableMeta"
       class="flex-1"
     />
 

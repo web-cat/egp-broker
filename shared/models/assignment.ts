@@ -22,8 +22,10 @@ export const assignmentRowSchema = z.object({
   dueDate: z.string().nullable(),
   availableFrom: z.string().nullable(),
   acceptUntil: z.string().nullable(),
+  eligibleUntil: z.string().nullable().optional(),
   createdAt: z.string(),
-  eligiblePassTypeNames: z.array(z.string()).optional()
+  eligiblePassTypeNames: z.array(z.string()).optional(),
+  highlight: z.boolean().optional()
 })
 
 export type AssignmentRow = z.infer<typeof assignmentRowSchema>
