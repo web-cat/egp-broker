@@ -94,7 +94,8 @@
   <FeaturesAdminAssignmentEditPanel
     v-model:open="assignmentEditOpen"
     :assignment="editingAssignment"
-    @saved="onAssignmentRowUpdated"
+    :pass-types="passTypesData?.data"
+    @saved="onAssignmentSavedWithRefresh"
     @created="onAssignmentItemCreated"
   />
 </template>
@@ -135,7 +136,6 @@ const {
   assignmentsTableKey,
   openAssignmentCreate,
   openAssignmentEdit,
-  onAssignmentRowUpdated,
   onAssignmentItemCreated,
 
   // Sync
@@ -143,6 +143,12 @@ const {
   syncing,
   syncAssignments
 } = useTeacherDashboard()
+
+// When an assignment is saved with eligibility changes, do a full refresh
+// instead of in-place update since eligibility data comes from the server
+const onAssignmentSavedWithRefresh = () => {
+  onAssignmentItemCreated()
+}
 
 const passTypeColumns: any[] = [
   {

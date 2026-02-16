@@ -25,10 +25,23 @@ export const assignmentRowSchema = z.object({
   eligibleUntil: z.string().nullable().optional(),
   createdAt: z.string(),
   eligiblePassTypeNames: z.array(z.string()).optional(),
-  eligiblePassTypes: z.array(z.object({
-    id: z.string(),
-    name: z.string()
-  })).optional(),
+  eligiblePassTypes: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string()
+      })
+    )
+    .optional(),
+  eligibilities: z
+    .array(
+      z.object({
+        passTypeId: z.string(),
+        passTypeName: z.string(),
+        isAutomatic: z.boolean()
+      })
+    )
+    .optional(),
   highlight: z.boolean().optional()
 })
 
@@ -52,7 +65,8 @@ export const updateAssignmentSchema = z.object({
   canvasAssignmentId: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
   availableFrom: z.string().nullable().optional(),
-  acceptUntil: z.string().nullable().optional()
+  acceptUntil: z.string().nullable().optional(),
+  manualPassTypeIds: z.array(z.string()).optional()
 })
 
 // =============================================================================

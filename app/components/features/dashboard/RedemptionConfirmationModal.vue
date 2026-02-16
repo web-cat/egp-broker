@@ -42,13 +42,17 @@ const newAcceptUntil = computed(() => {
     <template #body>
       <div class="space-y-4">
         <p class="text-sm text-gray-500 dark:text-gray-400">
-          Are you sure you want to redeem a <strong>{{ passType.name }}</strong> for <strong>{{ assignment.title }}</strong>? This will deduct 1 pass from your balance.
+          Are you sure you want to redeem a <strong>{{ passType.name }}</strong> for
+          <strong>{{ assignment.title }}</strong
+          >? This will deduct 1 pass from your balance.
         </p>
 
         <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-3">
           <div class="flex justify-between items-center text-sm">
             <span class="text-gray-500">Pass Duration</span>
-            <span class="font-medium text-gray-900 dark:text-white font-mono">+{{ hoursPerPass }}h</span>
+            <span class="font-medium text-gray-900 dark:text-white font-mono"
+              >+{{ hoursPerPass }}h</span
+            >
           </div>
 
           <div class="border-t border-gray-100 dark:border-gray-800 pt-3">
@@ -81,12 +85,7 @@ const newAcceptUntil = computed(() => {
 
     <template #footer>
       <div class="flex justify-end gap-3 w-full">
-        <UButton
-          color="neutral"
-          variant="ghost"
-          label="Cancel"
-          @click="isOpen = false"
-        />
+        <UButton color="neutral" variant="ghost" label="Cancel" @click="isOpen = false" />
         <UButton
           color="primary"
           :loading="loading"

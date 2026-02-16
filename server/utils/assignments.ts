@@ -303,8 +303,58 @@ export async function getCourseAssignments(courseId: string): Promise<Assignment
     eligiblePassTypes: a.passEligibilities.map((pe) => ({
       id: pe.passType.id,
       name: pe.passType.name
+    })),
+    eligibilities: a.passEligibilities.map((pe) => ({
+      passTypeId: pe.passType.id,
+      passTypeName: pe.passType.name,
+      isAutomatic: pe.isAutomatic
     }))
   }))
+}
+
+/**
+ * Sets the manual (non-automatic) pass type eligibilities for an assignment.
+ * - Removes manual eligibilities whose passTypeId is NOT in the new list.
+ * - Creates new manual eligibilities for pass types not yet linked.
+ * - Does NOT touch automatic eligibilities.
+ * - Recalculates eligible dates afterward.
+ */
+export async function setManualEligibilities(assignmentId: string, manualPassTypeIds: string[]) {
+  const existing = await prisma.passEligibility.findMany({
+    where: { assignmentId },
+    select: { id: true, passTypeId: true, isAutomatic: true }
+  })
+
+  const operations = []
+
+  // Remove manual eligibilities no longer in the list
+  for (const e of existing) {
+    if (!e.isAutomatic && !manualPassTypeIds.includes(e.passTypeId)) {
+      operations.push(prisma.passEligibility.delete({ where: { id: e.id } }))
+    }
+  }
+
+  // Create new manual eligibilities for IDs not already linked (auto or manual)
+  const existingPassTypeIds = new Set(existing.map((e) => e.passTypeId))
+  for (const ptId of manualPassTypeIds) {
+    if (!existingPassTypeIds.has(ptId)) {
+      operations.push(
+        prisma.passEligibility.create({
+          data: {
+            passTypeId: ptId,
+            assignmentId,
+            isAutomatic: false
+          }
+        })
+      )
+    }
+  }
+
+  if (operations.length > 0) {
+    await prisma.$transaction(operations)
+  }
+
+  await recalculateAssignmentEligibleDates(assignmentId)
 }
 
 export async function createAssignment(data: CreateAssignmentData) {

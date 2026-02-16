@@ -1,9 +1,7 @@
 import { defineEventHandler, readValidatedBody } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
-import { createAssignmentSchema } from '@@/shared/models/assignment'
-
-const updateAssignmentSchema = createAssignmentSchema.partial()
+import { updateAssignmentSchema } from '@@/shared/models/assignment'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   const session = await getUserSession(event)
@@ -62,6 +60,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   // Sync automatic pass eligibility
   if (body.title) {
     await syncAssignmentEligibility(updated.id)
+  }
+
+  // Sync manual pass eligibilities if provided
+  if (body.manualPassTypeIds) {
+    await setManualEligibilities(updated.id, body.manualPassTypeIds)
   }
 
   return {

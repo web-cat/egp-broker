@@ -37,6 +37,35 @@
             label="Accept Until"
             type="datetime-local"
           />
+
+          <!-- Pass Type Eligibility Multi-Select (edit mode only) -->
+          <UFormField v-if="isEdit" label="Eligible Pass Types" name="passTypes">
+            <USelectMenu
+              v-model="selectedPassTypeIds"
+              :items="passTypeMenuItems"
+              multiple
+              value-key="id"
+              placeholder="Select pass types…"
+              class="w-full"
+              :search-input="false"
+            >
+              <template #item-label="{ item }">
+                <div class="flex items-center gap-2">
+                  <span>{{ item.label }}</span>
+                  <UBadge
+                    v-if="autoPassTypeIds.has(item.id)"
+                    label="auto"
+                    size="xs"
+                    color="neutral"
+                    variant="subtle"
+                  />
+                </div>
+              </template>
+            </USelectMenu>
+            <p class="text-xs text-neutral-500 mt-1">
+              Items marked <strong>auto</strong> are set by pattern matching and cannot be removed.
+            </p>
+          </UFormField>
         </div>
       </UForm>
     </template>
@@ -74,11 +103,22 @@ interface AssignmentData {
   dueDate: string | null
   availableFrom: string | null
   acceptUntil: string | null
+  eligibilities?: {
+    passTypeId: string
+    passTypeName: string
+    isAutomatic: boolean
+  }[]
+}
+
+interface PassTypeOption {
+  id: string
+  name: string
 }
 
 const props = defineProps<{
   assignment: AssignmentData | null
   courseId?: string | null
+  passTypes?: PassTypeOption[] | null
 }>()
 
 const emit = defineEmits<{
@@ -114,6 +154,35 @@ const state = reactive({
   acceptUntil: ''
 })
 
+// --- Pass type eligibility state ---
+const selectedPassTypeIds = ref<string[]>([])
+
+/** IDs of pass types that are auto-matched (read-only, cannot be deselected) */
+const autoPassTypeIds = computed(() => {
+  const set = new Set<string>()
+  if (props.assignment?.eligibilities) {
+    for (const e of props.assignment.eligibilities) {
+      if (e.isAutomatic) set.add(e.passTypeId)
+    }
+  }
+  return set
+})
+
+/** Build menu items for USelectMenu. Auto-matched items are marked disabled. */
+const passTypeMenuItems = computed(() => {
+  if (!props.passTypes) return []
+  return props.passTypes.map((pt) => ({
+    id: pt.id,
+    label: pt.name,
+    disabled: autoPassTypeIds.value.has(pt.id)
+  }))
+})
+
+/** The manual-only pass type IDs (selected minus auto) to send to the API */
+const manualPassTypeIds = computed(() =>
+  selectedPassTypeIds.value.filter((id) => !autoPassTypeIds.value.has(id))
+)
+
 function toLocalDatetime(iso: string | null): string {
   if (!iso) return ''
   const d = new Date(iso)
@@ -131,12 +200,20 @@ watch(
       state.dueDate = toLocalDatetime(assignment.dueDate)
       state.availableFrom = toLocalDatetime(assignment.availableFrom)
       state.acceptUntil = toLocalDatetime(assignment.acceptUntil)
+
+      // Pre-select all currently eligible pass types (auto + manual)
+      if (assignment.eligibilities) {
+        selectedPassTypeIds.value = assignment.eligibilities.map((e) => e.passTypeId)
+      } else {
+        selectedPassTypeIds.value = []
+      }
     } else if (isOpen && !assignment) {
       state.title = ''
       state.canvasAssignmentId = ''
       state.dueDate = ''
       state.availableFrom = ''
       state.acceptUntil = ''
+      selectedPassTypeIds.value = []
     }
   },
   { immediate: true }
@@ -145,7 +222,7 @@ watch(
 const handleSubmit = async () => {
   saving.value = true
   try {
-    const body = {
+    const body: Record<string, any> = {
       title: state.title || null,
       canvasAssignmentId: state.canvasAssignmentId || null,
       dueDate: state.dueDate ? new Date(state.dueDate).toISOString() : null,
@@ -154,7 +231,10 @@ const handleSubmit = async () => {
     }
 
     if (isEdit.value) {
-      await $fetch(`/api/admin/assignments/${props.assignment!.id}`, {
+      // Include manual pass type IDs in edit mode
+      body.manualPassTypeIds = manualPassTypeIds.value
+
+      await $fetch(`/api/me/assignments/${props.assignment!.id}`, {
         method: 'PATCH',
         body
       })
@@ -162,7 +242,7 @@ const handleSubmit = async () => {
         title: 'Assignment updated',
         message: 'The assignment has been saved successfully.'
       })
-      emit('saved', props.assignment!.id, body)
+      emit('saved', props.assignment!.id, body as any)
     } else {
       if (!props.courseId) {
         showError({
@@ -171,7 +251,7 @@ const handleSubmit = async () => {
         })
         return
       }
-      await $fetch('/api/admin/assignments', {
+      await $fetch('/api/me/assignments', {
         method: 'POST',
         body: { ...body, courseId: props.courseId }
       })
