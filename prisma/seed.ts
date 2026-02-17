@@ -62,25 +62,26 @@ async function main() {
   }
   console.log(`✅ ${createdUsers.length} test users created`)
 
-  // Create LTI Platform and Deployment
+  // Create LTI Platform and Deployment (Canvas Endeavour)
   const platform = await prisma.ltiPlatform.create({
     data: {
-      issuer: 'https://canvas.instructure.com',
-      clientId: 'broker-client-id',
-      authEndpoint: 'https://canvas.instructure.com/api/lti/authorize_redirect',
-      tokenEndpoint: 'https://canvas.instructure.com/login/oauth2/token',
-      jwksEndpoint: 'https://canvas.instructure.com/api/lti/security/jwks',
-      name: 'Canvas Main'
+      issuer: 'https://canvas.endeavour.cs.vt.edu',
+      clientId: '10000000000007',
+      authEndpoint: 'https://canvas.endeavour.cs.vt.edu/api/lti/authorize_redirect',
+      tokenEndpoint: 'https://canvas.endeavour.cs.vt.edu/login/oauth2/token',
+      jwksEndpoint: 'https://canvas.endeavour.cs.vt.edu/api/lti/security/jwks',
+      name: 'endeavour.cs.vt'
     }
   })
 
   const deployment = await prisma.ltiDeployment.create({
     data: {
       platformId: platform.id,
-      deploymentId: 'deployment-1'
+      deploymentId: 'deployment-1',
+      deploymentHost: 'canvas.endeavour.cs.vt.edu'
     }
   })
-  console.log('✅ LTI platform and deployment created')
+  console.log('✅ LTI platform and deployment created (Canvas Endeavour)')
 
   // Create Courses
   const course1 = await prisma.course.create({
@@ -119,6 +120,31 @@ async function main() {
     ]
   })
   console.log('✅ Enrollments created (Admin as Teacher, Demo as Student)')
+
+  // Create LTI Identities for both users
+  const canvasApiToken = process.env.CANVAS_API_TOKEN || ''
+  if (!canvasApiToken) {
+    console.log('⚠️  CANVAS_API_TOKEN not set — LTI identities will have no API key')
+  }
+
+  await prisma.ltiIdentity.create({
+    data: {
+      userId: admin.id,
+      platformId: platform.id,
+      ltiSub: 'admin-lti-sub',
+      platformApiKey: canvasApiToken || null
+    }
+  })
+
+  await prisma.ltiIdentity.create({
+    data: {
+      userId: demo.id,
+      platformId: platform.id,
+      ltiSub: 'demo-lti-sub',
+      platformApiKey: canvasApiToken || null
+    }
+  })
+  console.log('✅ LTI identities created for both users')
 
   // Create Pass Types
   const _passType1 = await prisma.passType.create({
