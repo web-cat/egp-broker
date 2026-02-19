@@ -5,10 +5,34 @@ import { getGravatarUrl } from '@@/server/utils/gravatar'
 import { LtiLaunchSchema } from '@@/shared/schemas/auth.schema'
 
 export default defineEventHandler(async (event: H3Event) => {
-  const { id_token: idToken, state } = await readValidatedBody(event, LtiLaunchSchema.parse)
+  const allCookies = parseCookies(event)
+  console.log('--- SESSION DEBUG ---')
+  console.log('All Cookie Names:', Object.keys(allCookies))
+  console.log('Has nuxt-session cookie?:', !!allCookies['nuxt-session'])
+  
+  // Read the raw body first if readValidatedBody is failing to detect the type
+  const body = await readBody(event)
+  
+  console.log('--- LTI LAUNCH BODY ---', body)
+
+  // Explicitly validate the parsed body against your schema
+  const result = LtiLaunchSchema.safeParse(body)
+  
+  if (!result.success) {
+    console.error('Validation Error Details:', result.error.format())
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid LTI Launch: Missing id_token or state',
+      data: result.error.format()
+    })
+  }
+
+  const { id_token: idToken, state } = result.data
+  //const { id_token: idToken, state } = await readValidatedBody(event, LtiLaunchSchema.parse)
 
   // Get session to verify state
   const session = await getUserSession(event)
+  console.log('Session Data Found:', !!session.lti)
   if (!session.lti || !session.lti.issuer || session.lti.state !== state) {
     throw createError({
       statusCode: 403,
@@ -257,6 +281,30 @@ export default defineEventHandler(async (event: H3Event) => {
           where: { id: user.id },
           data: { currentCourseId: course.id }
         })
+
+        // 5. Define the AGS Claim constant
+        const AGS_CLAIM = 'https://purl.imsglobal.org/spec/lti-ags/claim/endpoint';
+        const agsEndpoint = claims[AGS_CLAIM];
+
+        if (agsEndpoint?.lineitem) {
+          const updatedAssignment = await tx.assignment.update({
+            where: { 
+              courseId_resourceLinkId: {
+                courseId: course.id,
+                resourceLinkId: resourceLink.id
+              }
+            },
+            data: { canvasAgsEndpoint: agsEndpoint.lineitem }
+          });
+
+          // 3. HIJACK: Rewrite the URL sent to the external tool
+          // We point it to our Broker's proxy endpoint
+          const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+          const host = event.node.req.headers.host;
+          
+          // We use a query param to keep track of which assignment this grade belongs to 
+          claims[AGS_CLAIM].lineitem = `${protocol}://${host}/api/proxy/grade-passback?assignmentId=${updatedAssignment.id}`;
+      }
       }
 
       // Check if we have a resource link to sync (internal ID lookup)
@@ -315,8 +363,9 @@ export default defineEventHandler(async (event: H3Event) => {
     })
 
     // Redirect to the target link URI (or home)
-    const targetUri = session.lti.targetLinkUri || '/'
-    return sendRedirect(event, targetUri)
+    //const targetUri = session.lti.targetLinkUri || '/'
+    //return sendRedirect(event, targetUri)
+    return sendRedirect(event, '/', 302)
   } catch (error: any) {
     logger.error('LTI Launch Error:', { error })
     throw createError({

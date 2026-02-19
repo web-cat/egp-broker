@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { CourseRole } from '@prisma/client'
+import prisma from '@@/lib/prisma'
 
 // LTI 1.3 Role URIs mapped to CourseRole enum
 const LTI_ROLE_MAPPINGS: { pattern: string; role: CourseRole }[] = [
@@ -30,61 +31,58 @@ export function parseCourseRole(roles?: string[]): CourseRole {
   return CourseRole.STUDENT
 }
 
-export interface LtiLaunchClaims {
-  iss: string
-  sub: string
-  aud: string
-  iat: number
-  exp: number
-  nonce: string
-  'https://purl.imsglobal.org/spec/lti/claim/deployment_id': string
-  'https://purl.imsglobal.org/spec/lti/claim/message_type': string
-  'https://purl.imsglobal.org/spec/lti/claim/version': string
-  'https://purl.imsglobal.org/spec/lti/claim/roles'?: string[]
-  'https://purl.imsglobal.org/spec/lti/claim/context'?: {
-    id: string
-    label?: string
-    title?: string
-    type?: string[]
-  }
-  'https://purl.imsglobal.org/spec/lti/claim/resource_link'?: {
-    id: string
-    title?: string
-  }
-  'https://purl.imsglobal.org/spec/lti/claim/custom'?: Record<string, any>
-  'https://purl.imsglobal.org/spec/lti/claim/tool_platform'?: {
-    guid: string
-    contact_email?: string
-    description?: string
-    name?: string
-    url?: string
-    product_family_code?: string
-    version?: string
-  }
-  'https://canvas.instructure.com/lti/legacy_user_id'?: string | number
-  email?: string
-  name?: string
-  given_name?: string
-  family_name?: string
-}
-
 /**
- * Validates an LTI 1.3 ID Token
+ * Shared logic to initiate the OIDC flow.
+ * This handles the database lookup and session storage before redirecting to Canvas.
  */
-export async function verifyLtiToken(
-  idToken: string,
-  jwksUrl: string,
-  clientId: string,
-  issuer: string
-): Promise<LtiLaunchClaims> {
-  const JWKS = createRemoteJWKSet(new URL(jwksUrl))
-
-  const { payload } = await jwtVerify(idToken, JWKS, {
-    audience: clientId,
-    issuer: issuer
+export async function initiateOidcRedirect(event: any, params: {
+  iss: string,
+  loginHint: string,
+  targetLinkUri: string,
+  ltiMessageHint?: string
+}) {
+  const platform = await prisma.ltiPlatform.findUnique({
+    where: { issuer: params.iss }
   })
 
-  return payload as unknown as LtiLaunchClaims
+  if (!platform) {
+    throw createError({ 
+      statusCode: 404, 
+      statusMessage: `Platform for issuer ${params.iss} not registered` 
+    })
+  }
+
+  const state = crypto.randomUUID()
+  const nonce = crypto.randomUUID()
+
+  console.log('--- OIDC INITIATION ---')
+  console.log('Generated State:', state)
+
+  // Store security values in session to verify during /launch
+  await setUserSession(event, {
+    lti: {
+      state,
+      nonce,
+      issuer: params.iss,
+      targetLinkUri: params.targetLinkUri
+    }
+  })
+
+  // Verify the session was written immediately
+  const sessionCheck = await getUserSession(event)
+  console.log('Session Verify after Write:', !!sessionCheck.lti)
+
+  const redirectUrl = createLtiLoginUrl(
+    platform.authEndpoint,
+    platform.clientId,
+    `${process.env.NUXT_SITE_URL}/api/lti13/launch`,
+    params.loginHint,
+    params.ltiMessageHint || '',
+    nonce,
+    state
+  )
+
+  return sendRedirect(event, redirectUrl)
 }
 
 /**
@@ -109,12 +107,28 @@ export function createLtiLoginUrl(
   url.searchParams.set('nonce', nonce)
   url.searchParams.set('state', state)
   url.searchParams.set('response_mode', 'form_post')
+  // REQUIRED for Canvas to avoid "missing prompt" errors
+  url.searchParams.set('prompt', 'none')  
   return url.toString()
 }
 
 /**
- * Helper to generate a session cookie configuration for iframe support
+ * Validates an LTI 1.3 ID Token
  */
+export async function verifyLtiToken(
+  idToken: string,
+  jwksUrl: string,
+  clientId: string,
+  issuer: string
+): Promise<any> {
+  const JWKS = createRemoteJWKSet(new URL(jwksUrl))
+  const { payload } = await jwtVerify(idToken, JWKS, {
+    audience: clientId,
+    issuer: issuer
+  })
+  return payload
+}
+
 export function getIframeCookieOptions() {
   return {
     httpOnly: true,

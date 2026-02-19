@@ -216,6 +216,7 @@ model Enrollment {
 model Assignment {
   id             String  @id @default(cuid())
   resourceLinkId String? // resource_link.id from LTI claim
+  canvasAgsEndpoint  String?
   title          String? // resource_link.title
 
   // Canvas-specific custom variables

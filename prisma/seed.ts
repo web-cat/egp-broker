@@ -66,19 +66,20 @@ async function main() {
   const platform = await prisma.ltiPlatform.create({
     data: {
       issuer: 'https://canvas.endeavour.cs.vt.edu',
-      clientId: '10000000000007',
+      clientId: '10000000000013',
       authEndpoint: 'https://canvas.endeavour.cs.vt.edu/api/lti/authorize_redirect',
       tokenEndpoint: 'https://canvas.endeavour.cs.vt.edu/login/oauth2/token',
       jwksEndpoint: 'https://canvas.endeavour.cs.vt.edu/api/lti/security/jwks',
-      name: 'endeavour.cs.vt'
+      name: 'Canvas Main'
     }
   })
 
   const deployment = await prisma.ltiDeployment.create({
     data: {
       platformId: platform.id,
-      deploymentId: 'deployment-1',
+      deploymentId: '100:f590ae92360f49bfad9842d10aba721c59668915',
       deploymentHost: 'canvas.endeavour.cs.vt.edu'
+      
     }
   })
   console.log('✅ LTI platform and deployment created (Canvas Endeavour)')

@@ -78,7 +78,7 @@ export default defineNuxtConfig({
         language: 'fr-FR'
       }
     ],
-    defaultLocale: 'fr',
+    defaultLocale: 'en',
     strategy: 'prefix',
     detectBrowserLanguage: {
       useCookie: true,
@@ -89,6 +89,20 @@ export default defineNuxtConfig({
       localeDetector: 'localeDetector.ts'
     }
   },
+
+  auth: {
+    session: {
+      name: 'nuxt-session',
+      password: process.env.NUXT_SESSION_PASSWORD,
+      cookie: {
+        sameSite: 'none', // Essential for the POST back from Canvas
+        secure: true,     // Essential for sameSite 'none'
+        maxAge: 60 * 10,   // 10 minutes is plenty for the OIDC handshake
+        partitioned: true
+      }
+    }
+  },
+
 
   // ========================================
   // Icon Configuration
@@ -263,6 +277,16 @@ export default defineNuxtConfig({
     // ====== Public Configuration (accessible on client-side) ======
     public: {
       version: packageJson.version
+    },
+    session: {
+      name: 'nuxt-session', // Optional: defaults to 'nuxt-session'
+      password: process.env.NUXT_SESSION_PASSWORD, // Must be 32+ chars
+      cookie: {
+        sameSite: 'none',
+        secure: true,
+        httpOnly: true,
+        // domain: 'yourdomain.com' // Usually better left undefined for local/dev
+      }
     }
   }
 })
