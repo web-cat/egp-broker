@@ -4,13 +4,13 @@ import prisma from '@@/lib/prisma'
 import { LtiLoginSchema } from '@@/shared/schemas/auth.schema'
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event) //
+  const query = getQuery(event)
 
   return await initiateOidcRedirect(event, {
-    iss: query.iss as string, //
-    loginHint: query.login_hint as string, //
-    targetLinkUri: query.target_link_uri as string, //
-    ltiMessageHint: query.lti_message_hint as string //
+    iss: query.iss as string,
+    loginHint: query.login_hint as string,
+    targetLinkUri: query.target_link_uri as string,
+    ltiMessageHint: query.lti_message_hint as string
   })
 })
 

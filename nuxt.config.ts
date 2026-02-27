@@ -182,6 +182,12 @@ export default defineNuxtConfig({
     },
     build: {
       chunkSizeWarningLimit: 600
+    },
+    server: {
+      watch: {
+        usePolling: true,
+        interval: 100 // Check every 100ms
+      }
     }
   },
 
@@ -234,7 +240,8 @@ export default defineNuxtConfig({
     '/api/**': {
       cors: true, // This enables Nitro's built-in CORS handling
       headers: {
-        'Access-Control-Max-Age': '86400'
+        'Access-Control-Max-Age': '86400',
+        'X-Frame-Options': 'ALLOWALL'
       }
     }
   },
@@ -285,6 +292,7 @@ export default defineNuxtConfig({
         sameSite: 'none',
         secure: true,
         httpOnly: true,
+        // partitioned: true
         // domain: 'yourdomain.com' // Usually better left undefined for local/dev
       }
     }

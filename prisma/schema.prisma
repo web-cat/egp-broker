@@ -90,6 +90,9 @@ model LtiTool {
   platformId         String?
   platform           LtiPlatform? @relation(fields: [platformId], references: [id], onDelete: SetNull)
 
+  //assignments related with this tool
+  assignments        Assignment[]
+
   name               String?
   baseUrl            String
   protocol           Protocol
@@ -221,6 +224,10 @@ model Assignment {
 
   // Canvas-specific custom variables
   canvasAssignmentId String? // $Canvas.assignment.id
+
+  //tool information
+  toolId        String?
+  tool          LtiTool? @relation(fields: [toolId], references: [id], onDelete: SetNull)
 
   // Relationships
   courseId String
