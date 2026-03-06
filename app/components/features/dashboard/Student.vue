@@ -100,7 +100,6 @@
 </template>
 
 <script setup lang="ts">
-import { formatDate } from '~/utils/date'
 // Feature Composable
 import { useStudentDashboard } from '~/composables/features/useStudentDashboard'
 
@@ -114,161 +113,21 @@ defineProps<{
 
 const {
   passPools,
-  assignmentsData,
   assignmentsStatus,
   refreshAssignments,
+  filteredAssignments,
+  assignmentColumns,
   redemptionsData,
   redemptionsStatus,
-  redeemPass
+  // Modal State
+  showRedemptionModal,
+  selectedAssignment,
+  selectedPassType,
+  selectedPassHours,
+  redemptionLoading,
+  handleConfirmRedemption,
+  dateCellRenderer
 } = useStudentDashboard()
-
-const showRedemptionModal = ref(false)
-const selectedAssignment = ref<any>(null)
-const selectedPassType = ref<{ id: string; name: string } | null>(null)
-const selectedPassHours = ref(24)
-const redemptionLoading = ref(false)
-
-const handleRedeemClick = (assignment: any, passType: { id: string; name: string }) => {
-  const pool = passPools.value?.data?.find((p) => p.name === passType.name)
-  if (!pool || pool.balance <= 0) return
-
-  selectedAssignment.value = assignment
-  selectedPassType.value = passType
-  selectedPassHours.value = pool.hoursPerPass
-  showRedemptionModal.value = true
-}
-
-const handleConfirmRedemption = async () => {
-  if (!selectedAssignment.value || !selectedPassType.value) return
-
-  redemptionLoading.value = true
-  try {
-    await redeemPass(selectedAssignment.value.id, selectedPassType.value.id)
-    showRedemptionModal.value = false
-  } finally {
-    redemptionLoading.value = false
-  }
-}
-
-const assignmentColumns: any[] = [
-  {
-    accessorKey: 'title',
-    header: 'Title',
-    cell: ({ row }: { row: any }) => {
-      const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
-      return h(
-        'span',
-        {
-          class: isEligible
-            ? 'font-bold text-gray-900 dark:text-white'
-            : 'text-gray-500 dark:text-gray-400'
-        },
-        row.getValue('title') || '—'
-      )
-    }
-  },
-  {
-    accessorKey: 'eligiblePassTypes',
-    header: 'Eligible Pass Types',
-    cell: ({ row }: { row: any }) => {
-      const types = row.original.eligiblePassTypes || []
-      if (!types.length) return '—'
-
-      return h(
-        'div',
-        { class: 'flex flex-wrap gap-3' },
-        types.map((pt: any) => {
-          const pool = passPools.value?.data?.find((p) => p.name === pt.name)
-          const hasBalance = (pool?.balance ?? 0) > 0
-
-          return h(
-            'button',
-            {
-              class: [
-                'flex items-center gap-1.5 font-medium text-sm transition-colors',
-                hasBalance
-                  ? 'text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer'
-                  : 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
-              ],
-              disabled: !hasBalance,
-              onClick: (e: MouseEvent) => {
-                e.stopPropagation()
-                handleRedeemClick(row.original, pt)
-              }
-            },
-            [h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-4 h-4' }), pt.name]
-          )
-        })
-      )
-    }
-  },
-  {
-    accessorKey: 'dueDate',
-    header: 'Due Date',
-    cell: ({ row }: { row: any }) => {
-      const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
-      const content = formatDate(row.getValue('dueDate')) || '—'
-      return h('span', { class: isEligible ? '' : 'text-gray-400 dark:text-gray-500' }, content)
-    }
-  },
-  {
-    accessorKey: 'availableFrom',
-    header: 'Available From',
-    cell: ({ row }: { row: any }) => {
-      const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
-      const content = formatDate(row.getValue('availableFrom')) || '—'
-      return h('span', { class: isEligible ? '' : 'text-gray-400 dark:text-gray-500' }, content)
-    }
-  }
-]
-
-const filteredAssignments = computed(() => {
-  if (!assignmentsData.value?.data) return []
-
-  const now = new Date()
-
-  return assignmentsData.value.data
-    .filter((a) => {
-      const { dueDate, acceptUntil, eligibleUntil, eligiblePassTypeNames } = a
-
-      // 1. Implicit Infinite: explicit eligibility but no cutoff date => Always Eligible
-      const hasPassTypes = eligiblePassTypeNames && eligiblePassTypeNames.length > 0
-      if (hasPassTypes && !eligibleUntil) return true
-
-      // 2. Max Date Logic
-      const dates = []
-      if (dueDate) dates.push(new Date(dueDate))
-      if (acceptUntil) dates.push(new Date(acceptUntil))
-      if (eligibleUntil) dates.push(new Date(eligibleUntil))
-
-      // If all dates are missing, treat as inactive/hidden (unless caught by implicit infinite above)
-      if (dates.length === 0) return false
-
-      // Calculate max date
-      const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
-
-      // Keep if max date is in the future
-      return maxDate > now
-    })
-    .sort((a, b) => {
-      // Priority 1: Eligible for redemption first
-      const aEligible = (a.eligiblePassTypeNames?.length ?? 0) > 0
-      const bEligible = (b.eligiblePassTypeNames?.length ?? 0) > 0
-
-      if (aEligible && !bEligible) return -1
-      if (!aEligible && bEligible) return 1
-
-      // Priority 2: Due Date Ascending (Nulls last)
-      if (!a.dueDate) return 1
-      if (!b.dueDate) return -1
-
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    })
-    .map((a) => ({
-      ...a,
-      highlight: (a.eligiblePassTypeNames?.length ?? 0) > 0
-    }))
-})
 
 const assignmentRowClass = (row: any) => {
   if (row.original.highlight) {
