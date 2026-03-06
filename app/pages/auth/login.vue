@@ -18,6 +18,7 @@
 
         <!-- Auth form -->
         <UAuthForm
+          v-if="config.public.enablePasswordLogin"
           :title="t('auth.login.title')"
           icon="i-lucide-lock-keyhole"
           :fields="fields"
@@ -50,6 +51,30 @@
             >.
           </template>
         </UAuthForm>
+
+        <!-- CAS Login Options -->
+        <!-- CAS Login Options -->
+        <template v-if="casServers?.length">
+          <UDivider
+            v-if="config.public.enablePasswordLogin"
+            :label="t('auth.login.or')"
+            class="my-6"
+          />
+          <div class="flex flex-col gap-3" :class="{ 'mt-4': !config.public.enablePasswordLogin }">
+            <UButton
+              v-for="server in casServers"
+              :key="server.id"
+              block
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-building-2"
+              :label="t('auth.login.cas.button', { name: server.name })"
+              :disabled="isLoading"
+              class="cursor-pointer"
+              @click="navigateTo(`/api/cas/login?serverId=${server.id}`, { external: true })"
+            />
+          </div>
+        </template>
       </UPageCard>
     </div>
   </div>
@@ -66,6 +91,7 @@ const { fetch: fetchUser } = useUserSession()
 const { success, error } = useNotifications()
 const { getErrorData, getErrorCode } = useApiError()
 const localePath = useLocalePath()
+const config = useRuntimeConfig()
 
 // =============================================================================
 // PAGE CONFIGURATION
@@ -82,6 +108,11 @@ useSeo('login')
 // =============================================================================
 const { state, schema } = useLoginForm()
 const isLoading = ref(false)
+
+// =============================================================================
+// CAS SERVERS
+// =============================================================================
+const { data: casServers } = await useFetch<{ id: string; name: string }[]>('/api/cas/servers')
 
 // Fields configuration
 const fields = computed(() => [

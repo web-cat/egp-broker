@@ -58,7 +58,7 @@ const localePath = useLocalePath()
 // =============================================================================
 definePageMeta({
   layout: false,
-  middleware: ['guest']
+  middleware: ['guest', 'password-login']
 })
 
 useSeo('forgotPassword')

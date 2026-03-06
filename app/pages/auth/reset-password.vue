@@ -59,7 +59,7 @@ const route = useRoute()
 // =============================================================================
 definePageMeta({
   layout: false,
-  middleware: ['guest']
+  middleware: ['guest', 'password-login']
 })
 
 useSeo('resetPassword')

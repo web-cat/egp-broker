@@ -24,6 +24,14 @@
  *         description: Too many requests
  */
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig()
+  if (!config.public.enablePasswordLogin) {
+    throw createError({
+      statusCode: 403,
+      message: 'Email/Password login is currently disabled.'
+    })
+  }
+
   const t = await useTranslation(event)
   const { email } = await validateBody(event, createForgotPasswordSchema(t))
   const locale = getCookie(event, 'i18n_redirected') || 'fr'

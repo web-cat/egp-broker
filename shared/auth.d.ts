@@ -26,6 +26,7 @@ declare module '#auth-utils' {
     user: User
     loggedInAt: Date
     lti?: LtiContext
+    authMethod?: 'local' | 'cas' | 'lti'
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type

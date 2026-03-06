@@ -14,13 +14,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AdminStats>
     })
   }
 
-  const [platforms, deployments, courses, users, tools, platformList, deploymentList] =
+  const [platforms, deployments, courses, users, tools, casServers, platformList, deploymentList] =
     await Promise.all([
       prisma.ltiPlatform.count(),
       prisma.ltiDeployment.count(),
       prisma.course.count(),
       prisma.user.count(),
       prisma.ltiTool.count(),
+      prisma.casServer.count(),
       prisma.ltiPlatform.findMany({
         select: { id: true, issuer: true, name: true },
         orderBy: { createdAt: 'desc' }
@@ -33,6 +34,15 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AdminStats>
 
   return {
     statusCode: 200,
-    data: { platforms, deployments, courses, users, tools, platformList, deploymentList }
+    data: {
+      platforms,
+      deployments,
+      courses,
+      users,
+      tools,
+      casServers,
+      platformList,
+      deploymentList
+    }
   }
 })

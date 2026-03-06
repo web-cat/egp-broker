@@ -39,6 +39,14 @@
  *         description: User already exists
  */
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig()
+  if (!config.public.enablePasswordLogin) {
+    throw createError({
+      statusCode: 403,
+      message: 'Email/Password registration is currently disabled.'
+    })
+  }
+
   const t = await useTranslation(event)
   const userData = await validateBody(event, createRegisterSchema(t))
 
