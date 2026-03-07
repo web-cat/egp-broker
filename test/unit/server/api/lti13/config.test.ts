@@ -38,6 +38,12 @@ describe('LTI 1.3 Config Endpoint', () => {
       public_jwk_url: 'https://broker.example.com/api/lti13/jwks'
     })
     expect(response.extensions[0].domain).toBe('broker.example.com')
+    expect(response.extensions[0].settings.placements).toContainEqual({
+      text: 'Link Selection via EGP Broker',
+      placement: 'link_selection',
+      message_type: 'LtiDeepLinkingRequest',
+      target_link_uri: 'https://broker.example.com/api/lti13/launch'
+    })
   })
 
   it('should generate correct JSON fallback using request host', async () => {

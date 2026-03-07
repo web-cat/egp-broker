@@ -31,6 +31,12 @@ export default defineEventHandler((event) => {
               placement: 'assignment_selection',
               message_type: 'LtiDeepLinkingRequest',
               target_link_uri: `${siteUrl}/api/lti13/launch`
+            },
+            {
+              text: 'Link Selection via EGP Broker',
+              placement: 'link_selection',
+              message_type: 'LtiDeepLinkingRequest',
+              target_link_uri: `${siteUrl}/api/lti13/launch`
             }
           ]
         }
