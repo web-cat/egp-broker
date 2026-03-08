@@ -9,6 +9,7 @@
 ### Status Check
 
 **PowerShell:**
+
 ```powershell
 # Current git status
 git status
@@ -21,6 +22,7 @@ git branch --show-current
 ```
 
 **Bash:**
+
 ```bash
 # Current git status
 git status
@@ -41,6 +43,7 @@ git branch --show-current
 **Before marking a wave complete:**
 
 1. All tasks have commits:
+
    ```powershell
    git log --oneline -N  # N = number of tasks in wave
    ```
@@ -77,18 +80,20 @@ After 3 consecutive failed debug attempts:
 1. **Stop** — Don't try a 4th approach in same session
 
 2. **Document** in STATE.md:
+
    ```markdown
    ## Debug Session
-   
+
    **Problem:** {description}
-   
+
    **Attempts:**
+
    1. {approach 1} → {result}
    2. {approach 2} → {result}
    3. {approach 3} → {result}
-   
+
    **Hypothesis:** {current theory}
-   
+
    **Recommended next:** {suggested approach}
    ```
 
@@ -194,6 +199,7 @@ If quality is degrading mid-session:
 ### Find in Codebase
 
 **PowerShell:**
+
 ```powershell
 # Find pattern in files
 Select-String -Path "src/**/*.ts" -Pattern "TODO" -Recurse
@@ -203,6 +209,7 @@ Get-ChildItem -Recurse -Filter "*.config.*"
 ```
 
 **Bash:**
+
 ```bash
 # Find pattern in files (with ripgrep)
 rg "TODO" --type ts
@@ -219,6 +226,7 @@ find . -name "*.config.*"
 Before reading any file:
 
 1. Search for relevant terms:
+
    ```powershell
    Select-String -Path "**/*.md" -Pattern "architecture" -Recurse
    ```
@@ -239,6 +247,7 @@ Before reading any file:
 **Cause:** Planning lock prevents implementation
 
 **Fix:**
+
 1. Open `.gsd/SPEC.md`
 2. Complete all required sections
 3. Change status to `Status: FINALIZED`
@@ -249,6 +258,7 @@ Before reading any file:
 **Symptoms:** Shorter responses, skipped steps, inconsistency
 
 **Fix:**
+
 1. Create state snapshot
 2. Commit current work
 3. Start fresh session
@@ -259,6 +269,7 @@ Before reading any file:
 **Causes:** Staged conflicts, hook failures
 
 **Debug:**
+
 ```powershell
 git status
 git diff --staged
@@ -292,5 +303,5 @@ git diff --staged
 
 ---
 
-*See PROJECT_RULES.md for canonical rules.*
-*See docs/model-selection-playbook.md for model guidance.*
+_See PROJECT_RULES.md for canonical rules._
+_See docs/model-selection-playbook.md for model guidance._

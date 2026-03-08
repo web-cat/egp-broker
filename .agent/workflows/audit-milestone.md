@@ -1,6 +1,6 @@
 ---
 description: Audit a milestone for quality and completeness
-argument-hint: "[milestone-name]"
+argument-hint: '[milestone-name]'
 ---
 
 # /audit-milestone Workflow
@@ -14,6 +14,7 @@ Review a completed (or in-progress) milestone for quality, completeness, and les
 ## 1. Load Milestone Context
 
 If milestone name provided, load from archive:
+
 ```powershell
 Get-Content ".gsd/milestones/{name}-SUMMARY.md"
 ```
@@ -25,6 +26,7 @@ If no name, audit current milestone from ROADMAP.md.
 ## 2. Check Must-Haves Verification
 
 For each must-have in the milestone:
+
 - Was it verified with empirical evidence?
 - Is the evidence still valid?
 - Any regressions since completion?
@@ -34,6 +36,7 @@ For each must-have in the milestone:
 ## 3. Review Technical Debt
 
 Check TODO.md and DECISIONS.md for:
+
 - Deferred items during this milestone
 - Technical debt acknowledged
 - Items that should be addressed
@@ -43,6 +46,7 @@ Check TODO.md and DECISIONS.md for:
 ## 4. Analyze Phase Quality
 
 For each phase:
+
 - Review VERIFICATION.md
 - Check for gap closures (were there many?)
 - Note recurring issues
@@ -57,27 +61,32 @@ For each phase:
 **Audited:** {date}
 
 ## Summary
-| Metric | Value |
-|--------|-------|
-| Phases | {N} |
-| Gap closures | {M} |
-| Technical debt items | {K} |
+
+| Metric               | Value |
+| -------------------- | ----- |
+| Phases               | {N}   |
+| Gap closures         | {M}   |
+| Technical debt items | {K}   |
 
 ## Must-Haves Status
+
 | Requirement | Verified | Evidence |
-|-------------|----------|----------|
-| {req 1} | ✅ | {link} |
-| {req 2} | ✅ | {link} |
+| ----------- | -------- | -------- |
+| {req 1}     | ✅       | {link}   |
+| {req 2}     | ✅       | {link}   |
 
 ## Concerns
+
 - {concern 1}
 - {concern 2}
 
 ## Recommendations
+
 1. {recommendation 1}
 2. {recommendation 2}
 
 ## Technical Debt to Address
+
 - [ ] {item 1}
 - [ ] {item 2}
 ```

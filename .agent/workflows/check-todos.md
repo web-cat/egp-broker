@@ -1,6 +1,6 @@
 ---
 description: List all pending todo items
-argument-hint: "[--all] [--priority high|medium|low]"
+argument-hint: '[--all] [--priority high|medium|low]'
 ---
 
 # /check-todos Workflow
@@ -15,8 +15,9 @@ Display pending todo items, optionally filtered by priority or status.
 - `--priority high|medium|low` — Filter by priority
 
 **Input:**
+
 - `.gsd/TODO.md` — Todo items
-</context>
+  </context>
 
 <process>
 
@@ -36,6 +37,7 @@ Get-Content ".gsd/TODO.md"
 ## 2. Parse and Filter
 
 Count items by status:
+
 - `- [ ]` = pending
 - `- [x]` = complete
 

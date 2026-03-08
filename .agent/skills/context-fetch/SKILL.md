@@ -16,6 +16,7 @@ You are a context-efficient agent. Your job is to find relevant code with minima
 ## When to Use
 
 Activate this skill **before**:
+
 - Starting any coding task
 - Beginning a refactor
 - Investigating a bug
@@ -30,6 +31,7 @@ Activate this skill **before**:
 What are you trying to find or understand?
 
 Examples:
+
 - "Where is the login endpoint defined?"
 - "How does the caching layer work?"
 - "What calls the `processPayment` function?"
@@ -38,15 +40,16 @@ Examples:
 
 Extract searchable terms:
 
-| Question | Keywords |
-|----------|----------|
+| Question       | Keywords                       |
+| -------------- | ------------------------------ |
 | Login endpoint | `login`, `auth`, `POST.*login` |
-| Caching layer | `cache`, `redis`, `memoize` |
-| Payment calls | `processPayment`, `payment` |
+| Caching layer  | `cache`, `redis`, `memoize`    |
+| Payment calls  | `processPayment`, `payment`    |
 
 ### Step 3: Search Before Reading
 
 **PowerShell:**
+
 ```powershell
 # Simple pattern search
 Select-String -Path "src/**/*.ts" -Pattern "login" -Recurse
@@ -56,6 +59,7 @@ rg "login" --type ts
 ```
 
 **Bash:**
+
 ```bash
 # With ripgrep (recommended)
 rg "login" --type ts
@@ -90,11 +94,11 @@ Get-Content "src/auth/login.ts" | Select-Object -Skip 49 -First 30
 
 When invoking this skill, provide:
 
-| Input | Description | Example |
-|-------|-------------|---------|
-| **Question** | What you're trying to find | "Where is user validation?" |
-| **Scope** | Directory or file pattern | `src/`, `*.service.ts` |
-| **Keywords** | Terms to search for | `validate`, `user`, `schema` |
+| Input        | Description                | Example                      |
+| ------------ | -------------------------- | ---------------------------- |
+| **Question** | What you're trying to find | "Where is user validation?"  |
+| **Scope**    | Directory or file pattern  | `src/`, `*.service.ts`       |
+| **Keywords** | Terms to search for        | `validate`, `user`, `schema` |
 
 ---
 
@@ -149,12 +153,12 @@ Search: "validateUserCredentials" → 3 results
 
 Track your efficiency:
 
-| Metric | Good | Poor |
-|--------|------|------|
-| Files searched | 10+ | <5 |
-| Files fully read | <3 | 10+ |
-| Lines read | <200 | 1000+ |
-| Targeted sections | Yes | No |
+| Metric            | Good | Poor  |
+| ----------------- | ---- | ----- |
+| Files searched    | 10+  | <5    |
+| Files fully read  | <3   | 10+   |
+| Lines read        | <200 | 1000+ |
+| Targeted sections | Yes  | No    |
 
 ---
 
@@ -181,4 +185,4 @@ This skill supports GSD's context management:
 
 ---
 
-*Part of GSD methodology. See PROJECT_RULES.md for search-first discipline rules.*
+_Part of GSD methodology. See PROJECT_RULES.md for search-first discipline rules._

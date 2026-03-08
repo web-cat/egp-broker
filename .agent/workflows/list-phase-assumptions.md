@@ -1,6 +1,6 @@
 ---
 description: List assumptions made during phase planning
-argument-hint: "<phase-number>"
+argument-hint: '<phase-number>'
 ---
 
 # /list-phase-assumptions Workflow
@@ -22,6 +22,7 @@ Get-ChildItem ".gsd/phases/{N}/*-PLAN.md"
 ## 2. Extract Assumptions
 
 Scan plans for:
+
 - Technology choices without justification
 - Implied dependencies
 - Expected behaviors not verified
@@ -32,13 +33,13 @@ Scan plans for:
 
 ## 3. Categorize Assumptions
 
-| Category | Risk Level |
-|----------|------------|
-| Technical | API exists, library works, syntax correct |
-| Integration | Services compatible, auth works |
-| Scope | Feature boundaries, what's excluded |
-| Performance | Will handle load, fast enough |
-| Timeline | Estimates accurate |
+| Category    | Risk Level                                |
+| ----------- | ----------------------------------------- |
+| Technical   | API exists, library works, syntax correct |
+| Integration | Services compatible, auth works           |
+| Scope       | Feature boundaries, what's excluded       |
+| Performance | Will handle load, fast enough             |
+| Timeline    | Estimates accurate                        |
 
 ---
 
@@ -75,6 +76,7 @@ SCOPE
 ## 5. Offer Validation
 
 Ask if user wants to:
+
 - Validate specific assumptions now
 - Add to TODO.md for later
 - Accept and proceed

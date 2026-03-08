@@ -1,6 +1,6 @@
 ---
 description: Create a new milestone with phases
-argument-hint: "<milestone-name>"
+argument-hint: '<milestone-name>'
 ---
 
 # /new-milestone Workflow
@@ -14,6 +14,7 @@ Define a new milestone with goal, phases, and success criteria.
 ## 1. Validate SPEC Exists
 
 **PowerShell:**
+
 ```powershell
 if (-not (Test-Path ".gsd/SPEC.md")) {
     Write-Error "SPEC.md required. Run /new-project first."
@@ -21,6 +22,7 @@ if (-not (Test-Path ".gsd/SPEC.md")) {
 ```
 
 **Bash:**
+
 ```bash
 if [ ! -f ".gsd/SPEC.md" ]; then
     echo "Error: SPEC.md required. Run /new-project first." >&2
@@ -32,6 +34,7 @@ fi
 ## 2. Gather Milestone Information
 
 Ask for:
+
 - **Name** — Milestone identifier (e.g., "v1.0", "MVP", "Beta")
 - **Goal** — What does this milestone achieve?
 - **Must-haves** — Non-negotiable deliverables
@@ -66,16 +69,19 @@ Ask user to confirm or modify.
 > **Goal**: {goal}
 
 ## Must-Haves
+
 - [ ] {must-have 1}
 - [ ] {must-have 2}
 
 ## Phases
 
 ### Phase 1: {name}
+
 **Status**: ⬜ Not Started
 **Objective**: {description}
 
 ### Phase 2: {name}
+
 **Status**: ⬜ Not Started
 **Objective**: {description}
 
@@ -88,6 +94,7 @@ Ask user to confirm or modify.
 
 ```markdown
 ## Current Position
+
 - **Milestone**: {name}
 - **Phase**: Not started
 - **Status**: Milestone planned

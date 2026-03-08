@@ -1,6 +1,6 @@
 ---
 description: Insert a phase between existing phases (renumbers subsequent)
-argument-hint: "<position> <phase-name>"
+argument-hint: '<position> <phase-name>'
 ---
 
 # /insert-phase Workflow
@@ -14,6 +14,7 @@ Insert a new phase at a specific position, renumbering all subsequent phases.
 ## 1. Parse Arguments
 
 Extract:
+
 - **Position** — Where to insert (e.g., 2 inserts before current Phase 2)
 - **Name** — Phase title
 
@@ -22,6 +23,7 @@ Extract:
 ## 2. Validate Position
 
 **PowerShell:**
+
 ```powershell
 $totalPhases = (Select-String -Path ".gsd/ROADMAP.md" -Pattern "### Phase \d+").Count
 if ($position -lt 1 -or $position -gt $totalPhases + 1) {
@@ -30,6 +32,7 @@ if ($position -lt 1 -or $position -gt $totalPhases + 1) {
 ```
 
 **Bash:**
+
 ```bash
 total_phases=$(grep -c "### Phase [0-9]" ".gsd/ROADMAP.md")
 if [ "$position" -lt 1 ] || [ "$position" -gt $((total_phases + 1)) ]; then
@@ -42,6 +45,7 @@ fi
 ## 3. Gather Phase Information
 
 Ask for:
+
 - **Objective** — What this phase achieves
 - **Dependencies** — What it needs from earlier phases
 
@@ -52,6 +56,7 @@ Ask for:
 For phases >= position, increment phase number by 1.
 
 **Also update:**
+
 - Phase directory names (`.gsd/phases/{N}/`)
 - References in PLAN.md files
 - Dependencies in ROADMAP.md

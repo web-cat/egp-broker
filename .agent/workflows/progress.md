@@ -13,6 +13,7 @@ Quick status check — where are we and what's next?
 ## 1. Load Current State
 
 Read:
+
 - `.gsd/STATE.md` — Current position
 - `.gsd/ROADMAP.md` — Phase statuses
 
@@ -21,6 +22,7 @@ Read:
 ## 2. Calculate Progress
 
 Count phases:
+
 - Total phases
 - Completed phases (✅)
 - In progress (🔄)
@@ -78,13 +80,13 @@ BLOCKERS
 
 Based on status, recommend:
 
-| State | Recommendation |
-|-------|----------------|
-| Phase in progress | `/execute {N}` to continue |
-| Phase done, not verified | `/verify {N}` |
-| Verification failed | `/execute {N} --gaps-only` |
-| All phases complete | Celebrate! 🎉 |
-| No phases started | `/plan 1` to begin |
-| SPEC not finalized | Complete SPEC.md first |
+| State                    | Recommendation             |
+| ------------------------ | -------------------------- |
+| Phase in progress        | `/execute {N}` to continue |
+| Phase done, not verified | `/verify {N}`              |
+| Verification failed      | `/execute {N} --gaps-only` |
+| All phases complete      | Celebrate! 🎉              |
+| No phases started        | `/plan 1` to begin         |
+| SPEC not finalized       | Complete SPEC.md first     |
 
 </process>

@@ -34,9 +34,9 @@ updated: [ISO timestamp]
 
 Decisions made that affect current work:
 
-| Decision | Choice | Made | Affects |
-|----------|--------|------|---------|
-| {what} | {choice} | {date} | {phases/plans} |
+| Decision | Choice   | Made   | Affects        |
+| -------- | -------- | ------ | -------------- |
+| {what}   | {choice} | {date} | {phases/plans} |
 
 ## Blockers
 
@@ -62,18 +62,21 @@ Things to watch but not blocking:
 ## Update Rules
 
 **Update STATE.md after:**
+
 - Every completed task
 - Every decision made
 - Any blocker identified
 - Session end/pause
 
 **What to update:**
+
 - `updated` timestamp
 - Current Position
 - Last Action
 - Next Steps
 
 **Keep it lean:**
+
 - STATE.md is read frequently
 - Only current context, not history
 - History goes in JOURNAL.md

@@ -47,10 +47,12 @@ Explicitly NOT part of this project:
 ## Users
 
 **Primary User:** {Who}
+
 - {How they'll use it}
 - {What they need}
 
 **Secondary User:** {Who} (if applicable)
+
 - {How they'll use it}
 
 ---
@@ -58,13 +60,16 @@ Explicitly NOT part of this project:
 ## Constraints
 
 ### Technical
+
 - {Technical constraint 1}
 - {Technical constraint 2}
 
 ### Timeline
+
 - {Timeline constraint}
 
 ### Other
+
 - {Budget, resources, etc.}
 
 ---
@@ -83,8 +88,8 @@ How we know the project is successful:
 
 Existing solutions or inspiration:
 
-| Solution | Pros | Cons | Relevance |
-|----------|------|------|-----------|
+| Solution   | Pros   | Cons   | Relevance        |
+| ---------- | ------ | ------ | ---------------- |
 | {solution} | {pros} | {cons} | {how it relates} |
 
 ---
@@ -102,9 +107,9 @@ Questions to resolve during planning:
 
 Key decisions made during specification:
 
-| Decision | Choice | Rationale | Date |
-|----------|--------|-----------|------|
-| {decision} | {choice} | {why} | {date} |
+| Decision   | Choice   | Rationale | Date   |
+| ---------- | -------- | --------- | ------ |
+| {decision} | {choice} | {why}     | {date} |
 ```
 
 ---

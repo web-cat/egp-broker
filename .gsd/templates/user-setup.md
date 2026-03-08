@@ -6,10 +6,10 @@ Template for user setup instructions when external services are needed.
 
 ## File Template
 
-```markdown
+````markdown
 ---
-phase: {N}
-plan: {M}
+phase: { N }
+plan: { M }
 type: user-setup
 ---
 
@@ -31,21 +31,26 @@ This plan requires manual setup that the AI cannot perform.
 **Why needed:** {Purpose in the project}
 
 **Create account:**
+
 - Go to: {URL}
 - Sign up with: {recommendations}
 
 **Get credentials:**
+
 1. Navigate to: {dashboard location}
 2. Find: {API keys section}
 3. Create: {what to create}
 
 **Add to project:**
+
 ```powershell
 # Add to .env.local
 {ENV_VAR}=your_key_here
 ```
+````
 
 **Verify:**
+
 ```powershell
 # Test the connection
 {verification command}
@@ -58,11 +63,13 @@ This plan requires manual setup that the AI cannot perform.
 **Why needed:** {Purpose}
 
 **Steps:**
+
 1. {Step 1}
 2. {Step 2}
 3. {Step 3}
 
 **Environment variables:**
+
 ```
 {VAR_1}=value
 {VAR_2}=value
@@ -74,9 +81,9 @@ This plan requires manual setup that the AI cannot perform.
 
 Some things require manual dashboard setup:
 
-| Service | Task | Location | Notes |
-|---------|------|----------|-------|
-| {service} | {task} | {where} | {notes} |
+| Service   | Task   | Location | Notes   |
+| --------- | ------ | -------- | ------- |
+| {service} | {task} | {where}  | {notes} |
 
 ---
 
@@ -94,6 +101,7 @@ Before continuing, verify:
 ## When Complete
 
 Type "done" or "setup complete" to continue with execution.
+
 ```
 
 ---
@@ -114,3 +122,4 @@ Type "done" or "setup complete" to continue with execution.
 - API calls (AI can do)
 
 **Keep minimal** — every manual step slows down execution.
+```

@@ -1,6 +1,6 @@
 ---
 description: The Auditor — Validate work against spec with empirical evidence
-argument-hint: "<phase-number>"
+argument-hint: '<phase-number>'
 ---
 
 # /verify Workflow
@@ -11,12 +11,13 @@ You are a GSD verifier. You validate implemented work against spec requirements 
 **Core principle:** No "trust me, it works." Every verification produces proof.
 
 **Core responsibilities:**
+
 - Extract testable deliverables from phase
 - Walk through each requirement
 - Collect empirical evidence (commands, screenshots)
 - Create verification report
 - Generate fix plans if issues found
-</role>
+  </role>
 
 <objective>
 Confirm that implemented work meets spec requirements with documented proof.
@@ -28,16 +29,18 @@ The verifier checks the CODEBASE, not SUMMARY claims.
 **Phase:** $ARGUMENTS (required — phase number to verify)
 
 **Required files:**
+
 - `.gsd/SPEC.md` — Original requirements
 - `.gsd/ROADMAP.md` — Phase definition with must-haves
 - `.gsd/phases/{phase}/*-SUMMARY.md` — What was implemented
-</context>
+  </context>
 
 <process>
 
 ## 1. Load Verification Context
 
 Read:
+
 - Phase definition from `.gsd/ROADMAP.md`
 - Original requirements from `.gsd/SPEC.md`
 - All SUMMARY.md files from `.gsd/phases/{phase}/`
@@ -50,6 +53,7 @@ From the phase definition, identify **must-haves** — requirements that MUST be
 
 ```markdown
 ### Must-Haves for Phase {N}
+
 1. {Requirement 1} — How to verify
 2. {Requirement 2} — How to verify
 3. {Requirement 3} — How to verify
@@ -63,20 +67,21 @@ For each must-have:
 
 ### 3a. Determine Verification Method
 
-| Type | Method | Evidence |
-|------|--------|----------|
-| API/Backend | Run curl or test command | Command output |
-| UI | Use browser tool | Screenshot |
-| Build | Run build command | Success output |
-| Tests | Run test suite | Test results |
-| File exists | Check filesystem | File listing |
-| Code behavior | Run specific scenario | Output |
+| Type          | Method                   | Evidence       |
+| ------------- | ------------------------ | -------------- |
+| API/Backend   | Run curl or test command | Command output |
+| UI            | Use browser tool         | Screenshot     |
+| Build         | Run build command        | Success output |
+| Tests         | Run test suite           | Test results   |
+| File exists   | Check filesystem         | File listing   |
+| Code behavior | Run specific scenario    | Output         |
 
 ### 3b. Execute Verification
 
 Run the verification command/action.
 
 // turbo
+
 ```bash
 # Example: Run tests
 npm test
@@ -85,6 +90,7 @@ npm test
 ### 3c. Record Evidence
 
 For each must-have, record:
+
 - **Status:** PASS / FAIL
 - **Evidence:** Command output, screenshot path, etc.
 - **Notes:** Any observations
@@ -97,23 +103,27 @@ Write `.gsd/phases/{phase}/VERIFICATION.md`:
 
 ```markdown
 ---
-phase: {N}
-verified_at: {timestamp}
+phase: { N }
+verified_at: { timestamp }
 verdict: PASS | FAIL | PARTIAL
 ---
 
 # Phase {N} Verification Report
 
 ## Summary
+
 {X}/{Y} must-haves verified
 
 ## Must-Haves
 
 ### ✅ {Must-have 1}
+
 **Status:** PASS
-**Evidence:** 
+**Evidence:**
 ```
+
 {command output or description}
+
 ```
 
 ### ❌ {Must-have 2}
@@ -136,13 +146,16 @@ verdict: PASS | FAIL | PARTIAL
 ### If PASS (all must-haves verified):
 
 Update `.gsd/STATE.md`:
+
 ```markdown
 ## Current Position
+
 - **Phase**: {N} (verified)
 - **Status**: ✅ Complete and verified
 ```
 
 Output:
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► PHASE {N} VERIFIED ✓
@@ -169,7 +182,7 @@ For each failed must-have, create a fix plan in `.gsd/phases/{phase}/`:
 
 ```markdown
 ---
-phase: {N}
+phase: { N }
 plan: fix-{issue}
 wave: 1
 gap_closure: true
@@ -178,6 +191,7 @@ gap_closure: true
 # Fix Plan: {Issue Name}
 
 ## Problem
+
 {What failed and why}
 
 ## Tasks
@@ -192,6 +206,7 @@ gap_closure: true
 ```
 
 Output:
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► PHASE {N} GAPS FOUND ⚠
@@ -227,6 +242,7 @@ git commit -m "docs(phase-{N}): verification report"
 ## Forbidden Phrases
 
 Never accept these as verification:
+
 - "This should work"
 - "The code looks correct"
 - "I've made similar changes before"
@@ -235,13 +251,13 @@ Never accept these as verification:
 
 ## Required Evidence
 
-| Claim | Required Proof |
-|-------|----------------|
-| "Tests pass" | Actual test output |
-| "API works" | Curl command + response |
-| "UI renders" | Screenshot |
-| "Build succeeds" | Build output |
-| "File created" | `ls` or `dir` output |
+| Claim            | Required Proof          |
+| ---------------- | ----------------------- |
+| "Tests pass"     | Actual test output      |
+| "API works"      | Curl command + response |
+| "UI renders"     | Screenshot              |
+| "Build succeeds" | Build output            |
+| "File created"   | `ls` or `dir` output    |
 
 </evidence_requirements>
 
@@ -249,15 +265,18 @@ Never accept these as verification:
 ## Related
 
 ### Workflows
-| Command | Relationship |
-|---------|--------------|
-| `/execute` | Run before /verify to implement work |
-| `/execute --gaps-only` | Fix issues found by /verify |
-| `/debug` | Diagnose verification failures |
+
+| Command                | Relationship                         |
+| ---------------------- | ------------------------------------ |
+| `/execute`             | Run before /verify to implement work |
+| `/execute --gaps-only` | Fix issues found by /verify          |
+| `/debug`               | Diagnose verification failures       |
 
 ### Skills
-| Skill | Purpose |
-|-------|---------|
-| `verifier` | Detailed verification methodology |
-| `empirical-validation` | Evidence requirements |
+
+| Skill                  | Purpose                           |
+| ---------------------- | --------------------------------- |
+| `verifier`             | Detailed verification methodology |
+| `empirical-validation` | Evidence requirements             |
+
 </related>

@@ -127,6 +127,9 @@ model LtiIdentity {
   platformId     String
   ltiSub         String // sub claim (unique user id in the platform)
   platformUserId String? // Optional platform-specific numeric ID (e.g. from Canvas legacy_user_id claim)
+  /// ⚠️ SECURITY RISK: Stored as plain text. If the database is compromised, all
+  /// user API keys are exposed. Future work: encrypt at the application layer
+  /// using an AES key stored in a secrets manager (e.g. NUXT_PLATFORM_API_KEY_SECRET).
   platformApiKey String? // Optional API key for this user on the platform
 
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -271,6 +274,7 @@ model Assignment {
   updatedAt DateTime @updatedAt
 
   @@unique([courseId, resourceLinkId])
+  @@index([courseId, canvasAssignmentId])
 }
 
 enum PassCoolDownUnit {

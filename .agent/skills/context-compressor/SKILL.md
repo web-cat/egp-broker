@@ -20,15 +20,17 @@ You are a context compression specialist. Your job is to maintain rich understan
 **When:** You've fully understood a file and may need to reference it later.
 
 **How:**
+
 ```markdown
 ## File Summary: src/auth/login.ts
 
 **Purpose:** Handles user login via email/password
 **Key functions:**
+
 - handleLogin(req, res) → Validates credentials, returns JWT
 - validateCredentials(email, password) → Checks against DB
-**Dependencies:** bcrypt, jose, database
-**Tokens saved:** ~400 (95 lines not reloaded)
+  **Dependencies:** bcrypt, jose, database
+  **Tokens saved:** ~400 (95 lines not reloaded)
 ```
 
 **Use instead of:** Re-reading the full file
@@ -40,6 +42,7 @@ You are a context compression specialist. Your job is to maintain rich understan
 **When:** You need to understand a file's structure but not implementation details.
 
 **How:**
+
 ```markdown
 ## Outline: src/services/payment.ts (127 lines)
 
@@ -61,14 +64,17 @@ You are a context compression specialist. Your job is to maintain rich understan
 **When:** You've already seen a file and need to understand changes.
 
 **How:**
+
 ```markdown
 ## Changes to: src/config.ts
 
 Added:
+
 - L45: TOKEN_BUDGET_THRESHOLD = 0.5
 - L46: COMPRESSION_ENABLED = true
 
 Modified:
+
 - L12: MAX_CONTEXT → increased from 100000 to 150000
 ```
 
@@ -81,14 +87,15 @@ Modified:
 **When:** You need to track a file without loading it.
 
 **How:**
+
 ```markdown
 ## References
 
-| File | Last Seen | Summary | Load If |
-|------|-----------|---------|---------|
-| auth.ts | Task 2 | Login handling | Auth bugs |
-| db.ts | Task 1 | Postgres client | DB errors |
-| utils.ts | Never | Utility funcs | Helper needed |
+| File     | Last Seen | Summary         | Load If       |
+| -------- | --------- | --------------- | ------------- |
+| auth.ts  | Task 2    | Login handling  | Auth bugs     |
+| db.ts    | Task 1    | Postgres client | DB errors     |
+| utils.ts | Never     | Utility funcs   | Helper needed |
 ```
 
 **Cost:** ~10 tokens vs ~200+ per file
@@ -100,6 +107,7 @@ Modified:
 **When:** Unsure how much detail is needed.
 
 **Process:**
+
 1. Start with outline (Level 1)
 2. If insufficient, load key functions (Level 2)
 3. If still stuck, load related code (Level 3)
@@ -118,13 +126,13 @@ L4: Full → Only for complex debugging
 
 ### Automatic Compression Points
 
-| Trigger | Action |
-|---------|--------|
-| After understanding a file | Create summary |
-| Switching tasks | Compress previous context |
-| Budget at 50% | Aggressive outline mode |
-| Budget at 70% | Summary-only mode |
-| End of wave | Full compression pass |
+| Trigger                    | Action                    |
+| -------------------------- | ------------------------- |
+| After understanding a file | Create summary            |
+| Switching tasks            | Compress previous context |
+| Budget at 50%              | Aggressive outline mode   |
+| Budget at 70%              | Summary-only mode         |
+| End of wave                | Full compression pass     |
 
 ---
 
@@ -139,10 +147,10 @@ When you need details from compressed context:
 ```markdown
 ## Decompression Log
 
-| File | Reason | Level | Tokens |
-|------|--------|-------|--------|
-| auth.ts | Debug login | L2 (func) | +150 |
-| db.ts | Check query | L3 (snippet) | +50 |
+| File    | Reason      | Level        | Tokens |
+| ------- | ----------- | ------------ | ------ |
+| auth.ts | Debug login | L2 (func)    | +150   |
+| db.ts   | Check query | L3 (snippet) | +50    |
 ```
 
 ---
@@ -153,6 +161,7 @@ When you need details from compressed context:
 
 ```markdown
 ## 📦 [filename]
+
 **Purpose:** [one line]
 **Key exports:** [list]
 **Dependencies:** [list]
@@ -164,6 +173,7 @@ When you need details from compressed context:
 
 ```markdown
 ## 📋 [filename] (N lines)
+
 - L[start]-[end]: [section name]
   - L[n]: [key item]
   - L[n]: [key item]
@@ -173,6 +183,7 @@ When you need details from compressed context:
 
 ```markdown
 ## Δ [filename]
+
 **+** [additions]
 **-** [removals]
 **~** [modifications]
@@ -183,6 +194,7 @@ When you need details from compressed context:
 ## Integration
 
 Works with:
+
 - `token-budget` — Triggers compression at thresholds
 - `context-fetch` — Provides input for compression
 - `context-health-monitor` — Monitors compression effectiveness
@@ -198,4 +210,4 @@ Works with:
 
 ---
 
-*Part of GSD v1.6 Token Optimization. See docs/token-optimization-guide.md for examples.*
+_Part of GSD v1.6 Token Optimization. See docs/token-optimization-guide.md for examples._

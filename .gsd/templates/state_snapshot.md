@@ -7,6 +7,7 @@ Template for wave summaries and session state captures.
 ## When to Use
 
 Create a state snapshot:
+
 - After completing each wave
 - Before pausing work
 - After 3 debugging failures
@@ -19,10 +20,10 @@ Create a state snapshot:
 
 ```markdown
 ---
-wave: {N}
-phase: {phase number}
-created: {ISO timestamp}
-status: {complete | partial | blocked}
+wave: { N }
+phase: { phase number }
+created: { ISO timestamp }
+status: { complete | partial | blocked }
 ---
 
 # Wave {N} State Snapshot
@@ -39,24 +40,24 @@ status: {complete | partial | blocked}
 
 ## Files Touched
 
-| File | Change Type | Description |
-|------|-------------|-------------|
-| {path/to/file1} | created | {brief description} |
-| {path/to/file2} | modified | {brief description} |
-| {path/to/file3} | deleted | {brief description} |
+| File            | Change Type | Description         |
+| --------------- | ----------- | ------------------- |
+| {path/to/file1} | created     | {brief description} |
+| {path/to/file2} | modified    | {brief description} |
+| {path/to/file3} | deleted     | {brief description} |
 
 ## Verification Results
 
-| Check | Command | Result |
-|-------|---------|--------|
-| {Test 1} | `{command}` | ✅ Passed |
-| {Test 2} | `{command}` | ✅ Passed |
+| Check    | Command     | Result              |
+| -------- | ----------- | ------------------- |
+| {Test 1} | `{command}` | ✅ Passed           |
+| {Test 2} | `{command}` | ✅ Passed           |
 | {Test 3} | `{command}` | ❌ Failed: {reason} |
 
 ## Commits in This Wave
 
-| Hash | Message |
-|------|---------|
+| Hash     | Message            |
+| -------- | ------------------ |
 | {abc123} | {commit message 1} |
 | {def456} | {commit message 2} |
 
@@ -79,12 +80,12 @@ status: {complete | partial | blocked}
 
 ## Token Usage (Optional)
 
-| Metric | Value |
-|--------|-------|
-| Files loaded | {count} |
-| Est. tokens | {number} |
-| Budget used | {percentage}% |
-| Compression | {yes/no} |
+| Metric       | Value         |
+| ------------ | ------------- |
+| Files loaded | {count}       |
+| Est. tokens  | {number}      |
+| Budget used  | {percentage}% |
+| Compression  | {yes/no}      |
 
 {Notes on token efficiency for this wave}
 ```
@@ -102,6 +103,7 @@ For quick state dumps during debugging:
 **Problem:** {what you're debugging}
 
 **Tried:**
+
 1. {approach 1} → {result}
 2. {approach 2} → {result}
 3. {approach 3} → {result}
@@ -109,6 +111,7 @@ For quick state dumps during debugging:
 **Current Hypothesis:** {theory}
 
 **Files Involved:**
+
 - {file1}
 - {file2}
 
@@ -129,4 +132,4 @@ STATE.md is current state; snapshots are historical records.
 
 ---
 
-*Part of GSD methodology. See PROJECT_RULES.md for wave execution rules.*
+_Part of GSD methodology. See PROJECT_RULES.md for wave execution rules._

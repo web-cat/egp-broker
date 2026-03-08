@@ -1,6 +1,6 @@
 ---
 description: Add a new phase to the end of the roadmap
-argument-hint: "<phase-name>"
+argument-hint: '<phase-name>'
 ---
 
 # /add-phase Workflow
@@ -34,6 +34,7 @@ $nextPhase = $phases.Count + 1
 ## 3. Gather Phase Information
 
 Ask for:
+
 - **Name** — Phase title
 - **Objective** — What this phase achieves
 - **Depends on** — Previous phases (usually N-1)
@@ -43,18 +44,22 @@ Ask for:
 ## 4. Add to ROADMAP.md
 
 Append:
+
 ```markdown
 ---
 
 ### Phase {N}: {name}
+
 **Status**: ⬜ Not Started
 **Objective**: {objective}
 **Depends on**: Phase {N-1}
 
 **Tasks**:
+
 - [ ] TBD (run /plan {N} to create)
 
 **Verification**:
+
 - TBD
 ```
 

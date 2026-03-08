@@ -6,12 +6,12 @@
 
 ## Why Token Optimization Matters
 
-| Issue | Impact |
-|-------|--------|
-| Excessive file loading | Higher costs, slower responses |
-| Context accumulation | Quality degradation after 50% |
-| Re-reading files | Wasted tokens on understood content |
-| Full files when snippets suffice | 10x token usage |
+| Issue                            | Impact                              |
+| -------------------------------- | ----------------------------------- |
+| Excessive file loading           | Higher costs, slower responses      |
+| Context accumulation             | Quality degradation after 50%       |
+| Re-reading files                 | Wasted tokens on understood content |
+| Full files when snippets suffice | 10x token usage                     |
 
 **Goal:** Maximize output quality per token spent.
 
@@ -37,21 +37,21 @@
 
 ### By Content Type
 
-| Type | Tokens/Line | 100 Lines = |
-|------|-------------|-------------|
-| Dense code | 6 | ~600 tokens |
-| Standard code | 4 | ~400 tokens |
-| Markdown | 3 | ~300 tokens |
-| Sparse YAML | 2 | ~200 tokens |
+| Type          | Tokens/Line | 100 Lines = |
+| ------------- | ----------- | ----------- |
+| Dense code    | 6           | ~600 tokens |
+| Standard code | 4           | ~400 tokens |
+| Markdown      | 3           | ~300 tokens |
+| Sparse YAML   | 2           | ~200 tokens |
 
 ### By File Size
 
-| File Lines | Strategy |
-|------------|----------|
-| <50 | Load freely |
-| 50-200 | Outline first |
-| 200-500 | Search + snippets |
-| 500+ | Never load fully |
+| File Lines | Strategy          |
+| ---------- | ----------------- |
+| <50        | Load freely       |
+| 50-200     | Outline first     |
+| 200-500    | Search + snippets |
+| 500+       | Never load fully  |
 
 ---
 
@@ -178,13 +178,13 @@ GOOD:
 
 ## Integration with GSD
 
-| GSD Workflow | Token Optimization |
-|--------------|-------------------|
-| `/map` | Generate outline, not full read |
-| `/plan` | Budget estimate per task |
-| `/execute` | Load minimal per task |
-| `/verify` | Targeted evidence only |
-| `/pause` | Compress and dump state |
+| GSD Workflow | Token Optimization              |
+| ------------ | ------------------------------- |
+| `/map`       | Generate outline, not full read |
+| `/plan`      | Budget estimate per task        |
+| `/execute`   | Load minimal per task           |
+| `/verify`    | Targeted evidence only          |
+| `/pause`     | Compress and dump state         |
 
 ---
 
@@ -192,16 +192,17 @@ GOOD:
 
 Track these for improvement:
 
-| Metric | Good | Poor |
-|--------|------|------|
-| Files fully loaded | <3 per wave | 10+ |
-| Search:Load ratio | 3:1 | 1:3 |
-| Re-reads | 0 | 3+ |
-| Budget at wave end | <50% | >70% |
+| Metric             | Good        | Poor |
+| ------------------ | ----------- | ---- |
+| Files fully loaded | <3 per wave | 10+  |
+| Search:Load ratio  | 3:1         | 1:3  |
+| Re-reads           | 0           | 3+   |
+| Budget at wave end | <50%        | >70% |
 
 ---
 
-*See also:*
-- *[.agent/skills/token-budget/SKILL.md](.agent/skills/token-budget/SKILL.md)*
-- *[.agent/skills/context-compressor/SKILL.md](.agent/skills/context-compressor/SKILL.md)*
-- *[PROJECT_RULES.md](PROJECT_RULES.md) — Token Efficiency Rules*
+_See also:_
+
+- _[.agent/skills/token-budget/SKILL.md](.agent/skills/token-budget/SKILL.md)_
+- _[.agent/skills/context-compressor/SKILL.md](.agent/skills/context-compressor/SKILL.md)_
+- _[PROJECT_RULES.md](PROJECT_RULES.md) — Token Efficiency Rules_

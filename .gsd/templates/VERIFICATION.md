@@ -4,11 +4,11 @@
 
 ```markdown
 ---
-phase: {N}
-verified_at: {YYYY-MM-DD HH:MM}
+phase: { N }
+verified_at: { YYYY-MM-DD HH:MM }
 verdict: PASS | FAIL | PARTIAL
-pass_count: {X}
-total_count: {Y}
+pass_count: { X }
+total_count: { Y }
 ---
 
 # Phase {N} Verification Report
@@ -21,11 +21,14 @@ total_count: {Y}
 ## Must-Haves
 
 ### ✅ 1. {Must-have description}
+
 **Status:** PASS
 **Method:** {How this was verified}
 **Evidence:**
 ```
+
 {Actual command output or screenshot reference}
+
 ```
 
 ### ❌ 2. {Must-have description}
@@ -35,7 +38,9 @@ total_count: {Y}
 **Actual:** {What actually happened}
 **Evidence:**
 ```
+
 {Actual command output}
+
 ```
 **Gap:** {What needs to be fixed}
 
@@ -61,10 +66,10 @@ total_count: {Y}
 
 ## Evidence Types
 
-| Verification | Evidence Required |
-|--------------|-------------------|
+| Verification | Evidence Required       |
+| ------------ | ----------------------- |
 | API endpoint | curl command + response |
-| UI behavior | Screenshot |
-| Test suite | Test output |
-| File exists | `ls` or `dir` output |
-| Build passes | Build command output |
+| UI behavior  | Screenshot              |
+| Test suite   | Test output             |
+| File exists  | `ls` or `dir` output    |
+| Build passes | Build command output    |

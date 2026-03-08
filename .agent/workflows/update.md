@@ -13,15 +13,17 @@ Update GSD for Antigravity to the latest version from GitHub.
 ## 1. Check Current Version
 
 **PowerShell:**
+
 ```powershell
 if (Test-Path "CHANGELOG.md") {
-    $version = Select-String -Path "CHANGELOG.md" -Pattern "## \[(\d+\.\d+\.\d+)\]" | 
+    $version = Select-String -Path "CHANGELOG.md" -Pattern "## \[(\d+\.\d+\.\d+)\]" |
         Select-Object -First 1
     Write-Output "Current version: $($version.Matches.Groups[1].Value)"
 }
 ```
 
 **Bash:**
+
 ```bash
 if [ -f "CHANGELOG.md" ]; then
     version=$(grep -oP '## \[\K[0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | head -1)
@@ -43,20 +45,23 @@ git clone --depth 1 https://github.com/toonight/get-shit-done-for-antigravity.gi
 ## 3. Compare Versions
 
 **PowerShell:**
+
 ```powershell
-$remoteVersion = Select-String -Path ".gsd-update-temp/CHANGELOG.md" -Pattern "## \[(\d+\.\d+\.\d+)\]" | 
+$remoteVersion = Select-String -Path ".gsd-update-temp/CHANGELOG.md" -Pattern "## \[(\d+\.\d+\.\d+)\]" |
     Select-Object -First 1
 
 Write-Output "Remote version: $($remoteVersion.Matches.Groups[1].Value)"
 ```
 
 **Bash:**
+
 ```bash
 remote_version=$(grep -oP '## \[\K[0-9]+\.[0-9]+\.[0-9]+' .gsd-update-temp/CHANGELOG.md | head -1)
 echo "Remote version: $remote_version"
 ```
 
 **If same version:**
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► ALREADY UP TO DATE ✓
@@ -68,6 +73,7 @@ No updates available.
 
 ───────────────────────────────────────────────────────
 ```
+
 Exit after cleanup.
 
 ---
@@ -101,6 +107,7 @@ B) No — Cancel
 **If user confirms:**
 
 **PowerShell:**
+
 ```powershell
 # Backup current
 Copy-Item -Recurse ".agent" ".agent.backup"
@@ -120,6 +127,7 @@ Copy-Item -Force ".gsd-update-temp/VERSION" "./"
 ```
 
 **Bash:**
+
 ```bash
 # Backup current
 cp -r .agent .agent.backup
@@ -143,6 +151,7 @@ cp .gsd-update-temp/VERSION ./
 ## 6. Cleanup
 
 **PowerShell:**
+
 ```powershell
 Remove-Item -Recurse -Force ".gsd-update-temp"
 Remove-Item -Recurse -Force ".agent.backup"
@@ -150,6 +159,7 @@ Remove-Item -Recurse -Force ".gsd/templates.backup"
 ```
 
 **Bash:**
+
 ```bash
 rm -rf .gsd-update-temp
 rm -rf .agent.backup
@@ -178,6 +188,7 @@ Updated to version {remote-version}
 
 <preserved_files>
 These user files are NEVER overwritten:
+
 - .gsd/SPEC.md
 - .gsd/ROADMAP.md
 - .gsd/STATE.md
@@ -186,6 +197,6 @@ These user files are NEVER overwritten:
 - .gsd/DECISIONS.md
 - .gsd/JOURNAL.md
 - .gsd/TODO.md
-- .gsd/phases/*
+- .gsd/phases/\*
 - .gemini/GEMINI.md
-</preserved_files>
+  </preserved_files>

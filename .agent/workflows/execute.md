@@ -1,6 +1,6 @@
 ---
 description: The Engineer — Execute a specific phase with focused context
-argument-hint: "<phase-number> [--gaps-only]"
+argument-hint: '<phase-number> [--gaps-only]'
 ---
 
 # /execute Workflow
@@ -9,12 +9,13 @@ argument-hint: "<phase-number> [--gaps-only]"
 You are a GSD executor orchestrator. You manage wave-based parallel execution of phase plans.
 
 **Core responsibilities:**
+
 - Validate phase exists and has plans
 - Discover and group plans by execution wave
 - Spawn focused execution for each plan
 - Verify phase goal after all plans complete
 - Update roadmap and state on completion
-</role>
+  </role>
 
 <objective>
 Execute all plans in a phase using wave-based parallel execution.
@@ -28,25 +29,29 @@ Orchestrator stays lean: discover plans, analyze dependencies, group into waves,
 **Phase:** $ARGUMENTS (required - phase number to execute)
 
 **Flags:**
+
 - `--gaps-only` — Execute only gap closure plans (created by `/verify` when issues found)
 
 **Required files:**
+
 - `.gsd/ROADMAP.md` — Phase definitions
 - `.gsd/STATE.md` — Current position
 - `.gsd/phases/{phase}/` — Phase directory with PLAN.md files
-</context>
+  </context>
 
 <process>
 
 ## 1. Validate Environment
 
 **PowerShell:**
+
 ```powershell
 Test-Path ".gsd/ROADMAP.md"
 Test-Path ".gsd/STATE.md"
 ```
 
 **Bash:**
+
 ```bash
 test -f ".gsd/ROADMAP.md"
 test -f ".gsd/STATE.md"
@@ -59,12 +64,14 @@ test -f ".gsd/STATE.md"
 ## 2. Validate Phase Exists
 
 **PowerShell:**
+
 ```powershell
 # Check phase exists in roadmap
 Select-String -Path ".gsd/ROADMAP.md" -Pattern "Phase $PHASE:"
 ```
 
 **Bash:**
+
 ```bash
 # Check phase exists in roadmap
 grep "Phase $PHASE:" ".gsd/ROADMAP.md"
@@ -77,6 +84,7 @@ grep "Phase $PHASE:" ".gsd/ROADMAP.md"
 ## 3. Ensure Phase Directory Exists
 
 **PowerShell:**
+
 ```powershell
 $PHASE_DIR = ".gsd/phases/$PHASE"
 if (-not (Test-Path $PHASE_DIR)) {
@@ -85,6 +93,7 @@ if (-not (Test-Path $PHASE_DIR)) {
 ```
 
 **Bash:**
+
 ```bash
 PHASE_DIR=".gsd/phases/$PHASE"
 mkdir -p "$PHASE_DIR"
@@ -95,11 +104,13 @@ mkdir -p "$PHASE_DIR"
 ## 4. Discover Plans
 
 **PowerShell:**
+
 ```powershell
 Get-ChildItem "$PHASE_DIR/*-PLAN.md"
 ```
 
 **Bash:**
+
 ```bash
 ls "$PHASE_DIR"/*-PLAN.md 2>/dev/null
 ```
@@ -107,11 +118,13 @@ ls "$PHASE_DIR"/*-PLAN.md 2>/dev/null
 **Check for existing summaries** (completed plans):
 
 **PowerShell:**
+
 ```powershell
 Get-ChildItem "$PHASE_DIR/*-SUMMARY.md"
 ```
 
 **Bash:**
+
 ```bash
 ls "$PHASE_DIR"/*-SUMMARY.md 2>/dev/null
 ```
@@ -139,6 +152,7 @@ wave: 1
 **Group plans by wave number.** Lower waves execute first.
 
 Display wave structure:
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► EXECUTING PHASE {N}
@@ -157,6 +171,7 @@ Wave 2: {plan-3}
 For each wave in order:
 
 ### 6a. Execute Plans in Wave
+
 For each plan in the current wave:
 
 1. **Load plan context** — Read only the PLAN.md file
@@ -170,9 +185,11 @@ For each plan in the current wave:
 5. **Create SUMMARY.md** — Document what was done
 
 ### 6b. Verify Wave Complete
+
 Check all plans in wave have SUMMARY.md files.
 
 ### 6c. Proceed to Next Wave
+
 Only after current wave fully completes.
 
 ---
@@ -186,10 +203,12 @@ After all waves complete:
 3. **Run verification commands** specified in phase
 
 **Create VERIFICATION.md:**
+
 ```markdown
 ## Phase {N} Verification
 
 ### Must-Haves
+
 - [x] Must-have 1 — VERIFIED (evidence: ...)
 - [ ] Must-have 2 — FAILED (reason: ...)
 
@@ -197,6 +216,7 @@ After all waves complete:
 ```
 
 **Route by verdict:**
+
 - `PASS` → Continue to step 8
 - `FAIL` → Create gap closure plans, offer `/execute {N} --gaps-only`
 
@@ -205,22 +225,28 @@ After all waves complete:
 ## 8. Update Roadmap and State
 
 **Update ROADMAP.md:**
+
 ```markdown
 ### Phase {N}: {Name}
+
 **Status**: ✅ Complete
 ```
 
 **Update STATE.md:**
+
 ```markdown
 ## Current Position
+
 - **Phase**: {N} (completed)
 - **Task**: All tasks complete
 - **Status**: Verified
 
 ## Last Session Summary
+
 Phase {N} executed successfully. {X} plans, {Y} tasks completed.
 
 ## Next Steps
+
 1. Proceed to Phase {N+1}
 ```
 
@@ -289,30 +315,35 @@ Gap closure plans created.
 
 ───────────────────────────────────────────────────────
 ```
+
 </offer_next>
 
 <context_hygiene>
 **After 3 failed debugging attempts:**
+
 1. Stop current approach
 2. Document to `.gsd/STATE.md` what was tried
 3. Recommend `/pause` for fresh session
-</context_hygiene>
+   </context_hygiene>
 
 <related>
 ## Related
 
 ### Workflows
-| Command | Relationship |
-|---------|--------------|
-| `/plan` | Creates PLAN.md files that /execute runs |
-| `/verify` | Validates work after /execute completes |
-| `/debug` | Use when tasks fail verification |
-| `/pause` | Use after 3 debugging failures |
+
+| Command   | Relationship                             |
+| --------- | ---------------------------------------- |
+| `/plan`   | Creates PLAN.md files that /execute runs |
+| `/verify` | Validates work after /execute completes  |
+| `/debug`  | Use when tasks fail verification         |
+| `/pause`  | Use after 3 debugging failures           |
 
 ### Skills
-| Skill | Purpose |
-|-------|---------|
-| `executor` | Detailed execution protocol |
-| `context-health-monitor` | 3-strike rule enforcement |
-| `empirical-validation` | Verification requirements |
+
+| Skill                    | Purpose                     |
+| ------------------------ | --------------------------- |
+| `executor`               | Detailed execution protocol |
+| `context-health-monitor` | 3-strike rule enforcement   |
+| `empirical-validation`   | Verification requirements   |
+
 </related>

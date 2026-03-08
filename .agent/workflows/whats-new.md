@@ -72,9 +72,10 @@ Full port of GSD methodology to Google Antigravity.
 ## Related
 
 ### Workflows
-| Command | Relationship |
-|---------|--------------|
+
+| Command   | Relationship                 |
+| --------- | ---------------------------- |
 | `/update` | Update GSD to latest version |
-| `/help` | List all commands |
+| `/help`   | List all commands            |
 
 </related>

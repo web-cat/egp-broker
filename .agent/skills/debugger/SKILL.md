@@ -18,12 +18,14 @@ Your job: Find the root cause, not just make symptoms disappear.
 ### User = Reporter, AI = Investigator
 
 **User knows:**
+
 - What they expected to happen
 - What actually happened
 - Error messages they saw
 - When it started / if it ever worked
 
 **User does NOT know (don't ask):**
+
 - What's causing the bug
 - Which file has the problem
 - What the fix should be
@@ -35,11 +37,13 @@ Ask about experience. Investigate the cause yourself.
 When debugging code you wrote, you're fighting your own mental model.
 
 **Why this is harder:**
+
 - You made the design decisions — they feel obviously correct
 - You remember intent, not what you actually implemented
 - Familiarity breeds blindness to bugs
 
 **The discipline:**
+
 1. **Treat your code as foreign** — Read it as if someone else wrote it
 2. **Question your design decisions** — Your implementations are hypotheses
 3. **Admit your mental model might be wrong** — Code behavior is truth
@@ -57,12 +61,12 @@ When debugging code you wrote, you're fighting your own mental model.
 
 ## Cognitive Biases to Avoid
 
-| Bias | Trap | Antidote |
-|------|------|----------|
-| **Confirmation** | Only look for supporting evidence | Actively seek disconfirming evidence |
-| **Anchoring** | First explanation becomes anchor | Generate 3+ hypotheses before investigating |
-| **Availability** | Recent bugs → assume similar cause | Treat each bug as novel |
-| **Sunk Cost** | Spent 2 hours, keep going | Every 30 min: "Would I still take this path?" |
+| Bias             | Trap                               | Antidote                                      |
+| ---------------- | ---------------------------------- | --------------------------------------------- |
+| **Confirmation** | Only look for supporting evidence  | Actively seek disconfirming evidence          |
+| **Anchoring**    | First explanation becomes anchor   | Generate 3+ hypotheses before investigating   |
+| **Availability** | Recent bugs → assume similar cause | Treat each bug as novel                       |
+| **Sunk Cost**    | Spent 2 hours, keep going          | Every 30 min: "Would I still take this path?" |
 
 ---
 
@@ -79,6 +83,7 @@ When debugging code you wrote, you're fighting your own mental model.
 ## When to Restart
 
 Consider starting over when:
+
 1. **2+ hours with no progress** — Tunnel-visioned
 2. **3+ "fixes" that didn't work** — Mental model is wrong
 3. **You can't explain current behavior** — Don't add changes on top
@@ -86,6 +91,7 @@ Consider starting over when:
 5. **Fix works but you don't know why** — This is luck, not a fix
 
 **Restart protocol:**
+
 1. Close all files and terminals
 2. Write down what you know for certain
 3. Write down what you've ruled out
@@ -101,10 +107,12 @@ Consider starting over when:
 A good hypothesis can be proven wrong.
 
 **Bad (unfalsifiable):**
+
 - "Something is wrong with the state"
 - "The timing is off"
 
 **Good (falsifiable):**
+
 - "User state is reset because component remounts on route change"
 - "API call completes after unmount, causing state update on unmounted component"
 
@@ -120,9 +128,11 @@ A good hypothesis can be proven wrong.
 ## Debugging Techniques
 
 ### Rubber Duck Debugging
+
 **When:** Stuck, confused, mental model doesn't match reality.
 
 Write or say:
+
 1. "The system should do X"
 2. "Instead it does Y"
 3. "I think this is because Z"
@@ -133,6 +143,7 @@ Write or say:
 Often you'll spot the bug mid-explanation.
 
 ### Minimal Reproduction
+
 **When:** Complex system, many moving parts.
 
 1. Copy failing code to new file
@@ -142,6 +153,7 @@ Often you'll spot the bug mid-explanation.
 5. Bug is now obvious in stripped-down code
 
 ### Working Backwards
+
 **When:** You know correct output, don't know why you're not getting it.
 
 1. Define desired output precisely
@@ -152,6 +164,7 @@ Often you'll spot the bug mid-explanation.
 4. Repeat backwards through call stack
 
 ### Differential Debugging
+
 **When:** Something used to work and now doesn't.
 
 **Time-based:** What changed in code? Environment? Data? Config?
@@ -159,6 +172,7 @@ Often you'll spot the bug mid-explanation.
 **Environment-based:** Config values? Env vars? Network? Data volume?
 
 ### Binary Search / Divide and Conquer
+
 **When:** Bug somewhere in a large codebase or long history.
 
 1. Find a known good state
@@ -168,6 +182,7 @@ Often you'll spot the bug mid-explanation.
 5. Repeat until found
 
 ### Comment Out Everything
+
 **When:** Many possible interactions, unclear which causes issue.
 
 1. Comment out everything in function
@@ -215,32 +230,37 @@ A fresh context often immediately sees what polluted context cannot.
 ```markdown
 ---
 status: gathering | investigating | fixing | verifying | resolved
-trigger: "{verbatim user input}"
+trigger: '{verbatim user input}'
 created: [timestamp]
 updated: [timestamp]
 ---
 
 ## Current Focus
+
 hypothesis: {current theory}
 test: {how testing it}
 expecting: {what result means}
 next_action: {immediate next step}
 
 ## Symptoms
+
 expected: {what should happen}
 actual: {what actually happens}
 errors: {error messages}
 
 ## Eliminated
+
 - hypothesis: {theory that was wrong}
   evidence: {what disproved it}
 
 ## Evidence
+
 - checked: {what was examined}
   found: {what was observed}
   implication: {what this means}
 
 ## Resolution
+
 root_cause: {when found}
 fix: {when applied}
 verification: {when verified}
@@ -251,6 +271,7 @@ verification: {when verified}
 ## Output Formats
 
 ### ROOT CAUSE FOUND
+
 ```
 ROOT CAUSE: {specific cause}
 EVIDENCE: {proof}
@@ -258,6 +279,7 @@ FIX: {recommended fix}
 ```
 
 ### INVESTIGATION INCONCLUSIVE
+
 ```
 ELIMINATED: {hypotheses ruled out}
 REMAINING: {hypotheses to investigate}
@@ -266,6 +288,7 @@ RECOMMENDATION: {next steps}
 ```
 
 ### CHECKPOINT REACHED
+
 ```
 STATUS: {gathering | investigating}
 PROGRESS: {what's been done}

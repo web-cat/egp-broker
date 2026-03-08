@@ -13,6 +13,7 @@ Create targeted plans to address gaps, technical debt, and issues identified dur
 ## 1. Load Gap Information
 
 Read from:
+
 - Latest AUDIT.md or VERIFICATION.md
 - TODO.md for deferred items
 - DECISIONS.md for acknowledged debt
@@ -21,11 +22,11 @@ Read from:
 
 ## 2. Categorize Gaps
 
-| Category | Priority | Action |
-|----------|----------|--------|
-| Must-have failures | 🔴 High | Create fix phase |
-| Technical debt | 🟡 Medium | Add to roadmap |
-| Nice-to-have misses | 🟢 Low | Add to backlog |
+| Category            | Priority  | Action           |
+| ------------------- | --------- | ---------------- |
+| Must-have failures  | 🔴 High   | Create fix phase |
+| Technical debt      | 🟡 Medium | Add to roadmap   |
+| Nice-to-have misses | 🟢 Low    | Add to backlog   |
 
 ---
 
@@ -35,10 +36,12 @@ Add new phase to ROADMAP.md:
 
 ```markdown
 ### Phase {N}: Gap Closure
+
 **Status**: ⬜ Not Started
 **Objective**: Address gaps from milestone audit
 
 **Gaps to Close:**
+
 - [ ] {gap 1}
 - [ ] {gap 2}
 ```
@@ -49,7 +52,7 @@ Add new phase to ROADMAP.md:
 
 ```markdown
 ---
-phase: {N}
+phase: { N }
 plan: fix-{gap-id}
 wave: 1
 gap_closure: true
@@ -58,9 +61,11 @@ gap_closure: true
 # Fix: {Gap Description}
 
 ## Problem
+
 {What the audit found}
 
 ## Root Cause
+
 {Why it exists}
 
 ## Tasks
@@ -80,6 +85,7 @@ gap_closure: true
 
 ```markdown
 ## Gap Closure Mode
+
 Addressing {N} gaps from milestone audit.
 ```
 

@@ -8,8 +8,8 @@ Template for `.gsd/phases/{N}/CONTEXT.md` — user's vision for a phase.
 
 ```markdown
 ---
-phase: {N}
-name: {phase-name}
+phase: { N }
+name: { phase-name }
 created: [ISO timestamp]
 ---
 
@@ -44,12 +44,15 @@ Explicitly NOT part of this phase:
 ## User Expectations
 
 ### Look and Feel
+
 {How it should appear/behave}
 
 ### Performance
+
 {Speed/responsiveness expectations}
 
 ### Integration
+
 {How it fits with existing work}
 
 ## Examples / Inspiration
@@ -60,8 +63,8 @@ Explicitly NOT part of this phase:
 
 Clarifications from /discuss-phase:
 
-| Question | Answer |
-|----------|--------|
+| Question   | Answer   |
+| ---------- | -------- |
 | {question} | {answer} |
 
 ## Constraints

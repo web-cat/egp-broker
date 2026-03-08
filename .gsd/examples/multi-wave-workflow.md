@@ -1,6 +1,7 @@
 # Multi-Wave Workflow Example
 
 This example demonstrates a complete GSD workflow with:
+
 - Short spec
 - Plan breakdown
 - 2-wave execution
@@ -22,15 +23,18 @@ updated: 2026-02-07
 # User Authentication Feature
 
 ## Overview
+
 Add login/logout functionality with JWT tokens.
 
 ## Requirements
+
 1. POST /api/auth/login endpoint
 2. POST /api/auth/logout endpoint
 3. JWT stored in httpOnly cookie
 4. Protected route middleware
 
 ## Success Criteria
+
 - User can login with email/password
 - Invalid credentials return 401
 - Protected routes require valid JWT
@@ -100,11 +104,13 @@ Files to read: src/app/api/ structure, existing auth if any
 ### 4. Wave 1 Execution
 
 **Task 1 Commit:**
+
 ```
 git commit -m "feat(phase-1): create login endpoint"
 ```
 
 **Task 2 Commit:**
+
 ```
 git commit -m "feat(phase-1): create logout endpoint"
 ```
@@ -124,32 +130,38 @@ status: complete
 # Wave 1 State Snapshot
 
 ## Objective
+
 Create authentication endpoints.
 
 ## Changes Realized
+
 - Created login endpoint with JWT generation
 - Created logout endpoint with cookie clearing
 - Added bcrypt password comparison
 
 ## Files Touched
-| File | Change Type | Description |
-|------|-------------|-------------|
-| src/app/api/auth/login/route.ts | created | Login handler |
-| src/app/api/auth/logout/route.ts | created | Logout handler |
+
+| File                             | Change Type | Description    |
+| -------------------------------- | ----------- | -------------- |
+| src/app/api/auth/login/route.ts  | created     | Login handler  |
+| src/app/api/auth/logout/route.ts | created     | Logout handler |
 
 ## Verification Results
-| Check | Command | Result |
-|-------|---------|--------|
-| Login works | `curl -X POST .../login` | ✅ 200 + cookie |
+
+| Check        | Command                   | Result           |
+| ------------ | ------------------------- | ---------------- |
+| Login works  | `curl -X POST .../login`  | ✅ 200 + cookie  |
 | Logout works | `curl -X POST .../logout` | ✅ 200 + cleared |
 
 ## Commits in This Wave
-| Hash | Message |
-|------|---------|
-| abc123 | feat(phase-1): create login endpoint |
+
+| Hash   | Message                               |
+| ------ | ------------------------------------- |
+| abc123 | feat(phase-1): create login endpoint  |
 | def456 | feat(phase-1): create logout endpoint |
 
 ## TODO for Next Wave
+
 1. Create auth middleware
 2. Apply to protected routes
 ```
@@ -210,6 +222,7 @@ JWT is stored in httpOnly cookie named "token".
 ### 7. Wave 2 Execution & Snapshot
 
 **Commits:**
+
 ```
 git commit -m "feat(phase-1): create auth middleware"
 git commit -m "feat(phase-1): apply middleware to profile route"
@@ -252,5 +265,5 @@ curl -X POST localhost:3000/api/auth/logout -b cookies.txt
 
 ---
 
-*See PROJECT_RULES.md for wave execution rules.*
-*See templates/state_snapshot.md for snapshot format.*
+_See PROJECT_RULES.md for wave execution rules._
+_See templates/state_snapshot.md for snapshot format._

@@ -13,18 +13,21 @@ Finalize the current milestone, archive documentation, and prepare for next mile
 ## 1. Verify All Phases Complete
 
 **PowerShell:**
+
 ```powershell
 # Check ROADMAP.md for incomplete phases
 Select-String -Path ".gsd/ROADMAP.md" -Pattern "Status.*Not Started|Status.*In Progress"
 ```
 
 **Bash:**
+
 ```bash
 # Check ROADMAP.md for incomplete phases
 grep -E "Status.*Not Started|Status.*In Progress" ".gsd/ROADMAP.md"
 ```
 
 **If incomplete phases found:**
+
 ```
 ⚠️ Cannot complete milestone — {N} phases incomplete
 
@@ -36,6 +39,7 @@ Run /progress to see status.
 ## 2. Run Final Verification
 
 Verify all must-haves from ROADMAP.md:
+
 - Run verification commands
 - Capture evidence
 - Create VERIFICATION.md if not exists
@@ -52,20 +56,24 @@ Create `.gsd/milestones/{name}-SUMMARY.md`:
 ## Completed: {date}
 
 ## Deliverables
+
 - ✅ {must-have 1}
 - ✅ {must-have 2}
 
 ## Phases Completed
+
 1. Phase 1: {name} — {date}
 2. Phase 2: {name} — {date}
-...
+   ...
 
 ## Metrics
+
 - Total commits: {N}
 - Files changed: {M}
 - Duration: {days}
 
 ## Lessons Learned
+
 {Auto-extract from DECISIONS.md and JOURNAL.md}
 ```
 
@@ -74,6 +82,7 @@ Create `.gsd/milestones/{name}-SUMMARY.md`:
 ## 4. Archive Current State
 
 **PowerShell:**
+
 ```powershell
 # Create milestone archive
 New-Item -ItemType Directory -Force ".gsd/milestones/{name}"
@@ -83,6 +92,7 @@ Move-Item ".gsd/phases/*" ".gsd/milestones/{name}/"
 ```
 
 **Bash:**
+
 ```bash
 # Create milestone archive
 mkdir -p ".gsd/milestones/{name}"

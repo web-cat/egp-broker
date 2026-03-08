@@ -8,8 +8,8 @@ Template for `.gsd/milestones/{name}/MILESTONE.md` — milestone definition and 
 
 ```markdown
 ---
-name: {milestone-name}
-version: {semantic version, e.g., v1.0}
+name: { milestone-name }
+version: { semantic version, e.g., v1.0 }
 status: planning | active | complete | archived
 created: [ISO timestamp]
 target_date: [optional target]
@@ -38,11 +38,11 @@ If time permits:
 
 ## Phases
 
-| Phase | Name | Status | Objective |
-|-------|------|--------|-----------|
-| 1 | {name} | ⬜ Not Started | {objective} |
-| 2 | {name} | ⬜ Not Started | {objective} |
-| 3 | {name} | ⬜ Not Started | {objective} |
+| Phase | Name   | Status         | Objective   |
+| ----- | ------ | -------------- | ----------- |
+| 1     | {name} | ⬜ Not Started | {objective} |
+| 2     | {name} | ⬜ Not Started | {objective} |
+| 3     | {name} | ⬜ Not Started | {objective} |
 
 ## Success Criteria
 
@@ -55,21 +55,21 @@ How we know milestone is complete:
 
 Key technical decisions for this milestone:
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| {decision} | {choice} | {why} |
+| Decision   | Choice   | Rationale |
+| ---------- | -------- | --------- |
+| {decision} | {choice} | {why}     |
 
 ## Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| {risk} | Low/Med/High | Low/Med/High | {action} |
+| Risk   | Likelihood   | Impact       | Mitigation |
+| ------ | ------------ | ------------ | ---------- |
+| {risk} | Low/Med/High | Low/Med/High | {action}   |
 
 ## Progress Log
 
-| Date | Event | Notes |
-|------|-------|-------|
-| {date} | Milestone started | — |
+| Date   | Event             | Notes |
+| ------ | ----------------- | ----- |
+| {date} | Milestone started | —     |
 ```
 
 ---

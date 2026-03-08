@@ -1,6 +1,6 @@
 ---
 description: Discuss a phase before planning (clarify scope and approach)
-argument-hint: "<phase-number>"
+argument-hint: '<phase-number>'
 ---
 
 # /discuss-phase Workflow
@@ -22,6 +22,7 @@ Run BEFORE `/plan` when:
 ## 1. Load Phase Context
 
 Read from ROADMAP.md:
+
 - Phase objective
 - Dependencies
 - Current status
@@ -31,6 +32,7 @@ Read from ROADMAP.md:
 ## 2. Analyze Requirements
 
 From phase objective, extract:
+
 - What needs to be built
 - What constraints exist
 - What decisions need to be made
@@ -76,6 +78,7 @@ TOPICS TO DISCUSS
 ## 4. Gather User Input
 
 Listen for:
+
 - Scope decisions
 - Approach preferences
 - Constraints not in spec
@@ -93,13 +96,16 @@ Update `.gsd/DECISIONS.md`:
 **Date:** {date}
 
 ### Scope
+
 - {decision about scope}
 
 ### Approach
+
 - Chose: {approach}
 - Reason: {rationale}
 
 ### Constraints
+
 - {constraint identified}
 ```
 

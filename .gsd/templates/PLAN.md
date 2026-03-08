@@ -4,19 +4,22 @@
 
 ```markdown
 ---
-phase: {N}
-plan: {M}
-wave: {W}
+phase: { N }
+plan: { M }
+wave: { W }
 gap_closure: false
 ---
 
 # Plan {N}.{M}: {Descriptive Name}
 
 ## Objective
+
 {One paragraph explaining what this plan delivers and why it matters}
 
 ## Context
+
 Load these files for context:
+
 - .gsd/SPEC.md
 - .gsd/ARCHITECTURE.md
 - {relevant source files}
@@ -60,11 +63,14 @@ Load these files for context:
 </task>
 
 ## Must-Haves
+
 After all tasks complete, verify:
+
 - [ ] {Must-have 1 — derived from phase goal}
 - [ ] {Must-have 2}
 
 ## Success Criteria
+
 - [ ] All tasks verified passing
 - [ ] Must-haves confirmed
 - [ ] No regressions in tests
@@ -72,19 +78,19 @@ After all tasks complete, verify:
 
 ## Task Types
 
-| Type | Use For | Behavior |
-|------|---------|----------|
-| `auto` | Everything Claude can do independently | Fully autonomous |
-| `checkpoint:human-verify` | Visual/functional verification | Pauses for user |
-| `checkpoint:decision` | Implementation choices | Pauses for user |
+| Type                      | Use For                                | Behavior         |
+| ------------------------- | -------------------------------------- | ---------------- |
+| `auto`                    | Everything Claude can do independently | Fully autonomous |
+| `checkpoint:human-verify` | Visual/functional verification         | Pauses for user  |
+| `checkpoint:decision`     | Implementation choices                 | Pauses for user  |
 
 ## Wave Assignment
 
-| Wave | Use For |
-|------|---------|
-| 1 | Foundation (types, schemas, utilities) |
-| 2 | Core implementations |
-| 3 | Integration and validation |
+| Wave | Use For                                |
+| ---- | -------------------------------------- |
+| 1    | Foundation (types, schemas, utilities) |
+| 2    | Core implementations                   |
+| 3    | Integration and validation             |
 
 Plans in the same wave can run in parallel.
 Later waves depend on earlier waves.

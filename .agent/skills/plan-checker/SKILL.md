@@ -20,24 +20,27 @@ Your job: Find problems BEFORE execution, not during.
 **Question:** Does every phase requirement have task(s) addressing it?
 
 **Process:**
+
 1. Extract phase goal from ROADMAP.md
 2. Decompose goal into requirements (what must be true)
 3. For each requirement, find covering task(s)
 4. Flag requirements with no coverage
 
 **Red flags:**
+
 - Requirement has zero tasks addressing it
 - Multiple requirements share one vague task ("implement auth" for login, logout, session)
 - Requirement partially covered
 
 **Example issue:**
+
 ```yaml
 issue:
   dimension: requirement_coverage
   severity: blocker
-  description: "AUTH-02 (logout) has no covering task"
-  plan: "1-01"
-  fix_hint: "Add task for logout endpoint"
+  description: 'AUTH-02 (logout) has no covering task'
+  plan: '1-01'
+  fix_hint: 'Add task for logout endpoint'
 ```
 
 ---
@@ -54,20 +57,22 @@ issue:
 | `tdd` | Required | Behavior + Implementation | Test commands | Expected outcomes |
 
 **Red flags:**
+
 - Missing `<verify>` — can't confirm completion
 - Missing `<done>` — no acceptance criteria
 - Vague `<action>` — "implement auth" instead of specific steps
 - Empty `<files>` — what gets created?
 
 **Example issue:**
+
 ```yaml
 issue:
   dimension: task_completeness
   severity: blocker
-  description: "Task 2 missing <verify> element"
-  plan: "1-01"
+  description: 'Task 2 missing <verify> element'
+  plan: '1-01'
   task: 2
-  fix_hint: "Add verification command"
+  fix_hint: 'Add verification command'
 ```
 
 ---
@@ -77,29 +82,33 @@ issue:
 **Question:** Are plan dependencies valid and acyclic?
 
 **Process:**
+
 1. Parse `depends_on` from each plan frontmatter
 2. Build dependency graph
 3. Check for cycles, missing references, future references
 
 **Red flags:**
+
 - Plan references non-existent plan
 - Circular dependency (A → B → A)
 - Future reference (plan 01 referencing plan 03's output)
 - Wave assignment inconsistent with dependencies
 
 **Dependency rules:**
+
 - `depends_on: []` = Wave 1 (can run parallel)
 - `depends_on: ["01"]` = Wave 2 minimum
 - Wave number = max(deps) + 1
 
 **Example issue:**
+
 ```yaml
 issue:
   dimension: dependency_correctness
   severity: blocker
-  description: "Circular dependency between plans 02 and 03"
-  plans: ["02", "03"]
-  fix_hint: "Break cycle by reordering tasks"
+  description: 'Circular dependency between plans 02 and 03'
+  plans: ['02', '03']
+  fix_hint: 'Break cycle by reordering tasks'
 ```
 
 ---
@@ -109,12 +118,14 @@ issue:
 **Question:** Are artifacts wired together, not just created in isolation?
 
 **Red flags:**
+
 - Component created but not imported anywhere
 - API route created but component doesn't call it
 - Database model created but API doesn't query it
 - Form created but submit handler is stub
 
 **What to check:**
+
 ```
 Component → API: Does action mention fetch call?
 API → Database: Does action mention Prisma/query?
@@ -123,14 +134,15 @@ State → Render: Does action mention displaying state?
 ```
 
 **Example issue:**
+
 ```yaml
 issue:
   dimension: key_links_planned
   severity: warning
-  description: "Chat.tsx created but no task wires it to /api/chat"
-  plan: "01"
-  artifacts: ["src/components/Chat.tsx", "src/app/api/chat/route.ts"]
-  fix_hint: "Add fetch call in Chat.tsx action"
+  description: 'Chat.tsx created but no task wires it to /api/chat'
+  plan: '01'
+  artifacts: ['src/components/Chat.tsx', 'src/app/api/chat/route.ts']
+  fix_hint: 'Add fetch call in Chat.tsx action'
 ```
 
 ---
@@ -147,22 +159,24 @@ issue:
 | Context | ~50% | ~70% | 80%+ |
 
 **Red flags:**
+
 - Plan with 5+ tasks (quality degrades)
 - Plan with 15+ file modifications
 - Single task with 10+ files
 - Complex work crammed into one plan
 
 **Example issue:**
+
 ```yaml
 issue:
   dimension: scope_sanity
   severity: warning
-  description: "Plan 01 has 5 tasks - split recommended"
-  plan: "01"
+  description: 'Plan 01 has 5 tasks - split recommended'
+  plan: '01'
   metrics:
     tasks: 5
     files: 12
-  fix_hint: "Split into 2 plans"
+  fix_hint: 'Split into 2 plans'
 ```
 
 ---
@@ -172,11 +186,13 @@ issue:
 **Question:** Are must-haves derived from phase goal, not invented?
 
 **Process:**
+
 1. Extract phase goal
 2. Check that each must-have traces to goal
 3. Flag must-haves that don't contribute to goal
 
 **Red flags:**
+
 - Must-have unrelated to phase goal
 - Missing must-haves for obvious requirements
 - Over-specified must-haves (implementation details, not outcomes)
@@ -186,6 +202,7 @@ issue:
 ## Checking Process
 
 ### Step 1: Load Context
+
 ```
 Read:
 - .gsd/ROADMAP.md (phase goals)
@@ -194,6 +211,7 @@ Read:
 ```
 
 ### Step 2: Parse Plans
+
 ```
 For each PLAN.md:
 - Extract frontmatter (phase, plan, wave, depends_on)
@@ -202,6 +220,7 @@ For each PLAN.md:
 ```
 
 ### Step 3: Check Each Dimension
+
 Run all 6 dimension checks, collect issues.
 
 ### Step 4: Determine Status
@@ -216,6 +235,7 @@ Run all 6 dimension checks, collect issues.
 ## Output Formats
 
 ### VERIFICATION PASSED
+
 ```
 ## Plan Check Passed ✓
 
@@ -230,6 +250,7 @@ Warnings (optional):
 ```
 
 ### ISSUES FOUND
+
 ```
 ## Plan Check Failed ✗
 
@@ -252,11 +273,11 @@ Warnings (optional):
 
 ## Severity Levels
 
-| Severity | Meaning | Action |
-|----------|---------|--------|
-| blocker | Will cause execution failure | Must fix before /execute |
-| warning | Quality/efficiency risk | Should fix, can proceed |
-| info | Observation | No action needed |
+| Severity | Meaning                      | Action                   |
+| -------- | ---------------------------- | ------------------------ |
+| blocker  | Will cause execution failure | Must fix before /execute |
+| warning  | Quality/efficiency risk      | Should fix, can proceed  |
+| info     | Observation                  | No action needed         |
 
 ---
 
@@ -264,12 +285,12 @@ Warnings (optional):
 
 ```yaml
 issue:
-  dimension: {which of 6 dimensions}
-  severity: {blocker | warning | info}
-  description: "{human-readable description}"
-  plan: "{plan id}"
-  task: {task number, if applicable}
-  fix_hint: "{suggested fix}"
+  dimension: { which of 6 dimensions }
+  severity: { blocker | warning | info }
+  description: '{human-readable description}'
+  plan: '{plan id}'
+  task: { task number, if applicable }
+  fix_hint: '{suggested fix}'
 ```
 
 ---

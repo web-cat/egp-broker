@@ -19,6 +19,7 @@ GSD is a **meta-prompting system** where every file is both implementation and s
 ### Workflows (`.agent/workflows/*.md`)
 
 Slash commands the user invokes. Each workflow:
+
 - Has YAML frontmatter with `description`
 - Contains XML-structured process blocks
 - Ends with "Next Steps" routing
@@ -26,6 +27,7 @@ Slash commands the user invokes. Each workflow:
 ### Skills (`.agent/skills/*/SKILL.md`)
 
 Specialized agent behaviors. Each skill:
+
 - Has YAML frontmatter with `name` and `description`
 - Contains detailed methodology
 - Is referenced by parent workflows
@@ -81,17 +83,16 @@ Execute all plans in a phase...
 
 The `effort` attribute hints at task complexity for model selection:
 
-| Value | Use Case | Model Hint |
-|-------|----------|------------|
-| `low` | Simple edits, formatting | Fast models |
-| `medium` | Standard implementation (default) | Standard models |
-| `high` | Complex logic, refactoring | Reasoning models |
-| `max` | Architecture, security-critical | Deep reasoning |
+| Value    | Use Case                          | Model Hint       |
+| -------- | --------------------------------- | ---------------- |
+| `low`    | Simple edits, formatting          | Fast models      |
+| `medium` | Standard implementation (default) | Standard models  |
+| `high`   | Complex logic, refactoring        | Reasoning models |
+| `max`    | Architecture, security-critical   | Deep reasoning   |
 
 **Default:** `medium` if omitted. No workflow should fail if this attribute is absent.
 
 See [docs/model-selection-playbook.md](docs/model-selection-playbook.md) for model selection guidance.
-
 
 ### Checkpoint Structure
 
@@ -108,19 +109,23 @@ See [docs/model-selection-playbook.md](docs/model-selection-playbook.md) for mod
 ## Language & Tone
 
 ### Imperative Voice
+
 - ✅ "Create the file"
 - ❌ "You should create the file"
 - ❌ "We will create the file"
 
 ### No Filler
+
 - ✅ "Run `npm test`"
 - ❌ "Now let's go ahead and run `npm test`"
 
 ### No Sycophancy
+
 - ✅ "Phase complete."
 - ❌ "Great job! Phase complete!"
 
 ### Brevity with Substance
+
 Every sentence should convey information. Remove words that don't add meaning.
 
 ---
@@ -129,18 +134,19 @@ Every sentence should convey information. Remove words that don't add meaning.
 
 ### Size Constraints
 
-| Context Usage | Quality |
-|---------------|---------|
-| 0-30% | PEAK — Thorough, comprehensive |
-| 30-50% | GOOD — Confident, solid work |
-| 50-70% | DEGRADING — Efficiency mode begins |
-| 70%+ | POOR — Rushed, minimal |
+| Context Usage | Quality                            |
+| ------------- | ---------------------------------- |
+| 0-30%         | PEAK — Thorough, comprehensive     |
+| 30-50%        | GOOD — Confident, solid work       |
+| 50-70%        | DEGRADING — Efficiency mode begins |
+| 70%+          | POOR — Rushed, minimal             |
 
 **Rule:** Plans should complete within ~50% context.
 
 ### Fresh Context Pattern
 
 When spawning subprocesses (plans, tasks), they get:
+
 - The specific plan being executed
 - Minimal necessary context from parent files
 - NO accumulated orchestrator state
@@ -205,21 +211,24 @@ Everything important goes in STATE.md so the next session can continue.
 ## Commit Conventions
 
 ### Format
+
 ```
 type(scope): description
 ```
 
 ### Types
-| Type | Use For |
-|------|---------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation |
+
+| Type       | Use For          |
+| ---------- | ---------------- |
+| `feat`     | New feature      |
+| `fix`      | Bug fix          |
+| `docs`     | Documentation    |
 | `refactor` | Code restructure |
-| `test` | Add tests |
-| `chore` | Maintenance |
+| `test`     | Add tests        |
+| `chore`    | Maintenance      |
 
 ### Rules
+
 - One task = one commit
 - Scope is phase number for phase work
 - No commit before verification passes
@@ -251,6 +260,7 @@ type(scope): description
 ### Decision Gates
 
 When user input needed:
+
 ```
 ⚠️ DECISION REQUIRED
 

@@ -35,6 +35,7 @@ Get-ChildItem ".gsd/phases/{N}/*-VERIFICATION.md" -ErrorAction SilentlyContinue
 ```
 
 **If previous verification exists with gaps → RE-VERIFICATION MODE:**
+
 1. Parse previous VERIFICATION.md
 2. Extract must-haves (truths, artifacts, key_links)
 3. Extract gaps (items that failed)
@@ -72,15 +73,15 @@ Extract phase goal from ROADMAP.md. This is the outcome to verify, not the tasks
 ```yaml
 must_haves:
   truths:
-    - "User can see existing messages"
-    - "User can send a message"
+    - 'User can see existing messages'
+    - 'User can send a message'
   artifacts:
-    - path: "src/components/Chat.tsx"
-      provides: "Message list rendering"
+    - path: 'src/components/Chat.tsx'
+      provides: 'Message list rendering'
   key_links:
-    - from: "Chat.tsx"
-      to: "api/chat"
-      via: "fetch in useEffect"
+    - from: 'Chat.tsx'
+      to: 'api/chat'
+      via: 'fetch in useEffect'
 ```
 
 **Option B: Derive from phase goal**
@@ -103,11 +104,13 @@ must_haves:
 For each truth, determine if codebase enables it.
 
 **Verification status:**
+
 - ✓ VERIFIED: All supporting artifacts pass all checks
 - ✗ FAILED: Artifacts missing, stub, or unwired
 - ? UNCERTAIN: Can't verify programmatically (needs human)
 
 For each truth:
+
 1. Identify supporting artifacts
 2. Check artifact status (Step 4)
 3. Check wiring status (Step 5)
@@ -120,21 +123,26 @@ For each truth:
 For each required artifact, verify three levels:
 
 #### Level 1: Existence
+
 ```powershell
 Test-Path "src/components/Chat.tsx"
 ```
+
 - File exists at expected path
 - **If missing:** FAILED at Level 1
 
 #### Level 2: Substantive
+
 ```powershell
 Get-Content "src/components/Chat.tsx" | Select-String -Pattern "TODO|placeholder|stub"
 ```
+
 - File contains real implementation
 - Not a stub, placeholder, or minimal scaffold
 - **If stub detected:** FAILED at Level 2
 
 #### Level 3: Wired
+
 - Imports are used, not just present
 - Exports are consumed by other files
 - Functions are called with correct arguments
@@ -147,24 +155,28 @@ Get-Content "src/components/Chat.tsx" | Select-String -Pattern "TODO|placeholder
 For each key link, verify the connection exists:
 
 **Pattern: Component → API**
+
 ```powershell
 # Check Chat.tsx calls /api/chat
 Select-String -Path "src/components/Chat.tsx" -Pattern "fetch.*api/chat"
 ```
 
 **Pattern: API → Database**
+
 ```powershell
 # Check route calls prisma
 Select-String -Path "src/app/api/chat/route.ts" -Pattern "prisma\."
 ```
 
 **Pattern: Form → Handler**
+
 ```powershell
 # Check onSubmit has implementation
 Select-String -Path "src/components/Form.tsx" -Pattern "onSubmit" -Context 0,5
 ```
 
 **Pattern: State → Render**
+
 ```powershell
 # Check state is used in JSX
 Select-String -Path "src/components/Chat.tsx" -Pattern "messages\.map"
@@ -181,10 +193,12 @@ Select-String -Path ".gsd/REQUIREMENTS.md" -Pattern "Phase {N}"
 ```
 
 For each requirement:
+
 1. Identify which truths/artifacts support it
 2. Determine status based on supporting infrastructure
 
 **Requirement status:**
+
 - ✓ SATISFIED: All supporting truths verified
 - ✗ BLOCKED: Supporting truths failed
 - ? NEEDS HUMAN: Can't verify programmatically
@@ -200,7 +214,7 @@ Run anti-pattern detection on modified files:
 Select-String -Path "src/**/*.ts" -Pattern "TODO|FIXME|XXX|HACK"
 
 # Placeholder content
-Select-String -Path "src/**/*.tsx" -Pattern "placeholder|coming soon" 
+Select-String -Path "src/**/*.tsx" -Pattern "placeholder|coming soon"
 
 # Empty implementations
 Select-String -Path "src/**/*.ts" -Pattern "return null|return \{\}|return \[\]"
@@ -210,6 +224,7 @@ Select-String -Path "src/**/*.ts" -Pattern "console\.log" -Context 2
 ```
 
 **Categorize findings:**
+
 - 🛑 Blocker: Prevents goal achievement
 - ⚠️ Warning: Indicates incomplete work
 - ℹ️ Info: Notable but not problematic
@@ -221,6 +236,7 @@ Select-String -Path "src/**/*.ts" -Pattern "console\.log" -Context 2
 Some things can't be verified programmatically:
 
 **Always needs human:**
+
 - Visual appearance (does it look right?)
 - User flow completion
 - Real-time behavior (WebSocket, SSE)
@@ -229,8 +245,10 @@ Some things can't be verified programmatically:
 - Error message clarity
 
 **Format:**
+
 ```markdown
 ### 1. {Test Name}
+
 **Test:** {What to do}
 **Expected:** {What should happen}
 **Why human:** {Why can't verify programmatically}
@@ -241,22 +259,26 @@ Some things can't be verified programmatically:
 ### Step 9: Determine Overall Status
 
 **Status: passed**
+
 - All truths VERIFIED
 - All artifacts pass levels 1-3
 - All key links WIRED
 - No blocker anti-patterns
 
 **Status: gaps_found**
+
 - One or more truths FAILED
 - OR artifacts MISSING/STUB
 - OR key links NOT_WIRED
 - OR blocker anti-patterns found
 
 **Status: human_needed**
+
 - All automated checks pass
 - BUT items flagged for human verification
 
 **Calculate score:**
+
 ```
 score = verified_truths / total_truths
 ```
@@ -292,18 +314,20 @@ gaps:
 ## Stub Detection Patterns
 
 ### Universal Stub Patterns
+
 ```powershell
 # Comment-based stubs
 Select-String -Pattern "TODO|FIXME|XXX|HACK|PLACEHOLDER"
 
 # Placeholder text
-Select-String -Pattern "placeholder|lorem ipsum|coming soon" 
+Select-String -Pattern "placeholder|lorem ipsum|coming soon"
 
 # Empty implementations
 Select-String -Pattern "return null|return undefined|return \{\}|return \[\]"
 ```
 
 ### React Component Stubs
+
 ```javascript
 // RED FLAGS:
 return <div>Component</div>
@@ -319,24 +343,26 @@ onSubmit={(e) => e.preventDefault()}  // Only prevents default
 ```
 
 ### API Route Stubs
+
 ```typescript
 // RED FLAGS:
 export async function POST() {
-  return Response.json({ message: "Not implemented" });
+  return Response.json({ message: 'Not implemented' })
 }
 
 export async function GET() {
-  return Response.json([]);  // Empty array, no DB query
+  return Response.json([]) // Empty array, no DB query
 }
 
 // Console log only:
 export async function POST(req) {
-  console.log(await req.json());
-  return Response.json({ ok: true });
+  console.log(await req.json())
+  return Response.json({ ok: true })
 }
 ```
 
 ### Wiring Red Flags
+
 ```typescript
 // Fetch exists but response ignored:
 fetch('/api/messages')  // No await, no .then
@@ -372,35 +398,43 @@ gaps: [...]  # If gaps_found
 ## Must-Haves
 
 ### Truths
-| Truth | Status | Evidence |
-|-------|--------|----------|
-| {truth 1} | ✓ VERIFIED | {how verified} |
-| {truth 2} | ✗ FAILED | {what's missing} |
+
+| Truth     | Status     | Evidence         |
+| --------- | ---------- | ---------------- |
+| {truth 1} | ✓ VERIFIED | {how verified}   |
+| {truth 2} | ✗ FAILED   | {what's missing} |
 
 ### Artifacts
-| Path | Exists | Substantive | Wired |
-|------|--------|-------------|-------|
-| src/components/Chat.tsx | ✓ | ✓ | ✗ |
+
+| Path                    | Exists | Substantive | Wired |
+| ----------------------- | ------ | ----------- | ----- |
+| src/components/Chat.tsx | ✓      | ✓           | ✗     |
 
 ### Key Links
-| From | To | Via | Status |
-|------|-----|-----|--------|
+
+| From     | To       | Via   | Status      |
+| -------- | -------- | ----- | ----------- |
 | Chat.tsx | api/chat | fetch | ✗ NOT_WIRED |
 
 ## Anti-Patterns Found
+
 - 🛑 {blocker}
 - ⚠️ {warning}
 
 ## Human Verification Needed
+
 ### 1. Visual Review
+
 **Test:** Open http://localhost:3000/chat
 **Expected:** Message list renders with real data
 **Why human:** Visual layout verification
 
 ## Gaps (if any)
+
 {Structured gap analysis for planner}
 
 ## Verdict
+
 {Status explanation}
 ```
 

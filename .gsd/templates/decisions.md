@@ -11,18 +11,23 @@
 **Status**: Proposed | Accepted | Deprecated | Superseded
 
 ### Context
+
 What is the issue we're facing?
 
 ### Decision
+
 What have we decided to do?
 
 ### Rationale
+
 Why did we make this decision?
 
 ### Consequences
+
 What are the trade-offs?
 
 ### Alternatives Considered
+
 What other options were evaluated?
 ```
 
@@ -34,4 +39,4 @@ What other options were evaluated?
 
 ---
 
-*Last updated: <!-- date -->*
+_Last updated: <!-- date -->_

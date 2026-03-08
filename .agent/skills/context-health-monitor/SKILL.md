@@ -15,12 +15,12 @@ The agent should self-monitor for these warning signs:
 
 ### Warning Signs
 
-| Signal | Threshold | Action |
-|--------|-----------|--------|
-| Repeated debugging | 3+ failed attempts | Trigger state dump |
-| Going in circles | Same approach tried twice | Stop and reassess |
+| Signal               | Threshold                    | Action               |
+| -------------------- | ---------------------------- | -------------------- |
+| Repeated debugging   | 3+ failed attempts           | Trigger state dump   |
+| Going in circles     | Same approach tried twice    | Stop and reassess    |
 | Confusion indicators | "I'm not sure", backtracking | Document uncertainty |
-| Session length | Extended back-and-forth | Recommend `/pause` |
+| Session length       | Extended back-and-forth      | Recommend `/pause`   |
 
 ## Behavior Rules
 
@@ -67,18 +67,22 @@ When triggered, write to `.gsd/STATE.md`:
 **Reason**: [3 failures / circular / uncertainty]
 
 ### What Was Attempted
+
 1. [Approach 1] — Result: [outcome]
 2. [Approach 2] — Result: [outcome]
 3. [Approach 3] — Result: [outcome]
 
 ### Current Hypothesis
+
 [Best guess at root cause]
 
 ### Recommended Next Steps
+
 1. [Fresh perspective action]
 2. [Alternative approach to try]
 
 ### Files Involved
+
 - [file1.ext] — [what state it's in]
 - [file2.ext] — [what state it's in]
 ```
@@ -100,6 +104,7 @@ Sessions can terminate abruptly (usage limits, context limits, network errors). 
 ## Integration
 
 This skill integrates with:
+
 - `/pause` — Triggers proper session handoff (includes proactive auto-save)
 - `/resume` — Loads the state dump context
 - Rule 3 in `GEMINI.md` — Context Hygiene enforcement

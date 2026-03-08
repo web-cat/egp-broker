@@ -1,7 +1,7 @@
 # Model Selection Playbook
 
 > Guidance for choosing models by phase and task type.
-> 
+>
 > **No model is required.** These are recommendations, not requirements.
 
 ---
@@ -11,6 +11,7 @@
 ### Planning & Architecture
 
 **Recommended capabilities:**
+
 - Extended reasoning / thinking mode
 - Large context window (analyze multiple files)
 - Strong at structured output (specs, plans)
@@ -24,6 +25,7 @@
 ### Code Implementation
 
 **Recommended capabilities:**
+
 - Fast iteration speed
 - Good at code completion
 - Tool/function calling (for verification commands)
@@ -37,6 +39,7 @@
 ### Refactoring
 
 **Recommended capabilities:**
+
 - Large context window (see before/after)
 - Pattern recognition
 - Consistent style application
@@ -50,6 +53,7 @@
 ### Debugging
 
 **Recommended capabilities:**
+
 - Extended reasoning (hypothesis generation)
 - Good at reading stack traces
 - Context for error patterns
@@ -63,6 +67,7 @@
 ### Code Review
 
 **Recommended capabilities:**
+
 - Large context (review full PR diff)
 - Security pattern knowledge
 - Style consistency checking
@@ -75,12 +80,12 @@
 
 ## Capability Tiers
 
-| Tier | Characteristics | Best For |
-|------|-----------------|----------|
-| **Fast** | Quick responses, lower cost | Implementation, iteration |
-| **Standard** | Balanced speed/quality | Most tasks |
-| **Reasoning** | Extended thinking, slower | Planning, debugging, architecture |
-| **Long-context** | >100k tokens | Review, refactoring |
+| Tier             | Characteristics             | Best For                          |
+| ---------------- | --------------------------- | --------------------------------- |
+| **Fast**         | Quick responses, lower cost | Implementation, iteration         |
+| **Standard**     | Balanced speed/quality      | Most tasks                        |
+| **Reasoning**    | Extended thinking, slower   | Planning, debugging, architecture |
+| **Long-context** | >100k tokens                | Review, refactoring               |
 
 ---
 
@@ -99,11 +104,13 @@
 ## Model Switching Mid-Session
 
 **When to switch:**
+
 - Context is getting polluted (approaching 50%)
 - Task type changes significantly (planning → implementation)
 - Current model struggling with task type
 
 **How to switch:**
+
 1. Create state snapshot
 2. Update STATE.md with current position
 3. Start fresh session with appropriate model
@@ -124,5 +131,5 @@ Choose models based on task needs, not methodology requirements.
 
 ---
 
-*See PROJECT_RULES.md for canonical rules.*
-*See docs/runbook.md for operational procedures.*
+_See PROJECT_RULES.md for canonical rules._
+_See docs/runbook.md for operational procedures._

@@ -15,6 +15,7 @@ Install GSD for Antigravity into the current project from GitHub.
 Look for GSD marker directories:
 
 **PowerShell:**
+
 ```powershell
 $alreadyInstalled = (Test-Path ".agent") -or (Test-Path ".gsd")
 if ($alreadyInstalled) {
@@ -23,6 +24,7 @@ if ($alreadyInstalled) {
 ```
 
 **Bash:**
+
 ```bash
 if [ -d ".agent" ] || [ -d ".gsd" ]; then
     echo "GSD files detected in this project."
@@ -30,6 +32,7 @@ fi
 ```
 
 **If already installed:**
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► ALREADY INSTALLED
@@ -63,6 +66,7 @@ git clone --depth 1 https://github.com/toonight/get-shit-done-for-antigravity.gi
 ## 3. Copy Files
 
 **PowerShell:**
+
 ```powershell
 # Core directories
 Copy-Item -Recurse ".gsd-install-temp\.agent" ".\"
@@ -79,6 +83,7 @@ Copy-Item -Force ".gsd-install-temp\model_capabilities.yaml" ".\"
 ```
 
 **Bash:**
+
 ```bash
 # Core directories
 cp -r .gsd-install-temp/.agent ./
@@ -99,11 +104,13 @@ cp .gsd-install-temp/model_capabilities.yaml ./
 ## 4. Cleanup
 
 **PowerShell:**
+
 ```powershell
 Remove-Item -Recurse -Force ".gsd-install-temp"
 ```
 
 **Bash:**
+
 ```bash
 rm -rf .gsd-install-temp
 ```

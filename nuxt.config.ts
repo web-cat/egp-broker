@@ -47,9 +47,9 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: {
-        lang: 'fr'
+        lang: 'en'
       },
-      titleTemplate: '%s | Nuxt Boilerplate',
+      titleTemplate: '%s | EGP Broker',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -78,7 +78,7 @@ export default defineNuxtConfig({
         language: 'fr-FR'
       }
     ],
-    defaultLocale: 'fr',
+    defaultLocale: 'en',
     strategy: 'prefix',
     detectBrowserLanguage: {
       useCookie: true,
@@ -222,6 +222,13 @@ export default defineNuxtConfig({
       headers: {
         'Access-Control-Max-Age': '86400'
       }
+    },
+    // Tighter rate limit for LTI endpoints to prevent nonce probing / DoS
+    '/api/lti13/launch': {
+      security: { rateLimiter: { tokensPerInterval: 20, interval: 60 * 1000, throwError: true } }
+    },
+    '/api/lti13/login': {
+      security: { rateLimiter: { tokensPerInterval: 20, interval: 60 * 1000, throwError: true } }
     }
   },
 

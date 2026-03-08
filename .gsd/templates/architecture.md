@@ -25,17 +25,19 @@
 ## Components
 
 ### Component A
+
 - **Purpose:** {What this component does}
 - **Location:** `{path/to/component}`
 - **Files:** {count} files
 - **Pattern:** {architectural pattern used}
 
-| File | Purpose | Priority |
-|------|---------|----------|
+| File  | Purpose   | Priority          |
+| ----- | --------- | ----------------- |
 | file1 | {purpose} | {high/medium/low} |
 | file2 | {purpose} | {high/medium/low} |
 
 ### Component B
+
 - **Purpose:** {What this component does}
 - **Location:** `{path/to/component}`
 
@@ -55,13 +57,15 @@
 ## Conventions
 
 **Naming:**
+
 - {Convention 1}
 - {Convention 2}
 
 **Structure:**
+
 - {Convention 1}
 - {Convention 2}
 
 ---
 
-*Last updated: <!-- date -->*
+_Last updated: <!-- date -->_
