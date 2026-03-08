@@ -14,6 +14,8 @@ export default function startupChecksPlugin(_nitro: any) {
 
   if (missing.length > 0) {
     const keys = missing.map((k) => `NUXT_EMAIL_${k.toUpperCase()}`).join(', ')
-    console.error(`[startup] Missing required email configuration: ${keys}. Email sending will fail.`)
+    console.error(
+      `[startup] Missing required email configuration: ${keys}. Email sending will fail.`
+    )
   }
 }

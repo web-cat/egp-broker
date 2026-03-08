@@ -1,5 +1,7 @@
-import type { Prisma } from '@prisma/client'
+import type { Prisma, PrismaClient } from '@prisma/client'
 import { getGravatarUrl } from '@@/server/utils/gravatar'
+
+import type { LtiSessionUser } from '@@/shared/schemas/auth.schema'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -46,14 +48,7 @@ interface AssignmentArgs {
 }
 
 export interface LtiLaunchResult {
-  user: {
-    id: string
-    email: string
-    firstName: string
-    lastName: string
-    avatarUrl: string | null
-    currentCourseId: string | null
-  }
+  user: LtiSessionUser
   assignmentId: string | null
 }
 
@@ -82,9 +77,21 @@ export async function upsertDeployment(tx: PrismaTx, args: DeploymentArgs) {
 }
 
 /**
+ * User fields we expose to the session token (aligns with LtiSessionUser schema)
+ */
+const sessionUserSelect = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  avatarUrl: true,
+  currentCourseId: true
+} satisfies Prisma.UserSelect
+
+/**
  * Step 2: Find or create the local user and LTI identity, returning the user record.
  */
-export async function resolveUser(tx: PrismaTx, args: UserArgs) {
+export async function resolveUser(tx: PrismaTx, args: UserArgs): Promise<LtiSessionUser> {
   const existingIdentity = await tx.ltiIdentity.findUnique({
     where: {
       platformId_ltiSub: {
@@ -92,7 +99,7 @@ export async function resolveUser(tx: PrismaTx, args: UserArgs) {
         ltiSub: args.ltiSub
       }
     },
-    include: { user: true }
+    select: { user: { select: sessionUserSelect } }
   })
 
   if (existingIdentity) {
@@ -100,7 +107,9 @@ export async function resolveUser(tx: PrismaTx, args: UserArgs) {
   }
 
   // Try to find an existing account by email
-  let user = args.email ? await tx.user.findUnique({ where: { email: args.email } }) : null
+  let user = args.email
+    ? await tx.user.findUnique({ where: { email: args.email }, select: sessionUserSelect })
+    : null
 
   if (!user) {
     user = await tx.user.create({
@@ -111,7 +120,8 @@ export async function resolveUser(tx: PrismaTx, args: UserArgs) {
         emailVerified: true,
         emailVerifiedAt: new Date(),
         avatarUrl: getGravatarUrl(args.email as string)
-      }
+      },
+      select: sessionUserSelect
     })
   }
 
@@ -242,7 +252,10 @@ interface LtiLaunchArgs {
  * → assignment resolution. Returns the user and assignmentId to the handler.
  */
 export async function handleLtiLaunch(
-  prisma: PrismaTx,
+  prisma: Omit<
+    PrismaClient,
+    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+  > & { $transaction: any },
   args: LtiLaunchArgs
 ): Promise<LtiLaunchResult> {
   const { claims, platform } = args
@@ -255,7 +268,7 @@ export async function handleLtiLaunch(
   const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom']
   const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles']
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: PrismaTx) => {
     // Step 1 — Deployment
     const deployment = await upsertDeployment(tx, {
       platformId: platform.id,
@@ -311,7 +324,8 @@ export async function handleLtiLaunch(
       // Step 5 — Update user's current course context
       user = await tx.user.update({
         where: { id: user.id },
-        data: { currentCourseId: course.id }
+        data: { currentCourseId: course.id },
+        select: sessionUserSelect
       })
     }
 

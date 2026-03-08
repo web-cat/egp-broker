@@ -1,7 +1,7 @@
 import { defineEventHandler, createError, readValidatedBody } from 'h3'
 import type { H3Event } from 'h3'
 import prisma from '@@/lib/prisma'
-import { LtiLaunchSchema } from '@@/shared/schemas/auth.schema'
+import { LtiLaunchSchema, LtiSessionUserSchema } from '@@/shared/schemas/auth.schema'
 import { handleLtiLaunch } from '@@/server/utils/lti-launch'
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -39,16 +39,12 @@ export default defineEventHandler(async (event: H3Event) => {
       await syncAssignmentEligibility(assignmentId)
     }
 
+    // Validate the user payload against our strict schema before injecting into session token
+    const validatedUser = LtiSessionUserSchema.parse(user)
+
     // Establish the authenticated user session
     await setUserSession(event, {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatarUrl: user.avatarUrl,
-        currentCourseId: user.currentCourseId
-      },
+      user: validatedUser,
       lti: {
         platformId: platform.id,
         issuer: platform.issuer,
