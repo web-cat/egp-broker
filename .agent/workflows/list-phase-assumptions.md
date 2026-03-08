@@ -1,178 +1,82 @@
-<purpose>
-Surface Claude's assumptions about a phase before planning, enabling users to correct misconceptions early.
+---
+description: List assumptions made during phase planning
+argument-hint: "<phase-number>"
+---
 
-Key difference from discuss-phase: This is ANALYSIS of what Claude thinks, not INTAKE of what user knows. No file output - purely conversational to prompt discussion.
-</purpose>
+# /list-phase-assumptions Workflow
+
+<objective>
+Surface and document assumptions made during phase planning that should be validated.
+</objective>
 
 <process>
 
-<step name="validate_phase" priority="first">
-Phase number: $ARGUMENTS (required)
+## 1. Load Phase Plans
 
-**If argument missing:**
-
+```powershell
+Get-ChildItem ".gsd/phases/{N}/*-PLAN.md"
 ```
-Error: Phase number required.
-
-Usage: @[list-phase-assumptions.md] [phase-number]
-Example: @[list-phase-assumptions.md] 3
-```
-
-Exit workflow.
-
-**If argument provided:**
-Validate phase exists in roadmap:
-
-```bash
-cat .planning/ROADMAP.md | grep -i "Phase ${PHASE}"
-```
-
-**If phase not found:**
-
-```
-Error: Phase ${PHASE} not found in roadmap.
-
-Available phases:
-[list phases from roadmap]
-```
-
-Exit workflow.
-
-**If phase found:**
-Parse phase details from roadmap:
-
-- Phase number
-- Phase name
-- Phase description/goal
-- Any scope details mentioned
-
-Continue to analyze_phase.
-</step>
-
-<step name="analyze_phase">
-Based on roadmap description and project context, identify assumptions across five areas:
-
-**1. Technical Approach:**
-What libraries, frameworks, patterns, or tools would Claude use?
-- "I'd use X library because..."
-- "I'd follow Y pattern because..."
-- "I'd structure this as Z because..."
-
-**2. Implementation Order:**
-What would Claude build first, second, third?
-- "I'd start with X because it's foundational"
-- "Then Y because it depends on X"
-- "Finally Z because..."
-
-**3. Scope Boundaries:**
-What's included vs excluded in Claude's interpretation?
-- "This phase includes: A, B, C"
-- "This phase does NOT include: D, E, F"
-- "Boundary ambiguities: G could go either way"
-
-**4. Risk Areas:**
-Where does Claude expect complexity or challenges?
-- "The tricky part is X because..."
-- "Potential issues: Y, Z"
-- "I'd watch out for..."
-
-**5. Dependencies:**
-What does Claude assume exists or needs to be in place?
-- "This assumes X from previous phases"
-- "External dependencies: Y, Z"
-- "This will be consumed by..."
-
-Be honest about uncertainty. Mark assumptions with confidence levels:
-- "Fairly confident: ..." (clear from roadmap)
-- "Assuming: ..." (reasonable inference)
-- "Unclear: ..." (could go multiple ways)
-</step>
-
-<step name="present_assumptions">
-Present assumptions in a clear, scannable format:
-
-```
-## My Assumptions for Phase ${PHASE}: ${PHASE_NAME}
-
-### Technical Approach
-[List assumptions about how to implement]
-
-### Implementation Order
-[List assumptions about sequencing]
-
-### Scope Boundaries
-**In scope:** [what's included]
-**Out of scope:** [what's excluded]
-**Ambiguous:** [what could go either way]
-
-### Risk Areas
-[List anticipated challenges]
-
-### Dependencies
-**From prior phases:** [what's needed]
-**External:** [third-party needs]
-**Feeds into:** [what future phases need from this]
 
 ---
 
-**What do you think?**
+## 2. Extract Assumptions
 
-Are these assumptions accurate? Let me know:
-- What I got right
-- What I got wrong
-- What I'm missing
-```
+Scan plans for:
+- Technology choices without justification
+- Implied dependencies
+- Expected behaviors not verified
+- Time estimates
+- Scope boundaries
 
-Wait for user response.
-</step>
+---
 
-<step name="gather_feedback">
-**If user provides corrections:**
+## 3. Categorize Assumptions
 
-Acknowledge the corrections:
+| Category | Risk Level |
+|----------|------------|
+| Technical | API exists, library works, syntax correct |
+| Integration | Services compatible, auth works |
+| Scope | Feature boundaries, what's excluded |
+| Performance | Will handle load, fast enough |
+| Timeline | Estimates accurate |
 
-```
-Got it. Key corrections:
-- [correction 1]
-- [correction 2]
+---
 
-This changes my understanding significantly. [Summarize new understanding]
-```
-
-**If user confirms assumptions:**
-
-```
-Great, assumptions validated.
-```
-
-Continue to offer_next.
-</step>
-
-<step name="offer_next">
-Present next steps:
+## 4. Display Assumptions
 
 ```
-What's next?
-1. Discuss context (@[discuss-phase.md] ${PHASE}) - Let me ask you questions to build comprehensive context
-2. Plan this phase (@[plan-phase.md] ${PHASE}) - Create detailed execution plans
-3. Re-examine assumptions - I'll analyze again with your corrections
-4. Done for now
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ GSD ► PHASE {N} ASSUMPTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TECHNICAL
+🟡 {assumption 1} — Validate before execution
+🟢 {assumption 2} — Low risk
+
+INTEGRATION
+🔴 {assumption 3} — High risk, verify first
+
+SCOPE
+🟡 {assumption 4} — Confirm with user
+
+───────────────────────────────────────────────────────
+
+▶ ACTIONS
+
+• Validate high-risk assumptions before /execute
+• Add verified assumptions to RESEARCH.md
+• Flag for user review if scope-related
+
+───────────────────────────────────────────────────────
 ```
 
-Wait for user selection.
+---
 
-If "Discuss context": Note that CONTEXT.md will incorporate any corrections discussed here
-If "Plan this phase": Proceed knowing assumptions are understood
-If "Re-examine": Return to analyze_phase with updated understanding
-</step>
+## 5. Offer Validation
+
+Ask if user wants to:
+- Validate specific assumptions now
+- Add to TODO.md for later
+- Accept and proceed
 
 </process>
-
-<success_criteria>
-- Phase number validated against roadmap
-- Assumptions surfaced across five areas: technical approach, implementation order, scope, risks, dependencies
-- Confidence levels marked where appropriate
-- "What do you think?" prompt presented
-- User feedback acknowledged
-- Clear next steps offered
-</success_criteria>

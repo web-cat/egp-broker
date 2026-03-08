@@ -15,6 +15,7 @@ EGP Broker acts as an **LTI 1.3 Tool** embedded within LMS platforms (primarily 
 ```
 
 **Key files:**
+
 - `server/api/lti13/login.get.ts` — OIDC initiation, stores nonce/state in session
 - `server/api/lti13/launch.post.ts` — JWT verification, user upsert, session creation
 - `server/api/lti13/config.get.ts` — LTI configuration JSON for platform registration
@@ -24,11 +25,13 @@ EGP Broker acts as an **LTI 1.3 Tool** embedded within LMS platforms (primarily 
 **Runtime config:** `NUXT_LTI_PRIVATE_KEY` (PKCS8), `NUXT_LTI_KEY_ID`
 
 **LTI Advantage Services configured:**
+
 - AGS (Assignment and Grades Services) — `lineitem` read/write scopes
 - NRPS (Names and Role Provisioning Services) — membership read scope
 - Placements: `course_navigation`, `assignment_selection`, `link_selection`
 
 **Canvas-specific custom variables captured at launch:**
+
 - `$Canvas.course.id` → `Course.canvasCourseId`
 - `$Canvas.course.workflowState` → `Course.workflowState`
 - `$Canvas.assignment.id` → `Assignment.canvasAssignmentId`
@@ -54,6 +57,7 @@ fetchCanvasAssignments(domain, courseId, accessToken): Promise<CanvasAssignment[
 Supports institutional SSO via CAS 2.0 / 3.0.
 
 **Files:**
+
 - `server/api/cas/login.get.ts` — redirects to CAS login
 - `server/api/cas/callback.get.ts` — handles service ticket validation
 - `server/api/cas/servers.get.ts` — lists configured CAS servers
@@ -69,6 +73,7 @@ Supports institutional SSO via CAS 2.0 / 3.0.
 Used for transactional email: verification, password reset.
 
 **Config (runtime env vars):**
+
 ```
 NUXT_EMAIL_HOST, NUXT_EMAIL_PORT, NUXT_EMAIL_SECURE
 NUXT_EMAIL_USER, NUXT_EMAIL_PASS, NUXT_EMAIL_FROM
@@ -78,6 +83,7 @@ NUXT_EMAIL_USER, NUXT_EMAIL_PASS, NUXT_EMAIL_FROM
 **Templates:** `server/templates/` (Handlebars `.hbs` files, served as Nitro server assets)
 
 **Emails sent by:**
+
 - `server/api/auth/register.post.ts` — verification email
 - `server/api/auth/forgot-password.post.ts` — reset link
 - `server/api/auth/resend-verification.post.ts` — resend verification
@@ -96,6 +102,7 @@ NUXT_EMAIL_USER, NUXT_EMAIL_PASS, NUXT_EMAIL_FROM
 ## Gravatar
 
 **File:** `server/utils/gravatar.ts`
+
 - `getGravatarUrl(email)` — generates avatar URL from email hash
 - Called during LTI user creation to set `User.avatarUrl`
 

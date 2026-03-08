@@ -175,22 +175,22 @@ test/
 
 ## Key Configuration Files
 
-| File | Purpose |
-|---|---|
-| `nuxt.config.ts` | Nuxt, Nitro, i18n, security, route rules, runtime config |
-| `vitest.config.ts` | Vitest environment (`happy-dom`), path aliases, setup file |
-| `playwright.config.ts` | E2E browser config, projects, auth state |
-| `prisma/schema.prisma` | DB models, enums, relations |
-| `GEMINI.md` | Architectural constitution and mandatory coding rules |
-| `lib/prisma.ts` | Prisma singleton import |
-| `.env.common` | Shared env var defaults (Docker) |
-| `.env.example` | Template for local `.env` |
+| File                   | Purpose                                                    |
+| ---------------------- | ---------------------------------------------------------- |
+| `nuxt.config.ts`       | Nuxt, Nitro, i18n, security, route rules, runtime config   |
+| `vitest.config.ts`     | Vitest environment (`happy-dom`), path aliases, setup file |
+| `playwright.config.ts` | E2E browser config, projects, auth state                   |
+| `prisma/schema.prisma` | DB models, enums, relations                                |
+| `GEMINI.md`            | Architectural constitution and mandatory coding rules      |
+| `lib/prisma.ts`        | Prisma singleton import                                    |
+| `.env.common`          | Shared env var defaults (Docker)                           |
+| `.env.example`         | Template for local `.env`                                  |
 
 ## Path Aliases
 
-| Alias | Resolves To |
-|---|---|
-| `~`, `@` | `./app` |
-| `~~`, `@@` | `.` (project root) |
-| `#shared` | `./shared` |
-| `#app` | `nuxt app` (mocked in tests) |
+| Alias      | Resolves To                  |
+| ---------- | ---------------------------- |
+| `~`, `@`   | `./app`                      |
+| `~~`, `@@` | `.` (project root)           |
+| `#shared`  | `./shared`                   |
+| `#app`     | `nuxt app` (mocked in tests) |

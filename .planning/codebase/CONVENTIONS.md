@@ -13,20 +13,20 @@ export type UserRow = z.infer<typeof userRowSchema>
 
 // ❌ Wrong
 import type { User } from '@prisma/client'
-return user  // exposes password hash etc.
+return user // exposes password hash etc.
 ```
 
 ## Naming Conventions
 
-| Element | Convention | Example |
-|---|---|---|
-| Files (server API) | `kebab-case.method.ts` | `forgot-password.post.ts` |
-| Files (components) | `PascalCase.vue` | `UserCard.vue` |
-| Files (composables) | `camelCase.ts` | `useAuthFeature.ts` |
-| Prisma Models | PascalCase singular | `LtiPlatform`, `PassRedemption` |
-| Prisma Fields | camelCase | `createdAt`, `emailVerified` |
-| Enums | PascalCase or UPPERCASE | `GlobalRole`, `CourseRole`, `TokenType` |
-| DB IDs | CUID2 (`@default(cuid())`) | — |
+| Element             | Convention                 | Example                                 |
+| ------------------- | -------------------------- | --------------------------------------- |
+| Files (server API)  | `kebab-case.method.ts`     | `forgot-password.post.ts`               |
+| Files (components)  | `PascalCase.vue`           | `UserCard.vue`                          |
+| Files (composables) | `camelCase.ts`             | `useAuthFeature.ts`                     |
+| Prisma Models       | PascalCase singular        | `LtiPlatform`, `PassRedemption`         |
+| Prisma Fields       | camelCase                  | `createdAt`, `emailVerified`            |
+| Enums               | PascalCase or UPPERCASE    | `GlobalRole`, `CourseRole`, `TokenType` |
+| DB IDs              | CUID2 (`@default(cuid())`) | —                                       |
 
 ## Server API Handlers
 
@@ -37,26 +37,28 @@ Every handler follows this pattern:
 export default defineEventHandler(async (event) => {
   // 1. Auth guard
   const session = await requireUserSession(event)
-  
+
   // 2. Context guard (if course-scoped)
   const courseId = await requireCourseContext(event)
-  
+
   // 3. Input validation (Zod via validation.helpers.ts)
   const body = await validateBody(event, MySchema)
-  
+
   // 4. Delegate to server/utils/ (no inline business logic)
   const result = await doBusinessLogic(courseId, body)
-  
+
   // 5. Return shared/models shape (never raw Prisma model)
   return result
 })
 ```
 
 **Guards:**
+
 - `requireUserSession(event)` — throws 401 if not authenticated
 - `requireCourseContext(event)` — throws 403 if no current course
 
 **Validation helpers** (`server/utils/validation.helpers.ts`):
+
 - `validateBody(event, schema)` — reads + validates request body
 - `validateParams(event, schema)` — validates URL params
 - `validateQuery(event, schema)` — validates query string
@@ -73,12 +75,12 @@ export default defineEventHandler(async (event) => {
 export function useSomething() {
   const { data, error, pending, refresh } = useFetch('/api/me/something')
   const computed = computed(() => data.value?.map(...))
-  
+
   async function doAction(payload: ActionInput) {
     await $fetch('/api/me/something', { method: 'POST', body: payload })
     await refresh()
   }
-  
+
   return { computed, error, pending, doAction }
 }
 ```
@@ -92,7 +94,7 @@ export function useSomething() {
 export const userRowSchema = z.object({
   id: z.string(),
   email: z.string().email(),
-  globalRole: z.enum(['ADMIN', 'INSTRUCTOR', 'USER']),
+  globalRole: z.enum(['ADMIN', 'INSTRUCTOR', 'USER'])
   // ...
 })
 export type UserRow = z.infer<typeof userRowSchema>
@@ -156,6 +158,7 @@ export const createLoginSchema = (t: (key: string) => string) =>
 ## Definition of Done (from GEMINI.md)
 
 Before considering a feature complete:
+
 1. State how it will be verified (test type).
 2. Write the test first.
 3. Implement the code.

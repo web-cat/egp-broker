@@ -142,6 +142,7 @@ The EGP Broker is a certified LTI 1.3 Tool. It implements the OIDC Third-party L
 - **`GET /api/lti13/login`**: OIDC Initiation endpoint. This is the entry point for the LMS when a user clicks the tool link. It handles the initial handshake and redirects back to the LMS for authentication.
 - **`POST /api/lti13/launch`**: OIDC Redirect URI. This endpoint receives the `id_token` from the LMS, validates its signature using the platform's JWKS, links or creates the local user account, and initializes a secure session.
 - **`GET /api/lti13/jwks`**: Public JWKS (JSON Web Key Set). Serves the tool's public keys, allowing platforms to verify any signed messages sent by the broker.
+- **`GET /api/lti13/config`**: LTI 1.3 Configuration endpoint. This provides the JSON configuration required for Canvas Dynamic Registration, including OIDC and launch URLs, public JWKS URL, required scopes, and placements (`course_navigation` and `assignment_selection`).
 
 ### Configuration
 
@@ -162,14 +163,10 @@ LTI 1.3 security relies on RSA key pairs. You must configure the tool's private 
 
 To install the EGP Broker in Canvas, follow these steps in the Developer Keys section of your Canvas instance:
 
-1. **Method**: Manual Entry
-2. **Title**: EGP Broker
-3. **Target Link URI**: `https://your-domain.com/`
-4. **OpenID Connect Initiation URL**: `https://your-domain.com/api/lti13/login`
-5. **Redirect URIs**: `https://your-domain.com/api/lti13/launch`
-6. **JWK Method**: Public JWK URL
-7. **Public JWK URL**: `https://your-domain.com/api/lti13/jwks`
-8. **LTI Advantage Services**: Enable "Assignment Data Service", "Result Service", and "Deep Linking Support" as needed for your use case.
+1. **Method**: Enter URL
+2. **Configuration URL**: `https://your-domain.com/api/lti13/config`
+
+This will automatically configure the tool's name, description, OIDC URLs, public JWKS URL, required scopes, and placements (`course_navigation` and `assignment_selection`).
 
 Once the Developer Key is created, perform the registration in the EGP Broker database (adding an `LtiPlatform` record) using the Client ID and Issuer (`https://canvas.instructure.com`) provided by Canvas.
 

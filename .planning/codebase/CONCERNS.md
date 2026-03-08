@@ -74,6 +74,7 @@ This handler violates the "no inline business logic" rule from GEMINI.md. The tr
 **File:** `server/api/lti13/launch.post.ts` (lines 179–228)
 
 Assignment lookup uses a 3-step cascade fallback:
+
 1. Find by `resourceLinkId`
 2. If not found, find by `canvasAssignmentId`
 3. If still not found, find by `title` where both IDs are `null`

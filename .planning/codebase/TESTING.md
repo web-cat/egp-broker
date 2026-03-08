@@ -2,12 +2,12 @@
 
 ## Testing Framework Overview
 
-| Layer | Framework | Config |
-|---|---|---|
-| Unit tests | Vitest (`^3.2.0`) | `vitest.config.ts` |
-| Component tests | Vitest + `@vue/test-utils` | same |
-| E2E tests | Playwright (`^1.55.0`) | `playwright.config.ts` |
-| Coverage | V8 (`@vitest/coverage-v8`) | `vitest.config.ts` |
+| Layer           | Framework                  | Config                 |
+| --------------- | -------------------------- | ---------------------- |
+| Unit tests      | Vitest (`^3.2.0`)          | `vitest.config.ts`     |
+| Component tests | Vitest + `@vue/test-utils` | same                   |
+| E2E tests       | Playwright (`^1.55.0`)     | `playwright.config.ts` |
+| Coverage        | V8 (`@vitest/coverage-v8`) | `vitest.config.ts`     |
 
 ## Unit Tests (`test/unit/`)
 
@@ -117,7 +117,7 @@ describe('CasSchema', () => {
 ```typescript
 vi.mock('@@/lib/prisma', () => ({
   default: {
-    user: { findUnique: vi.fn(), create: vi.fn() },
+    user: { findUnique: vi.fn(), create: vi.fn() }
     // ...
   }
 }))

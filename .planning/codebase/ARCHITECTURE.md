@@ -36,6 +36,7 @@
 ### 1. `shared/` — Universal Truths
 
 The only layer accessible by **both** server and client. Contains:
+
 - **Zod schemas** (`shared/schemas/`) — input validation contracts
 - **Interface models** (`shared/models/`) — API response shapes (e.g., `UserRow`)
 - **Constants** (`shared/constants/`) — validation limits, error codes
@@ -94,11 +95,11 @@ Canvas → POST /api/lti13/launch
 ```typescript
 // server/api/me/something.get.ts
 export default defineEventHandler(async (event) => {
-  const session = await requireUserSession(event)   // auth guard
+  const session = await requireUserSession(event) // auth guard
   const courseId = await requireCourseContext(event) // context guard
-  const body = await validateBody(event, MySchema)   // zod validation
-  const result = await doBusinessLogic(courseId)     // server/utils/
-  return result                                       // shared/models shape
+  const body = await validateBody(event, MySchema) // zod validation
+  const result = await doBusinessLogic(courseId) // server/utils/
+  return result // shared/models shape
 })
 ```
 
@@ -123,6 +124,7 @@ export function useSomething() {
 ## Scheduled Task Architecture
 
 Nitro experimental tasks with cron scheduling in `nuxt.config.ts`:
+
 ```typescript
 // server/tasks/cleanup/tokens.ts
 export default defineTask({ run: async () => { ... } })
