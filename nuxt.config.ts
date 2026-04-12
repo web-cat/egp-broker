@@ -7,6 +7,12 @@ export default defineNuxtConfig({
   // ========================================
   compatibilityDate: '2025-10-22',
 
+  // srcDir: 'app/',
+
+  // future: {
+  //   compatibilityVersion: 4,
+  // },
+
   devtools: {
     enabled: true,
     timeline: {
@@ -79,7 +85,7 @@ export default defineNuxtConfig({
       }
     ],
     defaultLocale: 'en',
-    strategy: 'prefix',
+    strategy: 'prefix_except_default',
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: 'i18n_redirected',

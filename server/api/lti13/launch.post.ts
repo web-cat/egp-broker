@@ -1,4 +1,4 @@
-import { defineEventHandler, createError, readBody, parseCookies, sendRedirect } from 'h3'
+import { defineEventHandler, createError, readBody, sendRedirect } from 'h3'
 import type { H3Event } from 'h3'
 import prisma from '@@/lib/prisma'
 import { getGravatarUrl } from '@@/server/utils/gravatar'
@@ -42,6 +42,7 @@ export default defineEventHandler(async (event: H3Event) => {
       const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
       const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
       const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom'] || {}
+      const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles'] || []
 
       // A. Upsert Deployment
       const deployment = await tx.ltiDeployment.upsert({
@@ -50,7 +51,7 @@ export default defineEventHandler(async (event: H3Event) => {
         create: { platformId: platform.id, deploymentId, deploymentHost: claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid || null }
       })
 
-      // B. Upsert Course (Defined in top scope of transaction to avoid "not defined" errors)
+      // B. Upsert Course
       const course = await tx.course.upsert({
         where: { deploymentId_ltiContextId: { deploymentId: deployment.id, ltiContextId: context.id } },
         update: { 
@@ -95,47 +96,59 @@ export default defineEventHandler(async (event: H3Event) => {
         create: { userId: user.id, platformId: platform.id, ltiSub: sub, deploymentId }
       })
 
-      const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles']
+      const userRole = parseCourseRole(roles)
       await tx.enrollment.upsert({
         where: { userId_courseId: { userId: user.id, courseId: course.id } },
-        update: { role: parseCourseRole(roles) },
-        create: { userId: user.id, courseId: course.id, role: parseCourseRole(roles) }
+        update: { role: userRole },
+        create: { userId: user.id, courseId: course.id, role: userRole }
       })
 
-      // E. Tool Identification (Look for tool_id in URL query string)
-      const targetLinkUri = claims['https://purl.imsglobal.org/spec/lti/claim/target_link_uri'] || ''
-      const urlParams = new URL(targetLinkUri).searchParams
-      const toolId = urlParams.get('tool_id') || customClaims.tool_id
-
-      if (!toolId) throw new Error('No tool_id provided in launch URL or custom parameters')
-
-      const tool = await tx.ltiTool.findUnique({ where: { id: toolId } })
-      if (!tool) throw new Error(`Tool with ID "${toolId}" not found in Broker database`)
-
-      // F. Upsert Assignment & Link Tool
-      const assignment = await tx.assignment.upsert({
+      // E. Dynamic Tool Identification Logic
+      // 1. Check for existing assignment mapping
+      let assignment = await tx.assignment.findUnique({
         where: { courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id } },
-        update: { 
-            toolId: tool.id, 
-            title: resourceLink.title,
-            canvasAgsEndpoint: claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem 
-        },
-        create: { 
-            courseId: course.id, 
-            resourceLinkId: resourceLink.id, 
-            toolId: tool.id, 
+        include: { tool: true }
+      })
+
+      // 2. If assignment doesn't exist, create the shell
+      if (!assignment) {
+        assignment = await tx.assignment.create({
+          data: {
+            courseId: course.id,
+            resourceLinkId: resourceLink.id,
             title: resourceLink.title,
             canvasAgsEndpoint: claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
-        }
-      })
+          },
+          include: { tool: true }
+        })
+      }
 
-      return { user, assignmentId: assignment.id, tool }
+      // 3. Determine if we have a tool to launch
+      // Check order: URL Param > Custom Field > Saved DB Mapping
+      const targetLinkUri = claims['https://purl.imsglobal.org/spec/lti/claim/target_link_uri'] || ''
+      const urlToolId = new URL(targetLinkUri).searchParams.get('tool_id')
+      const effectiveToolId = urlToolId || customClaims.tool_id || assignment.toolId
+
+      if (!effectiveToolId) {
+        return { user, needsConfiguration: true, assignmentId: assignment.id, role: userRole }
+      }
+
+      const tool = await tx.ltiTool.findUnique({ where: { id: effectiveToolId } })
+      if (!tool) throw new Error(`Tool with ID "${effectiveToolId}" not found`)
+
+      // Update assignment with the tool if it was a new discovery
+      if (assignment.toolId !== tool.id) {
+        await tx.assignment.update({
+          where: { id: assignment.id },
+          data: { toolId: tool.id }
+        })
+      }
+
+      return { user, assignmentId: assignment.id, tool, needsConfiguration: false }
     })
 
-    // 5. Finalize Session & Trigger LTI 1.1 Redirect
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-    const host = event.node.req.headers.host
-    const { user, assignmentId, tool } = transactionResult
+    // 5. Flow Control: Setup vs Launch
+    const { user, assignmentId, tool, needsConfiguration, role } = transactionResult
 
     await setUserSession(event, { 
       user: {
@@ -147,23 +160,48 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     })
 
-    // Sign the launch for the legacy LTI 1.1 tool (the test stub)
+    //check that the assignment is configured
+    if (needsConfiguration) {
+      // Add a log here to be 100% sure what the variable 'role' contains at this exact moment
+      console.log('Final check - Role:', role, 'Needs Config:', needsConfiguration)
+
+      const isStaff = ['TEACHER', 'TA', 'DESIGNER', 'ADMIN'].includes(role)
+
+      if (isStaff) {
+        // Redirect the teacher to the setup page
+        return sendRedirect(event, `/setup/${assignmentId}`, 303)
+        //return sendRedirect(event, `/test`, 303)
+      } else {
+        // If it's a student, show the error
+        throw createError({ 
+          statusCode: 412, 
+          statusMessage: 'This assignment has not been set up by an instructor.' 
+        })
+      }
+    } else {
+      // If linked, send them to the universal launch wrapper
+      return sendRedirect(event, `/launch/${assignmentId}`)
+    }
+
+    // 6. Finalize LTI 1.1 Redirect (The "Proxy" Launch)
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+    const host = event.node.req.headers.host
+
     const lti11Params = {
       lti_message_type: 'basic-lti-launch-request',
       lti_version: 'LTI-1p0',
       resource_link_id: claims['https://purl.imsglobal.org/spec/lti/claim/resource_link'].id,
       user_id: user.id,
-      roles: 'Learner', // Simplified for stub testing
+      roles: role,
       lis_person_name_full: `${user.firstName} ${user.lastName}`,
       lis_outcome_service_url: `${protocol}://${host}/api/proxy/grade-passback?assignmentId=${assignmentId}`
     }
 
-    const signedData = signLti11(tool.baseUrl, 'POST', lti11Params, tool.key, tool.secret)
+    const signedData = signLti11(tool!.baseUrl, 'POST', lti11Params, tool!.key, tool!.secret)
 
-    // Render an auto-submitting HTML form to the tool's endpoint
     event.node.res.setHeader('Content-Type', 'text/html')
     return `
-      <form action="${tool.baseUrl}" method="POST" id="lti_launch_form">
+      <form action="${tool!.baseUrl}" method="POST" id="lti_launch_form">
         ${Object.entries(signedData).map(([k, v]) => `<input type="hidden" name="${k}" value="${v}">`).join('')}
       </form>
       <script>document.getElementById('lti_launch_form').submit();</script>

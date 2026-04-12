@@ -5,6 +5,7 @@ import { LtiLoginSchema } from '@@/shared/schemas/auth.schema'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
+  console.log('RAW QUERY PARAMS:', query) // Check your terminal!
 
   return await initiateOidcRedirect(event, {
     iss: query.iss as string,
