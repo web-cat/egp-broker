@@ -35,6 +35,8 @@ export default defineEventHandler(async (event: H3Event) => {
 
     const sub = claims.sub
     const email = claims.email
+
+    console.log(claims['https://purl.imsglobal.org/spec/lti/claim/roles'])
     
     // 4. Run Database Transaction
     const transactionResult = await prisma.$transaction(async (tx) => {
@@ -42,13 +44,14 @@ export default defineEventHandler(async (event: H3Event) => {
       const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
       const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
       const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom'] || {}
+      const platformClaims = claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform'] || {}
       const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles'] || []
 
       // A. Upsert Deployment
       const deployment = await tx.ltiDeployment.upsert({
         where: { platformId_deploymentId: { platformId: platform.id, deploymentId } },
-        update: { deploymentHost: claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid || null },
-        create: { platformId: platform.id, deploymentId, deploymentHost: claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid || null }
+        update: { deploymentHost: platformClaims?.guid || null },
+        create: { platformId: platform.id, deploymentId, deploymentHost: platformClaims?.guid || null }
       })
 
       // B. Upsert Course
@@ -130,7 +133,7 @@ export default defineEventHandler(async (event: H3Event) => {
       const effectiveToolId = urlToolId || customClaims.tool_id || assignment.toolId
 
       if (!effectiveToolId) {
-        return { user, needsConfiguration: true, assignmentId: assignment.id, role: userRole }
+        return { user, needsConfiguration: true, assignmentId: assignment.id, userRole }
       }
 
       const tool = await tx.ltiTool.findUnique({ where: { id: effectiveToolId } })
@@ -144,11 +147,11 @@ export default defineEventHandler(async (event: H3Event) => {
         })
       }
 
-      return { user, assignmentId: assignment.id, tool, needsConfiguration: false }
+      return { user, assignmentId: assignment.id, tool, needsConfiguration: false, userRole}
     })
 
     // 5. Flow Control: Setup vs Launch
-    const { user, assignmentId, tool, needsConfiguration, role } = transactionResult
+    const { user, assignmentId, tool, needsConfiguration, custom, userRole } = transactionResult
 
     await setUserSession(event, { 
       user: {
@@ -156,56 +159,30 @@ export default defineEventHandler(async (event: H3Event) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        currentCourseId: user.currentCourseId
+        currentCourseId: user.currentCourseId,
+        role: userRole,
       }
     })
 
     //check that the assignment is configured
     if (needsConfiguration) {
       // Add a log here to be 100% sure what the variable 'role' contains at this exact moment
-      console.log('Final check - Role:', role, 'Needs Config:', needsConfiguration)
+      console.log('Final check - Role:', userRole, 'Needs Config:', needsConfiguration)
 
-      const isStaff = ['TEACHER', 'TA', 'DESIGNER', 'ADMIN'].includes(role)
+      //lti 1.3 roles
+      const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(userRole)
 
       if (isStaff) {
         // Redirect the teacher to the setup page
         return sendRedirect(event, `/setup/${assignmentId}`, 303)
-        //return sendRedirect(event, `/test`, 303)
       } else {
-        // If it's a student, show the error
-        throw createError({ 
-          statusCode: 412, 
-          statusMessage: 'This assignment has not been set up by an instructor.' 
-        })
+        //redirect to a friendly "Not Ready" page
+        return sendRedirect(event, `/not-ready`, 303)
       }
     } else {
       // If linked, send them to the universal launch wrapper
       return sendRedirect(event, `/launch/${assignmentId}`)
     }
-
-    // 6. Finalize LTI 1.1 Redirect (The "Proxy" Launch)
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-    const host = event.node.req.headers.host
-
-    const lti11Params = {
-      lti_message_type: 'basic-lti-launch-request',
-      lti_version: 'LTI-1p0',
-      resource_link_id: claims['https://purl.imsglobal.org/spec/lti/claim/resource_link'].id,
-      user_id: user.id,
-      roles: role,
-      lis_person_name_full: `${user.firstName} ${user.lastName}`,
-      lis_outcome_service_url: `${protocol}://${host}/api/proxy/grade-passback?assignmentId=${assignmentId}`
-    }
-
-    const signedData = signLti11(tool!.baseUrl, 'POST', lti11Params, tool!.key, tool!.secret)
-
-    event.node.res.setHeader('Content-Type', 'text/html')
-    return `
-      <form action="${tool!.baseUrl}" method="POST" id="lti_launch_form">
-        ${Object.entries(signedData).map(([k, v]) => `<input type="hidden" name="${k}" value="${v}">`).join('')}
-      </form>
-      <script>document.getElementById('lti_launch_form').submit();</script>
-    `
 
   } catch (error: any) {
     console.error('LTI Launch Error:', error)

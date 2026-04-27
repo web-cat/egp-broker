@@ -34,6 +34,7 @@ export default defineEventHandler(async (event: H3Event) => {
     { pathPrefix: '/api/posts', methods: ['GET'] }, // Allow /api/posts and subpaths
     { pathPrefix: '/api/docs', methods: ['GET'] }, // Allow /api/docs and subpaths
     { pathPrefix: '/api/lti13', methods: ['GET', 'POST'] }, // LTI endpoints
+    { pathPrefix: '/api/lti/', methods: ['GET', 'POST'] }, // LTI 1.1 endpoints
     ...(import.meta.dev ? [{ pathPrefix: '/api/dev', methods: ['POST'] }] : []) // Mock endpoints
   ]
 

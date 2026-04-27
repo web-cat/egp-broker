@@ -6,6 +6,9 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event) // This is the LIS Score JSON from the tool
   const assignmentId = query.assignmentId as string
 
+  console.log('--- Incoming Grade Passback ---');
+  console.log('Body:', body);
+
   // 1. Fetch assignment and its global tool/platform policy
   const assignment = await prisma.assignment.findUnique({
     where: { id: assignmentId },
