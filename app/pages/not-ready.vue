@@ -10,23 +10,13 @@
       </h1>
       
       <p class="text-gray-600 mb-6">
-        The assignment <strong>{{ route.query.title || 'this task' }}</strong> 
-        hasn't been finalized by your instructor yet. 
+        This assignment hasn't been finalized by your instructor yet. 
       </p>
 
-      <div class="bg-blue-50 p-4 rounded-lg text-sm text-blue-800 mb-6">
-        Your progress isn't lost—you just can't start quite yet. 
+      <div class="bg-blue-50 p-4 rounded-lg text-sm text-blue-800 mb-6"> 
         Please check back in a few minutes or contact your teacher.
       </div>
 
-      <UButton 
-        to="/dashboard" 
-        color="blue" 
-        variant="soft" 
-        icon="i-heroicons-arrow-left"
-      >
-        Go back to Dashboard
-      </UButton>
     </div>
   </div>
 </template>

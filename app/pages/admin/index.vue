@@ -90,7 +90,8 @@ const simpleCards = computed(() => {
   return [
     { label: 'LTI Tools', value: s?.tools ?? '—', to: '/admin/tools' },
     { label: 'Courses', value: s?.courses ?? '—', to: '/admin/courses' },
-    { label: 'Users', value: s?.users ?? '—', to: '/admin/users' }
+    { label: 'Users', value: s?.users ?? '—', to: '/admin/users' },
+    { label: 'Grade Translations', value: s?.translations ?? '—', to: '/admin/grade-translations' }
   ]
 })
 </script>

@@ -143,6 +143,21 @@ model LtiIdentity {
   @@unique([userId, platformId])
 }
 
+model gradeTranslation {
+  id          String       @id @default(cuid())
+  name        String       // e.g., "Standard Letter Grades", "Pass/Fail"
+  description String?
+  
+  // The actual mapping logic (e.g., score thresholds or scales)
+  mapping     Json?
+
+  // Relation back to assignments
+  assignments Assignment[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
 model LoginAttempt {
   id            String    @id @default(cuid())
   email         String
@@ -228,6 +243,10 @@ model Assignment {
   //tool information
   toolId        String?
   tool          LtiTool? @relation(fields: [toolId], references: [id], onDelete: SetNull)
+
+  //grade translation option
+  gradeTranslationId String?
+  grade         gradeTranslation? @relation(fields: [gradeTranslationId], references: [id], onDelete: SetNull)
 
   // Relationships
   courseId String

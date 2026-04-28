@@ -25,6 +25,7 @@ export interface AdminStats {
   courses: number
   users: number
   tools: number
+  gradeTranslations: number
   platformList: AdminPlatformSummary[]
   deploymentList: AdminDeploymentSummary[]
 }
