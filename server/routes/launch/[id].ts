@@ -1,33 +1,36 @@
 import prisma from '@@/lib/prisma'
 import crypto from 'crypto'
-import { decodeJwt } from 'jose'
+//import { decodeJwt } from 'jose'
 
 export default defineEventHandler(async (event) => {
-  try{
+  try {
     const id = getRouterParam(event, 'id')
-    const method = event.method
+    //const method = event.method
 
     // 1. Fetch assignment context
     const assignment = await prisma.assignment.findUnique({
       where: { id },
-      include: { 
+      include: {
         tool: true,
-        course: true 
+        course: true
       }
     })
 
     //console.log("Assignment: ", assignment)
 
-    if (!assignment?.tool) return "Assignment configuration missing."
+    if (!assignment?.tool) return 'Assignment configuration missing.'
 
     // 2. Access the User Session (This is where your data is after the redirect)
     const session = await getUserSession(event)
 
     //console.log("Session: ", session)
-    
+
     // If the session is empty, they aren't logged in properly
     if (!session.user) {
-      throw createError({ statusCode: 401, statusMessage: 'Session expired. Please relaunch from Canvas.' })
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Session expired. Please relaunch from Canvas.'
+      })
     }
 
     //const full_name = `${session.user.firstName} ${session.user.lastName}`
@@ -35,8 +38,8 @@ export default defineEventHandler(async (event) => {
     const oauthEncode = (str: string) => {
       return encodeURIComponent(str)
         .replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
-        .replace(/%20/g, '%20'); // Use %20 for spaces, NOT +
-    };
+        .replace(/%20/g, '%20') // Use %20 for spaces, NOT +
+    }
 
     // 3. Prepare LTI 1.1 Params
     const ltiParams: Record<string, string> = {
@@ -65,15 +68,15 @@ export default defineEventHandler(async (event) => {
 
       //canvas custom - needs to be general for any lms
       custom_canvas_api_domain: 'canvas.endeavour.cs.vt.edu',
-      custom_canvas_assignment_id: assignment.canvasAssignmentId || 
-                               assignment.canvasAgsEndpoint?.split('/').pop() || '',
+      custom_canvas_assignment_id:
+        assignment.canvasAssignmentId || assignment.canvasAgsEndpoint?.split('/').pop() || '',
       custom_canvas_course_id: assignment.course.canvasCourseId || '',
       custom_canvas_user_id: session.user.id || '',
       custom_canvas_user_login_id: session.user.email,
 
       //grade passback overwrite
-      lis_outcome_service_url: `https://${event.node.req.headers.host}/api/proxy/grade-passback`,
-      lis_result_sourcedid: session.user.id, //Buffer.from(`${assignment.id}:${session.user.id}`).toString('base64'),
+      lis_outcome_service_url: `https://${event.node.req.headers.host}/api/proxy/grade-passback/lti11`,
+      lis_result_sourcedid: ltiResult.id, //Buffer.from(`${assignment.id}:${session.user.id}`).toString('base64'),
       ext_outcome_data_values_accepted: 'url,text',
       ext_outcome_result_total_score_accepted: 'true',
 
@@ -87,7 +90,6 @@ export default defineEventHandler(async (event) => {
       tool_consumer_info_version: '1.0',
       tool_consumer_instance_guid: 'egp-broker-instance-01',
       tool_consumer_instance_name: 'EGP Middleware Broker',
-      
 
       oauth_callback: 'about:blank',
       oauth_consumer_key: assignment.tool.key,
@@ -97,22 +99,18 @@ export default defineEventHandler(async (event) => {
       oauth_version: '1.0'
     }
 
-    console.log("ltiParams: ", ltiParams)
+    console.log('ltiParams: ', ltiParams)
 
     // 5. Generate OAuth Signature
     // LTI 1.1 requires alphabetical sorting for the base string
     const sortedParams = Object.keys(ltiParams)
       .sort()
-      .map(key => `${oauthEncode(key)}=${oauthEncode(ltiParams[key])}`)
-      .join('&');
+      .map((key) => `${oauthEncode(key)}=${oauthEncode(ltiParams[key])}`)
+      .join('&')
 
-    const launchUrl = assignment.tool.baseUrl// + "lti/launch"
+    const launchUrl = assignment.tool.baseUrl // + "lti/launch"
 
-    const baseString = [
-      'POST',
-      oauthEncode(launchUrl),
-      oauthEncode(sortedParams)
-    ].join('&');
+    const baseString = ['POST', oauthEncode(launchUrl), oauthEncode(sortedParams)].join('&')
     const signingKey = `${oauthEncode(assignment.tool.secret)}&`
     const signature = crypto.createHmac('sha1', signingKey).update(baseString).digest('base64')
 
@@ -120,7 +118,9 @@ export default defineEventHandler(async (event) => {
 
     // 6. Generate the Auto-submit form
     const inputs = Object.entries(ltiParams)
-      .map(([k, v]) => `<input type="hidden" name="${k}" value="${String(v).replace(/"/g, '&quot;')}">`)
+      .map(
+        ([k, v]) => `<input type="hidden" name="${k}" value="${String(v).replace(/"/g, '&quot;')}">`
+      )
       .join('\n      ')
 
     // Example: verify variables exist before returning
@@ -142,8 +142,7 @@ export default defineEventHandler(async (event) => {
     `
 
     return send(event, html, 'text/html')
-
-  }catch (err:any){
+  } catch (err: any) {
     // THIS IS THE KEY: Log the full error to your terminal
     console.error('--- DETAILED LAUNCH ERROR ---')
     console.error('Message:', err.message)

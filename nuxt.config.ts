@@ -7,12 +7,6 @@ export default defineNuxtConfig({
   // ========================================
   compatibilityDate: '2025-10-22',
 
-  // srcDir: 'app/',
-
-  // future: {
-  //   compatibilityVersion: 4,
-  // },
-
   devtools: {
     enabled: true,
     timeline: {
@@ -102,13 +96,12 @@ export default defineNuxtConfig({
       password: process.env.NUXT_SESSION_PASSWORD,
       cookie: {
         sameSite: 'none', // Essential for the POST back from Canvas
-        secure: true,     // Essential for sameSite 'none'
-        maxAge: 60 * 10,   // 10 minutes is plenty for the OIDC handshake
+        secure: true, // Essential for sameSite 'none'
+        maxAge: 60 * 10, // 10 minutes is plenty for the OIDC handshake
         partitioned: true
       }
     }
   },
-
 
   // ========================================
   // Icon Configuration
@@ -249,6 +242,15 @@ export default defineNuxtConfig({
         'Access-Control-Max-Age': '86400',
         'X-Frame-Options': 'ALLOWALL'
       }
+    },
+    // Update this section:
+    '/api/proxy/grade-passback': {
+      bodyParser: false,
+      security: {
+        requestSizeLimiter: false, // Prevents early stream consumption
+        xssValidator: false, // Prevents parsing the XML to look for scripts
+        corsHandler: false // Use Nitro's built-in one instead
+      }
     }
   },
 
@@ -297,7 +299,7 @@ export default defineNuxtConfig({
       cookie: {
         sameSite: 'none',
         secure: true,
-        httpOnly: true,
+        httpOnly: true
         // partitioned: true
         // domain: 'yourdomain.com' // Usually better left undefined for local/dev
       }

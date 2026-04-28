@@ -8,11 +8,11 @@ export default defineEventHandler(async (event: H3Event) => {
   // 1. Validate the LTI 1.3 Launch Body
   const body = await readBody(event)
   const result = LtiLaunchSchema.safeParse(body)
-  
+
   if (!result.success) {
-    throw createError({ 
-      statusCode: 400, 
-      statusMessage: 'Invalid LTI Launch: Missing id_token or state' 
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid LTI Launch: Missing id_token or state'
     })
   }
 
@@ -31,13 +31,14 @@ export default defineEventHandler(async (event: H3Event) => {
   try {
     // 3. Verify LTI Token & Claims
     const claims = await verifyLtiToken(idToken, platform.jwksEndpoint, platform.clientId, issuer)
-    if (claims.nonce !== session.lti.nonce) throw createError({ statusCode: 403, statusMessage: 'Invalid nonce' })
+    if (claims.nonce !== session.lti.nonce)
+      throw createError({ statusCode: 403, statusMessage: 'Invalid nonce' })
 
     const sub = claims.sub
     const email = claims.email
 
     console.log(claims['https://purl.imsglobal.org/spec/lti/claim/roles'])
-    
+
     // 4. Run Database Transaction
     const transactionResult = await prisma.$transaction(async (tx) => {
       const deploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
@@ -51,23 +52,29 @@ export default defineEventHandler(async (event: H3Event) => {
       const deployment = await tx.ltiDeployment.upsert({
         where: { platformId_deploymentId: { platformId: platform.id, deploymentId } },
         update: { deploymentHost: platformClaims?.guid || null },
-        create: { platformId: platform.id, deploymentId, deploymentHost: platformClaims?.guid || null }
+        create: {
+          platformId: platform.id,
+          deploymentId,
+          deploymentHost: platformClaims?.guid || null
+        }
       })
 
       // B. Upsert Course
       const course = await tx.course.upsert({
-        where: { deploymentId_ltiContextId: { deploymentId: deployment.id, ltiContextId: context.id } },
-        update: { 
-            label: context.label, 
-            title: context.title, 
-            canvasCourseId: customClaims.canvas_course_id?.toString() 
+        where: {
+          deploymentId_ltiContextId: { deploymentId: deployment.id, ltiContextId: context.id }
         },
-        create: { 
-            deploymentId: deployment.id, 
-            ltiContextId: context.id, 
-            label: context.label, 
-            title: context.title, 
-            canvasCourseId: customClaims.canvas_course_id?.toString() 
+        update: {
+          label: context.label,
+          title: context.title,
+          canvasCourseId: customClaims.canvas_course_id?.toString()
+        },
+        create: {
+          deploymentId: deployment.id,
+          ltiContextId: context.id,
+          label: context.label,
+          title: context.title,
+          canvasCourseId: customClaims.canvas_course_id?.toString()
         }
       })
 
@@ -90,10 +97,10 @@ export default defineEventHandler(async (event: H3Event) => {
         })
       }
 
-      if (!user) throw new Error("Could not find or create user context")
+      if (!user) throw new Error('Could not find or create user context')
 
       // D. Identity and Enrollment
-      await tx.ltiIdentity.upsert({
+      await tx.ltiResult.upsert({
         where: { platformId_ltiSub: { platformId: platform.id, ltiSub: sub } },
         update: { deploymentId },
         create: { userId: user.id, platformId: platform.id, ltiSub: sub, deploymentId }
@@ -107,30 +114,49 @@ export default defineEventHandler(async (event: H3Event) => {
       })
 
       // E. Dynamic Tool Identification Logic
-      // 1. Check for existing assignment mapping
+      // 1. Check for existing assignment mapping (Resource Link ID is unique per assignment)
       let assignment = await tx.assignment.findUnique({
-        where: { courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id } },
+        where: {
+          courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id }
+        },
         include: { tool: true }
       })
 
-      // 2. If assignment doesn't exist, create the shell
+      // 2. Create shell if new
       if (!assignment) {
         assignment = await tx.assignment.create({
           data: {
             courseId: course.id,
             resourceLinkId: resourceLink.id,
-            title: resourceLink.title,
-            canvasAgsEndpoint: claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
+            title: resourceLink.title
+            //canvasAgsEndpoint: claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
           },
           include: { tool: true }
         })
       }
+      // F. Create/Update LtiResult (The SourcedId Bridge)
+      // This maps this specific User + Assignment to a unique ID for the proxy
+      const agsEndpoint = claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
+      const ltiResult = await tx.ltiResult.upsert({
+        where: { userId_assignmentId: { userId: user.id, assignmentId: assignment.id } },
+        update: { lisOutcomeServiceUrl: agsEndpoint },
+        create: {
+          userId: user.id,
+          assignmentId: assignment.id,
+          lisOutcomeServiceUrl: agsEndpoint
+        }
+      })
 
-      // 3. Determine if we have a tool to launch
-      // Check order: URL Param > Custom Field > Saved DB Mapping
-      const targetLinkUri = claims['https://purl.imsglobal.org/spec/lti/claim/target_link_uri'] || ''
+      // G. Determine Tool ID via Hierarchy
+      const targetLinkUri =
+        claims['https://purl.imsglobal.org/spec/lti/claim/target_link_uri'] || ''
       const urlToolId = new URL(targetLinkUri).searchParams.get('tool_id')
-      const effectiveToolId = urlToolId || customClaims.tool_id || assignment.toolId
+
+      // PRIORITIZE:
+      // 1. Existing DB mapping (The specific workout the teacher chose)
+      // 2. Custom claims (LTI Advantage custom parameters)
+      // 3. URL Param (The fallback/default)
+      const effectiveToolId = assignment.toolId || customClaims.tool_id || urlToolId
 
       if (!effectiveToolId) {
         return { user, needsConfiguration: true, assignmentId: assignment.id, userRole }
@@ -147,21 +173,30 @@ export default defineEventHandler(async (event: H3Event) => {
         })
       }
 
-      return { user, assignmentId: assignment.id, tool, needsConfiguration: false, userRole}
+      return {
+        user,
+        assignmentId: assignment.id,
+        tool,
+        needsConfiguration: false,
+        userRole,
+        sourcedId: ltiResult.id
+      }
     })
 
     // 5. Flow Control: Setup vs Launch
-    const { user, assignmentId, tool, needsConfiguration, custom, userRole } = transactionResult
+    const { user, assignmentId, tool, needsConfiguration, custom, userRole, sourcedId } =
+      transactionResult
 
-    await setUserSession(event, { 
+    await setUserSession(event, {
       user: {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         currentCourseId: user.currentCourseId,
-        role: userRole,
-      }
+        role: userRole
+      },
+      lti: { ...session.lti, sourcedId }
     })
 
     //check that the assignment is configured
@@ -177,13 +212,12 @@ export default defineEventHandler(async (event: H3Event) => {
         return sendRedirect(event, `/setup/${assignmentId}`, 303)
       } else {
         //redirect to a friendly "Not Ready" page
-        return sendRedirect(event, `/not-ready`, 303)
+        return sendRedirect(event, '/not-ready', 303)
       }
     } else {
       // If linked, send them to the universal launch wrapper
       return sendRedirect(event, `/launch/${assignmentId}`)
     }
-
   } catch (error: any) {
     console.error('LTI Launch Error:', error)
     throw createError({

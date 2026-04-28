@@ -1,7 +1,7 @@
 // server/api/admin/lti-tools.post.ts
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  
+
   return await prisma.ltiPlatform.upsert({
     where: { issuer: body.issuer },
     update: {

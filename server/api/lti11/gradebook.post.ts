@@ -9,11 +9,11 @@ export default defineEventHandler(async (event) => {
   // 1. Parse the XML request
   const parser = new XMLParser()
   const xmlObj = parser.parse(bodyText)
-  
+
   // Navigate the LTI POX XML structure to find the score and sourcedId
   const requestHeader = xmlObj?.imsx_POXEnvelopeRequest?.imsx_POXHeader?.imsx_POXRequestHeaderInfo
   const requestBody = xmlObj?.imsx_POXEnvelopeRequest?.imsx_POXBody?.replaceResultRequest
-  
+
   const sourcedId = requestBody?.resultRecord?.sourcedGUID?.sourcedId
   const score = requestBody?.resultRecord?.result?.resultScore?.textString
 
@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
 
   /**
    * 3. OAUTH VERIFICATION (Crucial)
-   * In a production environment, you would use the 'oauth-sign' library 
+   * In a production environment, you would use the 'oauth-sign' library
    * to verify the signature of the incoming header against assignment.tool.sharedSecret
    */
 
@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
   // 4. Forward to Canvas
   // This is where you would make an outgoing POST to Canvas's actual
   // outcome service URL, which you should have stored during the initial 1.3/1.1 handshake
-  
+
   return createLtiResponse('success', 'Grade updated successfully')
 })
 

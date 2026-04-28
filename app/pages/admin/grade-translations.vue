@@ -80,11 +80,16 @@ const translationColumns: TableColumn<GradeTranslationRow>[] = [
 ]
 
 async function deleteTranslation(row: GradeTranslationRow) {
-  if (!confirm('Are you sure you want to delete this translation? This may affect existing assignments.')) return
+  if (
+    !confirm(
+      'Are you sure you want to delete this translation? This may affect existing assignments.'
+    )
+  )
+    return
 
   try {
     await $fetch(`/api/admin/grade-translations/${row.id}`, { method: 'DELETE' })
-    onItemCreated() 
+    onItemCreated()
     useToast().add({ title: 'Translation deleted' })
   } catch {
     useToast().add({ title: 'Error deleting translation', color: 'error' })

@@ -15,7 +15,6 @@ export default defineEventHandler(async (event) => {
   })
 })
 
-
 // export default defineEventHandler(async (event: H3Event) => {
 //   const query = await getValidatedQuery(event, LtiLoginSchema.parse)
 //   const iss = query.iss

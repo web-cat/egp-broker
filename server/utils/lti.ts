@@ -35,20 +35,23 @@ export function parseCourseRole(roles?: string[]): CourseRole {
  * Shared logic to initiate the OIDC flow.
  * This handles the database lookup and session storage before redirecting to Canvas.
  */
-export async function initiateOidcRedirect(event: any, params: {
-  iss: string,
-  loginHint: string,
-  targetLinkUri: string,
-  ltiMessageHint?: string
-}) {
+export async function initiateOidcRedirect(
+  event: any,
+  params: {
+    iss: string
+    loginHint: string
+    targetLinkUri: string
+    ltiMessageHint?: string
+  }
+) {
   const platform = await prisma.ltiPlatform.findUnique({
     where: { issuer: params.iss }
   })
 
   if (!platform) {
-    throw createError({ 
-      statusCode: 404, 
-      statusMessage: `Platform for issuer ${params.iss} not registered` 
+    throw createError({
+      statusCode: 404,
+      statusMessage: `Platform for issuer ${params.iss} not registered`
     })
   }
 
@@ -108,7 +111,7 @@ export function createLtiLoginUrl(
   url.searchParams.set('state', state)
   url.searchParams.set('response_mode', 'form_post')
   // REQUIRED for Canvas to avoid "missing prompt" errors
-  url.searchParams.set('prompt', 'none')  
+  url.searchParams.set('prompt', 'none')
   return url.toString()
 }
 

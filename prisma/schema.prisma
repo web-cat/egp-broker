@@ -52,6 +52,7 @@ model User {
   ltiIdentities LtiIdentity[]
   enrollments   Enrollment[]
   passPools     StudentPassPool[]
+  ltiResults    LtiResult[]
 
   // Current context
   currentCourseId String?
@@ -141,6 +142,20 @@ model LtiIdentity {
 
   @@unique([platformId, ltiSub])
   @@unique([userId, platformId])
+}
+
+model LtiResult {
+  id                      String   @id @default(cuid())
+  user                    User     @relation(fields: [userId], references: [id])
+  userId                  String
+  assignment              Assignment @relation(fields: [assignmentId], references: [id])
+  assignmentId            String
+  lisResultSourcedId      String?
+  lisOutcomeServiceUrl    String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@unique([userId, assignmentId])
 }
 
 model gradeTranslation {
@@ -234,7 +249,6 @@ model Enrollment {
 model Assignment {
   id             String  @id @default(cuid())
   resourceLinkId String? // resource_link.id from LTI claim
-  canvasAgsEndpoint  String?
   title          String? // resource_link.title
 
   // Canvas-specific custom variables
@@ -255,6 +269,8 @@ model Assignment {
   // Resubmission pass relations
   passEligibilities PassEligibility[]
   passRedemptions   PassRedemption[]
+
+  ltiResults        LtiResult[] 
 
   availableFrom DateTime?
   dueDate       DateTime?

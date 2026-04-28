@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   return await prisma.ltiTool.findMany({
     select: {
       id: true,
-      name: true,
+      name: true
     },
     orderBy: { name: 'asc' }
   })

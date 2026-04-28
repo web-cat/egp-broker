@@ -15,10 +15,10 @@ export function signLti11(
 
   // Sort keys alphabetically
   const sortedKeys = Object.keys(params).sort()
-  const baseStringParts = sortedKeys.map(k => 
-    `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`
+  const baseStringParts = sortedKeys.map(
+    (k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`
   )
-  
+
   const baseString = [
     method.toUpperCase(),
     encodeURIComponent(url),
@@ -26,10 +26,7 @@ export function signLti11(
   ].join('&')
 
   const signingKey = `${encodeURIComponent(sharedSecret)}&`
-  params.oauth_signature = crypto
-    .createHmac('sha1', signingKey)
-    .update(baseString)
-    .digest('base64')
+  params.oauth_signature = crypto.createHmac('sha1', signingKey).update(baseString).digest('base64')
 
   return params
 }

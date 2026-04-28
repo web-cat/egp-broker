@@ -3,7 +3,7 @@ import prisma from '@@/lib/prisma'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
-  
+
   const assignment = await prisma.assignment.findUnique({
     where: { id },
     include: { tool: true }

@@ -36,17 +36,17 @@ const saving = ref(false)
 async function saveConfiguration() {
   //tool is required, translation is not
   if (!selectedToolId.value) return
-  
+
   saving.value = true
   try {
     await $fetch(`/api/assignments/${assignmentId}/configure`, {
       method: 'POST',
-      body: { 
+      body: {
         toolId: selectedToolId.value,
         gradeTranslationId: selectedTranslationId.value || null //send null if no translation chosen
       }
     })
-    
+
     // Success: Redirect to the actual LTI launch endpoint
     window.location.href = `/launch/${assignmentId}`
   } catch (e) {
@@ -75,8 +75,8 @@ async function saveConfiguration() {
           />
         </UFormField>
 
-        <UFormField 
-          label="Grade Translation (Optional)" 
+        <UFormField
+          label="Grade Translation (Optional)"
           description="If left blank, raw scores from the tool will be used."
         >
           <USelectMenu
@@ -97,8 +97,8 @@ async function saveConfiguration() {
         </UFormField>
 
         <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800">
-          <UButton 
-            block 
+          <UButton
+            block
             size="lg"
             color="primary"
             :loading="saving"

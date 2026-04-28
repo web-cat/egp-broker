@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   // --- POST: Create a new translation ---
   if (method === 'POST') {
     const body = await readBody(event)
-    
+
     // Basic validation
     if (!body.name || !body.mapping) {
       throw createError({ statusCode: 400, statusMessage: 'Name and mapping are required' })

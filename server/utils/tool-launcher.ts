@@ -1,7 +1,7 @@
 export const renderLti11AutoPost = (url: string, signedParams: Record<string, string>) => {
   const inputs = Object.entries(signedParams)
     .map(([k, v]) => `<input type="hidden" name="${k}" value="${v}" />`)
-    .join('\n');
+    .join('\n')
 
   return `
     <!DOCTYPE html>
@@ -16,5 +16,5 @@ export const renderLti11AutoPost = (url: string, signedParams: Record<string, st
         </div>
       </body>
     </html>
-  `;
-};
+  `
+}

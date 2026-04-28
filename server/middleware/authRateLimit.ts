@@ -3,7 +3,17 @@ import type { H3Event } from 'h3'
 export default defineEventHandler(async (event: H3Event) => {
   const url = getRequestURL(event)
 
-  if (url.pathname !== '/api/auth/login' || event.method !== 'POST') {
+  if (
+    url.pathname.startsWith('/api/proxy') ||
+    url.pathname !== '/api/auth/login' ||
+    event.method !== 'POST'
+  ) {
+    return
+  }
+
+  // Ensure we don't try to parse XML or other types as JSON
+  const contentType = getHeader(event, 'content-type')
+  if (!contentType?.includes('application/json')) {
     return
   }
 

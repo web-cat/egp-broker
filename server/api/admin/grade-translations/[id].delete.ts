@@ -12,12 +12,12 @@ export default defineEventHandler(async (event) => {
     await prisma.gradeTranslation.delete({
       where: { id }
     })
-    
+
     return { success: true }
   } catch (error) {
-    throw createError({ 
-      statusCode: 500, 
-      statusMessage: 'Failed to delete translation' 
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Failed to delete translation'
     })
   }
 })

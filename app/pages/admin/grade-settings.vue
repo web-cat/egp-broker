@@ -84,10 +84,10 @@ const toolColumns: TableColumn<ToolGradeRow>[] = [
   },
   actionsColumn<ToolGradeRow>((row) => [
     [
-      { 
-        label: 'Edit Configuration', 
-        icon: 'i-lucide-pencil', 
-        onSelect: () => openEdit(row.original) 
+      {
+        label: 'Edit Configuration',
+        icon: 'i-lucide-pencil',
+        onSelect: () => openEdit(row.original)
       }
     ],
     [{ label: 'Delete Tool', icon: 'i-lucide-trash-2', color: 'error' as const }]

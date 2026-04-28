@@ -4,19 +4,16 @@
       <div class="mb-6 text-blue-500">
         <Icon name="ph:clock-countdown-duotone" size="64" />
       </div>
-      
-      <h1 class="text-2xl font-bold text-gray-800 mb-2">
-        Almost there!
-      </h1>
-      
+
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">Almost there!</h1>
+
       <p class="text-gray-600 mb-6">
-        This assignment hasn't been finalized by your instructor yet. 
+        This assignment hasn't been finalized by your instructor yet.
       </p>
 
-      <div class="bg-blue-50 p-4 rounded-lg text-sm text-blue-800 mb-6"> 
+      <div class="bg-blue-50 p-4 rounded-lg text-sm text-blue-800 mb-6">
         Please check back in a few minutes or contact your teacher.
       </div>
-
     </div>
   </div>
 </template>
