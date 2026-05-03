@@ -1,35 +1,37 @@
 import type { H3Event } from 'h3'
-import { exportJWK, importPKCS8 } from 'jose'
+import { exportJWK, importSPKI } from 'jose' // Use importSPKI for Public Keys
 
 export default defineEventHandler(async (event: H3Event) => {
   const config = useRuntimeConfig(event)
-  const privateKeyPem = config.ltiPrivateKey
+  // Use your Public Key for the JWKS endpoint
+  const publicKeyPem = config.ltiPublicKey
 
-  if (!privateKeyPem) {
+  if (!publicKeyPem) {
     throw createError({
       statusCode: 500,
-      statusMessage: 'LTI private key not configured'
+      statusMessage: 'LTI public key not configured'
     })
   }
 
-  // Convert PKCS8 private key to a JWK
-  // Note: In a real app, you might want to cache the public JWK
   try {
-    const privateKey = await importPKCS8(privateKeyPem, 'RS256')
-    const jwk = await exportJWK(privateKey)
+    // 1. Fix: Add { extractable: true }
+    // 2. Fix: Use importSPKI to ensure we are exporting a Public Key
+    const publicKey = await importSPKI(publicKeyPem, 'RS256', { extractable: true })
+    const jwk = await exportJWK(publicKey)
 
     return {
       keys: [
         {
           ...jwk,
-          kid: config.ltiKeyId || 'lti-key-1',
+          kid: config.ltiKeyId, // Must match the KID in your SJWT header
           use: 'sig',
           alg: 'RS256'
         }
       ]
     }
   } catch (error: any) {
-    logger.error('Failed to export JWK:', { error })
+    // Ensure logger is available or use console
+    console.error('Failed to export JWK:', error)
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to generate JWKS'

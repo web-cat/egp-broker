@@ -5,41 +5,49 @@ import crypto from 'crypto'
 export default defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, 'id')
-    //const method = event.method
+    const session = await getUserSession(event)
 
-    // 1. Fetch assignment context
+    if (!session.user) {
+      throw createError({ statusCode: 401, statusMessage: 'Session expired.' })
+    }
+
+    // 1. Fetch assignment context AND the specific LtiResult for this user
     const assignment = await prisma.assignment.findUnique({
       where: { id },
       include: {
         tool: true,
-        course: true
+        course: true,
+        // Fetch the result record that was created/updated during launch.post.ts
+        ltiResults: {
+          where: {
+            userId: session.user.id,
+            assignmentId: id
+          }
+        }
       }
     })
 
-    //console.log("Assignment: ", assignment)
-
     if (!assignment?.tool) return 'Assignment configuration missing.'
 
-    // 2. Access the User Session (This is where your data is after the redirect)
-    const session = await getUserSession(event)
-
-    //console.log("Session: ", session)
-
-    // If the session is empty, they aren't logged in properly
-    if (!session.user) {
+    // 2. Identify the ltiResult for grade passback
+    const ltiResult = assignment.ltiResults[0]
+    if (!ltiResult) {
       throw createError({
-        statusCode: 401,
-        statusMessage: 'Session expired. Please relaunch from Canvas.'
+        statusCode: 404,
+        statusMessage: 'LTI result context not found. Please relaunch.'
       })
     }
-
-    //const full_name = `${session.user.firstName} ${session.user.lastName}`
 
     const oauthEncode = (str: string) => {
       return encodeURIComponent(str)
         .replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
         .replace(/%20/g, '%20') // Use %20 for spaces, NOT +
     }
+
+    const assignmentid =
+      assignment.canvasAssignmentId ||
+      assignment.ltiResults.lisOutcomeServiceUrl?.split('/').pop() ||
+      ''
 
     // 3. Prepare LTI 1.1 Params
     const ltiParams: Record<string, string> = {
@@ -62,21 +70,22 @@ export default defineEventHandler(async (event) => {
       //generate unique sourcedid
       lis_person_sourcedid: Buffer.from(`${assignment.id}:${session.user.id}`).toString('base64'),
       //map role to lti 1.1
-      roles: session.user.role, //(session.user.role === 'TEACHER' || session.user.role === 'ADMIN') ? 'Instructor' : 'Learner',
+      roles: 'Learner,urn:lti:instrole:ims/lis/Administrator', //session.user.role, //(session.user.role === 'TEACHER' || session.user.role === 'ADMIN') ? 'Instructor' : 'Learner',
 
       //ext_roles: 'urn:lti:instrole:ims/lis/Administrator,urn:lti:instrole:ims/lis/Instructor,urn:lti:instrole:ims/lis/Student,urn:lti:role:ims/lis/Learner,urn:lti:sysrole:ims/lis/User',
 
+      ext_lti_assignment_id: assignment.id, //uniqueness check
+
       //canvas custom - needs to be general for any lms
       custom_canvas_api_domain: 'canvas.endeavour.cs.vt.edu',
-      custom_canvas_assignment_id:
-        assignment.canvasAssignmentId || assignment.canvasAgsEndpoint?.split('/').pop() || '',
+      custom_canvas_assignment_id: assignmentid,
       custom_canvas_course_id: assignment.course.canvasCourseId || '',
       custom_canvas_user_id: session.user.id || '',
       custom_canvas_user_login_id: session.user.email,
 
       //grade passback overwrite
-      lis_outcome_service_url: `https://${event.node.req.headers.host}/api/proxy/grade-passback/lti11`,
-      lis_result_sourcedid: ltiResult.id, //Buffer.from(`${assignment.id}:${session.user.id}`).toString('base64'),
+      lis_outcome_service_url: `https://${event.node.req.headers.host}/api/proxy/grade-passback/lti11?assignmentId=${assignmentid}`,
+      lis_result_sourcedid: ltiResult.id,
       ext_outcome_data_values_accepted: 'url,text',
       ext_outcome_result_total_score_accepted: 'true',
 
@@ -86,8 +95,8 @@ export default defineEventHandler(async (event) => {
       launch_presentation_return_url: `https://canvas.endeavour.cs.vt.edu/courses/${assignment.course.canvasCourseId}/assignments`,
 
       //tool information
-      tool_consumer_info_product_family_code: 'EGP-Broker',
-      tool_consumer_info_version: '1.0',
+      tool_consumer_info_product_family_code: 'canvas', //'EGP-Broker',
+      tool_consumer_info_version: 'cloud', //'1.0',
       tool_consumer_instance_guid: 'egp-broker-instance-01',
       tool_consumer_instance_name: 'EGP Middleware Broker',
 
@@ -108,7 +117,12 @@ export default defineEventHandler(async (event) => {
       .map((key) => `${oauthEncode(key)}=${oauthEncode(ltiParams[key])}`)
       .join('&')
 
-    const launchUrl = assignment.tool.baseUrl // + "lti/launch"
+    const launchUrl = assignment.tool.baseUrl
+
+    console.log('--- DEBUG LAUNCH PARAMS ---')
+    console.log('Assignment ID:', assignment.id)
+    console.log('Resource Link ID (Passed to Tool):', ltiParams.resource_link_id)
+    console.log('Target URL:', launchUrl)
 
     const baseString = ['POST', oauthEncode(launchUrl), oauthEncode(sortedParams)].join('&')
     const signingKey = `${oauthEncode(assignment.tool.secret)}&`

@@ -37,8 +37,6 @@ export default defineEventHandler(async (event: H3Event) => {
     const sub = claims.sub
     const email = claims.email
 
-    console.log(claims['https://purl.imsglobal.org/spec/lti/claim/roles'])
-
     // 4. Run Database Transaction
     const transactionResult = await prisma.$transaction(async (tx) => {
       const deploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
@@ -47,6 +45,7 @@ export default defineEventHandler(async (event: H3Event) => {
       const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom'] || {}
       const platformClaims = claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform'] || {}
       const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles'] || []
+      const agsEndpoint = claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
 
       // A. Upsert Deployment
       const deployment = await tx.ltiDeployment.upsert({
@@ -99,25 +98,14 @@ export default defineEventHandler(async (event: H3Event) => {
 
       if (!user) throw new Error('Could not find or create user context')
 
-      // D. Identity and Enrollment
-      await tx.ltiResult.upsert({
-        where: { platformId_ltiSub: { platformId: platform.id, ltiSub: sub } },
-        update: { deploymentId },
-        create: { userId: user.id, platformId: platform.id, ltiSub: sub, deploymentId }
-      })
-
-      const userRole = parseCourseRole(roles)
-      await tx.enrollment.upsert({
-        where: { userId_courseId: { userId: user.id, courseId: course.id } },
-        update: { role: userRole },
-        create: { userId: user.id, courseId: course.id, role: userRole }
-      })
-
-      // E. Dynamic Tool Identification Logic
+      // D. Dynamic Tool Identification Logic
       // 1. Check for existing assignment mapping (Resource Link ID is unique per assignment)
       let assignment = await tx.assignment.findUnique({
         where: {
-          courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id }
+          courseId_resourceLinkId: {
+            courseId: course.id,
+            resourceLinkId: resourceLink.id
+          }
         },
         include: { tool: true }
       })
@@ -128,38 +116,57 @@ export default defineEventHandler(async (event: H3Event) => {
           data: {
             courseId: course.id,
             resourceLinkId: resourceLink.id,
-            title: resourceLink.title
+            title: resourceLink.title,
+            canvasAssignmentId: agsEndpoint?.split('/').filter(Boolean).pop()
             //canvasAgsEndpoint: claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
           },
           include: { tool: true }
         })
       }
-      // F. Create/Update LtiResult (The SourcedId Bridge)
-      // This maps this specific User + Assignment to a unique ID for the proxy
-      const agsEndpoint = claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
+
+      // E. Identity and Enrollment
+      // Consolidated LtiResult Logic
+      const userRole = parseCourseRole(roles)
+      await tx.enrollment.upsert({
+        where: { userId_courseId: { userId: user.id, courseId: course.id } },
+        update: { role: userRole },
+        create: { userId: user.id, courseId: course.id, role: userRole }
+      })
+
       const ltiResult = await tx.ltiResult.upsert({
-        where: { userId_assignmentId: { userId: user.id, assignmentId: assignment.id } },
-        update: { lisOutcomeServiceUrl: agsEndpoint },
+        where: {
+          platformId_ltiSub_assignmentId: {
+            platformId: platform.id,
+            ltiSub: sub,
+            assignmentId: assignment.id
+          }
+        },
+        update: {
+          lisOutcomeServiceUrl: agsEndpoint,
+          deploymentId: deploymentId
+        },
         create: {
+          platformId: platform.id,
+          ltiSub: sub,
           userId: user.id,
           assignmentId: assignment.id,
+          deploymentId: deploymentId,
           lisOutcomeServiceUrl: agsEndpoint
         }
       })
 
-      // G. Determine Tool ID via Hierarchy
-      const targetLinkUri =
-        claims['https://purl.imsglobal.org/spec/lti/claim/target_link_uri'] || ''
-      const urlToolId = new URL(targetLinkUri).searchParams.get('tool_id')
-
-      // PRIORITIZE:
-      // 1. Existing DB mapping (The specific workout the teacher chose)
-      // 2. Custom claims (LTI Advantage custom parameters)
-      // 3. URL Param (The fallback/default)
-      const effectiveToolId = assignment.toolId || customClaims.tool_id || urlToolId
+      // F. Determine Tool ID via Hierarchy
+      const effectiveToolId = assignment.toolId //|| customClaims.tool_id || urlToolId
 
       if (!effectiveToolId) {
-        return { user, needsConfiguration: true, assignmentId: assignment.id, userRole }
+        return {
+          user,
+          assignmentId: assignment.id,
+          //no tool
+          needsConfiguration: true,
+          userRole,
+          sourcedId: ltiResult.id
+        }
       }
 
       const tool = await tx.ltiTool.findUnique({ where: { id: effectiveToolId } })
@@ -184,8 +191,7 @@ export default defineEventHandler(async (event: H3Event) => {
     })
 
     // 5. Flow Control: Setup vs Launch
-    const { user, assignmentId, tool, needsConfiguration, custom, userRole, sourcedId } =
-      transactionResult
+    const { user, assignmentId, needsConfiguration, userRole, sourcedId } = transactionResult
 
     await setUserSession(event, {
       user: {

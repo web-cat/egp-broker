@@ -21,7 +21,7 @@
 
 import { createServer } from 'node:http'
 import { createHmac } from 'node:crypto'
-import { URL, URLSearchParams } from 'node:url'
+import { URLSearchParams } from 'node:url'
 
 // ─── CLI Args ─────────────────────────────────────────────────
 const args = process.argv.slice(2)

@@ -1,73 +1,103 @@
+import { XMLParser } from 'fast-xml-parser'
+import { SignJWT, importPKCS8 } from 'jose'
+import prisma from '~~/lib/prisma'
+
 export default defineEventHandler(async (event) => {
-  console.log('--- OLD GRADE PASSBACK REACHED ---')
+  console.log('--- GRADE PASSBACK REACHED ---')
+
+  const rawBody = await readRawBody(event, 'utf-8')
+  const parser = new XMLParser()
+  const xmlObj = parser.parse(rawBody)
+
+  const sourcedId =
+    xmlObj?.imsx_POXEnvelopeRequest?.imsx_POXBody?.replaceResultRequest?.resultRecord?.sourcedGUID
+      ?.sourcedId
+  const rawScore =
+    xmlObj?.imsx_POXEnvelopeRequest?.imsx_POXBody?.replaceResultRequest?.resultRecord?.result
+      ?.resultScore?.textString
+
+  const ltiResult = await prisma.ltiResult.findUnique({
+    where: { id: sourcedId },
+    include: {
+      platform: true
+    }
+  })
+
+  if (!ltiResult) throw createError({ statusCode: 404, statusMessage: 'Result not found' })
+
+  // 2. Prepare Tool Credentials (from ENV)
+  const config = useRuntimeConfig(event)
+  const privateKeyPem = config.ltiPrivateKey
+  const toolKid = config.ltiKeyId
+
+  const { platform } = ltiResult
+  const lineItemUrl = ltiResult.lisOutcomeServiceUrl
+
+  if (platform && lineItemUrl && privateKeyPem) {
+    try {
+      // Import your tool's private key
+      const privateKey = await importPKCS8(privateKeyPem, 'RS256')
+
+      // Sign the JWT for Canvas
+      const signedJwt = await new SignJWT({})
+        .setProtectedHeader({ alg: 'RS256', kid: toolKid })
+        .setIssuer(platform.clientId)
+        .setSubject(platform.clientId)
+        .setAudience(platform.tokenEndpoint)
+        .setExpirationTime('5m')
+        .setIssuedAt()
+        .setJti(crypto.randomUUID())
+        .sign(privateKey)
+
+      // Get Access Token
+      const tokenResponse: any = await $fetch(platform.tokenEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+          client_assertion: signedJwt,
+          scope: 'https://purl.imsglobal.org/spec/lti-ags/scope/score'
+        })
+      })
+
+      // 3. Post Score to Canvas
+      await $fetch(`${ltiResult.lisOutcomeServiceUrl}/scores`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${tokenResponse.access_token}`,
+          'Content-Type': 'application/vnd.ims.lis.v1.score+json' // Strict LTI Content-Type
+        },
+        body: {
+          userId: ltiResult.ltiSub,
+          scoreGiven: parseFloat(rawScore),
+          //lti 1.3 specific fields
+          scoreMaximum: 1.0,
+          activityProgress: 'Completed',
+          gradingProgress: 'FullyGraded',
+          timestamp: new Date().toISOString()
+          //comment: "Grade managed by EGP-Broker."
+        }
+      })
+    } catch (err) {
+      console.error('Canvas Passback Error:', err)
+    }
+  } else {
+    throw createError({ statusCode: 404, statusMessage: 'Grade Passback Information Missing' })
+  }
+
+  console.log('Grade sent to Canvas')
+
+  // 4. Return XML Success to the external tool
+  setResponseHeader(event, 'Content-Type', 'application/xml')
+  return `<?xml version="1.0" encoding="UTF-8"?>
+    <imsx_POXEnvelopeResponse xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">
+      <imsx_POXHeader>
+        <imsx_POXResponseHeaderInfo>
+          <imsx_version>V1.0</imsx_version>
+          <imsx_statusInfo><imsx_codeMajor>success</imsx_codeMajor></imsx_statusInfo>
+        </imsx_POXResponseHeaderInfo>
+      </imsx_POXHeader>
+      <imsx_POXBody><replaceResultResponse/></imsx_POXBody>
+    </imsx_POXEnvelopeResponse>`
 })
-
-// import { XMLParser } from 'fast-xml-parser'
-// import prisma from '@@/lib/prisma'
-
-// export default defineEventHandler(async (event) => {
-//   console.log('--- OLD LTI 1.1 PROXY HANDLER START ---')
-
-//   // 1. Read Raw Body as string (prevents JSON parsing errors)
-//   const rawBody = await readRawBody(event, 'utf-8')
-//   if (!rawBody) throw createError({ statusCode: 400, statusMessage: 'Empty Body' })
-
-//   // 2. Parse XML to JSON object
-//   const parser = new XMLParser()
-//   const xmlObj = parser.parse(rawBody)
-
-//   // 3. Extract LTI 1.1 Data
-//   const requestHeader = xmlObj?.imsx_POXEnvelopeRequest?.imsx_POXHeader?.imsx_POXRequestHeaderInfo
-//   const poxBody = xmlObj?.imsx_POXEnvelopeRequest?.imsx_POXBody?.replaceResultRequest
-
-//   const messageIdentifier = requestHeader?.imsx_messageIdentifier
-//   const sourcedId = poxBody?.resultRecord?.sourcedGUID?.sourcedId
-//   const rawScore = poxBody?.resultRecord?.result?.resultScore?.textString
-
-//   if (!sourcedId || rawScore === undefined) {
-//     throw createError({ statusCode: 400, statusMessage: 'Invalid LTI XML' })
-//   }
-
-//   // 4. Custom Logic (Prisma & Translations)
-//   const scoreGiven = parseFloat(rawScore) // LTI 1.1 is usually 0.0 to 1.0
-//   const query = getQuery(event)
-//   const assignmentId = query.assignmentId as string
-
-//   // Fetch assignment to find translation rules
-//   const assignment = await prisma.assignment.findUnique({
-//     where: { id: assignmentId },
-//     include: { course: { include: { gradeTranslation: true } }, gradeTranslation: true }
-//   })
-
-//   let finalScore = scoreGiven
-//   const translation = assignment?.gradeTranslation || assignment?.course?.gradeTranslation
-
-//   if (translation && translation.mapping) {
-//     // apply your mapping logic here...
-//     console.log('Applying translation for score:', scoreGiven)
-//   }
-
-//   // 5. Forwarding (Conceptual)
-//   // NOTE: To forward LTI 1.1, you'd need to OAuth sign a new POST to the LMS.
-//   // For now, we assume the processing logic happens here.
-
-//   // 6. Return XML Response (Mandatory for LTI 1.1 success)
-//   setResponseHeader(event, 'Content-Type', 'application/xml')
-//   return `<?xml version="1.0" encoding="UTF-8"?>
-// <imsx_POXEnvelopeResponse xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">
-//   <imsx_POXHeader>
-//     <imsx_POXResponseHeaderInfo>
-//       <imsx_version>V1.0</imsx_version>
-//       <imsx_messageIdentifier>${Date.now()}</imsx_messageIdentifier>
-//       <imsx_sendingJsack>${messageIdentifier}</imsx_sendingJsack>
-//       <imsx_statusInfo>
-//         <imsx_codeMajor>success</imsx_codeMajor>
-//         <imsx_severity>status</imsx_severity>
-//         <imsx_description>Grade processed by Proxy</imsx_description>
-//         <imsx_messageIdentifier>${messageIdentifier}</imsx_messageIdentifier>
-//       </imsx_statusInfo>
-//     </imsx_POXResponseHeaderInfo>
-//   </imsx_POXHeader>
-//   <imsx_POXBody><replaceResultResponse/></imsx_POXBody>
-// </imsx_POXEnvelopeResponse>`
-// })

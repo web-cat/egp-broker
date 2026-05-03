@@ -49,7 +49,7 @@ async function saveConfiguration() {
 
     // Success: Redirect to the actual LTI launch endpoint
     window.location.href = `/launch/${assignmentId}`
-  } catch (e) {
+  } catch {
     // If you have UToast, you can use it here
     alert('Error: Could not save assignment configuration.')
   } finally {

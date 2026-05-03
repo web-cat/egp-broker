@@ -79,7 +79,6 @@ async function main() {
       platformId: platform.id,
       deploymentId: '100:f590ae92360f49bfad9842d10aba721c59668915',
       deploymentHost: 'canvas.endeavour.cs.vt.edu'
-      
     }
   })
   console.log('✅ LTI platform and deployment created (Canvas Endeavour)')

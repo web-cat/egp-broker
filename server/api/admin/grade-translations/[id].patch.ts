@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
         mapping: body.mapping
       }
     })
-  } catch (error) {
+  } catch {
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to update translation'

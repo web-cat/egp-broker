@@ -5,7 +5,10 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
 
   if (!id) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing ID' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing ID'
+    })
   }
 
   try {
@@ -14,7 +17,7 @@ export default defineEventHandler(async (event) => {
     })
 
     return { success: true }
-  } catch (error) {
+  } catch {
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to delete translation'

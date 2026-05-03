@@ -244,7 +244,7 @@ export default defineNuxtConfig({
       }
     },
     // Update this section:
-    '/api/proxy/grade-passback': {
+    '/api/proxy/grade-passback/**': {
       bodyParser: false,
       security: {
         requestSizeLimiter: false, // Prevents early stream consumption
@@ -286,8 +286,9 @@ export default defineNuxtConfig({
     },
 
     // LTI 1.3 Configuration
-    ltiPrivateKey: '', // NUXT_LTI_PRIVATE_KEY (PKCS8 format)
-    ltiKeyId: 'lti-key-1', // NUXT_LTI_KEY_ID
+    ltiPrivateKey: process.env.NUXT_LTI_PRIVATE_KEY, //(PKCS8 format)
+    ltiPublicKey: process.env.NUXT_LTI_PUBLIC_KEY,
+    ltiKeyId: process.env.NUXT_LTI_KEY_ID,
 
     // ====== Public Configuration (accessible on client-side) ======
     public: {
