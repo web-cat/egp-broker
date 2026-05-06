@@ -269,6 +269,7 @@ export default defineNuxtConfig({
 
     // ====== Public Configuration (accessible on client-side) ======
     public: {
+      siteUrl: '', // NUXT_PUBLIC_SITE_URL or NUXT_SITE_URL
       enablePasswordLogin: true, // NUXT_PUBLIC_ENABLE_PASSWORD_LOGIN
       version: packageJson.version
     }

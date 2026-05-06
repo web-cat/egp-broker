@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
-import { getValidatedQuery } from 'h3'
+import { defineEventHandler, getValidatedQuery } from 'h3'
+import { getServerSiteUrl } from '../../utils/site'
 import prisma from '@@/lib/prisma'
 import { CasLoginSchema } from '@@/shared/schemas/cas.schema'
 
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event: H3Event) => {
   }
 
   // Build the service URL (our callback endpoint)
-  const siteUrl = process.env.NUXT_SITE_URL || 'http://localhost:3000'
+  const siteUrl = getServerSiteUrl(event)
   const serviceUrl = buildCasServiceUrl(siteUrl, serverId)
 
   // Redirect to CAS login page

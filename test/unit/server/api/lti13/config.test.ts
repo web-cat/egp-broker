@@ -10,6 +10,9 @@ describe('LTI 1.3 Config Endpoint', () => {
     originalEnv = process.env
     // Clear the env var we're testing
     delete process.env.NUXT_SITE_URL
+
+    // Mock global useRuntimeConfig
+    global.useRuntimeConfig = vi.fn().mockReturnValue({ public: { siteUrl: '' } }) as any
   })
 
   afterEach(() => {

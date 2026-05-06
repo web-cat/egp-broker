@@ -55,7 +55,7 @@
         <!-- CAS Login Options -->
         <!-- CAS Login Options -->
         <template v-if="casServers?.length">
-          <UDivider
+          <USeparator
             v-if="config.public.enablePasswordLogin"
             :label="t('auth.login.or')"
             class="my-6"

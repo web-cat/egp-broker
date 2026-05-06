@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
-import { getValidatedQuery } from 'h3'
+import { defineEventHandler, getValidatedQuery } from 'h3'
+import { getServerSiteUrl } from '../../utils/site'
 import prisma from '@@/lib/prisma'
 import { LtiLoginSchema } from '@@/shared/schemas/auth.schema'
 
@@ -38,10 +39,11 @@ export default defineEventHandler(async (event: H3Event) => {
   })
 
   // Construct the redirect URL to the platform's auth endpoint
+  const siteUrl = getServerSiteUrl(event)
   const redirectUrl = createLtiLoginUrl(
     platform.authEndpoint,
     platform.clientId,
-    `${process.env.NUXT_SITE_URL}/api/lti13/launch`,
+    `${siteUrl}/api/lti13/launch`,
     loginHint,
     ltiMessageHint ?? '',
     nonce,

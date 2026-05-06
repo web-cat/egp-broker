@@ -1,8 +1,9 @@
 import { defineEventHandler } from 'h3'
+import { getServerSiteUrl } from '../../utils/site'
 
 export default defineEventHandler((event) => {
-  // Use the environment variable or construct from the request if missing
-  const siteUrl = process.env.NUXT_SITE_URL || `https://${event.node.req.headers.host}`
+  // Use the standardized site URL resolver
+  const siteUrl = getServerSiteUrl(event)
 
   // Standard Canvas Dynamic Registration JSON format
   const config = {
@@ -13,7 +14,7 @@ export default defineEventHandler((event) => {
     extensions: [
       {
         domain: siteUrl.replace(/^https?:\/\//, ''),
-        tool_id: 'egp-broker',
+        tool_id: 'edu.vt.cs.egp-broker',
         platform: 'canvas.instructure.com',
         settings: {
           text: 'EGP Broker',
