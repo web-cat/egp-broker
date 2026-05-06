@@ -64,8 +64,10 @@ ENV NODE_ENV=production
 
 # Copy package.json and pnpm-lock.yaml
 COPY package.json pnpm-lock.yaml ./
-# Install prisma CLI globally to support migrations at runtime
-RUN pnpm install --frozen-lockfile --prod && \
+# Install prisma CLI to support migrations at runtime
+# We use --ignore-scripts to prevent the postinstall script from failing
+# because prisma isn't in the path yet.
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts && \
     pnpm add prisma --save-dev --ignore-scripts
 
 # Copy only the output from the build stage
