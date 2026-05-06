@@ -1,7 +1,10 @@
-import Pluralize from 'typescript-pluralize'
+import * as PluralizeModule from 'typescript-pluralize'
+
+// Robustly resolve the class from CJS/ESM modules
+const Pluralize: any = (PluralizeModule as any).default || PluralizeModule
 
 // override to fix bugs in original
-class PluralizeFix extends (Pluralize as any) {
+class PluralizeFix extends Pluralize {
   public interpolate(str: string, args: any[]): string {
     return super.interpolate(str, args)
   }
