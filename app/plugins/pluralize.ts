@@ -1,15 +1,26 @@
 import * as PluralizeModule from 'typescript-pluralize'
 
-// Robustly resolve the class from CJS/ESM modules
-const Pluralize: any = (PluralizeModule as any).default || PluralizeModule
+export default defineNuxtPlugin((_nuxtApp) => {
+  // Robustly resolve the class from CJS/ESM modules
+  const PluralizeClass: any = (PluralizeModule as any).default || PluralizeModule
 
-// override to fix bugs in original
-class PluralizeFix extends Pluralize {
-  public interpolate(str: string, args: any[]): string {
-    return super.interpolate(str, args)
+  if (typeof PluralizeClass !== 'function') {
+    console.error(
+      '[Pluralize Plugin] Failed to resolve Pluralize constructor. Falling back to identity.'
+    )
+    return {
+      provide: {
+        plural: (word: string) => word
+      }
+    }
   }
-  public replace(word: string, rule: any[]) {
+
+  const instance = new PluralizeClass()
+
+  // Override to fix bugs in original without using 'extends'
+  instance.replace = function (word: string, rule: any[]) {
     return word.replace(rule[0], (match, index) => {
+      // Use index 1 as arguments proxy for interpolate
       const result = this.interpolate(rule[1], [match, index])
       if (match === '') {
         return this.restoreCase(word[index - 1], result)
@@ -18,15 +29,12 @@ class PluralizeFix extends Pluralize {
       return this.restoreCase(match, result)
     })
   }
-}
 
-export default defineNuxtPlugin((_nuxtApp) => {
-  const instance = new PluralizeFix()
   const plural = (word: string) => {
     const replaceWord = instance.replaceWord(
-      Pluralize.irregularSingles,
-      Pluralize.irregularPlurals,
-      Pluralize.pluralRules
+      PluralizeClass.irregularSingles,
+      PluralizeClass.irregularPlurals,
+      PluralizeClass.pluralRules
     )
     return replaceWord(word)
   }
