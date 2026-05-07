@@ -58,7 +58,12 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     })
 
-    // 6. Flow Control: Setup vs Launch (Your branch logic)
+    // 6. Flow Control: Setup vs Launch
+    if (!assignmentId) {
+      // Course Navigation launch -> go to dashboard
+      return sendRedirect(event, '/', 303)
+    }
+
     if (needsConfiguration) {
       const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(userRole)
       return isStaff
@@ -66,7 +71,8 @@ export default defineEventHandler(async (event: H3Event) => {
         : sendRedirect(event, '/not-ready', 303)
     }
 
-    return sendRedirect(event, `/launch/${assignmentId}`)
+    // Assignment launch -> go to tool
+    return sendRedirect(event, `/launch-tool?assignmentId=${assignmentId}`, 303)
   } catch (error: any) {
     console.error('LTI Launch Error:', error)
     throw createError({

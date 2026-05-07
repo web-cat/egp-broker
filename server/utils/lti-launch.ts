@@ -319,7 +319,8 @@ export async function handleLtiLaunch(
       })
 
       // Step 4 — Assignment & Grade Passback (SourcedId)
-      if (resourceLink?.id) {
+      // We only treat this as an assignment launch if it targets a specific assignment
+      if (resourceLink?.id && customClaims?.canvas_assignment_id) {
         // We include 'toolId' in the select to check configuration
 
         // Use your existing resolver logic (or use the ID from above)
