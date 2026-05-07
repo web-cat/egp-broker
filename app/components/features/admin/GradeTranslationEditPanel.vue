@@ -2,9 +2,7 @@
   <USlideover
     v-model:open="open"
     :title="isEdit ? 'Edit Grade Translation' : 'New Grade Translation'"
-    :description="
-      isEdit ? 'Update the grading scale mapping.' : 'Create a new grading scale mapping.'
-    "
+    :description="isEdit ? 'Update the grading scale mapping.' : 'Create a new grading scale mapping.'"
   >
     <template #body>
       <UForm :state="state" class="space-y-4" @submit="onSubmit">
@@ -12,7 +10,7 @@
           v-model="state.name"
           name="name"
           label="Translation Name"
-          placeholder="e.g., Standard Letter Grades"
+          placeholder="e.g., Mastery-Based Scale"
           required
           autofocus
         />
@@ -25,47 +23,59 @@
           />
         </UFormField>
 
-        <div class="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-          <div class="flex items-center justify-between">
-            <label class="text-sm font-semibold">Score Mapping</label>
-            <UButton
-              size="xs"
-              variant="soft"
-              icon="i-lucide-plus"
-              label="Add Threshold"
-              @click="addRow"
-            />
-          </div>
-          <p class="text-xs text-neutral-500 mb-2">
-            Define the minimum score (0.0 to 1.0) required for each grade label.
-          </p>
+        <UFormField label="Grading Strategy" name="type">
+          <USelectMenu
+            v-model="state.type"
+            :items="[
+              { label: 'Categorical / Mastery (Numerical Remap)', value: 'CATEGORICAL' },
+              { label: 'Pass / Fail', value: 'PASS_FAIL' }
+            ]"
+            value-key="value"
+          />
+        </UFormField>
 
-          <div v-for="(row, index) in mappingRows" :key="index" class="flex items-center gap-2">
-            <UInput
-              v-model="row.threshold"
-              type="number"
-              step="0.01"
-              min="0"
-              max="1"
-              placeholder="0.90"
-              class="w-28"
-            />
-            <UIcon name="i-lucide-arrow-right" class="text-neutral-400" />
-            <UInput v-model="row.label" placeholder="A" class="flex-1" />
-            <UButton
-              icon="i-lucide-trash-2"
-              color="neutral"
-              variant="ghost"
-              @click="removeRow(index)"
-            />
-          </div>
-
-          <p
-            v-if="mappingRows.length === 0"
-            class="text-sm text-center py-4 text-neutral-400 italic"
+        <!-- 1. CATEGORICAL UI WITH NUMERICAL REMAPPING -->
+        <div v-if="state.type === 'CATEGORICAL'" class="space-y-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+          <UFormField 
+            label="Target Maximum Scale Value (maxScore)" 
+            description="The highest possible score on the new scale (e.g., 4.0 for a 4-point scale)."
           >
-            No thresholds defined. Grades will pass through as raw scores.
-          </p>
+            <!-- Linked directly to state.maxScore -->
+            <UInput v-model.number="state.maxScore" type="number" step="0.1" placeholder="4.0" class="w-32" />
+          </UFormField>
+
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-semibold">Threshold Mapping</label>
+              <UButton size="xs" variant="soft" icon="i-lucide-plus" label="Add Threshold" @click="addRow" />
+            </div>
+            <p class="text-xs text-neutral-500 mb-2">
+              Define the min raw score (0.0-1.0) and the corresponding value on the new scale.
+            </p>
+
+            <div v-for="(row, index) in mappingRows" :key="index" class="flex items-center gap-2">
+              <UInput v-model="row.threshold" type="number" step="0.01" min="0" max="1" placeholder="Min 0.90" class="w-24" />
+              <UIcon name="i-lucide-arrow-right" class="text-neutral-400" />
+              <UInput v-model="row.value" type="number" step="0.1" placeholder="Value" class="w-24" />
+              <UInput v-model="row.label" placeholder="Mastery" class="flex-1" />
+              <UButton icon="i-lucide-trash-2" color="neutral" variant="ghost" @click="removeRow(index)" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. PASS/FAIL UI -->
+        <div v-else-if="state.type === 'PASS_FAIL'" class="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+          <!-- Added maxScore configuration for Pass/Fail -->
+          <UFormField 
+            label="Target Maximum Scale Value (maxScore)" 
+            description="The score sent to the LMS for a 'Pass' (usually 1.0 or 100)."
+          >
+            <UInput v-model.number="state.maxScore" type="number" step="0.1" class="w-32" />
+          </UFormField>
+
+          <UFormField label="Pass Threshold" description="Scores at or above this raw value (0.0-1.0) will be marked as 'Pass'.">
+            <UInput v-model="state.passFailThreshold" type="number" step="0.01" min="0" max="1" />
+          </UFormField>
         </div>
 
         <div class="flex justify-end gap-x-2 mt-8">
@@ -78,116 +88,107 @@
 </template>
 
 <script setup lang="ts">
-// Note: You may want to define a specific type for GradeTranslationRow in your shared models
 interface GradeTranslationRow {
   id: string
   name: string
   description: string | null
-  mapping: Record<string, string> | null
-  createdAt: string
+  maxScore: number | null // Reflected top-level field
+  mapping: any | null
 }
 
-const props = defineProps<{
-  translation: GradeTranslationRow | null
-}>()
-
+const props = defineProps<{ translation: GradeTranslationRow | null }>()
 const open = defineModel<boolean>('open', { default: false })
-
-const emit = defineEmits<{
-  (e: 'saved', id: string, updates: any): void
-  (e: 'created'): void
-  (e: 'update:open', value: boolean): void
-}>()
+const emit = defineEmits(['saved', 'created'])
 
 const pending = ref(false)
 const isEdit = computed(() => !!props.translation)
 
-// Local state for basic fields
 const state = reactive({
   name: '',
-  description: ''
+  description: '',
+  type: 'CATEGORICAL',
+  maxScore: 4.0, // Default to 4-point scale for research context
+  passFailThreshold: 0.8
 })
 
-// Local state for the dynamic JSON mapping rows
-const mappingRows = ref<{ threshold: string; label: string }[]>([])
-
-const addRow = () => mappingRows.value.push({ threshold: '', label: '' })
+const mappingRows = ref<{ threshold: string; value: string; label: string }[]>([])
+const addRow = () => mappingRows.value.push({ threshold: '', value: '', label: '' })
 const removeRow = (index: number) => mappingRows.value.splice(index, 1)
 
-// Logic to sync internal state with the provided translation prop
 const syncState = (data: GradeTranslationRow | null) => {
   if (data) {
     state.name = data.name
     state.description = data.description ?? ''
-    // Convert DB JSON { "0.9": "A" } to UI rows [{ threshold: "0.9", label: "A" }]
-    mappingRows.value = Object.entries(data.mapping || {})
-      .map(([threshold, label]) => ({ threshold, label }))
-      .sort((a, b) => Number(b.threshold) - Number(a.threshold))
+    state.maxScore = data.maxScore ?? 4.0 // Pull from the new column
+    
+    const mapping = data.mapping || {}
+    state.type = mapping.type || 'CATEGORICAL'
+
+    if (state.type === 'CATEGORICAL') {
+      mappingRows.value = (mapping.levels || [])
+        .map((l: any) => ({ threshold: l.threshold, value: l.value, label: l.label }))
+        .sort((a, b) => Number(b.threshold) - Number(a.threshold))
+    } else if (state.type === 'PASS_FAIL') {
+      state.passFailThreshold = mapping.threshold
+    }
   } else {
+    // Defaults for new creation
     state.name = ''
-    state.description = ''
+    state.type = 'CATEGORICAL'
+    state.maxScore = 4.0
     mappingRows.value = [
-      { threshold: '0.90', label: 'A' },
-      { threshold: '0.80', label: 'B' },
-      { threshold: '0.70', label: 'C' }
+      { threshold: '0.90', value: '4.0', label: 'Mastery' },
+      { threshold: '0.75', value: '3.0', label: 'Proficient' }
     ]
   }
 }
 
-watch(
-  () => props.translation,
-  (val) => syncState(val),
-  { immediate: true }
-)
-watch(
-  () => open.value,
-  (isOpen) => {
-    if (isOpen) syncState(props.translation)
-  }
-)
+watch(() => props.translation, (val) => syncState(val), { immediate: true })
+watch(open, (isOpen) => { if (isOpen) syncState(props.translation) })
 
 async function onSubmit() {
   pending.value = true
-
-  // Convert rows back to JSON object for Prisma: { "0.9": "A" }
-  const finalMapping = mappingRows.value.reduce(
-    (acc, curr) => {
-      if (curr.threshold !== '') {
-        acc[curr.threshold] = curr.label
-      }
-      return acc
-    },
-    {} as Record<string, string>
-  )
+  
+  // 1. Determine the maxScore to save to the database column
+  // For Pass/Fail, we usually default to 1.0 (Canvas standard), 
+  // but for Categorical, we use the user-defined state.maxScore.
+  const savedMaxScore = state.type === 'CATEGORICAL' ? state.maxScore : 1.0
+  
+  let finalMapping: any = { type: state.type }
+  
+  if (state.type === 'CATEGORICAL') {
+    finalMapping.levels = mappingRows.value
+      .filter(r => r.threshold !== '')
+      .map(r => ({ 
+        threshold: parseFloat(r.threshold), 
+        value: parseFloat(r.value), 
+        label: r.label 
+      }))
+  } else if (state.type === 'PASS_FAIL') {
+    finalMapping.threshold = state.passFailThreshold
+    // Optional: add labels to the mapping for consistency in the proxy logic
+    finalMapping.passValue = 1.0 
+    finalMapping.failValue = 0.0
+  }
 
   try {
-    const payload = {
-      name: state.name,
-      description: state.description,
-      mapping: finalMapping
-    }
-
-    const url = isEdit.value
-      ? `/api/admin/grade-translations/${props.translation?.id}`
-      : '/api/admin/grade-translations'
-
+    const url = isEdit.value ? `/api/admin/grade-translations/${props.translation?.id}` : '/api/admin/grade-translations'
     const method = isEdit.value ? 'PATCH' : 'POST'
-
-    const res = await $fetch<any>(url, { method, body: payload })
+    
+    await $fetch<any>(url, { 
+      method, 
+      body: { 
+        name: state.name, 
+        description: state.description, 
+        maxScore: savedMaxScore, // This maps to your new Prisma column
+        mapping: finalMapping 
+      } 
+    })
 
     open.value = false
-    await nextTick()
-
-    if (isEdit.value && props.translation) {
-      emit('saved', props.translation.id, res)
-      useToast().add({ title: 'Translation updated' })
-    } else {
-      emit('created')
-      useToast().add({ title: 'Translation created' })
-    }
-  } catch (err: any) {
-    console.error(err)
-    useToast().add({ title: 'Error saving translation', color: 'error' })
+    emit(isEdit.value ? 'saved' : 'created')
+  } catch (err) {
+    console.error('Save failed:', err)
   } finally {
     pending.value = false
   }

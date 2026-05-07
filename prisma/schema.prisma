@@ -171,6 +171,7 @@ model gradeTranslation {
   description String?
   
   // The actual mapping logic (e.g., score thresholds or scales)
+  maxScore    Float         @default(1.0)
   mapping     Json?
 
   // Relation back to assignments
@@ -267,7 +268,7 @@ model Assignment {
 
   //grade translation option
   gradeTranslationId String?
-  grade         gradeTranslation? @relation(fields: [gradeTranslationId], references: [id], onDelete: SetNull)
+  gradeTranslation   gradeTranslation? @relation(fields: [gradeTranslationId], references: [id], onDelete: SetNull)
 
   // Relationships
   courseId String

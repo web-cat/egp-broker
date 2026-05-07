@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "gradeTranslation" ALTER COLUMN "maxScore" SET DEFAULT 1.0,
+ALTER COLUMN "maxScore" SET DATA TYPE DOUBLE PRECISION;

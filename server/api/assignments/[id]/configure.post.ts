@@ -33,7 +33,8 @@ export default defineEventHandler(async (event) => {
   const updatedAssignment = await prisma.assignment.update({
     where: { id: assignmentId },
     data: {
-      toolId: body.toolId
+      toolId: body.toolId,
+      gradeTranslationId: body.gradeTranslationId || null
       // Note: You can also update title or other metadata here if needed
     }
   })

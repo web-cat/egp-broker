@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
       //generate unique sourcedid
       lis_person_sourcedid: Buffer.from(`${assignment.id}:${session.user.id}`).toString('base64'),
       //map role to lti 1.1
-      roles: 'Learner,urn:lti:instrole:ims/lis/Administrator', //session.user.role, //(session.user.role === 'TEACHER' || session.user.role === 'ADMIN') ? 'Instructor' : 'Learner',
+      roles: (session.user.role === 'TEACHER' || session.user.role === 'TA' || session.user.role === 'ADMIN') ? 'Instructor' : 'Learner',
 
       //ext_roles: 'urn:lti:instrole:ims/lis/Administrator,urn:lti:instrole:ims/lis/Instructor,urn:lti:instrole:ims/lis/Student,urn:lti:role:ims/lis/Learner,urn:lti:sysrole:ims/lis/User',
 

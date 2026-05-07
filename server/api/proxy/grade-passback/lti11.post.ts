@@ -19,13 +19,27 @@ export default defineEventHandler(async (event) => {
   const ltiResult = await prisma.ltiResult.findUnique({
     where: { id: sourcedId },
     include: {
-      platform: true
+      platform: true,
+      assignment: {
+        include: { gradeTranslation: true }
+      }
     }
   })
 
   if (!ltiResult) throw createError({ statusCode: 404, statusMessage: 'Result not found' })
 
-  // 2. Prepare Tool Credentials (from ENV)
+  // 2. Apply EGP Logic using your utility
+  console.log("Grade Received: ", rawScore)
+  console.log("Grade Translation: ", ltiResult.assignment?.gradeTranslation?.mapping.type)
+  const translatedScore = applyGradeTranslation(
+    parseFloat(rawScore), 
+    ltiResult.assignment?.gradeTranslation?.mapping
+  )
+  const maxScore = ltiResult.assignment?.gradeTranslation?.maxScore
+  console.log("Translated Score: ", translatedScore)
+  console.log("Max Score: ", maxScore)
+
+  // 3. Prepare Tool Credentials (from ENV)
   const config = useRuntimeConfig(event)
   const privateKeyPem = config.ltiPrivateKey
   const toolKid = config.ltiKeyId
@@ -61,7 +75,7 @@ export default defineEventHandler(async (event) => {
         })
       })
 
-      // 3. Post Score to Canvas
+      // 4. Post Score to Canvas
       await $fetch(`${ltiResult.lisOutcomeServiceUrl}/scores`, {
         method: 'POST',
         headers: {
@@ -70,9 +84,9 @@ export default defineEventHandler(async (event) => {
         },
         body: {
           userId: ltiResult.ltiSub,
-          scoreGiven: parseFloat(rawScore),
+          scoreGiven: translatedScore,
           //lti 1.3 specific fields
-          scoreMaximum: 1.0,
+          scoreMaximum: maxScore,
           activityProgress: 'Completed',
           gradingProgress: 'FullyGraded',
           timestamp: new Date().toISOString()
@@ -88,7 +102,7 @@ export default defineEventHandler(async (event) => {
 
   console.log('Grade sent to Canvas')
 
-  // 4. Return XML Success to the external tool
+  // 5. Return XML Success to the external tool
   setResponseHeader(event, 'Content-Type', 'application/xml')
   return `<?xml version="1.0" encoding="UTF-8"?>
     <imsx_POXEnvelopeResponse xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">
