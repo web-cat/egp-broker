@@ -24,7 +24,7 @@ export function getServerSiteUrl(event: H3Event): string {
 
   const host = event.node.req.headers.host
   if (host) {
-    // We assume https for deployed environments. 
+    // We assume https for deployed environments.
     // If running locally behind a proxy, this might need further refinement.
     const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https'
     return `${protocol}://${host}`

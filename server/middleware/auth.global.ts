@@ -18,6 +18,9 @@ export default defineEventHandler(async (event: H3Event) => {
   // Skip MCP endpoints
   if (path.startsWith('/__mcp/')) return
 
+  //skip proxy endpoints
+  if (path.startsWith('/api/proxy')) return
+
   // Skip internal Nuxt 4 API endpoints (icons, image, etc.)
   // Covers: /api/_nuxt, /api/__nuxt, /api/_image, etc.
   const isInternalNuxtRoute = /^\/api\/[_]{1,2}/.test(path)
@@ -34,6 +37,7 @@ export default defineEventHandler(async (event: H3Event) => {
     { pathPrefix: '/api/posts', methods: ['GET'] }, // Allow /api/posts and subpaths
     { pathPrefix: '/api/docs', methods: ['GET'] }, // Allow /api/docs and subpaths
     { pathPrefix: '/api/lti13', methods: ['GET', 'POST'] }, // LTI endpoints
+    { pathPrefix: '/api/lti', methods: ['GET', 'POST'] }, // LTI 1.1 endpoints
     { pathPrefix: '/api/cas', methods: ['GET'] }, // CAS authentication endpoints
     ...(import.meta.dev ? [{ pathPrefix: '/api/dev', methods: ['POST'] }] : []) // Mock endpoints
   ]

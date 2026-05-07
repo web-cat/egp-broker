@@ -9,7 +9,7 @@ describe('getServerSiteUrl', () => {
     originalEnv = process.env
     process.env = { ...originalEnv }
     delete process.env.NUXT_SITE_URL
-    
+
     // Mock global Nuxt/Nitro functions
     global.useRuntimeConfig = vi.fn() as any
     vi.clearAllMocks()
@@ -17,7 +17,7 @@ describe('getServerSiteUrl', () => {
 
   afterEach(() => {
     process.env = originalEnv
-    // @ts-ignore
+    // @ts-expect-error: expected error
     delete global.useRuntimeConfig
   })
 
@@ -55,7 +55,7 @@ describe('getServerSiteUrl', () => {
 
   it('should fallback to host header if no config/env provided', () => {
     vi.mocked(global.useRuntimeConfig).mockReturnValue({ public: { siteUrl: '' } } as any)
-    
+
     const event = createEvent({
       headers: { host: 'myhost.com' }
     } as any)
@@ -66,7 +66,7 @@ describe('getServerSiteUrl', () => {
 
   it('should use http for localhost', () => {
     vi.mocked(global.useRuntimeConfig).mockReturnValue({ public: { siteUrl: '' } } as any)
-    
+
     const event = createEvent({
       headers: { host: 'localhost:3000' }
     } as any)
@@ -77,7 +77,7 @@ describe('getServerSiteUrl', () => {
 
   it('should provide a final fallback to localhost:3000', () => {
     vi.mocked(global.useRuntimeConfig).mockReturnValue({ public: { siteUrl: '' } } as any)
-    
+
     const event = createEvent({ headers: {} } as any)
     const url = getServerSiteUrl(event)
 

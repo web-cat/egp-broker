@@ -79,7 +79,7 @@ export default defineNuxtConfig({
       }
     ],
     defaultLocale: 'en',
-    strategy: 'prefix',
+    strategy: 'prefix_except_default',
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: 'i18n_redirected',
@@ -87,6 +87,19 @@ export default defineNuxtConfig({
     },
     experimental: {
       localeDetector: 'localeDetector.ts'
+    }
+  },
+
+  auth: {
+    session: {
+      name: 'nuxt-session',
+      password: process.env.NUXT_SESSION_PASSWORD,
+      cookie: {
+        sameSite: 'none', // Essential for the POST back from Canvas
+        secure: true, // Essential for sameSite 'none'
+        maxAge: 60 * 10, // 10 minutes is plenty for the OIDC handshake
+        partitioned: true
+      }
     }
   },
 
@@ -168,6 +181,12 @@ export default defineNuxtConfig({
     },
     build: {
       chunkSizeWarningLimit: 600
+    },
+    server: {
+      watch: {
+        usePolling: true,
+        interval: 100 // Check every 100ms
+      }
     }
   },
 
@@ -220,7 +239,17 @@ export default defineNuxtConfig({
     '/api/**': {
       cors: true, // This enables Nitro's built-in CORS handling
       headers: {
-        'Access-Control-Max-Age': '86400'
+        'Access-Control-Max-Age': '86400',
+        'X-Frame-Options': 'ALLOWALL'
+      }
+    },
+    // Update this section:
+    '/api/proxy/grade-passback/**': {
+      bodyParser: false,
+      security: {
+        requestSizeLimiter: false, // Prevents early stream consumption
+        xssValidator: false, // Prevents parsing the XML to look for scripts
+        corsHandler: false // Use Nitro's built-in one instead
       }
     },
     // Tighter rate limit for LTI endpoints to prevent nonce probing / DoS
@@ -264,14 +293,26 @@ export default defineNuxtConfig({
     },
 
     // LTI 1.3 Configuration
-    ltiPrivateKey: '', // NUXT_LTI_PRIVATE_KEY (PKCS8 format)
-    ltiKeyId: 'lti-key-1', // NUXT_LTI_KEY_ID
+    ltiPrivateKey: process.env.NUXT_LTI_PRIVATE_KEY, //(PKCS8 format)
+    ltiPublicKey: process.env.NUXT_LTI_PUBLIC_KEY,
+    ltiKeyId: process.env.NUXT_LTI_KEY_ID,
 
     // ====== Public Configuration (accessible on client-side) ======
     public: {
       siteUrl: '', // NUXT_PUBLIC_SITE_URL or NUXT_SITE_URL
       enablePasswordLogin: true, // NUXT_PUBLIC_ENABLE_PASSWORD_LOGIN
       version: packageJson.version
+    },
+    session: {
+      name: 'nuxt-session', // Optional: defaults to 'nuxt-session'
+      password: process.env.NUXT_SESSION_PASSWORD, // Must be 32+ chars
+      cookie: {
+        sameSite: 'none',
+        secure: true,
+        httpOnly: true
+        // partitioned: true
+        // domain: 'yourdomain.com' // Usually better left undefined for local/dev
+      }
     }
   }
 })

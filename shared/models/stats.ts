@@ -26,6 +26,7 @@ export interface AdminStats {
   users: number
   tools: number
   casServers: number
+  gradeTranslations: number
   platformList: AdminPlatformSummary[]
   deploymentList: AdminDeploymentSummary[]
 }
