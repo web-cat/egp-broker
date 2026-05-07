@@ -70,7 +70,12 @@ export default defineEventHandler(async (event) => {
       //generate unique sourcedid
       lis_person_sourcedid: Buffer.from(`${assignment.id}:${session.user.id}`).toString('base64'),
       //map role to lti 1.1
-      roles: (session.user.role === 'TEACHER' || session.user.role === 'TA' || session.user.role === 'ADMIN') ? 'Instructor' : 'Learner',
+      roles:
+        session.user.role === 'TEACHER' ||
+        session.user.role === 'TA' ||
+        session.user.role === 'ADMIN'
+          ? 'Instructor'
+          : 'Learner',
 
       //ext_roles: 'urn:lti:instrole:ims/lis/Administrator,urn:lti:instrole:ims/lis/Instructor,urn:lti:instrole:ims/lis/Student,urn:lti:role:ims/lis/Learner,urn:lti:sysrole:ims/lis/User',
 
@@ -108,7 +113,7 @@ export default defineEventHandler(async (event) => {
       oauth_version: '1.0'
     }
 
-    console.log('ltiParams: ', ltiParams)
+    //console.log('ltiParams: ', ltiParams)
 
     // 5. Generate OAuth Signature
     // LTI 1.1 requires alphabetical sorting for the base string
@@ -119,10 +124,10 @@ export default defineEventHandler(async (event) => {
 
     const launchUrl = assignment.tool.baseUrl
 
-    console.log('--- DEBUG LAUNCH PARAMS ---')
-    console.log('Assignment ID:', assignment.id)
-    console.log('Resource Link ID (Passed to Tool):', ltiParams.resource_link_id)
-    console.log('Target URL:', launchUrl)
+    // console.log('--- DEBUG LAUNCH PARAMS ---')
+    // console.log('Assignment ID:', assignment.id)
+    // console.log('Resource Link ID (Passed to Tool):', ltiParams.resource_link_id)
+    // console.log('Target URL:', launchUrl)
 
     const baseString = ['POST', oauthEncode(launchUrl), oauthEncode(sortedParams)].join('&')
     const signingKey = `${oauthEncode(assignment.tool.secret)}&`
@@ -138,9 +143,9 @@ export default defineEventHandler(async (event) => {
       .join('\n      ')
 
     // Example: verify variables exist before returning
-    console.log(`Attempting launch for Assignment: ${id} to URL: ${launchUrl}`)
-    console.log('FINAL SORTED PARAM STRING:', sortedParams)
-    console.log('SIGNATURE:', signature)
+    // console.log(`Attempting launch for Assignment: ${id} to URL: ${launchUrl}`)
+    // console.log('FINAL SORTED PARAM STRING:', sortedParams)
+    // console.log('SIGNATURE:', signature)
 
     //return { status: 'success', signature: signature }
     const html = `

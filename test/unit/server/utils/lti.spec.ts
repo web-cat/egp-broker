@@ -12,7 +12,18 @@ vi.mock('@prisma/client', () => ({
     OBSERVER: 'OBSERVER',
     DESIGNER: 'DESIGNER',
     ADMIN: 'ADMIN'
-  }
+  },
+  PrismaClient: vi.fn().mockImplementation(() => ({
+    // Mock the specific database tables your LTI logic uses
+    // Example: if you use prisma.casServer.findUnique()
+    casServer: {
+      findUnique: vi.fn(),
+      findMany: vi.fn()
+    },
+    user: {
+      findUnique: vi.fn()
+    }
+  }))
 }))
 
 describe('LTI Utils', () => {

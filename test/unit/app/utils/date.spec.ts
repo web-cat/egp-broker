@@ -6,7 +6,7 @@ describe('Date Utils - Simple Tests', () => {
       const date = new Date('2024-01-15')
       expect(date.getFullYear()).toBe(2024)
       expect(date.getMonth()).toBe(0) // Janvier = 0
-      expect(date.getDate()).toBe(15)
+      expect(date.getUTCDate()).toBe(15)
     })
 
     it('should detect invalid dates', () => {

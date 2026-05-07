@@ -31,7 +31,7 @@
 //   // 2. Apply EGP Logic using your utility
 //   console.log("Grade Received: ", rawScore)
 //   const translatedScore = applyGradeTranslation(
-//     parseFloat(rawScore), 
+//     parseFloat(rawScore),
 //     ltiResult.assignment?.gradeTranslation?.mapping
 //   )
 //   const maxScore = ltiResult.assignment?.gradeTranslation?.maxScore

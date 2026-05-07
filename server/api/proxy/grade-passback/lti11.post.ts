@@ -3,7 +3,7 @@ import { SignJWT, importPKCS8 } from 'jose'
 import prisma from '~~/lib/prisma'
 
 export default defineEventHandler(async (event) => {
-  console.log('--- LTI 1.1 GRADE PASSBACK ENDPOINT ---')
+  //console.log('--- LTI 1.1 GRADE PASSBACK ENDPOINT ---')
 
   const rawBody = await readRawBody(event, 'utf-8')
   const parser = new XMLParser()
@@ -29,15 +29,15 @@ export default defineEventHandler(async (event) => {
   if (!ltiResult) throw createError({ statusCode: 404, statusMessage: 'Result not found' })
 
   // 2. Apply EGP Logic using your utility
-  console.log("Grade Received: ", rawScore)
-  console.log("Grade Translation: ", ltiResult.assignment?.gradeTranslation?.mapping.type)
+  // console.log('Grade Received: ', rawScore)
+  // console.log('Grade Translation: ', ltiResult.assignment?.gradeTranslation?.mapping.type)
   const translatedScore = applyGradeTranslation(
-    parseFloat(rawScore), 
+    parseFloat(rawScore),
     ltiResult.assignment?.gradeTranslation?.mapping
   )
   const maxScore = ltiResult.assignment?.gradeTranslation?.maxScore
-  console.log("Translated Score: ", translatedScore)
-  console.log("Max Score: ", maxScore)
+  // console.log('Translated Score: ', translatedScore)
+  // console.log('Max Score: ', maxScore)
 
   // 3. Prepare Tool Credentials (from ENV)
   const config = useRuntimeConfig(event)
@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Grade Passback Information Missing' })
   }
 
-  console.log('Grade sent to Canvas')
+  //console.log('Grade sent to Canvas')
 
   // 5. Return XML Success to the external tool
   setResponseHeader(event, 'Content-Type', 'application/xml')

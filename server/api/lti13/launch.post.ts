@@ -8,7 +8,7 @@ export default defineEventHandler(async (event: H3Event) => {
   // 1. Validate the LTI 1.3 Launch Body
   const body = await readBody(event)
   const result = LtiLaunchSchema.safeParse(body)
-  
+
   const { id_token: idToken, state } = result.data
 
   // Verify state matches the OIDC login initiation session
@@ -25,21 +25,18 @@ export default defineEventHandler(async (event: H3Event) => {
   if (!platform) {
     throw createError({ statusCode: 404, statusMessage: 'Platform not found' })
   }
-
-  // 3. Verify LTI Token & Claims
+  try {
+    // 3. Verify LTI Token & Claims
     const claims = await verifyLtiToken(idToken, platform.jwksEndpoint, platform.clientId, issuer)
     if (claims.nonce !== session.lti.nonce) {
       throw createError({ statusCode: 403, statusMessage: 'Invalid nonce' })
     }
 
     // 4. Run Transaction via Utility (Logic from your branch should be inside handleLtiLaunch)
-    const { 
-      user, 
-      assignmentId, 
-      needsConfiguration, 
-      userRole, 
-      sourcedId 
-    } = await handleLtiLaunch(prisma as any, { claims, platform })
+    const { user, assignmentId, needsConfiguration, userRole, sourcedId } = await handleLtiLaunch(
+      prisma as any,
+      { claims, platform }
+    )
 
     // Optional: Sync from main branch
     if (assignmentId) {
@@ -54,23 +51,22 @@ export default defineEventHandler(async (event: H3Event) => {
 
     await setUserSession(event, {
       user: validatedUser,
-      lti: { 
-        ...session.lti, 
+      lti: {
+        ...session.lti,
         sourcedId,
-        deploymentId: claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id'],
+        deploymentId: claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
       }
     })
 
     // 6. Flow Control: Setup vs Launch (Your branch logic)
     if (needsConfiguration) {
       const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(userRole)
-      return isStaff 
+      return isStaff
         ? sendRedirect(event, `/setup/${assignmentId}`, 303)
         : sendRedirect(event, '/not-ready', 303)
     }
 
     return sendRedirect(event, `/launch/${assignmentId}`)
-
   } catch (error: any) {
     console.error('LTI Launch Error:', error)
     throw createError({

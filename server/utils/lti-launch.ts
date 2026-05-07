@@ -265,7 +265,8 @@ export async function handleLtiLaunch(
 
   // Extract common claims
   const rawDeploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
-  const deploymentHost = claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid ?? null
+  const deploymentHost =
+    claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid ?? null
   const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
   const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
   const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom']
@@ -283,14 +284,15 @@ export async function handleLtiLaunch(
     // Step 2 — User
     const firstName = claims.given_name || claims.name?.split(' ')[0] || 'LTI'
     const lastName = claims.family_name || claims.name?.split(' ').slice(1).join(' ') || 'User'
-    
+
     let user = await resolveUser(tx, {
       platformId: platform.id,
       ltiSub: claims.sub,
       email: claims.email,
       firstName,
       lastName,
-      platformUserId: String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null,
+      platformUserId:
+        String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null,
       deploymentId: rawDeploymentId
     })
 
@@ -319,10 +321,6 @@ export async function handleLtiLaunch(
       // Step 4 — Assignment & Grade Passback (SourcedId)
       if (resourceLink?.id) {
         // We include 'toolId' in the select to check configuration
-        const assignment = await tx.assignment.findUnique({
-          where: { courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id } },
-          select: { id: true, toolId: true }
-        })
 
         // Use your existing resolver logic (or use the ID from above)
         assignmentId = await resolveAssignment(tx, {
@@ -334,7 +332,7 @@ export async function handleLtiLaunch(
 
         // Check if tool is linked (if assignment was found or created)
         // Note: You might need to fetch the assignment again if resolveAssignment doesn't return the toolId
-        const finalAssignment = await tx.assignment.findUnique({ 
+        const finalAssignment = await tx.assignment.findUnique({
           where: { id: assignmentId as string },
           select: { toolId: true }
         })
