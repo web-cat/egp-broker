@@ -29,6 +29,14 @@
  *         description: Invalid token or validation error
  */
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig()
+  if (!config.public.enablePasswordLogin) {
+    throw createError({
+      statusCode: 403,
+      message: 'Email/Password login is currently disabled.'
+    })
+  }
+
   const t = await useTranslation(event)
   const { token, password } = await validateBody(event, createResetPasswordSchema(t))
 

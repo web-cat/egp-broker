@@ -190,15 +190,50 @@ async function main() {
   console.log(`✅ Seeded pass pools for ${studentEnrollments.length} student enrollments`)
 
   // Create Assignments
+  const now = new Date()
+  const oneDay = 24 * 60 * 60 * 1000
+
   await prisma.assignment.createMany({
     data: [
-      { courseId: course1.id, resourceLinkId: 'link-1', title: 'Hello World in Python' },
-      { courseId: course1.id, resourceLinkId: 'link-2', title: 'Variables and Loops' },
-      { courseId: course2.id, resourceLinkId: 'link-3', title: 'Implementing a Linked List' },
-      { courseId: course2.id, resourceLinkId: 'link-4', title: 'Recursive Binary Search' }
+      {
+        courseId: course1.id,
+        resourceLinkId: 'link-1',
+        title: 'Hello World in Python',
+        dueDate: new Date(now.getTime() - oneDay), // Yesterday
+        acceptUntil: new Date(now.getTime() - oneDay)
+      },
+      {
+        courseId: course1.id,
+        resourceLinkId: 'link-2',
+        title: 'Variables and Loops',
+        dueDate: new Date(now.getTime() + oneDay), // Tomorrow
+        acceptUntil: new Date(now.getTime() + oneDay)
+      },
+      {
+        courseId: course2.id,
+        resourceLinkId: 'link-3',
+        title: 'Implementing a Linked List',
+        dueDate: new Date(now.getTime() + 7 * oneDay), // Next week
+        acceptUntil: new Date(now.getTime() + 7 * oneDay)
+      },
+      {
+        courseId: course2.id,
+        resourceLinkId: 'link-4',
+        title: 'Recursive Binary Search',
+        dueDate: new Date(now.getTime() + 14 * oneDay), // In 2 weeks
+        acceptUntil: new Date(now.getTime() + 14 * oneDay)
+      },
+      {
+        courseId: course1.id,
+        resourceLinkId: 'link-5',
+        title: 'Hidden Future Assignment',
+        availableFrom: new Date(now.getTime() + 2 * oneDay), // In 2 days
+        dueDate: new Date(now.getTime() + 5 * oneDay),
+        acceptUntil: new Date(now.getTime() + 5 * oneDay)
+      }
     ]
   })
-  console.log('✅ 4 assignments created (2 per course)')
+  console.log('✅ 5 assignments created')
 
   // Display created users for reference
   console.log('\n📋 Created users:')

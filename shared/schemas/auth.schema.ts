@@ -15,3 +15,14 @@ export const LtiLoginSchema = z.object({
 })
 
 export type LtiLoginInput = z.infer<typeof LtiLoginSchema>
+
+export const LtiSessionUserSchema = z.object({
+  id: z.string().cuid(),
+  email: z.string().email(),
+  firstName: z.string(),
+  lastName: z.string(),
+  avatarUrl: z.string().url().nullable(),
+  currentCourseId: z.string().cuid().nullable()
+})
+
+export type LtiSessionUser = z.infer<typeof LtiSessionUserSchema>

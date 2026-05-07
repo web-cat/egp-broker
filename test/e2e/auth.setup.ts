@@ -18,7 +18,7 @@ setup('authenticate', async ({ page }) => {
 
   await page.getByPlaceholder('Entrez votre adresse email').fill('admin@example.com')
   await page.getByPlaceholder('Entrez votre mot de passe').fill('Admin123!')
-  await page.getByRole('button', { name: 'Se connecter' }).click()
+  await page.getByRole('button', { name: 'Se connecter', exact: true }).click()
 
   await page.waitForURL('/fr')
   await page.context().storageState({ path: authFile })

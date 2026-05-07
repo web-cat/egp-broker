@@ -8,7 +8,7 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <!-- Quick Stats -->
     <BaseCard>
-      <div class="text-center py-4">
+      <div class="text-center">
         <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
           {{ t('pages.dashboard.teacher.stats.activeAssignments') }}
         </p>
@@ -17,7 +17,7 @@
     </BaseCard>
 
     <BaseCard>
-      <div class="text-center py-4">
+      <div class="text-center">
         <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
           {{ t('pages.dashboard.teacher.stats.pendingRequests') }}
         </p>
@@ -26,7 +26,7 @@
     </BaseCard>
 
     <BaseCard>
-      <div class="text-center py-4">
+      <div class="text-center">
         <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium lowercase">
           {{ t('pages.dashboard.teacher.stats.enrolledStudents') }}
         </p>
@@ -230,15 +230,27 @@ const assignmentColumns: any[] = [
     header: 'Title',
     cell: ({ row }: { row: any }) => {
       const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
-      return h(
-        'span',
-        {
-          class: isEligible
-            ? 'font-bold text-gray-900 dark:text-white'
-            : 'text-gray-500 dark:text-gray-400'
-        },
-        row.getValue('title') || '—'
-      )
+      const isHidden =
+        row.original.availableFrom && new Date(row.original.availableFrom) > new Date()
+
+      return h('div', { class: 'flex items-center gap-2' }, [
+        isHidden &&
+          h(resolveComponent('UTooltip'), { text: 'Hidden from students' }, () => [
+            h(resolveComponent('UIcon'), {
+              name: 'i-lucide-eye-off',
+              class: 'w-4 h-4 text-neutral-400 dark:text-neutral-500'
+            })
+          ]),
+        h(
+          'span',
+          {
+            class: isEligible
+              ? 'font-bold text-gray-900 dark:text-white'
+              : 'text-gray-500 dark:text-gray-400'
+          },
+          row.getValue('title') || '—'
+        )
+      ])
     }
   },
   {

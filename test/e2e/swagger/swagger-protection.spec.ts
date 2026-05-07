@@ -40,7 +40,7 @@ test.describe('Swagger Protection in Production', () => {
 
     // Also verify that we don't find the text "/api/docs" in API paths
     const operationBlocks = page.locator('.opblock')
-    await expect(operationBlocks).toContainText(['/api/posts'])
+    await expect(operationBlocks).toContainText(['/api/auth/login'])
 
     // Ensure no opblock contains "/api/docs"
     const allOperationTexts = await operationBlocks.allTextContents()

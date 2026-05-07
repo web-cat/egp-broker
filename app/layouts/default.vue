@@ -16,7 +16,7 @@
 
         <!-- Login button when not logged in -->
         <BaseButton
-          v-else
+          v-else-if="config.public.enablePasswordLogin"
           :to="localePath('/auth/login')"
           color="primary"
           variant="soft"
@@ -89,6 +89,7 @@ const { locale, locales, t } = useI18n()
 const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
 const { clearCourseContext } = useCourseContext()
+const config = useRuntimeConfig()
 
 const handleChangeCourse = async () => {
   await clearCourseContext()

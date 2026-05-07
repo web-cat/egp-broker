@@ -41,7 +41,7 @@ const tableMeta = computed(() => {
 </script>
 
 <template>
-  <UCard>
+  <UCard :ui="{ body: 'p-2 sm:p-2' }">
     <!-- Toolbar -->
     <template v-if="searchable || $slots.toolbar" #header>
       <div class="flex items-center justify-between gap-4">
@@ -67,6 +67,7 @@ const tableMeta = computed(() => {
       :columns="columns"
       :loading="loading"
       :meta="tableMeta"
+      :ui="{ td: 'p-2 sm:p-2', th: 'p-2 sm:p-2' }"
       class="flex-1"
     />
 

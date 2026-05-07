@@ -47,9 +47,9 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: {
-        lang: 'fr'
+        lang: 'en'
       },
-      titleTemplate: '%s | Nuxt Boilerplate',
+      titleTemplate: '%s | EGP Broker',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -251,6 +251,13 @@ export default defineNuxtConfig({
         xssValidator: false, // Prevents parsing the XML to look for scripts
         corsHandler: false // Use Nitro's built-in one instead
       }
+    },
+    // Tighter rate limit for LTI endpoints to prevent nonce probing / DoS
+    '/api/lti13/launch': {
+      security: { rateLimiter: { tokensPerInterval: 20, interval: 60 * 1000, throwError: true } }
+    },
+    '/api/lti13/login': {
+      security: { rateLimiter: { tokensPerInterval: 20, interval: 60 * 1000, throwError: true } }
     }
   },
 
@@ -292,6 +299,8 @@ export default defineNuxtConfig({
 
     // ====== Public Configuration (accessible on client-side) ======
     public: {
+      siteUrl: '', // NUXT_PUBLIC_SITE_URL or NUXT_SITE_URL
+      enablePasswordLogin: true, // NUXT_PUBLIC_ENABLE_PASSWORD_LOGIN
       version: packageJson.version
     },
     session: {

@@ -28,6 +28,14 @@
  *         description: Too many attempts
  */
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig()
+  if (!config.public.enablePasswordLogin) {
+    throw createError({
+      statusCode: 403,
+      message: 'Email/Password login is currently disabled.'
+    })
+  }
+
   const t = await useTranslation(event)
   const { email, password } = await validateBody(event, createLoginSchema(t))
   const ipAddress = getClientIP(event)

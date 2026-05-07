@@ -30,7 +30,7 @@ services:
       - ./.docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       <<: *healthcheck-defaults
-      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      test: [ 'CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB' ]
 
   # A web-based database management interface (accessible on port 8080).
   adminer:
@@ -72,11 +72,11 @@ services:
 
   # Playwright server for secure, sandboxed E2E testing.
   playwright:
-    image: mcr.microsoft.com/playwright:v1.56.1-jammy
+    image: mcr.microsoft.com/playwright:v1.58.2-jammy
     container_name: egp-playwright
     user: pwuser
     working_dir: /home/pwuser
-    command: npx playwright run-server --port 3001
+    command: npx playwright@1.58.2 run-server --port 3001
     ports:
       - 127.0.0.1:3001:3001
     networks:
@@ -90,11 +90,11 @@ services:
   # Run with `docker compose --profile production up app-prod`
   app-prod:
     <<: *defaults
-    profiles: ['production']
+    profiles: [ 'production' ]
     build:
       context: .
       target: production
-    image: egp-broker:${APP_VERSION:-latest}
+    image: docker.cs.vt.edu/stedwar2/egp-broker:${APP_VERSION:-latest}
     container_name: egp-broker
     ports:
       - 127.0.0.1:8081:3000 # Changed from 8080 to avoid conflict with Adminer
@@ -106,4 +106,5 @@ networks:
   nuxt-boilerplate:
     driver: bridge
     name: nuxt-boilerplate_network
+
 # No named volumes; using bind mounts for persistence

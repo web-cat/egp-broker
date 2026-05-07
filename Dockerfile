@@ -62,12 +62,17 @@ FROM base AS production
 # Set production environment
 ENV NODE_ENV=production
 
+# Copy package.json and pnpm-lock.yaml
+COPY package.json pnpm-lock.yaml ./
+# Install ONLY the prisma CLI for migrations.
+# We avoid a full 'pnpm install' here to prevent root node_modules from
+# shadowing the dependencies bundled in .output/server/node_modules.
+RUN pnpm add prisma --save-dev --ignore-scripts
+
 # Copy only the output from the build stage
 COPY --from=build /app/.output ./.output
 # Copy prisma schema for runtime migrations
 COPY --from=build /app/prisma ./prisma
-# Copy package.json to have access to scripts if needed
-COPY --from=build /app/package.json ./package.json
 
 # Expose Nuxt production port
 EXPOSE 3000

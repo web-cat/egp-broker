@@ -35,6 +35,26 @@
         "createFailedTitle": "Create failed",
         "errorDefault": "An unexpected error occurred."
       }
+    },
+    "casServer": {
+      "title": "CAS Servers",
+      "description": "Configure Central Authentication Service (CAS) single sign-on providers.",
+      "panelTitleEdit": "Edit CAS Server",
+      "panelTitleCreate": "Add CAS Server",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Virginia Tech",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "e.g. https://login.vt.edu/profile/cas",
+      "versionLabel": "Validation Version",
+      "notifications": {
+        "updatedTitle": "CAS Server updated",
+        "updatedMessage": "The server configuration has been saved successfully.",
+        "createdTitle": "CAS Server created",
+        "createdMessage": "The new CAS server has been created successfully.",
+        "deletedTitle": "CAS Server deleted",
+        "deletedMessage": "The CAS server has been removed successfully.",
+        "errorDefault": "An error occurred while saving."
+      }
     }
   },
   "auth": {
@@ -113,7 +133,15 @@
         }
       },
       "submit": "Sign in",
-      "title": "Login"
+      "title": "Login",
+      "or": "or",
+      "cas": {
+        "button": "Login with {name}",
+        "error": {
+          "title": "CAS Login Failed",
+          "message": "Unable to authenticate with CAS. Please try again."
+        }
+      }
     },
     "logout": {
       "messages": {

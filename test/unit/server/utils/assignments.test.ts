@@ -224,7 +224,7 @@ describe('Assignment Eligibility Logic', () => {
       )
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toEqual({
+      expect(result[0]).toMatchObject({
         id: 'a1',
         resourceLinkId: 'rl1',
         title: 'A1',

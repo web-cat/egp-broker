@@ -11,14 +11,32 @@
           <p class="text-xl text-gray-600 dark:text-gray-400 leading-relaxed mb-10">
             {{ t('pages.dashboard.notLoggedIn.description') }}
           </p>
-          <BaseButton
-            :to="localePath('/auth/login')"
-            color="primary"
-            size="lg"
-            icon="i-lucide-log-in"
-          >
-            {{ t('auth.login.title') }}
-          </BaseButton>
+          <template v-if="config.public.enablePasswordLogin">
+            <BaseButton
+              :to="localePath('/auth/login')"
+              color="primary"
+              size="lg"
+              icon="i-lucide-log-in"
+            >
+              {{ t('auth.login.title') }}
+            </BaseButton>
+          </template>
+          <template v-else-if="casServers?.length">
+            <div class="flex flex-col gap-3 justify-center items-center max-w-sm mx-auto">
+              <UButton
+                v-for="server in casServers"
+                :key="server.id"
+                block
+                color="neutral"
+                size="lg"
+                variant="outline"
+                icon="i-lucide-building-2"
+                :label="t('auth.login.cas.button', { name: server.name })"
+                class="cursor-pointer"
+                @click="navigateTo(`/api/cas/login?serverId=${server.id}`, { external: true })"
+              />
+            </div>
+          </template>
         </div>
 
         <!-- Case 2: Logged In -->
@@ -146,9 +164,15 @@ import CourseGrid from '~/components/features/course/CourseGrid.vue'
 const { t } = useI18n()
 const { loggedIn, user, clear } = useUserSession()
 const localePath = useLocalePath()
+const config = useRuntimeConfig()
 
 // SEO
 useSeo('home')
+
+// CAS Servers fallback for when password login is disabled
+const { data: casServers } = await useFetch<{ id: string; name: string }[]>('/api/cas/servers', {
+  immediate: !loggedIn.value && !config.public.enablePasswordLogin
+})
 
 // Data fetching
 const {

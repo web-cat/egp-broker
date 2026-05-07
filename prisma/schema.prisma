@@ -50,6 +50,7 @@ model User {
   // Relations
   tokens        Token[]
   ltiIdentities LtiIdentity[]
+  casIdentities CasIdentity[]
   enrollments   Enrollment[]
   passPools     StudentPassPool[]
   ltiResults    LtiResult[]
@@ -131,6 +132,9 @@ model LtiIdentity {
   platformId     String
   ltiSub         String // sub claim (unique user id in the platform)
   platformUserId String? // Optional platform-specific numeric ID (e.g. from Canvas legacy_user_id claim)
+  /// ⚠️ SECURITY RISK: Stored as plain text. If the database is compromised, all
+  /// user API keys are exposed. Future work: encrypt at the application layer
+  /// using an AES key stored in a secrets manager (e.g. NUXT_PLATFORM_API_KEY_SECRET).
   platformApiKey String? // Optional API key for this user on the platform
 
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -179,6 +183,34 @@ model gradeTranslation {
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+/// A CAS server configuration (e.g., Virginia Tech CAS).
+model CasServer {
+  id                     String @id @default(cuid())
+  name                   String          // Display name (e.g. "Virginia Tech")
+  baseUrl                String @unique  // e.g. https://login.vt.edu/profile/cas
+  serviceValidateVersion String @default("2.0") // "2.0" or "3.0"
+
+  identities CasIdentity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Linkage between a local User and a CAS identity on a specific server.
+model CasIdentity {
+  id          String @id @default(cuid())
+  userId      String
+  casServerId String
+  casUsername String // CAS uid
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  casServer CasServer @relation(fields: [casServerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([casServerId, casUsername])
+  @@unique([userId, casServerId])
 }
 
 model LoginAttempt {
@@ -291,6 +323,7 @@ model Assignment {
   updatedAt DateTime @updatedAt
 
   @@unique([courseId, resourceLinkId])
+  @@index([courseId, canvasAssignmentId])
 }
 
 enum PassCoolDownUnit {
