@@ -50,6 +50,9 @@ interface AssignmentArgs {
 export interface LtiLaunchResult {
   user: LtiSessionUser
   assignmentId: string | null
+  userRole: string
+  sourcedId: string | null
+  needsConfiguration: boolean
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -260,13 +263,14 @@ export async function handleLtiLaunch(
 ): Promise<LtiLaunchResult> {
   const { claims, platform } = args
 
+  // Extract common claims
   const rawDeploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
-  const deploymentHost =
-    claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid ?? null
+  const deploymentHost = claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid ?? null
   const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
   const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
   const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom']
   const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles']
+  const agsEndpoint = claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
 
   return prisma.$transaction(async (tx: PrismaTx) => {
     // Step 1 — Deployment
@@ -279,21 +283,22 @@ export async function handleLtiLaunch(
     // Step 2 — User
     const firstName = claims.given_name || claims.name?.split(' ')[0] || 'LTI'
     const lastName = claims.family_name || claims.name?.split(' ').slice(1).join(' ') || 'User'
-    const platformUserId =
-      String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null
-
+    
     let user = await resolveUser(tx, {
       platformId: platform.id,
       ltiSub: claims.sub,
       email: claims.email,
       firstName,
       lastName,
-      platformUserId,
+      platformUserId: String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null,
       deploymentId: rawDeploymentId
     })
 
     // Step 3 — Course & Enrollment
     let assignmentId: string | null = null
+    let sourcedId: string | null = null
+    let needsConfiguration = false
+    const userRole = parseCourseRole(roles)
 
     if (context?.id) {
       const course = await upsertCourse(tx, {
@@ -308,20 +313,56 @@ export async function handleLtiLaunch(
       await upsertEnrollment(tx, {
         userId: user.id,
         courseId: course.id,
-        courseRole: parseCourseRole(roles)
+        courseRole: userRole
       })
 
-      // Step 4 — Assignment
+      // Step 4 — Assignment & Grade Passback (SourcedId)
       if (resourceLink?.id) {
+        // We include 'toolId' in the select to check configuration
+        const assignment = await tx.assignment.findUnique({
+          where: { courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id } },
+          select: { id: true, toolId: true }
+        })
+
+        // Use your existing resolver logic (or use the ID from above)
         assignmentId = await resolveAssignment(tx, {
           courseId: course.id,
           resourceLinkId: resourceLink.id,
           canvasAssignmentId: customClaims?.canvas_assignment_id?.toString(),
           title: resourceLink.title
         })
+
+        // Check if tool is linked (if assignment was found or created)
+        // Note: You might need to fetch the assignment again if resolveAssignment doesn't return the toolId
+        const finalAssignment = await tx.assignment.findUnique({ 
+          where: { id: assignmentId as string },
+          select: { toolId: true }
+        })
+        needsConfiguration = !finalAssignment?.toolId
+
+        // Step 4b — LtiResult (SourcedId for Grade Passback)
+        const ltiResult = await tx.ltiResult.upsert({
+          where: {
+            platformId_ltiSub_assignmentId: {
+              platformId: platform.id,
+              ltiSub: claims.sub,
+              assignmentId: assignmentId as string
+            }
+          },
+          update: { lisOutcomeServiceUrl: agsEndpoint, deploymentId: rawDeploymentId },
+          create: {
+            platformId: platform.id,
+            ltiSub: claims.sub,
+            userId: user.id,
+            assignmentId: assignmentId as string,
+            deploymentId: rawDeploymentId,
+            lisOutcomeServiceUrl: agsEndpoint
+          }
+        })
+        sourcedId = ltiResult.id
       }
 
-      // Step 5 — Update user's current course context
+      // Step 5 — Update user context
       user = await tx.user.update({
         where: { id: user.id },
         data: { currentCourseId: course.id },
@@ -329,6 +370,6 @@ export async function handleLtiLaunch(
       })
     }
 
-    return { user, assignmentId }
+    return { user, assignmentId, userRole, sourcedId, needsConfiguration }
   })
 }

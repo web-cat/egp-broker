@@ -183,6 +183,8 @@ model gradeTranslation {
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
 /// A CAS server configuration (e.g., Virginia Tech CAS).
 model CasServer {
   id                     String @id @default(cuid())
