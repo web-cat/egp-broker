@@ -1,7 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
-import { getGravatarUrl } from '@@/server/utils/gravatar'
-
-import type { LtiSessionUser } from '@@/shared/schemas/auth.schema'
+import { getGravatarUrl } from './gravatar'
+import type { LtiSessionUser } from '../../shared/schemas/auth.schema'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -255,10 +254,7 @@ interface LtiLaunchArgs {
  * → assignment resolution. Returns the user and assignmentId to the handler.
  */
 export async function handleLtiLaunch(
-  prisma: Omit<
-    PrismaClient,
-    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
-  > & { $transaction: any },
+  prisma: PrismaClient,
   args: LtiLaunchArgs
 ): Promise<LtiLaunchResult> {
   const { claims, platform } = args
@@ -332,33 +328,35 @@ export async function handleLtiLaunch(
         })
 
         // Check if tool is linked (if assignment was found or created)
-        // Note: You might need to fetch the assignment again if resolveAssignment doesn't return the toolId
-        const finalAssignment = await tx.assignment.findUnique({
-          where: { id: assignmentId as string },
-          select: { toolId: true }
-        })
+        const finalAssignment = assignmentId
+          ? await tx.assignment.findUnique({
+              where: { id: assignmentId },
+              select: { toolId: true }
+            })
+          : null
         needsConfiguration = !finalAssignment?.toolId
 
-        // Step 4b — LtiResult (SourcedId for Grade Passback)
-        const ltiResult = await tx.ltiResult.upsert({
-          where: {
-            platformId_ltiSub_assignmentId: {
+        if (assignmentId) {
+          const ltiResult = await tx.ltiResult.upsert({
+            where: {
+              platformId_ltiSub_assignmentId: {
+                platformId: platform.id,
+                ltiSub: claims.sub,
+                assignmentId: assignmentId
+              }
+            },
+            update: { lisOutcomeServiceUrl: agsEndpoint, deploymentId: rawDeploymentId },
+            create: {
               platformId: platform.id,
               ltiSub: claims.sub,
-              assignmentId: assignmentId as string
+              userId: user.id,
+              assignmentId: assignmentId,
+              deploymentId: rawDeploymentId,
+              lisOutcomeServiceUrl: agsEndpoint
             }
-          },
-          update: { lisOutcomeServiceUrl: agsEndpoint, deploymentId: rawDeploymentId },
-          create: {
-            platformId: platform.id,
-            ltiSub: claims.sub,
-            userId: user.id,
-            assignmentId: assignmentId as string,
-            deploymentId: rawDeploymentId,
-            lisOutcomeServiceUrl: agsEndpoint
-          }
-        })
-        sourcedId = ltiResult.id
+          })
+          sourcedId = ltiResult.id
+        }
       }
 
       // Step 5 — Update user context

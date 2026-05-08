@@ -10,7 +10,7 @@ import type { H3Event } from 'h3'
  * 4. Hardcoded localhost fallback
  */
 export function getServerSiteUrl(event: H3Event): string {
-  const runtimeConfig = useRuntimeConfig(event)
+  const runtimeConfig = useRuntimeConfig()
   const configUrl = runtimeConfig.public.siteUrl as string | undefined
 
   if (configUrl) {
