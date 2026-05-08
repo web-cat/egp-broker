@@ -56,7 +56,11 @@
 
         <div class="flex justify-end gap-3 mt-8">
           <UButton label="Cancel" color="neutral" variant="outline" @click="open = false" />
-          <UButton type="submit" :label="isEdit ? 'Save Changes' : 'Create Platform'" :loading="loading" />
+          <UButton
+            type="submit"
+            :label="isEdit ? 'Save Changes' : 'Create Platform'"
+            :loading="loading"
+          />
         </div>
       </UForm>
     </template>

@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')
   const body = await readValidatedBody(event, PlatformUpdateSchema.safeParse)
-  
+
   if (!body.success) {
     throw createError({
       statusCode: 400,
