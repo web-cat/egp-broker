@@ -51,7 +51,7 @@ export async function initiateOidcRedirect(
 
   if (!platform) {
     const setupUrl = `/setup-platform?iss=${encodeURIComponent(params.iss)}&login_hint=${encodeURIComponent(params.loginHint)}&target_link_uri=${encodeURIComponent(params.targetLinkUri)}&lti_message_hint=${encodeURIComponent(params.ltiMessageHint || '')}`
-    
+
     // Returning a small HTML page is more reliable than a 302 redirect inside an LMS iframe
     return `
       <!DOCTYPE html>
