@@ -1,64 +1,80 @@
 <template>
-  <BaseDataTable
-    :data="platforms?.data"
-    :columns="platformColumns"
-    :loading="platformsStatus === 'pending'"
-    searchable
-    search-placeholder="Search platforms…"
-    empty-icon="i-lucide-layers"
-    empty-text="No platforms registered yet."
-  >
-    <template #toolbar>
-      <UButton icon="i-lucide-plus" label="Add Platform" @click="isAddModalOpen = true" />
-    </template>
-  </BaseDataTable>
-
-  <!-- Add Platform Modal -->
-  <UModal v-model="isAddModalOpen">
-    <UCard>
-      <template #header>
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-semibold">Register New LTI Platform</h3>
-          <UButton color="gray" variant="ghost" icon="i-lucide-x" class="-my-1" @click="isAddModalOpen = false" />
-        </div>
+  <div>
+    <BaseDataTable
+      :data="platforms?.data"
+      :columns="platformColumns"
+      :loading="platformsStatus === 'pending'"
+      searchable
+      search-placeholder="Search platforms…"
+      empty-icon="i-lucide-layers"
+      empty-text="No platforms registered yet."
+    >
+      <template #toolbar>
+        <UButton icon="i-lucide-plus" label="Add Platform" @click="isAddModalOpen = true" />
       </template>
+    </BaseDataTable>
 
-      <UForm :schema="schema" :state="state" @submit="onSubmit" class="space-y-4">
-        <UFormGroup label="Platform Name" name="name">
-          <UInput v-model="state.name" placeholder="e.g. Canvas Production" />
-        </UFormGroup>
+    <!-- Add Platform Modal -->
+    <UModal v-model="isAddModalOpen">
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-semibold">Register New LTI Platform</h3>
+            <UButton
+              color="gray"
+              variant="ghost"
+              icon="i-lucide-x"
+              class="-my-1"
+              @click="isAddModalOpen = false"
+            />
+          </div>
+        </template>
 
-        <UFormGroup label="Issuer (iss)" name="issuer" help="The URL of the platform (e.g. https://canvas.instructure.com)">
-          <UInput v-model="state.issuer" @update:model-value="onIssuerUpdate" />
-        </UFormGroup>
-
-        <UFormGroup label="Client ID" name="clientId">
-          <UInput v-model="state.clientId" />
-        </UFormGroup>
-
-        <div class="grid grid-cols-1 gap-4">
-          <UFormGroup label="Auth Endpoint" name="authEndpoint">
-            <UInput v-model="state.authEndpoint" />
+        <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+          <UFormGroup label="Platform Name" name="name">
+            <UInput v-model="state.name" placeholder="e.g. Canvas Production" />
           </UFormGroup>
-          <UFormGroup label="Token Endpoint" name="tokenEndpoint">
-            <UInput v-model="state.tokenEndpoint" />
-          </UFormGroup>
-          <UFormGroup label="JWKS Endpoint" name="jwksEndpoint">
-            <UInput v-model="state.jwksEndpoint" />
-          </UFormGroup>
-        </div>
 
-        <div class="flex justify-end gap-3 pt-4">
-          <UButton variant="ghost" label="Cancel" @click="isAddModalOpen = false" />
-          <UButton type="submit" color="primary" label="Save Platform" :loading="loading" />
-        </div>
-      </UForm>
-    </UCard>
-  </UModal>
+          <UFormGroup
+            label="Issuer (iss)"
+            name="issuer"
+            help="The URL of the platform (e.g. https://canvas.instructure.com)"
+          >
+            <UInput v-model="state.issuer" @update:model-value="onIssuerUpdate" />
+          </UFormGroup>
+
+          <UFormGroup label="Client ID" name="clientId">
+            <UInput v-model="state.clientId" />
+          </UFormGroup>
+
+          <div class="grid grid-cols-1 gap-4">
+            <UFormGroup label="Auth Endpoint" name="authEndpoint">
+              <UInput v-model="state.authEndpoint" />
+            </UFormGroup>
+            <UFormGroup label="Token Endpoint" name="tokenEndpoint">
+              <UInput v-model="state.tokenEndpoint" />
+            </UFormGroup>
+            <UFormGroup label="JWKS Endpoint" name="jwksEndpoint">
+              <UInput v-model="state.jwksEndpoint" />
+            </UFormGroup>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-4">
+            <UButton variant="ghost" label="Cancel" @click="isAddModalOpen = false" />
+            <UButton type="submit" color="primary" label="Save Platform" :loading="loading" />
+          </div>
+        </UForm>
+      </UCard>
+    </UModal>
+  </div>
 </template>
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
+
+// --- Add Platform Logic ---
+import { z } from 'zod'
+import type { FormSubmitEvent } from '#ui/types'
 
 interface PlatformRow {
   id: string
@@ -95,13 +111,8 @@ onMounted(() => {
 const { fetchPlatforms } = useAdminPlatforms()
 const { data: platforms, status: platformsStatus, refresh } = await fetchPlatforms()
 
-// --- Add Platform Logic ---
-import { z } from 'zod'
-import type { FormSubmitEvent } from '#ui/types'
-
 const isAddModalOpen = ref(false)
 const loading = ref(false)
-const toast = useToast()
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -140,11 +151,11 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
       method: 'POST',
       body: event.data
     })
-    
+
     toast.add({ title: 'Platform added successfully', color: 'success' })
     isAddModalOpen.value = false
     refresh()
-    
+
     // Reset state
     Object.assign(state, {
       name: '',
@@ -155,10 +166,10 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
       jwksEndpoint: ''
     })
   } catch (err: any) {
-    toast.add({ 
-      title: 'Failed to add platform', 
-      description: err.data?.message || 'Check logs', 
-      color: 'error' 
+    toast.add({
+      title: 'Failed to add platform',
+      description: err.data?.message || 'Check logs',
+      color: 'error'
     })
   } finally {
     loading.value = false
