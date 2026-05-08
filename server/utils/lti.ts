@@ -1,4 +1,4 @@
-import { createError, sendRedirect } from 'h3'
+import { sendRedirect } from 'h3'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { CourseRole } from '@prisma/client'
 import prisma from '@@/lib/prisma'
@@ -50,20 +50,10 @@ export async function initiateOidcRedirect(
   })
 
   if (!platform) {
-    const session = await getUserSession(event)
-    const isAdmin = session?.user?.globalRole === 'ADMIN'
-
-    if (isAdmin) {
-      return sendRedirect(
-        event,
-        `/admin/platforms?error=${encodeURIComponent(`Platform for issuer ${params.iss} not registered`)}`
-      )
-    }
-
-    throw createError({
-      statusCode: 404,
-      statusMessage: `Platform for issuer ${params.iss} not registered`
-    })
+    return sendRedirect(
+      event,
+      `/admin/platforms/setup?iss=${encodeURIComponent(params.iss)}&login_hint=${encodeURIComponent(params.loginHint)}&target_link_uri=${encodeURIComponent(params.targetLinkUri)}&lti_message_hint=${encodeURIComponent(params.ltiMessageHint || '')}`
+    )
   }
 
   const state = crypto.randomUUID()
