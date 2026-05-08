@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 import { getGravatarUrl } from './gravatar'
-import type { LtiSessionUser } from '../../shared/schemas/auth.schema'
+import type { LtiSessionUser } from '@@/shared/schemas/auth.schema'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -204,46 +204,38 @@ export async function upsertEnrollment(tx: PrismaTx, args: EnrollmentArgs) {
 export async function resolveAssignment(
   tx: PrismaTx,
   args: AssignmentArgs
-): Promise<string | null> {
+): Promise<{ id: string; toolId: string | null }> {
   const { courseId, resourceLinkId, canvasAssignmentId, title } = args
 
-  // 1. Standard LTI lookup
+  // 1. Strict check for existing mapping
   let assignment = await tx.assignment.findUnique({
     where: {
       courseId_resourceLinkId: { courseId, resourceLinkId }
-    }
+    },
+    select: { id: true, toolId: true }
   })
 
-  // 2. Canvas assignment ID lookup (synced but never launched)
-  if (!assignment && canvasAssignmentId) {
-    assignment = await tx.assignment.findFirst({
-      where: { courseId, canvasAssignmentId }
+  // 2. Create shell if it's the first time this link is clicked
+  if (!assignment) {
+    const created = await tx.assignment.create({
+      data: {
+        courseId,
+        resourceLinkId,
+        title,
+        canvasAssignmentId
+      },
+      select: { id: true, toolId: true }
     })
+    return created
   }
 
-  // 3. Title-only fallback — only when the incoming claim has no canvasAssignmentId
-  //    (if the LMS sent a canvasAssignmentId we already know it didn't match, so
-  //    a title match would be a different assignment — skip to avoid bad merge)
-  if (!assignment && title && !canvasAssignmentId) {
-    assignment = await tx.assignment.findFirst({
-      where: { courseId, title, resourceLinkId: null, canvasAssignmentId: null }
-    })
-  }
-
-  if (assignment) {
-    await tx.assignment.update({
-      where: { id: assignment.id },
-      data: { resourceLinkId, canvasAssignmentId, title }
-    })
-    return assignment.id
-  }
-
-  // Create new
-  const created = await tx.assignment.create({
-    data: { courseId, resourceLinkId, title, canvasAssignmentId },
-    select: { id: true }
+  // 3. Update title/ID sync if record exists
+  await tx.assignment.update({
+    where: { id: assignment.id },
+    data: { title, canvasAssignmentId }
   })
-  return created.id
+
+  return assignment
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -261,121 +253,127 @@ interface LtiLaunchArgs {
  */
 export async function handleLtiLaunch(
   prisma: PrismaClient,
-  args: LtiLaunchArgs
+  payload: { claims: any; platform: any }
 ): Promise<LtiLaunchResult> {
-  const { claims, platform } = args
+  const { claims, platform } = payload
 
-  // Extract common claims
-  const rawDeploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
-  const deploymentHost =
-    claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform']?.guid ?? null
-  const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
-  const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
-  const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom']
-  const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles']
-  const agsEndpoint = claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
+  return await prisma.$transaction(async (tx) => {
+    const deploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
+    const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
+    const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
+    const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom'] || {}
+    const platformClaims = claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform'] || {}
+    const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles'] || []
+    const agsEndpoint = claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
 
-  return prisma.$transaction(async (tx: PrismaTx) => {
-    // Step 1 — Deployment
-    const deployment = await upsertDeployment(tx, {
-      platformId: platform.id,
-      deploymentId: rawDeploymentId,
-      deploymentHost
+    // A. Upsert Deployment
+    const deployment = await tx.ltiDeployment.upsert({
+      where: { platformId_deploymentId: { platformId: platform.id, deploymentId } },
+      update: { deploymentHost: platformClaims?.guid || null },
+      create: {
+        platformId: platform.id,
+        deploymentId,
+        deploymentHost: platformClaims?.guid || null
+      }
     })
 
-    // Step 2 — User
-    const firstName = claims.given_name || claims.name?.split(' ')[0] || 'LTI'
-    const lastName = claims.family_name || claims.name?.split(' ').slice(1).join(' ') || 'User'
-
-    let user = await resolveUser(tx, {
-      platformId: platform.id,
-      ltiSub: claims.sub,
-      email: claims.email,
-      firstName,
-      lastName,
-      platformUserId:
-        String(claims['https://canvas.instructure.com/lti/legacy_user_id'] || '') || null,
-      deploymentId: rawDeploymentId
-    })
-
-    // Step 3 — Course & Enrollment
-    let assignmentId: string | null = null
-    let sourcedId: string | null = null
-    let needsConfiguration = false
-    const userRole = parseCourseRole(roles)
-
-    if (context?.id) {
-      const course = await upsertCourse(tx, {
+    // B. Upsert Course
+    const course = await tx.course.upsert({
+      where: { deploymentId_ltiContextId: { deploymentId: deployment.id, ltiContextId: context.id } },
+      update: {
+        label: context.label,
+        title: context.title,
+        canvasCourseId: customClaims.canvas_course_id?.toString()
+      },
+      create: {
         deploymentId: deployment.id,
         ltiContextId: context.id,
         label: context.label,
         title: context.title,
-        canvasCourseId: customClaims?.canvas_course_id?.toString(),
-        workflowState: customClaims?.canvas_course_workflow_state
-      })
-
-      await upsertEnrollment(tx, {
-        userId: user.id,
-        courseId: course.id,
-        courseRole: userRole
-      })
-
-      // Step 4 — Assignment & Grade Passback (SourcedId)
-      // We only treat this as an assignment launch if it targets a specific assignment
-      const rawAssignmentId = customClaims?.canvas_assignment_id?.toString()
-      const isRealAssignment = rawAssignmentId && !rawAssignmentId.includes('$')
-
-      if (resourceLink?.id && isRealAssignment) {
-        // We include 'toolId' in the select to check configuration
-
-        // Use your existing resolver logic (or use the ID from above)
-        assignmentId = await resolveAssignment(tx, {
-          courseId: course.id,
-          resourceLinkId: resourceLink.id,
-          canvasAssignmentId: rawAssignmentId,
-          title: resourceLink.title
-        })
-
-        // Check if tool is linked (if assignment was found or created)
-        const finalAssignment = assignmentId
-          ? await tx.assignment.findUnique({
-              where: { id: assignmentId },
-              select: { toolId: true }
-            })
-          : null
-        needsConfiguration = !finalAssignment?.toolId
-
-        if (assignmentId) {
-          const ltiResult = await tx.ltiResult.upsert({
-            where: {
-              platformId_ltiSub_assignmentId: {
-                platformId: platform.id,
-                ltiSub: claims.sub,
-                assignmentId: assignmentId
-              }
-            },
-            update: { lisOutcomeServiceUrl: agsEndpoint, deploymentId: rawDeploymentId },
-            create: {
-              platformId: platform.id,
-              ltiSub: claims.sub,
-              userId: user.id,
-              assignmentId: assignmentId,
-              deploymentId: rawDeploymentId,
-              lisOutcomeServiceUrl: agsEndpoint
-            }
-          })
-          sourcedId = ltiResult.id
-        }
+        canvasCourseId: customClaims.canvas_course_id?.toString()
       }
+    })
 
-      // Step 5 — Update user context
-      user = await tx.user.update({
-        where: { id: user.id },
-        data: { currentCourseId: course.id },
-        select: sessionUserSelect
+    // C. Find or Create User
+    let user = await tx.user.findFirst({
+      where: { ltiIdentities: { some: { platformId: platform.id, ltiSub: claims.sub } } }
+    })
+
+    if (!user && claims.email) {
+      user = await tx.user.upsert({
+        where: { email: claims.email },
+        update: { currentCourseId: course.id },
+        create: {
+          email: claims.email,
+          firstName: claims.given_name || claims.name?.split(' ')[0] || 'LTI',
+          lastName: claims.family_name || 'User',
+          avatarUrl: getGravatarUrl(claims.email),
+          currentCourseId: course.id
+        }
       })
     }
 
-    return { user, assignmentId, userRole, sourcedId, needsConfiguration }
+    if (!user) throw new Error('Could not find or create user context')
+
+    // D. Strict Assignment Lookup (Standard LTI 1:1)
+    let assignment = await tx.assignment.findUnique({
+      where: { courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id } },
+      include: { tool: true }
+    })
+
+    if (!assignment) {
+      assignment = await tx.assignment.create({
+        data: {
+          courseId: course.id,
+          resourceLinkId: resourceLink.id,
+          title: resourceLink.title,
+          canvasAssignmentId: agsEndpoint?.split('/').filter(Boolean).pop()
+        },
+        include: { tool: true }
+      })
+    }
+
+    // E. Identity and Enrollment
+    const userRole = parseCourseRole(roles) // Ensure this helper is imported/available
+    await tx.enrollment.upsert({
+      where: { userId_courseId: { userId: user.id, courseId: course.id } },
+      update: { role: userRole as any },
+      create: { userId: user.id, courseId: course.id, role: userRole as any }
+    })
+
+    const ltiResult = await tx.ltiResult.upsert({
+      where: {
+        platformId_ltiSub_assignmentId: {
+          platformId: platform.id,
+          ltiSub: claims.sub,
+          assignmentId: assignment.id
+        }
+      },
+      update: { lisOutcomeServiceUrl: agsEndpoint, deploymentId },
+      create: {
+        platformId: platform.id,
+        ltiSub: claims.sub,
+        userId: user.id,
+        assignmentId: assignment.id,
+        deploymentId,
+        lisOutcomeServiceUrl: agsEndpoint
+      }
+    })
+
+    // F. Final assignment check & User sync
+    const needsConfiguration = !assignment.toolId
+    
+    user = await tx.user.update({
+      where: { id: user.id },
+      data: { currentCourseId: course.id }
+    })
+
+    return {
+      user,
+      assignmentId: assignment.id,
+      userRole,
+      sourcedId: ltiResult.id,
+      needsConfiguration
+    }
   })
 }
