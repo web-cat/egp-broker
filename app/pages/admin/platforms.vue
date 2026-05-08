@@ -30,6 +30,24 @@ interface PlatformRow {
 const { setTitle } = useAdminPageTitle()
 setTitle('Platforms')
 
+// --- Notifications ---
+const route = useRoute()
+const toast = useToast()
+
+onMounted(() => {
+  if (route.query.error) {
+    toast.add({
+      title: 'Action Required',
+      description: route.query.error as string,
+      color: 'warning',
+      icon: 'i-lucide-alert-triangle',
+      timeout: 10000
+    })
+    // Clear the error from the URL
+    navigateTo({ path: route.path, query: {} }, { replace: true })
+  }
+})
+
 // --- Data fetching ---
 const { fetchPlatforms } = useAdminPlatforms()
 const { data: platforms, status: platformsStatus } = await fetchPlatforms()

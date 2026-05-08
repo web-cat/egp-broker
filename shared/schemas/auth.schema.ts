@@ -22,6 +22,7 @@ export const LtiSessionUserSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   avatarUrl: z.string().url().nullable(),
+  globalRole: z.enum(['ADMIN', 'INSTRUCTOR', 'USER']),
   currentCourseId: z.string().cuid().nullable()
 })
 

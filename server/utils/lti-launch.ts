@@ -87,6 +87,7 @@ const sessionUserSelect = {
   firstName: true,
   lastName: true,
   avatarUrl: true,
+  globalRole: true,
   currentCourseId: true
 } satisfies Prisma.UserSelect
 
@@ -114,11 +115,16 @@ export async function resolveUser(tx: PrismaTx, args: UserArgs): Promise<LtiSess
     : null
 
   if (!user) {
+    // Check if this is the very first user in the system
+    const userCount = await tx.user.count()
+    const globalRole = userCount === 0 ? 'ADMIN' : 'USER'
+
     user = await tx.user.create({
       data: {
         email: args.email as string,
         firstName: args.firstName,
         lastName: args.lastName,
+        globalRole,
         emailVerified: true,
         emailVerifiedAt: new Date(),
         avatarUrl: getGravatarUrl(args.email as string)

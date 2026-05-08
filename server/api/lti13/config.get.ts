@@ -44,7 +44,6 @@ export default defineEventHandler((event) => {
       }
     ],
     public_jwk_url: `${siteUrl}/api/lti13/jwks`,
-    'https://purl.imsglobal.org/spec/lti-dr/claim/registration_endpoint': `${siteUrl}/api/lti13/registration`,
     custom_fields: {
       user_id: '$User.id',
       course_id: '$CourseSection.sourcedId',
