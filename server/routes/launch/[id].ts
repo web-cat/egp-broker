@@ -45,9 +45,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const assignmentid =
-      assignment.canvasAssignmentId ||
-      ltiResult.lisOutcomeServiceUrl?.split('/').pop() ||
-      ''
+      assignment.canvasAssignmentId || ltiResult.lisOutcomeServiceUrl?.split('/').pop() || ''
 
     // 3. Prepare LTI 1.1 Params
     const ltiParams: Record<string, string> = {

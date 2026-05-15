@@ -24,7 +24,8 @@ export default defineEventHandler(async (event) => {
 
   try {
     const claims = await verifyLtiToken(idToken, platform.jwksEndpoint, platform.clientId, issuer)
-    if (claims.nonce !== session.lti.nonce) throw createError({ statusCode: 403, statusMessage: 'Invalid nonce' })
+    if (claims.nonce !== session.lti.nonce)
+      throw createError({ statusCode: 403, statusMessage: 'Invalid nonce' })
 
     // Use the logic that was working
     const { user, assignmentId, needsConfiguration, userRole, sourcedId } = await handleLtiLaunch(
@@ -48,13 +49,12 @@ export default defineEventHandler(async (event) => {
     // Routing
     if (needsConfiguration) {
       const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(userRole)
-      return isStaff 
+      return isStaff
         ? sendRedirect(event, `/setup/${assignmentId}`, 303)
         : sendRedirect(event, '/not-ready', 303)
     }
 
     return sendRedirect(event, `/launch/${assignmentId}`)
-
   } catch (error: any) {
     console.error('LTI Launch Error:', error)
     throw createError({ statusCode: 500, statusMessage: error.message || 'LTI failed' })

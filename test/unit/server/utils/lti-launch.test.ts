@@ -31,7 +31,7 @@ function makeTx(overrides: Record<string, any> = {}) {
   return {
     ltiDeployment: { upsert: vi.fn().mockResolvedValue({ id: 'dep-1' }) },
     ltiIdentity: { findUnique: vi.fn(), create: vi.fn() },
-    user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
     course: { upsert: vi.fn().mockResolvedValue({ id: 'course-1' }) },
     enrollment: { upsert: vi.fn() },
     assignment: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
@@ -130,57 +130,23 @@ describe('lti-launch utils', () => {
       tx.assignment.findUnique.mockResolvedValue({ id: 'asgn-1' })
       tx.assignment.update.mockResolvedValue({})
 
-      const id = await resolveAssignment(tx as any, baseArgs)
+      const { id } = await resolveAssignment(tx as any, baseArgs)
       expect(id).toBe('asgn-1')
       expect(tx.assignment.findFirst).not.toHaveBeenCalled()
     })
 
-    it('falls back to canvasAssignmentId when resourceLinkId not found', async () => {
+    it('creates a new assignment when resourceLinkId not found', async () => {
       const tx = makeTx()
       tx.assignment.findUnique.mockResolvedValue(null)
-      tx.assignment.findFirst.mockResolvedValueOnce({ id: 'asgn-2' })
-      tx.assignment.update.mockResolvedValue({})
-
-      const id = await resolveAssignment(tx as any, {
-        ...baseArgs,
-        canvasAssignmentId: 'canvas-42'
-      })
-      expect(id).toBe('asgn-2')
-    })
-
-    it('falls back to title when resourceLinkId and canvasAssignmentId not found, and claim has no canvasAssignmentId', async () => {
-      const tx = makeTx()
-      tx.assignment.findUnique.mockResolvedValue(null)
-      tx.assignment.findFirst.mockResolvedValueOnce({ id: 'asgn-3' })
-      tx.assignment.update.mockResolvedValue({})
-
-      const id = await resolveAssignment(tx as any, {
-        courseId: 'course-1',
-        resourceLinkId: 'link-new',
-        canvasAssignmentId: undefined, // no canvasAssignmentId in claim → title fallback allowed
-        title: 'Homework 1'
-      })
-      expect(id).toBe('asgn-3')
-    })
-
-    it('does NOT use title fallback when canvasAssignmentId is present in claim but not found', async () => {
-      // If the LMS sent a canvasAssignmentId but it didn't match, a title match
-      // would be a different assignment — skip to avoid a bad merge.
-      const tx = makeTx()
-      tx.assignment.findUnique.mockResolvedValue(null)
-      tx.assignment.findFirst.mockResolvedValue(null) // canvasAssignmentId lookup misses
-      // title fallback should NOT fire — findFirst should only be called once (for canvasAssignmentId)
       tx.assignment.create.mockResolvedValue({ id: 'asgn-new' })
 
-      const id = await resolveAssignment(tx as any, {
-        courseId: 'course-1',
-        resourceLinkId: 'link-new',
-        canvasAssignmentId: 'canvas-99',
-        title: 'Homework 1'
+      const { id } = await resolveAssignment(tx as any, {
+        ...baseArgs,
+        resourceLinkId: 'link-new'
       })
 
-      expect(tx.assignment.findFirst).toHaveBeenCalledTimes(1) // only canvasAssignmentId lookup
       expect(id).toBe('asgn-new')
+      expect(tx.assignment.create).toHaveBeenCalledOnce()
     })
 
     it('creates a new assignment when none found', async () => {
@@ -189,7 +155,7 @@ describe('lti-launch utils', () => {
       tx.assignment.findFirst.mockResolvedValue(null)
       tx.assignment.create.mockResolvedValue({ id: 'asgn-created' })
 
-      const id = await resolveAssignment(tx as any, {
+      const { id } = await resolveAssignment(tx as any, {
         ...baseArgs,
         canvasAssignmentId: undefined
       })

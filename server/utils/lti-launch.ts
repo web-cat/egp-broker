@@ -208,7 +208,7 @@ export async function resolveAssignment(
   const { courseId, resourceLinkId, canvasAssignmentId, title } = args
 
   // 1. Strict check for existing mapping
-  let assignment = await tx.assignment.findUnique({
+  const assignment = await tx.assignment.findUnique({
     where: {
       courseId_resourceLinkId: { courseId, resourceLinkId }
     },
@@ -253,7 +253,7 @@ interface LtiLaunchArgs {
  */
 export async function handleLtiLaunch(
   prisma: PrismaClient,
-  payload: { claims: any; platform: any }
+  payload: LtiLaunchArgs
 ): Promise<LtiLaunchResult> {
   const { claims, platform } = payload
 
@@ -279,7 +279,9 @@ export async function handleLtiLaunch(
 
     // B. Upsert Course
     const course = await tx.course.upsert({
-      where: { deploymentId_ltiContextId: { deploymentId: deployment.id, ltiContextId: context.id } },
+      where: {
+        deploymentId_ltiContextId: { deploymentId: deployment.id, ltiContextId: context.id }
+      },
       update: {
         label: context.label,
         title: context.title,
@@ -362,7 +364,7 @@ export async function handleLtiLaunch(
 
     // F. Final assignment check & User sync
     const needsConfiguration = !assignment.toolId
-    
+
     user = await tx.user.update({
       where: { id: user.id },
       data: { currentCourseId: course.id }
