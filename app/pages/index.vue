@@ -194,8 +194,15 @@ const {
 })
 
 const isTeacher = computed(() => {
-  const role = enrollment.value?.data?.role
-  return role === 'TEACHER' || role === 'TA' || role === 'DESIGNER' || role === 'ADMIN'
+  const role = enrollment.value?.data?.role?.toUpperCase()
+  return (
+    role === 'TEACHER' ||
+    role === 'TA' ||
+    role === 'DESIGNER' ||
+    role === 'ADMIN' ||
+    role === 'INSTRUCTOR' ||
+    user.value?.globalRole === 'ADMIN'
+  )
 })
 
 // Helper to check for unauthorized errors (handles both .status and .statusCode)

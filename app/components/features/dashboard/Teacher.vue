@@ -1,22 +1,22 @@
 <template>
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-    <UPageHeader
-      :title="courseCode ? `${courseCode}: ${courseTitle || ''}` : courseTitle || ''"
-      :description="t('pages.dashboard.teacher.subtitle')"
-      class="border-b-0 p-0"
-    />
-    <div class="flex items-center gap-2 self-start sm:self-center shrink-0">
-      <UButton
+  <UPageHeader
+    :title="courseCode ? `${courseCode}: ${courseTitle || ''}` : courseTitle || ''"
+    :description="t('pages.dashboard.teacher.subtitle')"
+    class="border-b-0 mb-4"
+  >
+    <template #links>
+      <BaseButton
         icon="i-lucide-eye"
-        label="Student View"
         color="neutral"
         variant="outline"
         size="md"
         class="cursor-pointer font-medium"
         @click="enterStudentView"
-      />
-    </div>
-  </div>
+      >
+        Student View
+      </BaseButton>
+    </template>
+  </UPageHeader>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <!-- Quick Stats -->
