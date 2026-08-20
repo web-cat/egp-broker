@@ -1,5 +1,7 @@
 import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
+import type { SyncStatusResponse } from '@@/shared/schemas/sync.schema'
+import { useAdminCrud } from '~/composables/features/admin/useAdminCrud'
 
 export const useTeacherDashboard = () => {
   const toast = useToast()
@@ -31,15 +33,33 @@ export const useTeacherDashboard = () => {
   } = useAdminCrud<AssignmentRow>('/api/me/assignments')
 
   // --- Sync Logic ---
-  const { data: syncStatus } = useFetch<{ data: { canSync: boolean } }>('/api/me/sync-status', {
-    lazy: true
-  })
+  const { data: syncStatus, refresh: refreshSyncStatus } = useFetch<{ data: SyncStatusResponse }>(
+    '/api/me/sync-status',
+    {
+      lazy: true
+    }
+  )
 
   const canSync = computed(() => syncStatus.value?.data?.canSync ?? false)
+  const platformName = computed(() => syncStatus.value?.data?.platformName || 'Canvas')
   const syncing = ref(false)
+  const apiKeyModalOpen = ref(false)
+  const isSavingApiKey = ref(false)
 
-  const syncAssignments = async () => {
-    if (!confirm('This will fetch assignments from the LMS and update the list. Continue?')) return
+  const openApiKeyModal = () => {
+    apiKeyModalOpen.value = true
+  }
+
+  const closeApiKeyModal = () => {
+    apiKeyModalOpen.value = false
+  }
+
+  const syncAssignments = async (promptConfirm = true) => {
+    if (
+      promptConfirm &&
+      !confirm('This will fetch assignments from the LMS and update the list. Continue?')
+    )
+      return
 
     syncing.value = true
     try {
@@ -62,6 +82,42 @@ export const useTeacherDashboard = () => {
       })
     } finally {
       syncing.value = false
+    }
+  }
+
+  const saveApiKey = async (apiKey: string) => {
+    isSavingApiKey.value = true
+    try {
+      await $fetch('/api/me/platform-key', {
+        method: 'POST',
+        body: { apiKey }
+      })
+
+      await refreshSyncStatus()
+      apiKeyModalOpen.value = false
+
+      toast.add({
+        title: 'API key saved',
+        description: 'Syncing is now enabled. Fetching assignments...',
+        color: 'success'
+      })
+
+      // Automatically sync assignments after saving key without secondary confirmation prompt
+      await syncAssignments(false)
+    } catch (err: any) {
+      console.error(err)
+      toast.add({
+        title: 'Failed to save API key',
+        description:
+          err.data?.statusMessage ||
+          err.data?.message ||
+          err.message ||
+          'An unexpected error occurred.',
+        color: 'error'
+      })
+      throw err
+    } finally {
+      isSavingApiKey.value = false
     }
   }
 
@@ -88,9 +144,15 @@ export const useTeacherDashboard = () => {
     onAssignmentRowUpdated,
     onAssignmentItemCreated,
 
-    // Sync
+    // Sync & API Key
     canSync,
+    platformName,
     syncing,
+    apiKeyModalOpen,
+    isSavingApiKey,
+    openApiKeyModal,
+    closeApiKeyModal,
+    saveApiKey,
     syncAssignments
   }
 }

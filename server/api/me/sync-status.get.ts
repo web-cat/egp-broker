@@ -1,8 +1,9 @@
-import { defineEventHandler } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
+import type { SyncStatusResponse } from '@@/shared/schemas/sync.schema'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<{ canSync: boolean }>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<SyncStatusResponse>> => {
   const session = await getUserSession(event)
   if (!session.user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
@@ -14,7 +15,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<{ canSync: 
     select: {
       currentCourse: {
         include: {
-          deployment: true
+          deployment: {
+            include: {
+              platform: true
+            }
+          }
         }
       }
     }
@@ -22,10 +27,21 @@ export default defineEventHandler(async (event): Promise<ApiResponse<{ canSync: 
 
   // Basic checks
   if (!user?.currentCourse?.deployment?.platformId) {
-    return { statusCode: 200, data: { canSync: false } }
+    return {
+      statusCode: 200,
+      data: {
+        canSync: false,
+        hasCourseContext: false,
+        platformName: null
+      }
+    }
   }
 
   const platformId = user.currentCourse.deployment.platformId
+  const platformName =
+    user.currentCourse.deployment.platform.name ||
+    user.currentCourse.deployment.platform.issuer ||
+    'Canvas'
 
   // Check for identity with API key
   const identity = await prisma.ltiIdentity.findFirst({
@@ -38,6 +54,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<{ canSync: 
 
   return {
     statusCode: 200,
-    data: { canSync: !!identity }
+    data: {
+      canSync: !!identity,
+      hasCourseContext: true,
+      platformName
+    }
   }
 })

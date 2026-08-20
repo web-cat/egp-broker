@@ -79,6 +79,15 @@
           class="mr-2"
           @click="syncAssignments"
         />
+        <UButton
+          v-else
+          icon="i-lucide-key"
+          label="Enable Assignment Sync"
+          variant="outline"
+          color="primary"
+          class="mr-2"
+          @click="openApiKeyModal"
+        />
         <UButton icon="i-lucide-plus" label="Add Assignment" @click="openAssignmentCreate" />
       </template>
     </BaseDataTable>
@@ -97,6 +106,13 @@
     :pass-types="passTypesData?.data"
     @saved="onAssignmentSavedWithRefresh"
     @created="onAssignmentItemCreated"
+  />
+
+  <FeaturesDashboardPlatformApiKeyModal
+    v-model:open="apiKeyModalOpen"
+    :platform-name="platformName"
+    :loading="isSavingApiKey"
+    @save="saveApiKey"
   />
 </template>
 
@@ -138,9 +154,14 @@ const {
   openAssignmentEdit,
   onAssignmentItemCreated,
 
-  // Sync
+  // Sync & API Key
   canSync,
+  platformName,
   syncing,
+  apiKeyModalOpen,
+  isSavingApiKey,
+  openApiKeyModal,
+  saveApiKey,
   syncAssignments
 } = useTeacherDashboard()
 
