@@ -317,6 +317,29 @@ export async function handleLtiLaunch(
 
     if (!user) throw new Error('Could not find or create user context')
 
+    // Ensure LtiIdentity is created/linked
+    const platformUserId = customClaims.canvas_user_id?.toString() || null
+    await tx.ltiIdentity.upsert({
+      where: {
+        platformId_ltiSub: {
+          platformId: platform.id,
+          ltiSub: claims.sub
+        }
+      },
+      update: {
+        userId: user.id,
+        platformUserId,
+        deploymentId
+      },
+      create: {
+        userId: user.id,
+        platformId: platform.id,
+        ltiSub: claims.sub,
+        platformUserId,
+        deploymentId
+      }
+    })
+
     // D. Strict Assignment Lookup (Standard LTI 1:1)
     let assignment = await tx.assignment.findUnique({
       where: { courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id } },

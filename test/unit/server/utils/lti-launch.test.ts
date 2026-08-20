@@ -30,7 +30,7 @@ vi.mock('@prisma/client', () => ({
 function makeTx(overrides: Record<string, any> = {}) {
   return {
     ltiDeployment: { upsert: vi.fn().mockResolvedValue({ id: 'dep-1' }) },
-    ltiIdentity: { findUnique: vi.fn(), create: vi.fn() },
+    ltiIdentity: { findUnique: vi.fn(), create: vi.fn(), upsert: vi.fn() },
     user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
     course: { upsert: vi.fn().mockResolvedValue({ id: 'course-1' }) },
     enrollment: { upsert: vi.fn() },

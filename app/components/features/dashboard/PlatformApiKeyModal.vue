@@ -4,30 +4,24 @@
       <div class="space-y-6">
         <!-- Instructions Card -->
         <div
-          class="p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-200 dark:border-neutral-700 space-y-3 text-sm"
+          class="p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-200 dark:border-neutral-700 space-y-2 text-sm"
         >
           <div class="flex items-center gap-2 font-medium text-neutral-900 dark:text-neutral-100">
             <UIcon name="i-lucide-info" class="w-4 h-4 text-primary-500" />
-            <span>How to get your {{ platformName || 'Canvas' }} Access Token:</span>
+            <span>{{ platformName || 'Canvas' }} API Access Token</span>
           </div>
-          <ol
-            class="list-decimal list-inside space-y-1.5 text-neutral-600 dark:text-neutral-300 ml-1 text-xs sm:text-sm"
-          >
-            <li>
-              In <strong>{{ platformName || 'Canvas' }}</strong
-              >, click <strong>Account</strong> in the left sidebar, then select
-              <strong>Settings</strong>.
-            </li>
-            <li>
-              Scroll down to <strong>Approved Integrations</strong> and click
-              <strong>+ New Access Token</strong>.
-            </li>
-            <li>
-              Enter a purpose (e.g., <em>EGP Broker Sync</em>) and click
-              <strong>Generate Token</strong>.
-            </li>
-            <li>Copy the generated token string and paste it into the field below.</li>
-          </ol>
+          <p class="text-neutral-600 dark:text-neutral-300 text-xs sm:text-sm leading-relaxed">
+            An access token is required to automatically import and synchronize assignments and due
+            dates from {{ platformName || 'Canvas' }}.
+          </p>
+          <p class="text-neutral-600 dark:text-neutral-300 text-xs sm:text-sm leading-relaxed">
+            If you do not have a Canvas access token but believe you need one, please consult with
+            <strong>Bob Edmison</strong> (<a
+              href="mailto:bedmison@vt.edu"
+              class="text-primary-600 dark:text-primary-400 font-medium hover:underline"
+              >bedmison@vt.edu</a
+            >).
+          </p>
         </div>
 
         <!-- Token Input Form -->
