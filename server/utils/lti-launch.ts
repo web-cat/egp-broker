@@ -362,7 +362,17 @@ export async function handleLtiLaunch(
         rawAssignmentId !== '$Canvas.assignment.id'
     )
 
+    console.info('[LTI Launch] Assignment context evaluation:', {
+      rawAssignmentId,
+      hasAssignmentContext,
+      resourceLinkId: resourceLink.id,
+      resourceLinkTitle: resourceLink.title
+    })
+
     if (!hasAssignmentContext) {
+      console.info(
+        '[LTI Launch] Launch identified as Course Navigation / General placement (no assignment context).'
+      )
       return {
         user,
         assignmentId: null,
