@@ -2,7 +2,7 @@ import { defineEventHandler } from 'h3'
 import prisma from '@@/lib/prisma'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { AssignmentRow } from '@@/shared/models/assignment'
-import { fetchCanvasAssignments } from '@@/server/utils/canvas'
+import { fetchCanvasAssignments, getPlatformCanvasDomain } from '@@/server/utils/canvas'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentRow[]>> => {
   const session = await getUserSession(event)
@@ -28,7 +28,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
               platform: {
                 select: {
                   id: true,
-                  issuer: true
+                  issuer: true,
+                  authEndpoint: true,
+                  tokenEndpoint: true,
+                  jwksEndpoint: true
                 }
               }
             }
@@ -60,8 +63,6 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  // Wait, I can't query by [platformId, ltiSub] if I don't have ltiSub easily.
-  // I should find by userId and platformId.
   const platformIdentity = await prisma.ltiIdentity.findUnique({
     where: {
       userId_platformId: {
@@ -85,26 +86,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
     })
   }
 
-  // 3. Fetch from Canvas
-  // Domain is platform issuer? Issuer is usually 'https://canvas.instructure.com'.
-  // But usage of API needs the domain.
-  // `deploymentHost` might be the domain?
-  // Or we can parse it from the auth endpoint or issuer.
-  // Issuer for Canvas: "https://canvas.instructure.com" or "https://<domain>"
-  // Let's try to extract domain from issuer or deploymentHost.
-  let domain = course.deployment.deploymentHost
-  if (!domain) {
-    // Fallback: try parsing issuer
-    try {
-      const url = new URL(course.deployment.platform.issuer)
-      domain = url.hostname
-    } catch {
-      throw createError({ statusCode: 500, statusMessage: 'Could not determine Canvas domain.' })
-    }
-  }
+  // 3. Fetch from Canvas using resolved tenant domain
+  const domain = getPlatformCanvasDomain(
+    course.deployment.platform,
+    course.deployment.deploymentHost
+  )
 
   const canvasAssignments = await fetchCanvasAssignments(
-    domain!,
+    domain,
     course.canvasCourseId,
     platformIdentity.platformApiKey
   )

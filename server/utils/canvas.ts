@@ -1,3 +1,5 @@
+import { createError } from 'h3'
+
 export interface CanvasAssignment {
   id: number
   name: string
@@ -19,6 +21,83 @@ export interface CanvasAssignment {
   use_rubric_for_grading?: boolean
   rubric_settings?: any
   allowed_extensions?: string[]
+}
+
+/**
+ * Resolves the API domain for Canvas REST API requests.
+ *
+ * In commercial Canvas deployments (e.g. Canvas by Instructure), the LTI issuer
+ * is often generic ('https://canvas.instructure.com'), but the actual tenant API calls
+ * must go to the institution's specific domain (e.g. 'canvas.vt.edu').
+ *
+ * This function resolves the domain in order of precedence:
+ * 1. An explicit, valid deploymentHost (if configured/resolved as a valid hostname)
+ * 2. Hostname parsed from the platform's authEndpoint, tokenEndpoint, or jwksEndpoint
+ * 3. Hostname parsed from the platform's issuer
+ */
+export function getPlatformCanvasDomain(
+  platform: {
+    issuer: string
+    authEndpoint?: string | null
+    tokenEndpoint?: string | null
+    jwksEndpoint?: string | null
+  },
+  deploymentHost?: string | null
+): string {
+  // If deploymentHost is present and looks like a valid hostname (no colon, contains dot)
+  if (deploymentHost) {
+    const cleaned = deploymentHost
+      .trim()
+      .replace(/^https?:\/\//, '')
+      .split('/')[0]
+    // Filter out internal GUIDs (which often have colons like "yDz0MxxBs02YM08vCb8fQ85ISbDXw62vLT6KiA6s:canvas-lms")
+    if (cleaned && !cleaned.includes(':') && cleaned.includes('.')) {
+      return cleaned
+    }
+  }
+
+  // Next, extract hostname from platform entry points (tokenEndpoint, authEndpoint, jwksEndpoint)
+  const endpoints = [platform.tokenEndpoint, platform.authEndpoint, platform.jwksEndpoint]
+  for (const ep of endpoints) {
+    if (ep) {
+      try {
+        const url = new URL(ep.startsWith('http') ? ep : `https://${ep}`)
+        if (
+          url.hostname &&
+          !url.hostname.includes(':') &&
+          url.hostname !== 'canvas.instructure.com'
+        ) {
+          return url.hostname
+        }
+      } catch {
+        // Continue to next endpoint
+      }
+    }
+  }
+
+  // Fallback: use first valid endpoint hostname (even if canvas.instructure.com)
+  for (const ep of endpoints) {
+    if (ep) {
+      try {
+        const url = new URL(ep.startsWith('http') ? ep : `https://${ep}`)
+        if (url.hostname) {
+          return url.hostname
+        }
+      } catch {
+        // Continue to next endpoint
+      }
+    }
+  }
+
+  // Final fallback: issuer hostname
+  try {
+    const url = new URL(
+      platform.issuer.startsWith('http') ? platform.issuer : `https://${platform.issuer}`
+    )
+    return url.hostname
+  } catch {
+    return platform.issuer
+  }
 }
 
 /**
