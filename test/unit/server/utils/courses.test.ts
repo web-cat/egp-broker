@@ -25,6 +25,8 @@ describe('Course Utilities', () => {
           ltiContextId: 'lti1',
           label: 'L1',
           title: 'T1',
+          canvasCourseId: '12345',
+          workflowState: 'available',
           createdAt: mockDate,
           _count: { enrollments: 10, assignments: 5 }
         }
@@ -40,6 +42,8 @@ describe('Course Utilities', () => {
           ltiContextId: 'lti1',
           label: 'L1',
           title: 'T1',
+          canvasCourseId: '12345',
+          workflowState: 'available',
           enrollmentCount: 10,
           assignmentCount: 5,
           createdAt: mockDate.toISOString()
@@ -62,6 +66,8 @@ describe('Course Utilities', () => {
         ltiContextId: 'lti1',
         label: 'L1',
         title: 'T1',
+        canvasCourseId: '12345',
+        workflowState: 'available',
         createdAt: mockDate,
         _count: { enrollments: 10, assignments: 5 }
       }
@@ -75,6 +81,8 @@ describe('Course Utilities', () => {
         ltiContextId: 'lti1',
         label: 'L1',
         title: 'T1',
+        canvasCourseId: '12345',
+        workflowState: 'available',
         enrollmentCount: 10,
         assignmentCount: 5,
         createdAt: mockDate.toISOString()

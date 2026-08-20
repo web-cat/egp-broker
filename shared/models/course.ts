@@ -17,6 +17,8 @@ export const courseRowSchema = z.object({
   ltiContextId: z.string().nullable(),
   label: z.string().nullable(),
   title: z.string().nullable(),
+  canvasCourseId: z.string().nullable(),
+  workflowState: z.string().nullable(),
   enrollmentCount: z.number(),
   assignmentCount: z.number(),
   createdAt: z.string()

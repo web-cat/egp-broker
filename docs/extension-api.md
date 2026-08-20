@@ -79,12 +79,12 @@ Every request from the Broker to the Tool must include an `X-PassPort-Signature`
 
 To respect data privacy, the Broker only sends optional properties if the Tool explicitly requests them during registration.
 
-| Category | **Baseline (Always Sent)** | **Optional (Requested)** |
-| :--- | :--- | :--- |
-| **Context** | `lms_instance_guid`, `issuer`, `lti_context_id` | `lms_instance`, `lti_deployment_id`, `canvas_course_id` |
-| **User** | `lti_user_id` | `broker_user_id`, `canvas_user_id`, `first_name`, `last_name`, `email`, `display_name`, `course_role` |
-| **Resource** | `lti_resource_link_id` | `broker_assignment_id`, `canvas_assignment_id`, `title`, `external_url` |
-| **Extension**| *All fields are mandatory* | N/A |
+| Category      | **Baseline (Always Sent)**                      | **Optional (Requested)**                                                                              |
+| :------------ | :---------------------------------------------- | :---------------------------------------------------------------------------------------------------- |
+| **Context**   | `lms_instance_guid`, `issuer`, `lti_context_id` | `lms_instance`, `lti_deployment_id`, `canvas_course_id`                                               |
+| **User**      | `lti_user_id`                                   | `broker_user_id`, `canvas_user_id`, `first_name`, `last_name`, `email`, `display_name`, `course_role` |
+| **Resource**  | `lti_resource_link_id`                          | `broker_assignment_id`, `canvas_assignment_id`, `title`, `external_url`                               |
+| **Extension** | _All fields are mandatory_                      | N/A                                                                                                   |
 
 #### C. Response Codes
 
@@ -93,48 +93,66 @@ To respect data privacy, the Broker only sends optional properties if the Tool e
 - **404 Not Found:** User or Resource not recognized.
 - **409 Conflict:** A later due date is already active for this student.
 
-### 3. Dynamic Registration
+### 3. Dynamic Registration (Asynchronous Handshake)
 
-The Broker can automatically configure itself for a tool using a **Registration Handshake**.
+The Broker can automatically configure itself for a tool using a secure **2-Phase Registration Handshake**. This process ensures that credentials are never sent to a potentially spoofed origin.
 
-#### A. Registration Request (Broker -> Tool)
+#### A. Phase 1: Registration Request (Broker -> Tool)
 
-The Broker initiates registration by sending a POST request to the tool's Registration URL (provided by the tool administrator).
+The Broker initiates registration by sending a POST request to the tool's Registration URL.
 
-**Method:** `POST`
+**Method:** `POST`  
+**Endpoint:** `/api/passport/v1/register`  
 **Body (JSON):**
 
 ```json
 {
   "broker_base_url": "https://egp-broker.university.edu",
+  "callback_url": "https://egp-broker.university.edu/api/passport/v1/credentials",
+  "name": "VT Extension Manager",
   "passport_version": "1.0"
 }
 ```
 
-#### B. Registration Response (Tool -> Broker)
+**Security Validation (Tool-side):**
 
-The Tool responds with its configuration and the credentials the Broker must use for all future requests.
+1. **Whitelist Check:** The `broker_base_url` must match a pattern in the tool's Domain Whitelist (e.g., `*.vt.edu`).
+2. **HTTPS Enforcement:** Both `broker_base_url` and `callback_url` MUST use `https`.
+3. **Domain Matching:** The `callback_url` MUST have the same protocol, host, and port as the `broker_base_url`.
+4. **Immediate Response:** If validation passes, the Tool returns `202 Accepted`. Credentials are **NOT** provided in this response.
 
+#### B. Phase 2: Credential Delivery (Tool -> Broker)
+
+After validating the request, the Tool generates credentials and "pushes" them to the Broker via an asynchronous POST request to the provided `callback_url`.
+
+**Method:** `POST`  
 **Body (JSON):**
 
 ```json
 {
-  "tool_name": "OpenDSA",
+  "tool_name": "CodeWorkout",
   "passport_version": "1.0",
   "endpoints": {
-    "extension_handler": "https://opendsa.org/api/passport/grant"
+    "extension_handler": "https://codeworkout.org/api/passport/v1/extension"
   },
-  "requested_properties": {
-    "context": ["canvas_course_id"],
-    "user": ["first_name", "last_name", "email"],
-    "resource": ["canvas_assignment_id", "title"]
-  },
+  "requested_properties": ["canvas_course_id", "lti_user_id", "email", "canvas_assignment_id"],
   "credentials": {
     "client_id": "broker-assigned-id-001",
     "client_secret": "randomly-generated-shared-secret"
   }
 }
 ```
+
+**Security Verification (Broker-side):**
+The Broker should verify that the `tool_name` and `endpoints` match the expected tool before storing the credentials.
+
+#### C. Domain Whitelisting Logic
+
+The Tool maintains a list of authorized domain patterns to prevent malicious or unapproved tools from self-registering.
+
+- **Pattern Matching:** The whitelist supports literal strings or regular expressions.
+- **Verification:** During Phase 1, the Tool extracts the domain from `broker_base_url` and ensures it is explicitly allowed.
+- **Granularity:** Administrators can whitelist specific subdomains (e.g., `canvas.vt.edu`) or broad organizational patterns (e.g., `*.vt.edu`).
 
 ### 4. Implementation Workflow
 

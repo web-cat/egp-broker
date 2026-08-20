@@ -25,6 +25,9 @@ describe('LTI Platform Utilities', () => {
           issuer: 'iss1',
           clientId: 'client1',
           name: 'Canvas',
+          authEndpoint: 'https://auth.example.com',
+          tokenEndpoint: 'https://token.example.com',
+          jwksEndpoint: 'https://jwks.example.com',
           createdAt: mockDate,
           _count: { deployments: 2 }
         }
@@ -40,6 +43,9 @@ describe('LTI Platform Utilities', () => {
           issuer: 'iss1',
           clientId: 'client1',
           name: 'Canvas',
+          authEndpoint: 'https://auth.example.com',
+          tokenEndpoint: 'https://token.example.com',
+          jwksEndpoint: 'https://jwks.example.com',
           deploymentCount: 2,
           createdAt: mockDate.toISOString()
         }
@@ -55,6 +61,9 @@ describe('LTI Platform Utilities', () => {
         issuer: 'iss1',
         clientId: 'client1',
         name: 'Canvas',
+        authEndpoint: 'https://auth.example.com',
+        tokenEndpoint: 'https://token.example.com',
+        jwksEndpoint: 'https://jwks.example.com',
         createdAt: mockDate,
         _count: { deployments: 2 }
       }
@@ -68,6 +77,9 @@ describe('LTI Platform Utilities', () => {
         issuer: 'iss1',
         clientId: 'client1',
         name: 'Canvas',
+        authEndpoint: 'https://auth.example.com',
+        tokenEndpoint: 'https://token.example.com',
+        jwksEndpoint: 'https://jwks.example.com',
         deploymentCount: 2,
         createdAt: mockDate.toISOString()
       })

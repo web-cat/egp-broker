@@ -24,6 +24,8 @@ export function useAdminCrud<T extends HasId>(
 
   const editOpen = ref(false)
   const editingItem = ref<T | null>(null) as Ref<T | null>
+  const deleteOpen = ref(false)
+  const deletingItem = ref<T | null>(null) as Ref<T | null>
   const tableKey = ref(0)
 
   function openCreate() {
@@ -36,12 +38,27 @@ export function useAdminCrud<T extends HasId>(
     editOpen.value = true
   }
 
+  function openDelete(item: T) {
+    deletingItem.value = item
+    deleteOpen.value = true
+  }
+
   function onRowUpdated(id: string, updates: Partial<T>) {
     const rows = data.value?.data
     if (!rows) return
     const idx = rows.findIndex((r) => r.id === id)
     if (idx !== -1) {
       rows[idx] = { ...rows[idx], ...updates }
+      tableKey.value++
+    }
+  }
+
+  function onRowDeleted(id: string) {
+    const rows = data.value?.data
+    if (!rows) return
+    const idx = rows.findIndex((r) => r.id === id)
+    if (idx !== -1) {
+      rows.splice(idx, 1)
       tableKey.value++
     }
   }
@@ -64,10 +81,14 @@ export function useAdminCrud<T extends HasId>(
     status,
     editOpen,
     editingItem,
+    deleteOpen,
+    deletingItem,
     tableKey,
     openCreate,
     openEdit,
+    openDelete,
     onRowUpdated,
+    onRowDeleted,
     onItemCreated,
     refresh
   }

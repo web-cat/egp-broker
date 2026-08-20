@@ -1,7 +1,21 @@
 import { describe, it, expect, vi } from 'vitest'
 
 // Import after mocking
-import { parseCourseRole } from '@@/server/utils/lti'
+import { parseCourseRole, initiateOidcRedirect } from '@@/server/utils/lti'
+import prisma from '@@/lib/prisma'
+
+// Mock prisma
+vi.mock('@@/lib/prisma', () => ({
+  default: {
+    ltiPlatform: {
+      findUnique: vi.fn()
+    }
+  }
+}))
+
+// Mock global getUserSession and setUserSession
+vi.stubGlobal('getUserSession', vi.fn())
+vi.stubGlobal('setUserSession', vi.fn())
 
 // Mock @prisma/client before importing the function
 vi.mock('@prisma/client', () => ({
@@ -79,6 +93,45 @@ describe('LTI Utils', () => {
     it('should return STUDENT for unrecognized roles', () => {
       const roles = ['http://purl.imsglobal.org/vocab/lis/v2/membership#UnknownRole']
       expect(parseCourseRole(roles)).toBe('STUDENT')
+    })
+  })
+
+  describe('initiateOidcRedirect', () => {
+    it('should render admin setup link when platform is not found and user is ADMIN', async () => {
+      vi.mocked(prisma.ltiPlatform.findUnique).mockResolvedValue(null)
+      vi.mocked(global.getUserSession).mockResolvedValue({
+        user: { globalRole: 'ADMIN' }
+      } as any)
+
+      const result = await initiateOidcRedirect({} as any, {
+        iss: 'https://canvas.example.com',
+        loginHint: 'user123',
+        targetLinkUri: 'https://broker.example.com/api/lti13/launch'
+      })
+
+      expect(result).toContain('LTI Platform Not Registered')
+      expect(result).toContain('/admin/platforms/setup?iss=https%3A%2F%2Fcanvas.example.com')
+      expect(result).toContain('Set up Platform')
+    })
+
+    it('should render contact administrator message when platform is not found and user is not ADMIN', async () => {
+      vi.mocked(prisma.ltiPlatform.findUnique).mockResolvedValue(null)
+      vi.mocked(global.getUserSession).mockResolvedValue({
+        user: { globalRole: 'STUDENT' }
+      } as any)
+
+      const result = await initiateOidcRedirect({} as any, {
+        iss: 'https://canvas.example.com',
+        loginHint: 'user123',
+        targetLinkUri: 'https://broker.example.com/api/lti13/launch'
+      })
+
+      expect(result).toContain('LTI Platform Not Registered')
+      expect(result).toContain(
+        'Please contact your system administrator to configure and register this platform'
+      )
+      expect(result).not.toContain('Set up Platform')
+      expect(result).not.toContain('/admin/platforms/setup')
     })
   })
 })

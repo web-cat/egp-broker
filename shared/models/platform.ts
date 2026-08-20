@@ -17,6 +17,9 @@ export const platformRowSchema = z.object({
   issuer: z.string(),
   clientId: z.string(),
   name: z.string().nullable(),
+  authEndpoint: z.string(),
+  tokenEndpoint: z.string(),
+  jwksEndpoint: z.string(),
   deploymentCount: z.number(),
   createdAt: z.string()
 })

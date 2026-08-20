@@ -19,6 +19,9 @@ export async function getAllPlatforms(): Promise<PlatformRow[]> {
     issuer: p.issuer,
     clientId: p.clientId,
     name: p.name,
+    authEndpoint: p.authEndpoint,
+    tokenEndpoint: p.tokenEndpoint,
+    jwksEndpoint: p.jwksEndpoint,
     deploymentCount: p._count.deployments,
     createdAt: p.createdAt.toISOString()
   }))
@@ -44,6 +47,9 @@ export async function getPlatform(id: string): Promise<PlatformRow | null> {
     issuer: p.issuer,
     clientId: p.clientId,
     name: p.name,
+    authEndpoint: p.authEndpoint,
+    tokenEndpoint: p.tokenEndpoint,
+    jwksEndpoint: p.jwksEndpoint,
     deploymentCount: p._count.deployments,
     createdAt: p.createdAt.toISOString()
   }

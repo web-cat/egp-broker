@@ -1,8 +1,8 @@
 erDiagram
-    USER ||--o{ LTI_IDENTITY : has
-    USER ||--o{ ENROLLMENT : has
-    USER ||--o{ PASS_POOL : has
-    USER ||--o{ LTI_RESULT : has
+USER ||--o{ LTI_IDENTITY : has
+USER ||--o{ ENROLLMENT : has
+USER ||--o{ PASS_POOL : has
+USER ||--o{ LTI_RESULT : has
 
     LTI_PLATFORM ||--o{ LTI_DEPLOYMENT : has
     LTI_PLATFORM ||--o{ LTI_IDENTITY : identifies

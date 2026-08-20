@@ -21,23 +21,28 @@
       @saved="onRowUpdated"
       @created="onItemCreated"
     />
+
+    <BaseConfirmationModal
+      v-model:open="deleteOpen"
+      title="Delete Platform"
+      :description="`Are you sure you want to delete ${deletingItem?.name || deletingItem?.issuer || 'this platform'}?`"
+      confirm-label="Delete Platform"
+      confirm-color="error"
+      confirm-icon="i-lucide-trash-2"
+      :loading="isDeleting"
+      @confirm="handleDeleteConfirm"
+    >
+      <p class="text-sm text-neutral-500">
+        This will permanently delete the platform registration and may cascade to its associated
+        deployments and identities. This action cannot be undone.
+      </p>
+    </BaseConfirmationModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-
-interface PlatformRow {
-  id: string
-  issuer: string
-  clientId: string
-  name: string | null
-  deploymentCount: number
-  createdAt: string
-  authEndpoint: string
-  tokenEndpoint: string
-  jwksEndpoint: string
-}
+import type { PlatformRow } from '@@/shared/models/platform'
 
 // --- Page title ---
 const { setTitle } = useAdminPageTitle()
@@ -67,12 +72,46 @@ const {
   status,
   editOpen,
   editingItem,
+  deleteOpen,
+  deletingItem,
   tableKey,
   openCreate,
   openEdit,
+  openDelete,
   onRowUpdated,
+  onRowDeleted,
   onItemCreated
 } = useAdminCrud<PlatformRow>('/api/admin/platforms')
+
+const isDeleting = ref(false)
+
+async function handleDeleteConfirm() {
+  if (!deletingItem.value) return
+  isDeleting.value = true
+  const target = deletingItem.value
+  try {
+    await $fetch(`/api/admin/platforms/${target.id}`, {
+      method: 'DELETE'
+    })
+    onRowDeleted(target.id)
+    deleteOpen.value = false
+    toast.add({
+      title: 'Platform Deleted',
+      description: `Successfully deleted platform ${target.name || target.issuer}`,
+      color: 'success'
+    })
+  } catch (err: unknown) {
+    const fetchErr = err as { data?: { statusMessage?: string; message?: string } }
+    toast.add({
+      title: 'Failed to delete platform',
+      description:
+        fetchErr.data?.statusMessage || fetchErr.data?.message || 'An unexpected error occurred.',
+      color: 'error'
+    })
+  } finally {
+    isDeleting.value = false
+  }
+}
 
 const platformColumns: TableColumn<PlatformRow>[] = [
   {
@@ -125,7 +164,14 @@ const platformColumns: TableColumn<PlatformRow>[] = [
         onSelect: () => openEdit(row.original)
       }
     ],
-    [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const }]
+    [
+      {
+        label: 'Delete',
+        icon: 'i-lucide-trash-2',
+        color: 'error' as const,
+        onSelect: () => openDelete(row.original)
+      }
+    ]
   ])
 ]
 </script>

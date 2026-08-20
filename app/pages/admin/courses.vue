@@ -26,16 +26,7 @@
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-
-interface CourseRow {
-  id: string
-  ltiContextId: string
-  label: string | null
-  title: string | null
-  enrollmentCount: number
-  assignmentCount: number
-  createdAt: string
-}
+import type { CourseRow } from '@@/shared/models/course'
 
 const route = useRoute()
 const deploymentFilter = computed(() => route.query.d as string | undefined)

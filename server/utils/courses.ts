@@ -50,6 +50,8 @@ export async function getAllCourses(filters?: AdminCourseQuery): Promise<CourseR
     ltiContextId: c.ltiContextId ?? '',
     label: c.label,
     title: c.title,
+    canvasCourseId: c.canvasCourseId,
+    workflowState: c.workflowState,
     enrollmentCount: c._count.enrollments,
     assignmentCount: c._count.assignments,
     createdAt: c.createdAt.toISOString()
@@ -79,6 +81,8 @@ export async function getCourse(id: string): Promise<CourseRow | null> {
     ltiContextId: course.ltiContextId ?? '',
     label: course.label,
     title: course.title,
+    canvasCourseId: course.canvasCourseId,
+    workflowState: course.workflowState,
     enrollmentCount: course._count.enrollments,
     assignmentCount: course._count.assignments,
     createdAt: course.createdAt.toISOString()
@@ -106,6 +110,8 @@ export async function createCourse(data: CreateCourseData): Promise<CourseRow> {
     ltiContextId: course.ltiContextId ?? '',
     label: course.label,
     title: course.title,
+    canvasCourseId: course.canvasCourseId,
+    workflowState: course.workflowState,
     enrollmentCount: course._count.enrollments,
     assignmentCount: course._count.assignments,
     createdAt: course.createdAt.toISOString()

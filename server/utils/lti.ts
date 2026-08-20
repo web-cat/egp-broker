@@ -50,7 +50,18 @@ export async function initiateOidcRedirect(
   })
 
   if (!platform) {
-    const setupUrl = `/setup-platform?iss=${encodeURIComponent(params.iss)}&login_hint=${encodeURIComponent(params.loginHint)}&target_link_uri=${encodeURIComponent(params.targetLinkUri)}&lti_message_hint=${encodeURIComponent(params.ltiMessageHint || '')}`
+    const session = await getUserSession(event)
+    const isAdmin = session?.user?.globalRole === 'ADMIN'
+    const setupUrl = `/admin/platforms/setup?iss=${encodeURIComponent(params.iss)}&login_hint=${encodeURIComponent(params.loginHint)}&target_link_uri=${encodeURIComponent(params.targetLinkUri)}&lti_message_hint=${encodeURIComponent(params.ltiMessageHint || '')}`
+
+    const adminActionHtml = `
+      <p>If you are an administrator, you can set up this platform to enable the launch.</p>
+      <a href="${setupUrl}">Set up Platform</a>
+    `
+
+    const nonAdminActionHtml = `
+      <p>Please contact your system administrator to configure and register this platform in EGP Broker.</p>
+    `
 
     // Returning a small HTML page is more reliable than a 302 redirect inside an LMS iframe
     return `
@@ -60,10 +71,10 @@ export async function initiateOidcRedirect(
           <title>LTI Setup Required</title>
           <style>
             body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f9fafb; color: #111827; }
-            .card { background: white; padding: 2rem; border-radius: 0.5rem; shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; max-width: 400px; border: 1px solid #e5e7eb; }
+            .card { background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; max-width: 400px; border: 1px solid #e5e7eb; }
             h1 { font-size: 1.25rem; margin-bottom: 1rem; }
-            p { font-size: 0.875rem; color: #4b5563; margin-bottom: 1.5rem; }
-            a { background: #2563eb; color: white; padding: 0.625rem 1.25rem; border-radius: 0.375rem; text-decoration: none; font-weight: 500; font-size: 0.875rem; }
+            p { font-size: 0.875rem; color: #4b5563; margin-bottom: 1.5rem; line-height: 1.5; }
+            a { display: inline-block; background: #2563eb; color: white; padding: 0.625rem 1.25rem; border-radius: 0.375rem; text-decoration: none; font-weight: 500; font-size: 0.875rem; }
             .iss { font-family: monospace; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 0.25rem; word-break: break-all; margin: 1rem 0; display: block; }
           </style>
         </head>
@@ -72,8 +83,7 @@ export async function initiateOidcRedirect(
             <h1>LTI Platform Not Registered</h1>
             <p>The platform with the following issuer is not registered in EGP Broker:</p>
             <span class="iss">${params.iss}</span>
-            <p>If you are an administrator, you can set up this platform to enable the launch.</p>
-            <a href="${setupUrl}">Set up Platform</a>
+            ${isAdmin ? adminActionHtml : nonAdminActionHtml}
           </div>
         </body>
       </html>
