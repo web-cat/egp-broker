@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 import { getGravatarUrl } from './gravatar'
+import { parseCourseRole } from './lti'
 import type { LtiSessionUser } from '@@/shared/schemas/auth.schema'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -340,7 +341,38 @@ export async function handleLtiLaunch(
       }
     })
 
-    // D. Strict Assignment Lookup (Standard LTI 1:1)
+    // D. Identity and Enrollment
+    const userRole = parseCourseRole(roles)
+    await tx.enrollment.upsert({
+      where: { userId_courseId: { userId: user.id, courseId: course.id } },
+      update: { role: userRole as any },
+      create: { userId: user.id, courseId: course.id, role: userRole as any }
+    })
+
+    user = await tx.user.update({
+      where: { id: user.id },
+      data: { currentCourseId: course.id }
+    })
+
+    // E. Differentiate Assignment Placement vs. Course Navigation Placement
+    const rawAssignmentId = customClaims.canvas_assignment_id?.toString()
+    const hasAssignmentContext = Boolean(
+      rawAssignmentId &&
+        !rawAssignmentId.startsWith('$') &&
+        rawAssignmentId !== '$Canvas.assignment.id'
+    )
+
+    if (!hasAssignmentContext) {
+      return {
+        user,
+        assignmentId: null,
+        userRole,
+        sourcedId: null,
+        needsConfiguration: false
+      }
+    }
+
+    // F. Strict Assignment Lookup (Standard LTI 1:1)
     let assignment = await tx.assignment.findUnique({
       where: { courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id } },
       include: { tool: true }
@@ -352,19 +384,11 @@ export async function handleLtiLaunch(
           courseId: course.id,
           resourceLinkId: resourceLink.id,
           title: resourceLink.title,
-          canvasAssignmentId: agsEndpoint?.split('/').filter(Boolean).pop()
+          canvasAssignmentId: rawAssignmentId || agsEndpoint?.split('/').filter(Boolean).pop()
         },
         include: { tool: true }
       })
     }
-
-    // E. Identity and Enrollment
-    const userRole = parseCourseRole(roles) // Ensure this helper is imported/available
-    await tx.enrollment.upsert({
-      where: { userId_courseId: { userId: user.id, courseId: course.id } },
-      update: { role: userRole as any },
-      create: { userId: user.id, courseId: course.id, role: userRole as any }
-    })
 
     const ltiResult = await tx.ltiResult.upsert({
       where: {
@@ -385,13 +409,7 @@ export async function handleLtiLaunch(
       }
     })
 
-    // F. Final assignment check & User sync
     const needsConfiguration = !assignment.toolId
-
-    user = await tx.user.update({
-      where: { id: user.id },
-      data: { currentCourseId: course.id }
-    })
 
     return {
       user,

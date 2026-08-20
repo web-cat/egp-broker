@@ -54,17 +54,24 @@
           <div v-else-if="enrollmentStatus === 'success' && enrollment" class="animate-fade-up">
             <!-- Sub-case: Active Course Selected -->
             <div v-if="enrollment.data">
+              <!-- Student View Banner for preview mode -->
+              <FeaturesDashboardStudentViewBanner
+                v-if="isTeacher && isStudentView"
+                @exit="exitStudentView"
+              />
+
               <FeaturesDashboardTeacher
-                v-if="enrollment.data.role === 'TEACHER' || enrollment.data.role === 'TA'"
+                v-if="isTeacher && !isStudentView"
                 :course-title="enrollment.data.courseTitle"
                 :course-code="enrollment.data.courseLabel"
                 :is-admin="user?.globalRole === 'ADMIN'"
               />
               <FeaturesDashboardStudent
-                v-else-if="enrollment.data.role === 'STUDENT'"
+                v-else
                 :course-title="enrollment.data.courseTitle"
                 :course-code="enrollment.data.courseLabel"
                 :is-admin="user?.globalRole === 'ADMIN'"
+                :is-preview="isStudentView"
               />
             </div>
 
@@ -163,6 +170,7 @@ import CourseGrid from '~/components/features/course/CourseGrid.vue'
 // Composables
 const { t } = useI18n()
 const { loggedIn, user, clear } = useUserSession()
+const { isStudentView, exitStudentView } = useStudentView()
 const localePath = useLocalePath()
 const config = useRuntimeConfig()
 
@@ -183,6 +191,11 @@ const {
 } = await useFetch<ApiResponse<SimpleEnrollment>>('/api/me/enrollment', {
   immediate: loggedIn.value,
   watch: [loggedIn, user]
+})
+
+const isTeacher = computed(() => {
+  const role = enrollment.value?.data?.role
+  return role === 'TEACHER' || role === 'TA' || role === 'DESIGNER' || role === 'ADMIN'
 })
 
 // Helper to check for unauthorized errors (handles both .status and .statusCode)

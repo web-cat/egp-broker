@@ -1,10 +1,17 @@
-import type { SimplePassPool, RedemptionRow } from '@@/shared/models/pass'
+import type { SimplePassPool, RedemptionRow, PassTypeData } from '@@/shared/models/pass'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 
-export const useStudentDashboard = () => {
+export const useStudentDashboard = (isPreview = false) => {
+  const toast = useToast()
+
   // Fetch pass pools for the current course
   const { data: passPools } = useFetch<ApiResponse<SimplePassPool[]>>('/api/me/pass-pools')
+
+  // Fetch pass types for the current course (used for preview fallback)
+  const { data: passTypesData } = useFetch<ApiResponse<PassTypeData[]>>('/api/me/pass-types', {
+    lazy: true
+  })
 
   // Fetch assignments for the current course
   const {
@@ -20,7 +27,32 @@ export const useStudentDashboard = () => {
     refresh: refreshRedemptions
   } = useFetch<ApiResponse<RedemptionRow[]>>('/api/me/redemptions')
 
+  // Effective pass pools: use student pass pools if available; otherwise use course pass types with initial balances in preview
+  const effectivePassPools = computed<SimplePassPool[]>(() => {
+    if (passPools.value?.data && passPools.value.data.length > 0) {
+      return passPools.value.data
+    }
+    if (passTypesData.value?.data) {
+      return passTypesData.value.data.map((pt) => ({
+        id: pt.id,
+        name: pt.name,
+        balance: pt.initialBalance,
+        hoursPerPass: pt.hoursPerPass
+      }))
+    }
+    return []
+  })
+
   const redeemPass = async (assignmentId: string, passTypeId: string) => {
+    if (isPreview) {
+      toast.add({
+        title: 'Redemption Simulated',
+        description: 'Pass redemption confirmed in preview mode. No live tokens were deducted.',
+        color: 'success'
+      })
+      return { data: { success: true }, error: null }
+    }
+
     const { data, error } = await useFetch('/api/me/redemptions', {
       method: 'POST',
       body: { assignmentId, passTypeId }
@@ -93,7 +125,7 @@ export const useStudentDashboard = () => {
   const redemptionLoading = ref(false)
 
   const handleRedeemClick = (assignment: AssignmentRow, passType: { id: string; name: string }) => {
-    const pool = passPools.value?.data?.find((p) => p.name === passType.name)
+    const pool = effectivePassPools.value.find((p) => p.name === passType.name)
     if (!pool || pool.balance <= 0) return
 
     selectedAssignment.value = assignment
@@ -148,7 +180,7 @@ export const useStudentDashboard = () => {
           'div',
           { class: 'flex flex-wrap gap-3' },
           types.map((pt: any) => {
-            const pool = passPools.value?.data?.find((p) => p.name === pt.name)
+            const pool = effectivePassPools.value.find((p) => p.name === pt.name)
             const hasBalance = (pool?.balance ?? 0) > 0
 
             return h(
@@ -193,7 +225,7 @@ export const useStudentDashboard = () => {
   ]
 
   return {
-    passPools,
+    passPools: effectivePassPools,
     assignmentsData,
     assignmentsStatus,
     filteredAssignments,

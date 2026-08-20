@@ -47,6 +47,10 @@ export default defineEventHandler(async (event) => {
     })
 
     // Routing
+    if (!assignmentId) {
+      return sendRedirect(event, '/', 303)
+    }
+
     if (needsConfiguration) {
       const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(userRole)
       return isStaff

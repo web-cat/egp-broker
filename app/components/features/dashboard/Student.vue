@@ -8,7 +8,10 @@
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
     <!-- Pass Pools -->
-    <BaseCard v-for="pool in passPools?.data" :key="pool.id">
+    <BaseCard
+      v-for="pool in Array.isArray(passPools) ? passPools : passPools?.data || []"
+      :key="pool.id"
+    >
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
@@ -105,11 +108,20 @@ import { useStudentDashboard } from '~/composables/features/useStudentDashboard'
 
 const { t } = useI18n()
 
-defineProps<{
-  courseTitle?: string | null
-  courseCode?: string | null
-  isAdmin: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    courseTitle?: string | null
+    courseCode?: string | null
+    isAdmin?: boolean
+    isPreview?: boolean
+  }>(),
+  {
+    courseTitle: null,
+    courseCode: null,
+    isAdmin: false,
+    isPreview: false
+  }
+)
 
 const {
   passPools,
@@ -127,7 +139,7 @@ const {
   redemptionLoading,
   handleConfirmRedemption,
   dateCellRenderer
-} = useStudentDashboard()
+} = useStudentDashboard(props.isPreview)
 
 const assignmentRowClass = (row: any) => {
   if (row.original.highlight) {

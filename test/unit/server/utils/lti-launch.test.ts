@@ -4,7 +4,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Unit tests
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { upsertDeployment, resolveUser, resolveAssignment } from '@@/server/utils/lti-launch'
+import {
+  upsertDeployment,
+  resolveUser,
+  resolveAssignment,
+  handleLtiLaunch
+} from '@@/server/utils/lti-launch'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mocks
@@ -22,7 +27,8 @@ vi.mock('@prisma/client', () => ({
     OBSERVER: 'OBSERVER',
     DESIGNER: 'DESIGNER',
     ADMIN: 'ADMIN'
-  }
+  },
+  PrismaClient: vi.fn()
 }))
 
 // ─── Prisma transaction mock factory ─────────────────────────────────────────
@@ -161,6 +167,101 @@ describe('lti-launch utils', () => {
       })
       expect(id).toBe('asgn-created')
       expect(tx.assignment.create).toHaveBeenCalledOnce()
+    })
+  })
+
+  // ── handleLtiLaunch ─────────────────────────────────────────────────────────
+
+  describe('handleLtiLaunch', () => {
+    const platform = {
+      id: 'plat-1',
+      issuer: 'https://canvas.instructure.com',
+      clientId: 'client-1'
+    }
+
+    const baseClaims = {
+      sub: 'user-sub-123',
+      email: 'teacher@vt.edu',
+      name: 'Teacher User',
+      'https://purl.imsglobal.org/spec/lti/claim/deployment_id': 'dep-1',
+      'https://purl.imsglobal.org/spec/lti/claim/resource_link': {
+        id: 'resource-link-1',
+        title: 'EGP Broker'
+      },
+      'https://purl.imsglobal.org/spec/lti/claim/context': {
+        id: 'canvas-course-231884',
+        label: 'CS 1114',
+        title: 'Intro to Software Design'
+      },
+      'https://purl.imsglobal.org/spec/lti/claim/roles': [
+        'http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor'
+      ]
+    }
+
+    it('returns assignmentId: null and skips assignment creation when launched from Course Navigation', async () => {
+      const tx = makeTx({
+        user: {
+          findFirst: vi.fn().mockResolvedValue({ id: 'user-1', email: 'teacher@vt.edu' }),
+          update: vi.fn().mockResolvedValue({ id: 'user-1', currentCourseId: 'course-1' })
+        },
+        assignment: {
+          findUnique: vi.fn(),
+          create: vi.fn()
+        }
+      })
+      const prismaMock = { $transaction: vi.fn((cb) => cb(tx)) }
+
+      const claims = {
+        ...baseClaims,
+        'https://purl.imsglobal.org/spec/lti/claim/custom': {
+          canvas_assignment_id: '$Canvas.assignment.id',
+          canvas_course_id: '231884'
+        }
+      }
+
+      const result = await handleLtiLaunch(prismaMock as any, { claims, platform } as any)
+
+      expect(result.assignmentId).toBeNull()
+      expect(result.needsConfiguration).toBe(false)
+      expect(tx.assignment.findUnique).not.toHaveBeenCalled()
+      expect(tx.assignment.create).not.toHaveBeenCalled()
+    })
+
+    it('creates/resolves assignment when launched from an Assignment with expanded canvas_assignment_id', async () => {
+      const tx = makeTx({
+        user: {
+          findFirst: vi.fn().mockResolvedValue({ id: 'user-1', email: 'teacher@vt.edu' }),
+          update: vi.fn().mockResolvedValue({ id: 'user-1', currentCourseId: 'course-1' })
+        },
+        assignment: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          create: vi.fn().mockResolvedValue({ id: 'asgn-456', toolId: null })
+        },
+        ltiResult: {
+          upsert: vi.fn().mockResolvedValue({ id: 'result-1' })
+        }
+      })
+      const prismaMock = { $transaction: vi.fn((cb) => cb(tx)) }
+
+      const claims = {
+        ...baseClaims,
+        'https://purl.imsglobal.org/spec/lti/claim/custom': {
+          canvas_assignment_id: '98765',
+          canvas_course_id: '231884'
+        }
+      }
+
+      const result = await handleLtiLaunch(prismaMock as any, { claims, platform } as any)
+
+      expect(result.assignmentId).toBe('asgn-456')
+      expect(result.needsConfiguration).toBe(true)
+      expect(tx.assignment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            canvasAssignmentId: '98765'
+          })
+        })
+      )
     })
   })
 })
