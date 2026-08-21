@@ -15,7 +15,7 @@ const props = withDefaults(
     loading: false,
     searchable: false,
     searchPlaceholder: 'Search…',
-    pageSize: 10,
+    pageSize: 50,
     emptyIcon: 'i-lucide-inbox',
     emptyText: 'No data found.',
     rowClass: undefined
@@ -23,7 +23,32 @@ const props = withDefaults(
 )
 
 const globalFilter = ref('')
-const page = ref(1)
+
+const pagination = ref({
+  pageIndex: 0,
+  pageSize: props.pageSize
+})
+
+watch(
+  () => props.pageSize,
+  (newSize) => {
+    pagination.value.pageSize = newSize
+  }
+)
+
+watch(globalFilter, () => {
+  pagination.value.pageIndex = 0
+})
+
+const page = computed({
+  get: () => (pagination.value.pageIndex ?? 0) + 1,
+  set: (val: number) => {
+    pagination.value = {
+      ...pagination.value,
+      pageIndex: Math.max(0, val - 1)
+    }
+  }
+})
 
 const hasData = computed(() => (props.data?.length ?? 0) > 0)
 const totalRows = computed(() => props.data?.length ?? 0)
@@ -63,6 +88,7 @@ const tableMeta = computed(() => {
     <UTable
       v-if="hasData"
       v-model:global-filter="globalFilter"
+      v-model:pagination="pagination"
       :data="data!"
       :columns="columns"
       :loading="loading"
