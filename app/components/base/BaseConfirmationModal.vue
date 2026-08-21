@@ -36,6 +36,7 @@
  * BaseConfirmationModal
  * Pure presenter modal for confirming destructive or critical actions.
  */
+import { computed } from 'vue'
 import type { ButtonProps } from '@nuxt/ui'
 
 const props = withDefaults(

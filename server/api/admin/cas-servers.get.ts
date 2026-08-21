@@ -1,7 +1,7 @@
 import { defineEventHandler, createError } from 'h3'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { CasServerAdminRow } from '@@/shared/schemas/cas.schema'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<CasServerAdminRow[]>> => {
   const session = await getUserSession(event)

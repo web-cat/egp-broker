@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getAllDeployments } from '../../../../server/utils/lti-deployments'
-import prisma from '../../../../lib/prisma'
+import prisma from '@@/server/utils/db'
 
-vi.mock('../../../../lib/prisma', () => ({
+vi.mock('@@/server/utils/db', () => ({
   default: {
     ltiDeployment: {
       findMany: vi.fn(),

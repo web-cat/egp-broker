@@ -1,17 +1,10 @@
-import { defineEventHandler, createError, readBody, sendRedirect } from 'h3'
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, createError, readValidatedBody, sendRedirect } from 'h3'
+import prisma from '@@/server/utils/db'
 import { LtiLaunchSchema } from '@@/shared/schemas/auth.schema'
 import { handleLtiLaunch } from '@@/server/utils/lti-launch'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const result = LtiLaunchSchema.safeParse(body)
-
-  if (!result.success) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid LTI Launch' })
-  }
-
-  const { id_token: idToken, state } = result.data
+  const { id_token: idToken, state } = await readValidatedBody(event, LtiLaunchSchema.parse)
   const session = await getUserSession(event)
 
   if (!session.lti || session.lti.state !== state) {
@@ -27,9 +20,9 @@ export default defineEventHandler(async (event) => {
     if (claims.nonce !== session.lti.nonce)
       throw createError({ statusCode: 403, statusMessage: 'Invalid nonce' })
 
-    // Use the logic that was working
+    // Execute launch logic
     const { user, assignmentId, needsConfiguration, userRole, sourcedId } = await handleLtiLaunch(
-      prisma as any,
+      prisma,
       { claims, platform }
     )
 
@@ -59,8 +52,12 @@ export default defineEventHandler(async (event) => {
     }
 
     return sendRedirect(event, `/launch/${assignmentId}`)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      throw error
+    }
     console.error('LTI Launch Error:', error)
-    throw createError({ statusCode: 500, statusMessage: error.message || 'LTI failed' })
+    const message = error instanceof Error ? error.message : 'LTI failed'
+    throw createError({ statusCode: 500, statusMessage: message })
   }
 })

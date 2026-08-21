@@ -1,11 +1,14 @@
+import { defineEventHandler, readValidatedBody } from 'h3'
+import { LtiLoginSchema } from '@@/shared/schemas/auth.schema'
+
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
+  const body = await readValidatedBody(event, LtiLoginSchema.parse)
 
   return await initiateOidcRedirect(event, {
-    iss: body.iss as string,
-    loginHint: body.login_hint as string,
-    targetLinkUri: body.target_link_uri as string,
-    ltiMessageHint: body.lti_message_hint as string,
-    clientId: body.client_id as string
+    iss: body.iss,
+    loginHint: body.login_hint,
+    targetLinkUri: body.target_link_uri,
+    ltiMessageHint: body.lti_message_hint,
+    clientId: body.client_id
   })
 })

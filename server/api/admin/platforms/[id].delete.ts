@@ -1,5 +1,5 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 export default defineEventHandler(async (event) => {
   // 1. Require Admin session

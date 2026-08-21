@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import assignmentsGet from '../../../../../server/api/me/assignments.get'
 import { getCourseAssignments } from '../../../../../server/utils/assignments'
-import prisma from '../../../../../lib/prisma'
+import prisma from '@@/server/utils/db'
 
 vi.mock('../../../../../server/utils/assignments', () => ({
   getCourseAssignments: vi.fn()
 }))
 
-vi.mock('../../../../../lib/prisma', () => ({
+vi.mock('@@/server/utils/db', () => ({
   default: {
     user: {
       findUnique: vi.fn()

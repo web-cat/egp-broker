@@ -97,7 +97,10 @@ const handleChangeCourse = async () => {
 
 // Available locales for the selector
 const availableLocales = computed(() =>
-  locales.value.map((l: any) => ({ code: l.code, name: l.name }))
+  locales.value.map((l: { code: string; name?: string }) => ({
+    code: l.code,
+    name: l.name ?? l.code
+  }))
 )
 
 // Computed properties

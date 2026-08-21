@@ -1,5 +1,5 @@
 import { defineEventHandler, readValidatedBody, createError } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
 import { savePlatformApiKeySchema } from '@@/shared/schemas/sync.schema'
 

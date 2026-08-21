@@ -149,6 +149,7 @@ model LtiIdentity {
   @@unique([userId, platformId])
 }
 
+/// Stores LTI outcome launch details and grade synchronization state.
 model LtiResult {
   id                      String   @id @default(cuid())
   user                    User     @relation(fields: [userId], references: [id])
@@ -166,10 +167,12 @@ model LtiResult {
   updatedAt               DateTime @updatedAt
 
   @@unique([platformId, ltiSub, assignmentId])
-  //@@unique([userId, assignmentId])
+  @@index([userId])
+  @@index([assignmentId])
 }
 
-model gradeTranslation {
+/// Configuration for translating numeric grades to custom scales or letter grades.
+model GradeTranslation {
   id          String       @id @default(cuid())
   name        String       // e.g., "Standard Letter Grades", "Pass/Fail"
   description String?
@@ -215,6 +218,7 @@ model CasIdentity {
   @@unique([userId, casServerId])
 }
 
+/// Rate-limiting and security tracking for login attempts by IP and email.
 model LoginAttempt {
   id            String    @id @default(cuid())
   email         String
@@ -231,6 +235,7 @@ model LoginAttempt {
   @@index([lastAttemptAt])
 }
 
+/// Ephemeral authentication or verification tokens (e.g., password reset, email verification).
 model Token {
   id        String    @id @default(cuid())
   userId    String
@@ -248,6 +253,7 @@ model Token {
   @@index([userId, type])
 }
 
+/// An LTI course context.
 model Course {
   id           String  @id @default(cuid())
   // LTI context claim fields
@@ -271,8 +277,10 @@ model Course {
   updatedAt DateTime @updatedAt
 
   @@unique([deploymentId, ltiContextId])
+  @@index([deploymentId])
 }
 
+/// User enrollment in a course with an assigned role.
 model Enrollment {
   id       String     @id @default(cuid())
   userId   String
@@ -286,8 +294,10 @@ model Enrollment {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, courseId])
+  @@index([courseId])
 }
 
+/// An assignment linked to a course and optional external LTI tool.
 model Assignment {
   id             String  @id @default(cuid())
   resourceLinkId String? // resource_link.id from LTI claim
@@ -302,7 +312,7 @@ model Assignment {
 
   //grade translation option
   gradeTranslationId String?
-  gradeTranslation   gradeTranslation? @relation(fields: [gradeTranslationId], references: [id], onDelete: SetNull)
+  gradeTranslation   GradeTranslation? @relation(fields: [gradeTranslationId], references: [id], onDelete: SetNull)
 
   // Relationships
   courseId String
@@ -326,6 +336,8 @@ model Assignment {
 
   @@unique([courseId, resourceLinkId])
   @@index([courseId, canvasAssignmentId])
+  @@index([toolId])
+  @@index([gradeTranslationId])
 }
 
 enum PassCoolDownUnit {

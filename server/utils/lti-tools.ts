@@ -1,4 +1,4 @@
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { ToolRow, AdminToolQuery, CreateToolData, UpdateToolData } from '@@/shared/models/tool'
 
 /**

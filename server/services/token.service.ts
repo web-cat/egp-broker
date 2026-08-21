@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 /**
  * Token Service - Manages email verification and password reset tokens

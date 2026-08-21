@@ -1,5 +1,6 @@
 <template>
   <UInput
+    :model-value="modelValue"
     v-bind="$attrs"
     :ui="{
       base: 'transition-all duration-200',
@@ -10,6 +11,7 @@
         }
       }
     }"
+    @update:model-value="$emit('update:modelValue', $event)"
   >
     <template #leading>
       <slot name="leading" />
@@ -25,4 +27,9 @@
  * BaseInput
  * Wrapper around UInput with premium styling.
  */
+defineProps<{
+  modelValue?: string | number
+}>()
+
+defineEmits<(e: 'update:modelValue', value: string | number) => void>()
 </script>

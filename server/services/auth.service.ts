@@ -1,5 +1,5 @@
 import type { H3Event, EventHandlerRequest } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 /**
  * Auth Service - Pure business logic for authentication flows

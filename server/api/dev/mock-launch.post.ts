@@ -1,6 +1,6 @@
 import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import type { H3Event } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { CourseRole } from '@prisma/client'
 import { MockLaunchSchema } from '@@/shared/schemas/dev.schema'
 

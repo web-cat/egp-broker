@@ -1,7 +1,7 @@
 import type { H3Event } from 'h3'
 import { defineEventHandler, getValidatedQuery } from 'h3'
 import { getServerSiteUrl } from '../../utils/site'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import { CasCallbackSchema } from '@@/shared/schemas/cas.schema'
 
 /**

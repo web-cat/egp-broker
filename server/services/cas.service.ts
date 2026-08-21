@@ -1,4 +1,4 @@
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { CasServer } from '@prisma/client'
 import { getGravatarUrl } from '@@/server/utils/gravatar'
 

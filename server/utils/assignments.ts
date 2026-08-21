@@ -1,4 +1,4 @@
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { AssignmentRow, CreateAssignmentData } from '@@/shared/models/assignment'
 
 /**

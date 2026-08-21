@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { requireCourseContext } from '../../../../server/utils/session'
 import type { H3Event } from 'h3'
 
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 // Mock dependencies
 vi.mock('@@/server/utils/session', async () => {
@@ -14,7 +14,7 @@ vi.mock('@@/server/utils/session', async () => {
 })
 
 // Mock prisma
-vi.mock('@@/lib/prisma', () => ({
+vi.mock('@@/server/utils/db', () => ({
   default: {
     user: {
       findUnique: vi.fn()

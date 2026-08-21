@@ -25,6 +25,8 @@
 </template>
 
 <script setup lang="ts">
+import BaseInput from '~/components/base/BaseInput.vue'
+
 interface InputProps {
   modelValue?: string
   label: string

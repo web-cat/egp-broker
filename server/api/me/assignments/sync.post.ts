@@ -1,5 +1,5 @@
 import { defineEventHandler } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import { fetchCanvasAssignments, getPlatformCanvasDomain } from '@@/server/utils/canvas'

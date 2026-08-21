@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import contextPost from '../../../../../server/api/me/context.post'
 import contextDelete from '../../../../../server/api/me/context.delete'
 import { updateUserCurrentCourse } from '../../../../../server/utils/users'
-import prisma from '../../../../../lib/prisma'
+import prisma from '@@/server/utils/db'
 
 // Move mock to top to ensure hoisting and application
 vi.mock('h3', async () => {
@@ -37,7 +37,7 @@ vi.mock('../../../../../server/utils/users', () => ({
   updateUserCurrentCourse: vi.fn()
 }))
 
-vi.mock('../../../../../lib/prisma', () => ({
+vi.mock('@@/server/utils/db', () => ({
   default: {
     enrollment: {
       findUnique: vi.fn()

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const savePlatformApiKeySchema = z.object({
-  apiKey: z.string().min(1, 'API Key / Access Token is required').trim()
+  apiKey: z.string().trim().min(1, 'API Key / Access Token is required')
 })
 
 export type SavePlatformApiKeyInput = z.infer<typeof savePlatformApiKeySchema>

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { H3Event } from 'h3'
 import assignmentDelete from '../../../../../server/api/admin/assignments/[id].delete'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import { deleteAssignment } from '../../../../../server/utils/assignments'
 
-vi.mock('@@/lib/prisma', () => ({
+vi.mock('@@/server/utils/db', () => ({
   default: {
     assignment: {
       findUnique: vi.fn(),

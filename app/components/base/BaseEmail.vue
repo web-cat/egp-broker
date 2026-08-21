@@ -12,6 +12,8 @@
 </template>
 
 <script setup lang="ts">
+import BaseFormInput from '~/components/base/BaseFormInput.vue'
+
 interface EmailProps {
   modelValue: string
   label: string

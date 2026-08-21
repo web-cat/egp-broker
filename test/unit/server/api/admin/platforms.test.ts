@@ -3,7 +3,7 @@ import type { H3Event } from 'h3'
 import platformsGet from '../../../../../server/api/admin/platforms/index.get'
 import platformsDelete from '../../../../../server/api/admin/platforms/[id].delete'
 import { getAllPlatforms } from '../../../../../server/utils/lti-platforms'
-import prisma from '../../../../../lib/prisma'
+import prisma from '@@/server/utils/db'
 
 // Mock dependencies
 vi.mock('../../../../../server/utils/lti-platforms', () => ({
@@ -11,7 +11,7 @@ vi.mock('../../../../../server/utils/lti-platforms', () => ({
   getPlatform: vi.fn()
 }))
 
-vi.mock('../../../../../lib/prisma', () => ({
+vi.mock('@@/server/utils/db', () => ({
   default: {
     ltiPlatform: {
       delete: vi.fn()

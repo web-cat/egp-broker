@@ -23,6 +23,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import BaseFormInput from '~/components/base/BaseFormInput.vue'
+
 const showPassword = ref(false)
 
 interface PasswordProps {

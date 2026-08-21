@@ -1,5 +1,5 @@
 import { defineEventHandler, readValidatedBody, createError } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
 import { createAssignmentSchema } from '@@/shared/models/assignment'
 import { createAssignment } from '@@/server/utils/assignments'

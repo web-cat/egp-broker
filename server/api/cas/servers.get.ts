@@ -1,4 +1,4 @@
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { CasServerPublic } from '@@/shared/schemas/cas.schema'
 
 /**

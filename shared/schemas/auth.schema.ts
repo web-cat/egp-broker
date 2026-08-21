@@ -11,7 +11,8 @@ export const LtiLoginSchema = z.object({
   iss: z.string().min(1),
   login_hint: z.string().min(1),
   target_link_uri: z.string().min(1),
-  lti_message_hint: z.string().optional()
+  lti_message_hint: z.string().optional(),
+  client_id: z.string().optional()
 })
 
 export type LtiLoginInput = z.infer<typeof LtiLoginSchema>

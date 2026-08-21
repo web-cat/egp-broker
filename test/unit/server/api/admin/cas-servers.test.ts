@@ -5,7 +5,7 @@ import casServersPost from '../../../../../server/api/admin/cas-servers.post'
 import casServersPut from '../../../../../server/api/admin/cas-servers/[id].put'
 import casServersDelete from '../../../../../server/api/admin/cas-servers/[id].delete'
 
-import mockDbAny from '../../../../../lib/prisma'
+import mockDbAny from '@@/server/utils/db'
 
 // Mock h3 utils
 vi.mock('h3', async (importOriginal) => {
@@ -23,7 +23,7 @@ vi.mock('h3', async (importOriginal) => {
 // Mock global getUserSession
 vi.stubGlobal('getUserSession', (event: any) => Promise.resolve({ user: event.context.user }))
 
-vi.mock('../../../../../lib/prisma', () => ({
+vi.mock('@@/server/utils/db', () => ({
   default: {
     casServer: {
       findMany: vi.fn(),

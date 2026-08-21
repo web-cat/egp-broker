@@ -1,5 +1,5 @@
 // server/api/proxy/grade-translations.get.ts
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)

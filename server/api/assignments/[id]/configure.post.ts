@@ -1,8 +1,14 @@
-import prisma from '@@/lib/prisma'
+import { defineEventHandler, readValidatedBody, getRouterParam, createError } from 'h3'
+import prisma from '@@/server/utils/db'
+import { configureAssignmentSchema } from '@@/shared/models/assignment'
 
 export default defineEventHandler(async (event) => {
   const assignmentId = getRouterParam(event, 'id')
-  const body = await readBody(event)
+  if (!assignmentId) {
+    throw createError({ statusCode: 400, statusMessage: 'Assignment ID is required' })
+  }
+
+  const body = await readValidatedBody(event, configureAssignmentSchema.parse)
   const session = await getUserSession(event)
 
   if (!session.user) {
@@ -22,20 +28,19 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  if (!enrollment) {
+  if (!enrollment && session.user.globalRole !== 'ADMIN') {
     throw createError({
       statusCode: 403,
       statusMessage: 'You do not have permission to configure this assignment.'
     })
   }
 
-  // 2. Update the assignment with the chosen tool ID
+  // 2. Update the assignment with the chosen tool ID and translation ID
   const updatedAssignment = await prisma.assignment.update({
     where: { id: assignmentId },
     data: {
-      toolId: body.toolId,
-      gradeTranslationId: body.gradeTranslationId || null
-      // Note: You can also update title or other metadata here if needed
+      toolId: body.toolId ?? null,
+      gradeTranslationId: body.gradeTranslationId ?? null
     }
   })
 

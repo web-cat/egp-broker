@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getAllTools, getTool } from '../../../../server/utils/lti-tools'
-import prisma from '../../../../lib/prisma'
+import prisma from '@@/server/utils/db'
 
-vi.mock('../../../../lib/prisma', () => ({
+vi.mock('@@/server/utils/db', () => ({
   default: {
     ltiTool: {
       findMany: vi.fn(),

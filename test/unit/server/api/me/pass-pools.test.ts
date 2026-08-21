@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import passPoolsGet from '../../../../../server/api/me/pass-pools.get'
 import { getStudentPassPools } from '../../../../../server/utils/pass-types'
 import { getCurrentEnrollment } from '../../../../../server/utils/enrollments'
-import prisma from '../../../../../lib/prisma'
+import prisma from '@@/server/utils/db'
 
 vi.mock('../../../../../server/utils/pass-types', () => ({
   getStudentPassPools: vi.fn()
@@ -12,7 +12,7 @@ vi.mock('../../../../../server/utils/enrollments', () => ({
   getCurrentEnrollment: vi.fn()
 }))
 
-vi.mock('../../../../../lib/prisma', () => ({
+vi.mock('@@/server/utils/db', () => ({
   default: {
     user: {
       findUnique: vi.fn()

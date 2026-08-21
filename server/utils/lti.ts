@@ -1,7 +1,7 @@
 import { sendRedirect } from 'h3'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { CourseRole } from '@prisma/client'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 // LTI 1.3 Role URIs mapped to CourseRole enum
 const LTI_ROLE_MAPPINGS: { pattern: string; role: CourseRole }[] = [

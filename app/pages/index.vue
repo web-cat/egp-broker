@@ -163,9 +163,13 @@
 </template>
 
 <script lang="ts" setup>
-import type { SimpleEnrollment } from '@@/shared/models/enrollment'
-import type { ApiResponse } from '@@/shared/types/api'
 import CourseGrid from '~/components/features/course/CourseGrid.vue'
+
+import { useCasServers } from '~/composables/features/useCasServers'
+import {
+  useCurrentEnrollment,
+  useAvailableEnrollments
+} from '~/composables/features/useEnrollmentsFeature'
 
 // Composables
 const { t } = useI18n()
@@ -178,8 +182,8 @@ const config = useRuntimeConfig()
 useSeo('home')
 
 // CAS Servers fallback for when password login is disabled
-const { data: casServers } = await useFetch<{ id: string; name: string }[]>('/api/cas/servers', {
-  immediate: !loggedIn.value && !config.public.enablePasswordLogin
+const { data: casServers } = await useCasServers({
+  immediate: computed(() => !loggedIn.value && !config.public.enablePasswordLogin)
 })
 
 // Data fetching
@@ -188,8 +192,8 @@ const {
   status: enrollmentStatus,
   error: enrollmentError,
   refresh: refreshEnrollment
-} = await useFetch<ApiResponse<SimpleEnrollment>>('/api/me/enrollment', {
-  immediate: loggedIn.value,
+} = await useCurrentEnrollment({
+  immediate: loggedIn,
   watch: [loggedIn, user]
 })
 
@@ -206,17 +210,22 @@ const isTeacher = computed(() => {
 })
 
 // Helper to check for unauthorized errors (handles both .status and .statusCode)
-const isUnauthorized = (err: any) => {
-  if (!err) return false
+const isUnauthorized = (err: unknown) => {
+  if (!err || typeof err !== 'object') return false
+  const errorObj = err as {
+    status?: number
+    statusCode?: number
+    response?: { status?: number; statusCode?: number }
+  }
   const code =
-    err.status ||
-    err.statusCode ||
-    (err.response && (err.response.status || err.response.statusCode))
+    errorObj.status ||
+    errorObj.statusCode ||
+    (errorObj.response && (errorObj.response.status || errorObj.response.statusCode))
   return code === 401
 }
 
 // Handle 401 Unauthorized errors by clearing the local session
-watch(enrollmentError, (newError: any) => {
+watch(enrollmentError, (newError: unknown) => {
   if (isUnauthorized(newError)) {
     clear()
   }
@@ -226,10 +235,9 @@ watch(enrollmentError, (newError: any) => {
 const {
   data: courses,
   status: coursesStatus,
-  //error: coursesError,
   refresh: refreshCourses
-} = await useFetch<ApiResponse<SimpleEnrollment[]>>('/api/me/enrollments', {
-  immediate: loggedIn.value && !enrollment.value?.data?.role,
+} = await useAvailableEnrollments({
+  immediate: computed(() => loggedIn.value && !enrollment.value?.data?.role),
   watch: [loggedIn, enrollment]
 })
 

@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser'
 import { SignJWT, importPKCS8 } from 'jose'
-import prisma from '~~/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 export default defineEventHandler(async (event) => {
   //console.log('--- LTI 1.1 GRADE PASSBACK ENDPOINT ---')

@@ -1,15 +1,18 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends Record<string, unknown> = Record<string, unknown>">
+import { ref, computed, watch } from 'vue'
+import type { TableColumn } from '@nuxt/ui'
+
 const props = withDefaults(
   defineProps<{
-    data: any[] | null | undefined
-    columns: any[]
+    data: T[] | null | undefined
+    columns: TableColumn<T>[]
     loading?: boolean
     searchable?: boolean
     searchPlaceholder?: string
     pageSize?: number
     emptyIcon?: string
     emptyText?: string
-    rowClass?: (row: any) => string
+    rowClass?: (row: T) => string
   }>(),
   {
     loading: false,
@@ -59,7 +62,7 @@ const tableMeta = computed(() => {
   if (!props.rowClass) return undefined
   return {
     class: {
-      tr: (row: any) => props.rowClass?.(row) ?? ''
+      tr: (row: T) => props.rowClass?.(row) ?? ''
     }
   }
 })
@@ -89,8 +92,8 @@ const tableMeta = computed(() => {
       v-if="hasData"
       v-model:global-filter="globalFilter"
       v-model:pagination="pagination"
-      :data="data!"
-      :columns="columns"
+      :data="data as any"
+      :columns="columns as any"
       :loading="loading"
       :meta="tableMeta"
       :ui="{ td: 'p-2 sm:p-2', th: 'p-2 sm:p-2' }"

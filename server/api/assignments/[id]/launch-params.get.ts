@@ -1,4 +1,4 @@
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 // You may need an lti-signing library here or use your existing LTI logic
 
 export default defineEventHandler(async (event) => {

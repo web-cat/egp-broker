@@ -1,5 +1,5 @@
 import { defineEventHandler, createError } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { RedemptionRow } from '@@/shared/models/pass'
 import { getStudentRedemptions } from '@@/server/utils/redemptions'

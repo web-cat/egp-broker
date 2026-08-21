@@ -83,6 +83,8 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
 
+import { useCasServers } from '~/composables/features/useCasServers'
+
 // =============================================================================
 // COMPOSABLES & DEPENDENCIES
 // =============================================================================
@@ -112,7 +114,7 @@ const isLoading = ref(false)
 // =============================================================================
 // CAS SERVERS
 // =============================================================================
-const { data: casServers } = await useFetch<{ id: string; name: string }[]>('/api/cas/servers')
+const { data: casServers } = await useCasServers()
 
 // Fields configuration
 const fields = computed(() => [

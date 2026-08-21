@@ -69,12 +69,23 @@ export const updateAssignmentSchema = z.object({
   manualPassTypeIds: z.array(z.string()).optional()
 })
 
+export const linkToolSchema = z.object({
+  toolId: z.string().min(1, 'Tool ID is required')
+})
+
+export const configureAssignmentSchema = z.object({
+  toolId: z.string().nullable().optional(),
+  gradeTranslationId: z.string().nullable().optional()
+})
+
 // =============================================================================
 // TYPE EXPORTS
 // =============================================================================
 
 export type CreateAssignmentData = z.infer<typeof createAssignmentSchema>
 export type UpdateAssignmentData = z.infer<typeof updateAssignmentSchema>
+export type LinkToolData = z.infer<typeof linkToolSchema>
+export type ConfigureAssignmentData = z.infer<typeof configureAssignmentSchema>
 
 // =============================================================================
 // INITIAL STATES

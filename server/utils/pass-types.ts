@@ -1,4 +1,4 @@
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { PassTypeData, SimplePassPool } from '@@/shared/models/pass'
 import { toSimplePassPool } from '@@/shared/models/pass'
 

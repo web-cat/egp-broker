@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { defineEventHandler, readValidatedBody, createError, getRouterParam } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 const PlatformUpdateSchema = z.object({
   name: z.string().optional(),

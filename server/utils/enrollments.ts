@@ -1,4 +1,4 @@
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { Enrollment } from '@prisma/client'
 import type { SimpleEnrollment } from '@@/shared/models/enrollment'
 import { toSimpleEnrollment } from '@@/shared/models/enrollment'

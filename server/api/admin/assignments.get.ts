@@ -1,5 +1,5 @@
 import { defineEventHandler, getValidatedQuery, createError } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
 import { AdminAssignmentQuerySchema } from '@@/shared/schemas/admin.schema'
 

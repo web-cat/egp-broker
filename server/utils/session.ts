@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 import { createError } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 
 export async function requireCourseContext(event: H3Event): Promise<string> {
   const session = await getUserSession(event)

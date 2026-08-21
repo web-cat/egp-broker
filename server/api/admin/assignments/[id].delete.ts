@@ -1,5 +1,5 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3'
-import prisma from '@@/lib/prisma'
+import prisma from '@@/server/utils/db'
 import { deleteAssignment } from '@@/server/utils/assignments'
 
 export default defineEventHandler(async (event) => {
