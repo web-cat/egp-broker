@@ -114,6 +114,7 @@ export async function fetchCanvasAssignments(
 
   try {
     while (url) {
+      console.info(`[Canvas API] GET ${url}`)
       const response = await $fetch.raw<CanvasAssignment[]>(url, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -121,8 +122,13 @@ export async function fetchCanvasAssignments(
         }
       })
 
-      if (response._data) {
-        assignments.push(...response._data)
+      const records = response._data
+      console.info(
+        `[Canvas API] Status ${response.status}, received: ${Array.isArray(records) ? `${records.length} items` : typeof records}`
+      )
+
+      if (records && Array.isArray(records)) {
+        assignments.push(...records)
       }
 
       // Parse Link header for pagination

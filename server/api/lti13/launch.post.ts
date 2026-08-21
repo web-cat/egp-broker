@@ -27,27 +27,11 @@ export default defineEventHandler(async (event) => {
     if (claims.nonce !== session.lti.nonce)
       throw createError({ statusCode: 403, statusMessage: 'Invalid nonce' })
 
-    console.info('[LTI Launch] Verified claims:', {
-      sub: claims.sub,
-      email: claims.email,
-      messageType: claims['https://purl.imsglobal.org/spec/lti/claim/message_type'],
-      targetLinkUri: claims['https://purl.imsglobal.org/spec/lti/claim/target_link_uri'],
-      custom: claims['https://purl.imsglobal.org/spec/lti/claim/custom'],
-      endpoint: claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']
-    })
-
     // Use the logic that was working
     const { user, assignmentId, needsConfiguration, userRole, sourcedId } = await handleLtiLaunch(
       prisma as any,
       { claims, platform }
     )
-
-    console.info('[LTI Launch] Launch handled result:', {
-      userId: user.id,
-      role: userRole,
-      assignmentId,
-      needsConfiguration
-    })
 
     // Set the session
     await setUserSession(event, {
@@ -64,18 +48,16 @@ export default defineEventHandler(async (event) => {
 
     // Routing
     if (!assignmentId) {
-      console.info('[LTI Launch] No assignmentId -> Redirecting to dashboard /')
       return sendRedirect(event, '/', 303)
     }
 
     if (needsConfiguration) {
       const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(userRole)
-      const target = isStaff ? `/setup/${assignmentId}` : '/not-ready'
-      console.info(`[LTI Launch] Assignment needs configuration -> Redirecting to ${target}`)
-      return sendRedirect(event, target, 303)
+      return isStaff
+        ? sendRedirect(event, `/setup/${assignmentId}`, 303)
+        : sendRedirect(event, '/not-ready', 303)
     }
 
-    console.info(`[LTI Launch] Assignment ready -> Redirecting to /launch/${assignmentId}`)
     return sendRedirect(event, `/launch/${assignmentId}`)
   } catch (error: any) {
     console.error('LTI Launch Error:', error)

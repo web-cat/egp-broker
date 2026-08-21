@@ -22,6 +22,22 @@
       @saved="onRowUpdated"
       @created="onItemCreated"
     />
+
+    <BaseConfirmationModal
+      v-model:open="deleteOpen"
+      title="Delete Assignment"
+      :description="`Are you sure you want to delete ${deletingItem?.title || deletingItem?.resourceLinkId || 'this assignment'}?`"
+      confirm-label="Delete Assignment"
+      confirm-color="error"
+      confirm-icon="i-lucide-trash-2"
+      :loading="isDeleting"
+      @confirm="handleDeleteConfirm"
+    >
+      <p class="text-sm text-neutral-500">
+        This will permanently delete the assignment, its pass eligibilities, and associated results.
+        This action cannot be undone.
+      </p>
+    </BaseConfirmationModal>
   </div>
 </template>
 
@@ -43,6 +59,7 @@ interface AssignmentRow {
 }
 
 const route = useRoute()
+const toast = useToast()
 const courseFilter = computed(() => route.query.c as string | undefined)
 const createCourseId = ref<string | null>(null)
 
@@ -51,12 +68,46 @@ const {
   status,
   editOpen,
   editingItem,
+  deleteOpen,
+  deletingItem,
   tableKey,
   openCreate,
   openEdit,
+  openDelete,
   onRowUpdated,
+  onRowDeleted,
   onItemCreated
 } = useAdminCrud<AssignmentRow>('/api/admin/assignments', { c: courseFilter })
+
+const isDeleting = ref(false)
+
+async function handleDeleteConfirm() {
+  if (!deletingItem.value) return
+  isDeleting.value = true
+  const target = deletingItem.value
+  try {
+    await $fetch(`/api/admin/assignments/${target.id}`, {
+      method: 'DELETE'
+    })
+    onRowDeleted(target.id)
+    deleteOpen.value = false
+    toast.add({
+      title: 'Assignment Deleted',
+      description: `Successfully deleted assignment ${target.title || target.resourceLinkId}`,
+      color: 'success'
+    })
+  } catch (err: unknown) {
+    const fetchErr = err as { data?: { statusMessage?: string; message?: string } }
+    toast.add({
+      title: 'Failed to delete assignment',
+      description:
+        fetchErr.data?.statusMessage || fetchErr.data?.message || 'An unexpected error occurred.',
+      color: 'error'
+    })
+  } finally {
+    isDeleting.value = false
+  }
+}
 
 const { setTitle } = useAdminPageTitle()
 
@@ -107,7 +158,14 @@ const assignmentColumns: TableColumn<AssignmentRow>[] = [
   },
   actionsColumn<AssignmentRow>((row) => [
     [{ label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEdit(row.original) }],
-    [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const }]
+    [
+      {
+        label: 'Delete',
+        icon: 'i-lucide-trash-2',
+        color: 'error' as const,
+        onSelect: () => openDelete(row.original)
+      }
+    ]
   ])
 ]
 </script>

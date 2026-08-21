@@ -92,10 +92,18 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
     course.deployment.deploymentHost
   )
 
+  console.info(
+    `[Canvas Sync] Requesting assignments from domain "${domain}" for courseId "${course.canvasCourseId}"`
+  )
+
   const canvasAssignments = await fetchCanvasAssignments(
     domain,
     course.canvasCourseId,
     platformIdentity.platformApiKey
+  )
+
+  console.info(
+    `[Canvas Sync] Retrieved ${canvasAssignments.length} assignment(s) from Canvas. Processing DB upserts...`
   )
 
   // 4. Sync Logic

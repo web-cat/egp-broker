@@ -375,3 +375,16 @@ export async function createAssignment(data: CreateAssignmentData) {
 
   return assignment
 }
+
+export async function deleteAssignment(id: string) {
+  return await prisma.$transaction(async (tx) => {
+    // Delete any dependent records if needed (like LtiResult which lacks cascade onDelete)
+    await tx.ltiResult.deleteMany({
+      where: { assignmentId: id }
+    })
+
+    return await tx.assignment.delete({
+      where: { id }
+    })
+  })
+}

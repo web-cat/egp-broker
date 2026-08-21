@@ -44,6 +44,7 @@ vi.mock('~/composables/features/admin/useAdminCrud', () => ({
     editOpen: ref(false),
     editingItem: ref(null),
     tableKey: ref(0),
+    refresh: vi.fn().mockResolvedValue(undefined),
     openCreate: vi.fn(),
     openEdit: vi.fn(),
     openDelete: vi.fn(),

@@ -26,6 +26,7 @@ export const useTeacherDashboard = () => {
     editOpen: assignmentEditOpen,
     editingItem: editingAssignment,
     tableKey: assignmentsTableKey,
+    refresh: refreshAssignments,
     openCreate: openAssignmentCreate,
     openEdit: openAssignmentEdit,
     onRowUpdated: onAssignmentRowUpdated,
@@ -63,21 +64,26 @@ export const useTeacherDashboard = () => {
 
     syncing.value = true
     try {
-      const { data } = await $fetch<{ data: any[] }>('/api/me/assignments/sync', {
+      const res = await $fetch<{ data: any[] }>('/api/me/assignments/sync', {
         method: 'POST'
       })
 
-      // Update local data if available
+      // Update local data and re-fetch
       if (assignmentsData.value) {
-        assignmentsData.value.data = data
+        assignmentsData.value.data = res.data
       }
+      await refreshAssignments()
 
-      toast.add({ title: 'Assignments synced successfully', color: 'success' })
+      toast.add({
+        title: 'Assignments synced',
+        description: `Successfully synchronized ${res.data?.length ?? 0} assignment(s) from Canvas.`,
+        color: 'success'
+      })
     } catch (err: any) {
       console.error(err)
       toast.add({
         title: 'Sync failed',
-        description: err.data?.message || err.message,
+        description: err.data?.message || err.data?.statusMessage || err.message,
         color: 'error'
       })
     } finally {
