@@ -18,12 +18,12 @@ export default defineEventHandler(async (event): Promise<ApiResponse<StudentRost
   // Get current user and enrollment context
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { currentCourseId: true, role: true }
+    select: { currentCourseId: true, globalRole: true }
   })
 
   const enrollment = await getCurrentEnrollment(session.user.id, user?.currentCourseId, session.lti)
 
-  if (!enrollment && user?.role !== 'ADMIN') {
+  if (!enrollment && user?.globalRole !== 'ADMIN') {
     throw createError({
       statusCode: 403,
       statusMessage: 'Forbidden'

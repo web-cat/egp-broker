@@ -50,6 +50,8 @@ export interface CanvasAssignment {
   published: boolean
   html_url: string
   url: string
+  has_overrides?: boolean
+  all_dates?: any[]
   quiz_id?: number
   rubric?: any[]
   use_rubric_for_grading?: boolean
@@ -145,7 +147,7 @@ export async function fetchCanvasAssignments(
   accessToken: string
 ): Promise<CanvasAssignment[]> {
   const assignments: CanvasAssignment[] = []
-  let url = `https://${domain}/api/v1/courses/${courseId}/assignments?include[]=overrides&per_page=100`
+  let url = `https://${domain}/api/v1/courses/${courseId}/assignments?include[]=all_dates&include[]=overrides&override_assignment_dates=false&per_page=100`
 
   try {
     while (url) {
@@ -191,6 +193,33 @@ export async function fetchCanvasAssignments(
   }
 
   return assignments
+}
+
+/**
+ * Fetches overrides for a single assignment directly from the Canvas API.
+ */
+export async function fetchCanvasAssignmentOverrides(
+  domain: string,
+  courseId: string,
+  assignmentId: number | string,
+  accessToken: string
+): Promise<CanvasAssignmentOverride[]> {
+  const url = `https://${domain}/api/v1/courses/${courseId}/assignments/${assignmentId}/overrides`
+  try {
+    const res = await $fetch<CanvasAssignmentOverride[]>(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json'
+      }
+    })
+    return Array.isArray(res) ? res : []
+  } catch (err: any) {
+    console.warn(
+      `[Canvas API] Could not fetch individual overrides for assignment ${assignmentId}:`,
+      err.message
+    )
+    return []
+  }
 }
 
 /**

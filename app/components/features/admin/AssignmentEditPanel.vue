@@ -54,7 +54,7 @@
                   <span>{{ item.label }}</span>
                   <UBadge
                     v-if="autoPassTypeIds.has(item.id)"
-                    label="auto"
+                    label="pattern match"
                     size="xs"
                     color="neutral"
                     variant="subtle"
@@ -63,7 +63,7 @@
               </template>
             </USelectMenu>
             <p class="text-xs text-neutral-500 mt-1">
-              Items marked <strong>auto</strong> are set by pattern matching and cannot be removed.
+              Select or deselect pass types eligible for this assignment.
             </p>
           </UFormField>
         </div>
@@ -168,20 +168,14 @@ const autoPassTypeIds = computed(() => {
   return set
 })
 
-/** Build menu items for USelectMenu. Auto-matched items are marked disabled. */
+/** Build menu items for USelectMenu. */
 const passTypeMenuItems = computed(() => {
   if (!props.passTypes) return []
   return props.passTypes.map((pt) => ({
     id: pt.id,
-    label: pt.name,
-    disabled: autoPassTypeIds.value.has(pt.id)
+    label: pt.name
   }))
 })
-
-/** The manual-only pass type IDs (selected minus auto) to send to the API */
-const manualPassTypeIds = computed(() =>
-  selectedPassTypeIds.value.filter((id) => !autoPassTypeIds.value.has(id))
-)
 
 function toLocalDatetime(iso: string | null): string {
   if (!iso) return ''
@@ -231,8 +225,8 @@ const handleSubmit = async () => {
     }
 
     if (isEdit.value) {
-      // Include manual pass type IDs in edit mode
-      body.manualPassTypeIds = manualPassTypeIds.value
+      // Include all selected pass type IDs in edit mode
+      body.manualPassTypeIds = selectedPassTypeIds.value
 
       await $fetch(`/api/me/assignments/${props.assignment!.id}`, {
         method: 'PATCH',

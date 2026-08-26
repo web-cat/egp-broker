@@ -337,10 +337,9 @@ export async function getCourseAssignments(
 }
 
 /**
- * Sets the manual (non-automatic) pass type eligibilities for an assignment.
- * - Removes manual eligibilities whose passTypeId is NOT in the new list.
+ * Sets the pass type eligibilities for an assignment.
+ * - Removes any eligibilities (manual or pattern-matched) whose passTypeId is NOT in the new list.
  * - Creates new manual eligibilities for pass types not yet linked.
- * - Does NOT touch automatic eligibilities.
  * - Recalculates eligible dates afterward.
  */
 export async function setManualEligibilities(assignmentId: string, manualPassTypeIds: string[]) {
@@ -351,9 +350,9 @@ export async function setManualEligibilities(assignmentId: string, manualPassTyp
 
   const operations = []
 
-  // Remove manual eligibilities no longer in the list
+  // Remove eligibilities no longer in the list (allows teacher to opt-out of auto matches)
   for (const e of existing) {
-    if (!e.isAutomatic && !manualPassTypeIds.includes(e.passTypeId)) {
+    if (!manualPassTypeIds.includes(e.passTypeId)) {
       operations.push(prisma.passEligibility.delete({ where: { id: e.id } }))
     }
   }

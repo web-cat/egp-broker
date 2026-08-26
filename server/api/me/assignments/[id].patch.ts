@@ -66,14 +66,13 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     }
   })
 
-  // Sync automatic pass eligibility
-  if (body.title) {
-    await syncAssignmentEligibility(updated.id)
-  }
-
-  // Sync manual pass eligibilities if provided
-  if (body.manualPassTypeIds) {
+  // Sync pass eligibilities
+  if (body.manualPassTypeIds !== undefined) {
+    // Explicit manual selection takes precedence
     await setManualEligibilities(updated.id, body.manualPassTypeIds)
+  } else if (body.title) {
+    // Fall back to title regex auto-sync only when manual list is not specified
+    await syncAssignmentEligibility(updated.id)
   }
 
   return {

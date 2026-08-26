@@ -27,7 +27,7 @@ export default defineEventHandler(
     // Get current user and enrollment context
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { currentCourseId: true, role: true }
+      select: { currentCourseId: true, globalRole: true }
     })
 
     const enrollment = await getCurrentEnrollment(
@@ -36,7 +36,7 @@ export default defineEventHandler(
       session.lti
     )
 
-    if (!enrollment && user?.role !== 'ADMIN') {
+    if (!enrollment && user?.globalRole !== 'ADMIN') {
       throw createError({
         statusCode: 403,
         statusMessage: 'Forbidden'

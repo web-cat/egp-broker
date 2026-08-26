@@ -3,7 +3,8 @@ import {
   syncAssignmentEligibility,
   syncPassTypeEligibility,
   recalculateAssignmentEligibleDates,
-  getCourseAssignments
+  getCourseAssignments,
+  setManualEligibilities
 } from '../../../../server/utils/assignments'
 import prisma from '@@/server/utils/db'
 
@@ -277,6 +278,41 @@ describe('Assignment Eligibility Logic', () => {
 
       expect(result).toHaveLength(1)
       expect(result[0].dueDate).toBe('2026-09-01T23:59:00.000Z')
+    })
+  })
+
+  describe('setManualEligibilities', () => {
+    it('should delete both auto and manual eligibilities that are omitted from manualPassTypeIds', async () => {
+      const existing = [
+        { id: 'pe1', passTypeId: 'pt-auto-1', isAutomatic: true },
+        { id: 'pe2', passTypeId: 'pt-manual-1', isAutomatic: false },
+        { id: 'pe3', passTypeId: 'pt-keep-1', isAutomatic: true }
+      ]
+
+      vi.mocked(prisma.passEligibility.findMany).mockResolvedValue(existing as any)
+      vi.mocked(prisma.passEligibility.delete).mockReturnValue({} as any)
+      vi.mocked(prisma.passEligibility.create).mockReturnValue({} as any)
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign1',
+        dueDate: new Date(),
+        passEligibilities: []
+      } as any)
+
+      // Keep pt-keep-1 and add new pt-new-1
+      await setManualEligibilities('assign1', ['pt-keep-1', 'pt-new-1'])
+
+      // Should delete pe1 and pe2
+      expect(prisma.passEligibility.delete).toHaveBeenCalledWith({ where: { id: 'pe1' } })
+      expect(prisma.passEligibility.delete).toHaveBeenCalledWith({ where: { id: 'pe2' } })
+      // Should create pt-new-1
+      expect(prisma.passEligibility.create).toHaveBeenCalledWith({
+        data: {
+          passTypeId: 'pt-new-1',
+          assignmentId: 'assign1',
+          isAutomatic: false
+        }
+      })
+      expect(prisma.$transaction).toHaveBeenCalled()
     })
   })
 })

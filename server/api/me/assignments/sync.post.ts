@@ -4,6 +4,7 @@ import type { ApiResponse } from '@@/shared/types/api'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import {
   fetchCanvasAssignments,
+  fetchCanvasAssignmentOverrides,
   fetchCanvasSections,
   getPlatformCanvasDomain
 } from '@@/server/utils/canvas'
@@ -230,8 +231,18 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
 
     const syncedOverrideIds: string[] = []
 
-    if (ca.overrides && Array.isArray(ca.overrides)) {
-      for (const ov of ca.overrides) {
+    let rawOverrides = ca.overrides
+    if ((!rawOverrides || rawOverrides.length === 0) && ca.has_overrides) {
+      rawOverrides = await fetchCanvasAssignmentOverrides(
+        domain,
+        course.canvasCourseId,
+        ca.id,
+        platformIdentity.platformApiKey
+      )
+    }
+
+    if (rawOverrides && Array.isArray(rawOverrides)) {
+      for (const ov of rawOverrides) {
         const overrideIdStr = ov.id.toString()
         // Skip if this is a pass-generated override
         if (passOverrideIds.has(overrideIdStr) || ov.title?.startsWith('[EGP Pass]')) {
