@@ -61,7 +61,7 @@ describe('API: Me Assignments GET', () => {
       where: { id: 'u1' },
       select: { currentCourseId: true }
     })
-    expect(getCourseAssignments).toHaveBeenCalledWith('c1')
+    expect(getCourseAssignments).toHaveBeenCalledWith('c1', 'u1')
     expect(result.data).toEqual(mockAssignments)
   })
 

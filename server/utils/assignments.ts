@@ -1,5 +1,6 @@
 import prisma from '@@/server/utils/db'
 import type { AssignmentRow, CreateAssignmentData } from '@@/shared/models/assignment'
+import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
 
 /**
  * Creates a new assignment.
@@ -275,7 +276,10 @@ export async function syncPassTypeEligibility(passTypeId: string) {
  * Fetches all assignments for a course with their pass eligibilities.
  * strictly conforms to the `AssignmentRow` shared schema.
  */
-export async function getCourseAssignments(courseId: string): Promise<AssignmentRow[]> {
+export async function getCourseAssignments(
+  courseId: string,
+  userId?: string
+): Promise<AssignmentRow[]> {
   const assignments = await prisma.assignment.findMany({
     where: { courseId },
     orderBy: [{ dueDate: 'desc' }, { title: 'asc' }],
@@ -287,34 +291,49 @@ export async function getCourseAssignments(courseId: string): Promise<Assignment
     }
   })
 
-  return assignments.map((a) => ({
-    id: a.id,
-    resourceLinkId: a.resourceLinkId,
-    title: a.title ?? null,
-    canvasAssignmentId: a.canvasAssignmentId ?? null,
-    courseLabel: a.course.label ?? null,
-    courseTitle: a.course.title ?? null,
-    dueDate: a.dueDate?.toISOString() ?? null,
-    availableFrom: a.availableFrom?.toISOString() ?? null,
-    acceptUntil: a.acceptUntil?.toISOString() ?? null,
-    eligibleUntil: a.eligibleUntil?.toISOString() ?? null,
-    published: a.published,
-    createdAt: a.createdAt.toISOString(),
-    eligiblePassTypeNames: a.passEligibilities.map((pe) => pe.passType.name),
-    eligiblePassTypes: a.passEligibilities.map((pe) => ({
-      id: pe.passType.id,
-      name: pe.passType.name,
-      hoursPerPass: pe.passType.hoursPerPass,
-      extensionOnly: pe.passType.extensionOnly,
-      minDaysPastDue: pe.passType.minDaysPastDue,
-      maxDaysPastDue: pe.passType.maxDaysPastDue
-    })),
-    eligibilities: a.passEligibilities.map((pe) => ({
-      passTypeId: pe.passType.id,
-      passTypeName: pe.passType.name,
-      isAutomatic: pe.isAutomatic
-    }))
-  }))
+  return Promise.all(
+    assignments.map(async (a) => {
+      let dueDate = a.dueDate?.toISOString() ?? null
+      let availableFrom = a.availableFrom?.toISOString() ?? null
+      let acceptUntil = a.acceptUntil?.toISOString() ?? null
+
+      if (userId) {
+        const effective = await resolveStudentEffectiveDates(a, userId, courseId)
+        dueDate = effective.dueDate?.toISOString() ?? null
+        availableFrom = effective.availableFrom?.toISOString() ?? null
+        acceptUntil = effective.acceptUntil?.toISOString() ?? null
+      }
+
+      return {
+        id: a.id,
+        resourceLinkId: a.resourceLinkId,
+        title: a.title ?? null,
+        canvasAssignmentId: a.canvasAssignmentId ?? null,
+        courseLabel: a.course.label ?? null,
+        courseTitle: a.course.title ?? null,
+        dueDate,
+        availableFrom,
+        acceptUntil,
+        eligibleUntil: a.eligibleUntil?.toISOString() ?? null,
+        published: a.published,
+        createdAt: a.createdAt.toISOString(),
+        eligiblePassTypeNames: a.passEligibilities.map((pe) => pe.passType.name),
+        eligiblePassTypes: a.passEligibilities.map((pe) => ({
+          id: pe.passType.id,
+          name: pe.passType.name,
+          hoursPerPass: pe.passType.hoursPerPass,
+          extensionOnly: pe.passType.extensionOnly,
+          minDaysPastDue: pe.passType.minDaysPastDue,
+          maxDaysPastDue: pe.passType.maxDaysPastDue
+        })),
+        eligibilities: a.passEligibilities.map((pe) => ({
+          passTypeId: pe.passType.id,
+          passTypeName: pe.passType.name,
+          isAutomatic: pe.isAutomatic
+        }))
+      }
+    })
+  )
 }
 
 /**

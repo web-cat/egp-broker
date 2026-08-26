@@ -4,6 +4,7 @@ import type {
   StudentRosterRow,
   StudentRedemptionHistoryRow
 } from '@@/shared/models/teacher'
+import type { AssignmentOverrideDetails } from '@@/shared/models/override'
 
 /**
  * Retrieves all redemptions for a specific assignment in a course.
@@ -184,6 +185,66 @@ export async function getStudentRedemptionHistory(
       dueDate: r.dueDate?.toISOString() ?? null,
       acceptUntil: r.acceptUntil?.toISOString() ?? null,
       isActive
+    }
+  })
+}
+
+/**
+ * Retrieves all section and individual overrides for a specific assignment.
+ */
+export async function getAssignmentOverrides(
+  assignmentId: string,
+  courseId: string
+): Promise<AssignmentOverrideDetails[]> {
+  const overrides = await prisma.assignmentOverride.findMany({
+    where: {
+      assignmentId,
+      assignment: { courseId }
+    },
+    include: {
+      courseSection: true,
+      students: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: 'asc' }
+  })
+
+  return overrides.map((o) => {
+    const isSection = !!o.courseSectionId
+    let targetName = 'General'
+    if (isSection && o.courseSection) {
+      targetName = `Section: ${o.courseSection.name}`
+    } else if (o.students.length > 0) {
+      const studentLabels = o.students
+        .map((s) => {
+          const name =
+            [s.user.firstName, s.user.lastName].filter(Boolean).join(' ').trim() ||
+            s.user.email ||
+            s.user.id
+          return name
+        })
+        .join(', ')
+      targetName = `Student(s): ${studentLabels}`
+    }
+
+    return {
+      id: o.id,
+      title: o.title ?? null,
+      type: isSection ? ('SECTION' as const) : ('STUDENT' as const),
+      targetName,
+      availableFrom: o.availableFrom?.toISOString() ?? null,
+      dueDate: o.dueDate?.toISOString() ?? null,
+      acceptUntil: o.acceptUntil?.toISOString() ?? null
     }
   })
 }

@@ -376,14 +376,17 @@ const assignmentColumns: any[] = [
             ]
           ),
         h(
-          'span',
+          'button',
           {
+            type: 'button',
             class: [
+              'text-left hover:underline focus:outline-none transition-colors cursor-pointer',
               isEligible
-                ? 'font-bold text-gray-900 dark:text-white'
-                : 'text-gray-500 dark:text-gray-400',
+                ? 'font-bold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400'
+                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white',
               isUnpublished ? 'opacity-60 line-through' : ''
-            ]
+            ],
+            onClick: () => openAssignmentRedemptions(row.original)
           },
           row.getValue('title') || '—'
         )

@@ -29,6 +29,17 @@ vi.mock('@@/server/utils/db', () => ({
   }
 }))
 
+vi.mock('@@/server/utils/overrides', () => ({
+  resolveStudentEffectiveDates: vi.fn().mockImplementation((a) =>
+    Promise.resolve({
+      dueDate: new Date('2026-09-01T23:59:00.000Z'),
+      availableFrom: a.availableFrom,
+      acceptUntil: a.acceptUntil,
+      overrideType: 'STUDENT'
+    })
+  )
+}))
+
 describe('Assignment Eligibility Logic', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -240,6 +251,32 @@ describe('Assignment Eligibility Logic', () => {
         createdAt: mockDate.toISOString(),
         eligiblePassTypeNames: ['Late Pass']
       })
+    })
+
+    it('should resolve student override dates when userId is passed', async () => {
+      const mockDate = new Date('2023-01-01T00:00:00.000Z')
+      const mockAssignments = [
+        {
+          id: 'a1',
+          resourceLinkId: 'rl1',
+          title: 'A1',
+          canvasAssignmentId: 'c1',
+          dueDate: mockDate,
+          availableFrom: mockDate,
+          acceptUntil: mockDate,
+          published: true,
+          createdAt: mockDate,
+          course: { label: 'C1', title: 'Course 1' },
+          passEligibilities: []
+        }
+      ]
+
+      vi.mocked(prisma.assignment.findMany).mockResolvedValue(mockAssignments as any)
+
+      const result = await getCourseAssignments('course1', 'student1')
+
+      expect(result).toHaveLength(1)
+      expect(result[0].dueDate).toBe('2026-09-01T23:59:00.000Z')
     })
   })
 })

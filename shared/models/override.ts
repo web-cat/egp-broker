@@ -44,3 +44,18 @@ export const effectiveAssignmentDatesSchema = z.object({
 })
 
 export type EffectiveAssignmentDates = z.infer<typeof effectiveAssignmentDatesSchema>
+
+/**
+ * Detailed projection of an assignment override for display in teacher views.
+ */
+export const assignmentOverrideDetailsSchema = z.object({
+  id: z.string(),
+  title: z.string().nullable().optional(),
+  type: z.enum(['SECTION', 'STUDENT']),
+  targetName: z.string(),
+  availableFrom: z.string().nullable(),
+  dueDate: z.string().nullable(),
+  acceptUntil: z.string().nullable()
+})
+
+export type AssignmentOverrideDetails = z.infer<typeof assignmentOverrideDetailsSchema>

@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   courseSectionSchema,
   assignmentOverrideSchema,
-  effectiveAssignmentDatesSchema
+  effectiveAssignmentDatesSchema,
+  assignmentOverrideDetailsSchema
 } from '@@/shared/models/override'
 
 describe('Override & Section Schemas', () => {
@@ -39,6 +40,20 @@ describe('Override & Section Schemas', () => {
       overrideTitle: 'Section 001'
     }
     const parsed = effectiveAssignmentDatesSchema.safeParse(dates)
+    expect(parsed.success).toBe(true)
+  })
+
+  it('validates assignmentOverrideDetailsSchema', () => {
+    const details = {
+      id: 'ov1',
+      title: 'Accommodation',
+      type: 'SECTION' as const,
+      targetName: 'Section: Section 001',
+      availableFrom: '2026-08-20T00:00:00.000Z',
+      dueDate: '2026-09-01T23:59:00.000Z',
+      acceptUntil: '2026-09-05T23:59:00.000Z'
+    }
+    const parsed = assignmentOverrideDetailsSchema.safeParse(details)
     expect(parsed.success).toBe(true)
   })
 })
