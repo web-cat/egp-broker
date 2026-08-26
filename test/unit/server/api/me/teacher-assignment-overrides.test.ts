@@ -58,7 +58,7 @@ describe('GET /api/me/assignments/:id/overrides', () => {
         dueDate: new Date('2026-09-02T23:59:00.000Z'),
         acceptUntil: new Date('2026-09-05T23:59:00.000Z'),
         courseSection: { id: 'sec-1', name: 'Section 001' },
-        students: []
+        studentOverrides: []
       },
       {
         id: 'ov-2',
@@ -68,7 +68,7 @@ describe('GET /api/me/assignments/:id/overrides', () => {
         dueDate: new Date('2026-09-04T23:59:00.000Z'),
         acceptUntil: null,
         courseSection: null,
-        students: [
+        studentOverrides: [
           {
             user: {
               id: 'stu-1',

@@ -203,7 +203,7 @@ export async function getAssignmentOverrides(
     },
     include: {
       courseSection: true,
-      students: {
+      studentOverrides: {
         include: {
           user: {
             select: {
@@ -224,8 +224,8 @@ export async function getAssignmentOverrides(
     let targetName = 'General'
     if (isSection && o.courseSection) {
       targetName = `Section: ${o.courseSection.name}`
-    } else if (o.students.length > 0) {
-      const studentLabels = o.students
+    } else if (o.studentOverrides && o.studentOverrides.length > 0) {
+      const studentLabels = o.studentOverrides
         .map((s) => {
           const name =
             [s.user.firstName, s.user.lastName].filter(Boolean).join(' ').trim() ||
