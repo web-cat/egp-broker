@@ -51,9 +51,18 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     data: {
       title: body.title,
       canvasAssignmentId: body.canvasAssignmentId,
-      dueDate: body.dueDate ? new Date(body.dueDate) : null,
-      availableFrom: body.availableFrom ? new Date(body.availableFrom) : null,
-      acceptUntil: body.acceptUntil ? new Date(body.acceptUntil) : null
+      dueDate: body.dueDate ? new Date(body.dueDate) : body.dueDate === null ? null : undefined,
+      availableFrom: body.availableFrom
+        ? new Date(body.availableFrom)
+        : body.availableFrom === null
+          ? null
+          : undefined,
+      acceptUntil: body.acceptUntil
+        ? new Date(body.acceptUntil)
+        : body.acceptUntil === null
+          ? null
+          : undefined,
+      published: body.published !== undefined ? body.published : undefined
     }
   })
 

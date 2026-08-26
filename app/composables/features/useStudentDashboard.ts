@@ -1,6 +1,7 @@
 import type { SimplePassPool, RedemptionRow, PassTypeData } from '@@/shared/models/pass'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { AssignmentRow } from '@@/shared/models/assignment'
+import { calculatePassExtension } from '@@/shared/utils/extension'
 
 export const useStudentDashboard = (isPreview = false) => {
   const toast = useToast()
@@ -73,64 +74,100 @@ export const useStudentDashboard = (isPreview = false) => {
 
     return assignmentsData.value.data
       .filter((a) => {
-        // 0. Availability check: Hide if not yet available
+        // 0. Published check: Hide if unpublished
+        if (a.published === false) return false
+
+        // 1. Only show assignments where passes can be used
+        const hasPassTypes =
+          (a.eligiblePassTypes && a.eligiblePassTypes.length > 0) ||
+          (a.eligiblePassTypeNames && a.eligiblePassTypeNames.length > 0)
+        if (!hasPassTypes) return false
+
+        // 2. Availability check: Hide if not yet unlocked
         if (a.availableFrom && new Date(a.availableFrom) > now) return false
 
-        const { dueDate, acceptUntil, eligibleUntil, eligiblePassTypeNames } = a
+        // 3. Check if there is an active extension currently in progress
+        const latestRedemption = redemptionsData.value?.data?.find(
+          (r: any) => r.assignmentTitle === a.title
+        )
+        if (latestRedemption?.dueDate && new Date(latestRedemption.dueDate) > now) {
+          return true
+        }
 
-        // 1. Implicit Infinite: explicit eligibility but no cutoff date => Always Eligible
-        const hasPassTypes = eligiblePassTypeNames && eligiblePassTypeNames.length > 0
-        if (hasPassTypes && !eligibleUntil) return true
+        // 4. Keep if upcoming due date is in the future
+        if (a.dueDate && new Date(a.dueDate) > now) {
+          return true
+        }
 
-        // 2. Max Date Logic
-        const dates = []
-        if (dueDate) dates.push(new Date(dueDate))
-        if (acceptUntil) dates.push(new Date(acceptUntil))
-        if (eligibleUntil) dates.push(new Date(eligibleUntil))
+        // 5. If past due, keep only if at least one pass type is still within its redemption window
+        const passTypes = a.eligiblePassTypes || []
+        if (passTypes.length > 0) {
+          const hasOpenWindow = passTypes.some((pt) => {
+            if (pt.maxDaysPastDue !== null && pt.maxDaysPastDue !== undefined) {
+              const origDue = a.dueDate ? new Date(a.dueDate) : now
+              const maxAllowed = new Date(
+                origDue.getTime() + pt.maxDaysPastDue * 24 * 60 * 60 * 1000
+              )
+              return now <= maxAllowed
+            }
+            if (a.acceptUntil) return new Date(a.acceptUntil) > now
+            if (a.eligibleUntil) return new Date(a.eligibleUntil) > now
+            return true
+          })
+          if (hasOpenWindow) return true
+        }
 
-        // If all dates are missing, treat as inactive/hidden (unless caught by implicit infinite above)
-        if (dates.length === 0) return false
-
-        // Calculate max date
-        const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
-
-        // Keep if max date is in the future
-        return maxDate > now
+        return false
       })
       .sort((a, b) => {
-        // Priority 1: Eligible for redemption first
-        const aEligible = (a.eligiblePassTypeNames?.length ?? 0) > 0
-        const bEligible = (b.eligiblePassTypeNames?.length ?? 0) > 0
-
-        if (aEligible && !bEligible) return -1
-        if (!aEligible && bEligible) return 1
-
-        // Priority 2: Due Date Ascending (Nulls last)
+        // Keep assignments in chronological order by due date (earliest due date first, nulls last)
+        if (!a.dueDate && !b.dueDate) return (a.title || '').localeCompare(b.title || '')
         if (!a.dueDate) return 1
         if (!b.dueDate) return -1
-
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
       })
       .map((a) => ({
         ...a,
-        highlight: (a.eligiblePassTypeNames?.length ?? 0) > 0
+        highlight: true
       }))
   })
 
   // Modal & Selection State
   const showRedemptionModal = ref(false)
   const selectedAssignment = ref<AssignmentRow | null>(null)
-  const selectedPassType = ref<{ id: string; name: string } | null>(null)
+  const selectedPassType = ref<any>(null)
   const selectedPassHours = ref(24)
   const redemptionLoading = ref(false)
+
+  const selectedLatestRedemption = computed(() => {
+    if (!selectedAssignment.value || !redemptionsData.value?.data) return null
+    return (
+      redemptionsData.value.data.find(
+        (r: any) => r.assignmentTitle === selectedAssignment.value?.title
+      ) || null
+    )
+  })
 
   const handleRedeemClick = (assignment: AssignmentRow, passType: { id: string; name: string }) => {
     const pool = effectivePassPools.value.find((p) => p.name === passType.name)
     if (!pool || pool.balance <= 0) return
 
+    const fullPassType = assignment.eligiblePassTypes?.find((pt) => pt.id === passType.id) || {
+      id: passType.id,
+      name: passType.name,
+      hoursPerPass: pool.hoursPerPass || 0,
+      extensionOnly: false,
+      minDaysPastDue: null,
+      maxDaysPastDue: null
+    }
+
     selectedAssignment.value = assignment
-    selectedPassType.value = passType
-    selectedPassHours.value = pool.hoursPerPass || 0
+    selectedPassType.value = {
+      ...fullPassType,
+      balance: pool.balance,
+      hoursPerPass: fullPassType.hoursPerPass || pool.hoursPerPass || 0
+    }
+    selectedPassHours.value = selectedPassType.value.hoursPerPass || 0
     showRedemptionModal.value = true
   }
 
@@ -139,8 +176,22 @@ export const useStudentDashboard = (isPreview = false) => {
 
     redemptionLoading.value = true
     try {
-      await redeemPass(selectedAssignment.value.id, selectedPassType.value.id)
-      showRedemptionModal.value = false
+      const { error } = await redeemPass(selectedAssignment.value.id, selectedPassType.value.id)
+
+      if (!error.value) {
+        showRedemptionModal.value = false
+        toast.add({
+          title: 'Pass Redeemed',
+          description: `Successfully applied ${selectedPassType.value.name} to ${selectedAssignment.value.title}.`,
+          color: 'success'
+        })
+      } else {
+        toast.add({
+          title: 'Redemption Failed',
+          description: error.value.data?.message || error.value.message || 'Could not redeem pass.',
+          color: 'error'
+        })
+      }
     } finally {
       redemptionLoading.value = false
     }
@@ -157,14 +208,9 @@ export const useStudentDashboard = (isPreview = false) => {
       accessorKey: 'title',
       header: 'Title',
       cell: ({ row }: { row: any }) => {
-        const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
         return h(
           'span',
-          {
-            class: isEligible
-              ? 'font-bold text-gray-900 dark:text-white'
-              : 'text-gray-500 dark:text-gray-400'
-          },
+          { class: 'font-bold text-gray-900 dark:text-white' },
           row.getValue('title') || '—'
         )
       }
@@ -176,29 +222,92 @@ export const useStudentDashboard = (isPreview = false) => {
         const types = row.original.eligiblePassTypes || []
         if (!types.length) return '—'
 
+        const now = new Date()
+        const latestRedemption = redemptionsData.value?.data?.find(
+          (r: any) => r.assignmentTitle === row.original.title
+        )
+
         return h(
           'div',
-          { class: 'flex flex-wrap gap-3' },
+          { class: 'flex flex-wrap gap-2.5 items-center' },
           types.map((pt: any) => {
             const pool = effectivePassPools.value.find((p) => p.name === pt.name)
-            const hasBalance = (pool?.balance ?? 0) > 0
+            const balance = pool?.balance ?? 0
+            const hasBalance = balance > 0
 
+            const ext = calculatePassExtension({
+              assignment: row.original,
+              passType: {
+                extensionOnly: pt.extensionOnly ?? false,
+                hoursPerPass: pt.hoursPerPass || 24,
+                minDaysPastDue: pt.minDaysPastDue,
+                maxDaysPastDue: pt.maxDaysPastDue
+              },
+              latestRedemption,
+              now
+            })
+
+            // State 1: Active extension currently in progress
+            if (latestRedemption?.dueDate && now <= new Date(latestRedemption.dueDate)) {
+              return h(
+                'span',
+                {
+                  class:
+                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-800'
+                },
+                [
+                  h(resolveComponent('UIcon'), { name: 'i-lucide-clock', class: 'w-3.5 h-3.5' }),
+                  `Active: Due ${formatDate(latestRedemption.dueDate)}`
+                ]
+              )
+            }
+
+            // State 2: Redemption window closed / ineligible
+            if (!ext.isEligible) {
+              return h(
+                'span',
+                {
+                  class:
+                    'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 cursor-not-allowed'
+                },
+                [
+                  h(resolveComponent('UIcon'), { name: 'i-lucide-ban', class: 'w-3.5 h-3.5' }),
+                  pt.name
+                ]
+              )
+            }
+
+            // State 3: Zero Balance
+            if (!hasBalance) {
+              return h(
+                'button',
+                {
+                  class:
+                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-50 text-neutral-400 dark:bg-neutral-900 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-800 cursor-not-allowed opacity-60',
+                  disabled: true
+                },
+                [
+                  h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-3.5 h-3.5' }),
+                  `${pt.name} (0 left)`
+                ]
+              )
+            }
+
+            // State 4: Available to redeem
             return h(
               'button',
               {
-                class: [
-                  'flex items-center gap-1.5 font-medium text-sm transition-colors',
-                  hasBalance
-                    ? 'text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer'
-                    : 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
-                ],
-                disabled: !hasBalance,
+                class:
+                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-primary-50 text-primary-700 dark:bg-primary-950/50 dark:text-primary-300 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors cursor-pointer',
                 onClick: (e: MouseEvent) => {
                   e.stopPropagation()
                   handleRedeemClick(row.original, pt)
                 }
               },
-              [h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-4 h-4' }), pt.name]
+              [
+                h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-3.5 h-3.5' }),
+                pt.name
+              ]
             )
           })
         )
@@ -208,18 +317,16 @@ export const useStudentDashboard = (isPreview = false) => {
       accessorKey: 'dueDate',
       header: 'Due Date',
       cell: ({ row }: { row: any }) => {
-        const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
         const content = formatDate(row.getValue('dueDate')) || '—'
-        return h('span', { class: isEligible ? '' : 'text-gray-400 dark:text-gray-500' }, content)
+        return h('span', { class: 'text-gray-900 dark:text-white font-medium' }, content)
       }
     },
     {
       accessorKey: 'availableFrom',
       header: 'Available From',
       cell: ({ row }: { row: any }) => {
-        const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
         const content = formatDate(row.getValue('availableFrom')) || '—'
-        return h('span', { class: isEligible ? '' : 'text-gray-400 dark:text-gray-500' }, content)
+        return h('span', { class: 'text-gray-500 dark:text-gray-400' }, content)
       }
     }
   ]
@@ -240,6 +347,7 @@ export const useStudentDashboard = (isPreview = false) => {
     selectedAssignment,
     selectedPassType,
     selectedPassHours,
+    selectedLatestRedemption,
     redemptionLoading,
     handleConfirmRedemption,
     assignmentColumns,

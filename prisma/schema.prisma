@@ -48,12 +48,13 @@ model User {
   updatedAt       DateTime   @updatedAt
 
   // Relations
-  tokens        Token[]
-  ltiIdentities LtiIdentity[]
-  casIdentities CasIdentity[]
-  enrollments   Enrollment[]
-  passPools     StudentPassPool[]
-  ltiResults    LtiResult[]
+  tokens           Token[]
+  ltiIdentities    LtiIdentity[]
+  casIdentities    CasIdentity[]
+  enrollments      Enrollment[]
+  passPools        StudentPassPool[]
+  ltiResults       LtiResult[]
+  overrideStudents AssignmentOverrideStudent[]
 
   // Current context
   currentCourseId String?
@@ -271,6 +272,7 @@ model Course {
   enrollments      Enrollment[]
   assignments      Assignment[]
   passTypes        PassType[]
+  sections         CourseSection[]
   usersWithCurrent User[]         @relation("UserCurrentCourse")
 
   createdAt DateTime @default(now())
@@ -282,19 +284,22 @@ model Course {
 
 /// User enrollment in a course with an assigned role.
 model Enrollment {
-  id       String     @id @default(cuid())
-  userId   String
-  courseId String
-  role     CourseRole
+  id              String     @id @default(cuid())
+  userId          String
+  courseId        String
+  role            CourseRole
+  courseSectionId String?
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseSection CourseSection? @relation(fields: [courseSectionId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([userId, courseId])
   @@index([courseId])
+  @@index([courseSectionId])
 }
 
 /// An assignment linked to a course and optional external LTI tool.
@@ -321,6 +326,7 @@ model Assignment {
   // Resubmission pass relations
   passEligibilities PassEligibility[]
   passRedemptions   PassRedemption[]
+  overrides         AssignmentOverride[]
 
   ltiResults        LtiResult[] 
 
@@ -330,6 +336,8 @@ model Assignment {
 
   eligibleFrom  DateTime?
   eligibleUntil DateTime?
+
+  published     Boolean   @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -465,6 +473,80 @@ model PassRedemption {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Canvas override tracking
+  canvasOverrideId String? // Canvas assignment override ID if synced to Canvas
+
   @@index([poolId])
   @@index([assignmentId])
+  @@index([canvasOverrideId])
 }
+
+// ─────────────────────────────────────────────────────────
+// Section & Override Models
+// ─────────────────────────────────────────────────────────
+
+/// Represents a section within a course (e.g. synced from Canvas).
+model CourseSection {
+  id              String   @id @default(cuid())
+  courseId        String
+  canvasSectionId String?  // Canvas section ID
+  name            String   // e.g. "Section 001"
+  
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrollments     Enrollment[]
+  overrides       AssignmentOverride[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([courseId, canvasSectionId])
+  @@index([courseId])
+}
+
+/// An override for an assignment's deadline triple, targeting a Course Section or individual students.
+model AssignmentOverride {
+  id               String    @id @default(cuid())
+  assignmentId     String
+  canvasOverrideId String?   // Canvas override ID
+
+  title            String?   // e.g. "Section 001", "Individual Accommodation"
+  
+  // The override deadline triple
+  availableFrom    DateTime?
+  dueDate          DateTime?
+  acceptUntil      DateTime?
+
+  // Target Relations
+  assignment       Assignment     @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  
+  // Section target (optional)
+  courseSectionId  String?
+  courseSection    CourseSection? @relation(fields: [courseSectionId], references: [id], onDelete: Cascade)
+
+  // Individual student targets (optional)
+  studentOverrides AssignmentOverrideStudent[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([assignmentId, canvasOverrideId])
+  @@index([assignmentId])
+  @@index([courseSectionId])
+}
+
+/// Join table for assignment overrides assigned to specific individual students.
+model AssignmentOverrideStudent {
+  id         String             @id @default(cuid())
+  overrideId String
+  userId     String
+
+  override   AssignmentOverride @relation(fields: [overrideId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@unique([overrideId, userId])
+  @@index([userId])
+}
+

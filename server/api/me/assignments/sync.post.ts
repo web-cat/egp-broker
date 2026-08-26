@@ -2,7 +2,11 @@ import { defineEventHandler } from 'h3'
 import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { AssignmentRow } from '@@/shared/models/assignment'
-import { fetchCanvasAssignments, getPlatformCanvasDomain } from '@@/server/utils/canvas'
+import {
+  fetchCanvasAssignments,
+  fetchCanvasSections,
+  getPlatformCanvasDomain
+} from '@@/server/utils/canvas'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentRow[]>> => {
   const session = await getUserSession(event)
@@ -93,9 +97,65 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
   )
 
   console.info(
-    `[Canvas Sync] Requesting assignments from domain "${domain}" for courseId "${course.canvasCourseId}"`
+    `[Canvas Sync] Syncing sections and assignments from domain "${domain}" for courseId "${course.canvasCourseId}"`
   )
 
+  // 3a. Fetch and sync sections
+  const canvasSections = await fetchCanvasSections(
+    domain,
+    course.canvasCourseId,
+    platformIdentity.platformApiKey
+  )
+
+  const sectionMap = new Map<string, string>() // canvasSectionId -> db Section id
+  for (const cs of canvasSections) {
+    const canvasSecIdStr = cs.id.toString()
+    const dbSection = await prisma.courseSection.upsert({
+      where: {
+        courseId_canvasSectionId: {
+          courseId: course.id,
+          canvasSectionId: canvasSecIdStr
+        }
+      },
+      create: {
+        courseId: course.id,
+        canvasSectionId: canvasSecIdStr,
+        name: cs.name
+      },
+      update: {
+        name: cs.name
+      }
+    })
+    sectionMap.set(canvasSecIdStr, dbSection.id)
+
+    // Sync section enrollments if present
+    if (cs.enrollments && Array.isArray(cs.enrollments)) {
+      for (const en of cs.enrollments) {
+        const platformUserId = en.user_id?.toString()
+        if (!platformUserId) continue
+
+        const ltiIdent = await prisma.ltiIdentity.findFirst({
+          where: {
+            platformId: course.deployment.platform.id,
+            platformUserId
+          },
+          select: { userId: true }
+        })
+
+        if (ltiIdent) {
+          await prisma.enrollment.updateMany({
+            where: {
+              userId: ltiIdent.userId,
+              courseId: course.id
+            },
+            data: { courseSectionId: dbSection.id }
+          })
+        }
+      }
+    }
+  }
+
+  // 3b. Fetch and sync assignments with overrides
   const canvasAssignments = await fetchCanvasAssignments(
     domain,
     course.canvasCourseId,
@@ -138,7 +198,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
           canvasAssignmentId: canvasIdStr,
           dueDate: ca.due_at ? new Date(ca.due_at) : null,
           availableFrom: ca.unlock_at ? new Date(ca.unlock_at) : null,
-          acceptUntil: ca.lock_at ? new Date(ca.lock_at) : null
+          acceptUntil: ca.lock_at ? new Date(ca.lock_at) : null,
+          published: ca.published ?? true
           // Do not overwrite resourceLinkId if it exists
         }
       })
@@ -152,10 +213,114 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
           dueDate: ca.due_at ? new Date(ca.due_at) : null,
           availableFrom: ca.unlock_at ? new Date(ca.unlock_at) : null,
           acceptUntil: ca.lock_at ? new Date(ca.lock_at) : null,
+          published: ca.published ?? true,
           resourceLinkId: undefined // Optional now
         }
       })
     }
+
+    // Process assignment overrides from Canvas
+    const passRedemptions = await prisma.passRedemption.findMany({
+      where: { assignmentId: assignment.id, canvasOverrideId: { not: null } },
+      select: { canvasOverrideId: true }
+    })
+    const passOverrideIds = new Set(
+      passRedemptions.map((r) => r.canvasOverrideId).filter((id): id is string => Boolean(id))
+    )
+
+    const syncedOverrideIds: string[] = []
+
+    if (ca.overrides && Array.isArray(ca.overrides)) {
+      for (const ov of ca.overrides) {
+        const overrideIdStr = ov.id.toString()
+        // Skip if this is a pass-generated override
+        if (passOverrideIds.has(overrideIdStr) || ov.title?.startsWith('[EGP Pass]')) {
+          continue
+        }
+
+        const courseSectionDbId = ov.course_section_id
+          ? (sectionMap.get(ov.course_section_id.toString()) ?? null)
+          : null
+
+        const dbOverride = await prisma.assignmentOverride.upsert({
+          where: {
+            assignmentId_canvasOverrideId: {
+              assignmentId: assignment.id,
+              canvasOverrideId: overrideIdStr
+            }
+          },
+          create: {
+            assignmentId: assignment.id,
+            canvasOverrideId: overrideIdStr,
+            title: ov.title,
+            dueDate: ov.due_at ? new Date(ov.due_at) : null,
+            availableFrom: ov.unlock_at ? new Date(ov.unlock_at) : null,
+            acceptUntil: ov.lock_at ? new Date(ov.lock_at) : null,
+            courseSectionId: courseSectionDbId
+          },
+          update: {
+            title: ov.title,
+            dueDate: ov.due_at ? new Date(ov.due_at) : null,
+            availableFrom: ov.unlock_at ? new Date(ov.unlock_at) : null,
+            acceptUntil: ov.lock_at ? new Date(ov.lock_at) : null,
+            courseSectionId: courseSectionDbId
+          }
+        })
+
+        syncedOverrideIds.push(dbOverride.id)
+
+        // If this override targets individual students
+        if (ov.student_ids && Array.isArray(ov.student_ids) && ov.student_ids.length > 0) {
+          const studentIdStrs = ov.student_ids.map((id) => id.toString())
+          const identities = await prisma.ltiIdentity.findMany({
+            where: {
+              platformId: course.deployment.platform.id,
+              platformUserId: { in: studentIdStrs }
+            },
+            select: { userId: true }
+          })
+
+          const targetUserIds = identities.map((i) => i.userId)
+
+          // Sync join table AssignmentOverrideStudent
+          await prisma.assignmentOverrideStudent.deleteMany({
+            where: {
+              overrideId: dbOverride.id,
+              userId: { notIn: targetUserIds }
+            }
+          })
+
+          for (const uid of targetUserIds) {
+            await prisma.assignmentOverrideStudent.upsert({
+              where: {
+                overrideId_userId: {
+                  overrideId: dbOverride.id,
+                  userId: uid
+                }
+              },
+              create: {
+                overrideId: dbOverride.id,
+                userId: uid
+              },
+              update: {}
+            })
+          }
+        } else {
+          // Clear any student links if not student_ids
+          await prisma.assignmentOverrideStudent.deleteMany({
+            where: { overrideId: dbOverride.id }
+          })
+        }
+      }
+    }
+
+    // Prune instructor overrides deleted from Canvas
+    await prisma.assignmentOverride.deleteMany({
+      where: {
+        assignmentId: assignment.id,
+        id: { notIn: syncedOverrideIds }
+      }
+    })
 
     // Auto-eligibility sync
     await syncAssignmentEligibility(assignment.id)

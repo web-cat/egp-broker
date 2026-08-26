@@ -1,6 +1,8 @@
 import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import type { SyncStatusResponse } from '@@/shared/schemas/sync.schema'
+import type { StudentRosterRow } from '@@/shared/models/teacher'
+import type { ApiResponse } from '@@/shared/types/api'
 import { useAdminCrud } from '~/composables/features/admin/useAdminCrud'
 
 export const useTeacherDashboard = () => {
@@ -32,6 +34,32 @@ export const useTeacherDashboard = () => {
     onRowUpdated: onAssignmentRowUpdated,
     onItemCreated: onAssignmentItemCreated
   } = useAdminCrud<AssignmentRow>('/api/me/assignments')
+
+  // --- Student Roster Data ---
+  const {
+    data: studentsData,
+    status: studentsStatus,
+    refresh: refreshStudents
+  } = useFetch<ApiResponse<StudentRosterRow[]>>('/api/me/students', {
+    lazy: true
+  })
+
+  // --- Modal States for Drill-down ---
+  const assignmentRedemptionsOpen = ref(false)
+  const selectedAssignmentForRedemptions = ref<AssignmentRow | null>(null)
+
+  const openAssignmentRedemptions = (assignment: AssignmentRow) => {
+    selectedAssignmentForRedemptions.value = assignment
+    assignmentRedemptionsOpen.value = true
+  }
+
+  const studentRedemptionsOpen = ref(false)
+  const selectedStudentForRedemptions = ref<StudentRosterRow | null>(null)
+
+  const openStudentRedemptions = (student: StudentRosterRow) => {
+    selectedStudentForRedemptions.value = student
+    studentRedemptionsOpen.value = true
+  }
 
   // --- Sync Logic ---
   const { data: syncStatus, refresh: refreshSyncStatus } = useFetch<{ data: SyncStatusResponse }>(
@@ -149,6 +177,19 @@ export const useTeacherDashboard = () => {
     openAssignmentEdit,
     onAssignmentRowUpdated,
     onAssignmentItemCreated,
+
+    // Student Roster
+    studentsData,
+    studentsStatus,
+    refreshStudents,
+
+    // Drill-down Modal States & Handlers
+    assignmentRedemptionsOpen,
+    selectedAssignmentForRedemptions,
+    openAssignmentRedemptions,
+    studentRedemptionsOpen,
+    selectedStudentForRedemptions,
+    openStudentRedemptions,
 
     // Sync & API Key
     canSync,

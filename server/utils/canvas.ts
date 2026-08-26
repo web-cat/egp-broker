@@ -1,5 +1,39 @@
 import { createError } from 'h3'
 
+export interface CanvasAssignmentOverride {
+  id: number
+  assignment_id: number
+  title: string
+  created_at?: string
+  updated_at?: string
+  due_at?: string | null
+  all_day?: boolean
+  all_day_date?: string | null
+  unlock_at?: string | null
+  lock_at?: string | null
+  course_section_id?: number | null
+  group_id?: number | null
+  student_ids?: number[]
+}
+
+export interface CanvasSection {
+  id: number
+  name: string
+  course_id: number
+  sis_section_id?: string | null
+  integration_id?: string | null
+  start_at?: string | null
+  end_at?: string | null
+  total_students?: number
+  enrollments?: Array<{
+    id: number
+    user_id: number
+    course_section_id: number
+    role: string
+    type: string
+  }>
+}
+
 export interface CanvasAssignment {
   id: number
   name: string
@@ -21,6 +55,7 @@ export interface CanvasAssignment {
   use_rubric_for_grading?: boolean
   rubric_settings?: any
   allowed_extensions?: string[]
+  overrides?: CanvasAssignmentOverride[]
 }
 
 /**
@@ -110,7 +145,7 @@ export async function fetchCanvasAssignments(
   accessToken: string
 ): Promise<CanvasAssignment[]> {
   const assignments: CanvasAssignment[] = []
-  let url = `https://${domain}/api/v1/courses/${courseId}/assignments?per_page=100`
+  let url = `https://${domain}/api/v1/courses/${courseId}/assignments?include[]=overrides&per_page=100`
 
   try {
     while (url) {
@@ -156,4 +191,61 @@ export async function fetchCanvasAssignments(
   }
 
   return assignments
+}
+
+/**
+ * Fetches sections (with enrollments) from the Canvas API for a specific course.
+ */
+export async function fetchCanvasSections(
+  domain: string,
+  courseId: string,
+  accessToken: string
+): Promise<CanvasSection[]> {
+  const sections: CanvasSection[] = []
+  let url = `https://${domain}/api/v1/courses/${courseId}/sections?include[]=enrollments&per_page=100`
+
+  try {
+    while (url) {
+      console.info(`[Canvas API] GET ${url}`)
+      const response = await $fetch.raw<CanvasSection[]>(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json'
+        }
+      })
+
+      const records = response._data
+      console.info(
+        `[Canvas API] Status ${response.status}, received: ${Array.isArray(records) ? `${records.length} sections` : typeof records}`
+      )
+
+      if (records && Array.isArray(records)) {
+        sections.push(...records)
+      }
+
+      // Parse Link header for pagination
+      const linkHeader = response.headers.get('link')
+      if (linkHeader) {
+        const links = linkHeader.split(',')
+        const nextLink = links.find((link) => link.includes('rel="next"'))
+        if (nextLink) {
+          const match = nextLink.match(/<([^>]+)>/)
+          url = match ? match[1] : ''
+        } else {
+          url = ''
+        }
+      } else {
+        url = ''
+      }
+    }
+  } catch (error: any) {
+    console.error('Error fetching Canvas sections:', error)
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: 'Failed to fetch sections from Canvas',
+      data: error.data
+    })
+  }
+
+  return sections
 }

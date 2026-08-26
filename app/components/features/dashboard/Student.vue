@@ -97,6 +97,7 @@
     :assignment="selectedAssignment"
     :pass-type="selectedPassType"
     :hours-per-pass="selectedPassHours"
+    :latest-redemption="selectedLatestRedemption"
     :loading="redemptionLoading"
     @confirm="handleConfirmRedemption"
   />
@@ -136,6 +137,7 @@ const {
   selectedAssignment,
   selectedPassType,
   selectedPassHours,
+  selectedLatestRedemption,
   redemptionLoading,
   handleConfirmRedemption,
   dateCellRenderer

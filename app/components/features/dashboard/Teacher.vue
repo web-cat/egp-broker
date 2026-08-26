@@ -106,6 +106,32 @@
     </BaseDataTable>
   </div>
 
+  <!-- Student Roster & Pass Balances -->
+  <div class="space-y-4 pt-8">
+    <div class="flex items-center justify-between px-1">
+      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+        Students & Pass Balances
+      </h3>
+      <UButton
+        icon="i-lucide-refresh-cw"
+        variant="ghost"
+        color="neutral"
+        size="sm"
+        :loading="studentsStatus === 'pending'"
+        @click="() => refreshStudents()"
+      />
+    </div>
+    <BaseDataTable
+      :data="studentsData?.data"
+      :columns="studentColumns"
+      :loading="studentsStatus === 'pending'"
+      searchable
+      search-placeholder="Search students…"
+      empty-icon="i-lucide-users"
+      empty-text="No enrolled students found."
+    />
+  </div>
+
   <FeaturesAdminPassTypeEditPanel
     v-model:open="passTypeEditOpen"
     :pass-type="editingPassType"
@@ -127,11 +153,22 @@
     :loading="isSavingApiKey"
     @save="saveApiKey"
   />
+
+  <FeaturesDashboardAssignmentRedemptionsModal
+    v-model:open="assignmentRedemptionsOpen"
+    :assignment="selectedAssignmentForRedemptions"
+  />
+
+  <FeaturesDashboardStudentRedemptionsModal
+    v-model:open="studentRedemptionsOpen"
+    :student="selectedStudentForRedemptions"
+  />
 </template>
 
 <script setup lang="ts">
 import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
+import type { StudentRosterRow } from '@@/shared/models/teacher'
 
 import { formatDate } from '~/utils/date'
 // Feature Composables
@@ -140,6 +177,7 @@ import { useStudentView } from '~/composables/features/useStudentView'
 
 const { t } = useI18n()
 const { enterStudentView } = useStudentView()
+const toast = useToast()
 
 defineProps<{
   courseTitle?: string | null
@@ -169,6 +207,19 @@ const {
   openAssignmentEdit,
   onAssignmentItemCreated,
 
+  // Student Roster
+  studentsData,
+  studentsStatus,
+  refreshStudents,
+
+  // Drill-down Modal States & Handlers
+  assignmentRedemptionsOpen,
+  selectedAssignmentForRedemptions,
+  openAssignmentRedemptions,
+  studentRedemptionsOpen,
+  selectedStudentForRedemptions,
+  openStudentRedemptions,
+
   // Sync & API Key
   canSync,
   platformName,
@@ -179,6 +230,30 @@ const {
   saveApiKey,
   syncAssignments
 } = useTeacherDashboard()
+
+// Toggle assignment published state
+const toggleAssignmentPublish = async (assignment: AssignmentRow) => {
+  try {
+    const newPublished = !assignment.published
+    await $fetch(`/api/me/assignments/${assignment.id}`, {
+      method: 'PATCH',
+      body: { published: newPublished }
+    })
+    assignment.published = newPublished
+    toast.add({
+      title: newPublished ? 'Assignment Published' : 'Assignment Unpublished',
+      description: `"${assignment.title || 'Assignment'}" is now ${newPublished ? 'visible' : 'hidden'} to students.`,
+      color: 'success'
+    })
+  } catch (err: any) {
+    console.error(err)
+    toast.add({
+      title: 'Failed to update assignment',
+      description: err.data?.message || err.message || 'Could not update assignment status.',
+      color: 'error'
+    })
+  }
+}
 
 // When an assignment is saved with eligibility changes, do a full refresh
 // instead of in-place update since eligibility data comes from the server
@@ -268,21 +343,47 @@ const assignmentColumns: any[] = [
       const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
       const isHidden =
         row.original.availableFrom && new Date(row.original.availableFrom) > new Date()
+      const isUnpublished = row.original.published === false
 
       return h('div', { class: 'flex items-center gap-2' }, [
-        isHidden &&
-          h(resolveComponent('UTooltip'), { text: 'Hidden from students' }, () => [
-            h(resolveComponent('UIcon'), {
-              name: 'i-lucide-eye-off',
-              class: 'w-4 h-4 text-neutral-400 dark:text-neutral-500'
-            })
-          ]),
+        isUnpublished &&
+          h(
+            resolveComponent('UBadge'),
+            {
+              color: 'neutral',
+              variant: 'subtle',
+              size: 'xs',
+              class: 'font-normal'
+            },
+            () => [
+              h(resolveComponent('UIcon'), {
+                name: 'i-lucide-eye-off',
+                class: 'w-3 h-3 mr-1 text-neutral-500'
+              }),
+              'Unpublished'
+            ]
+          ),
+        !isUnpublished &&
+          isHidden &&
+          h(
+            resolveComponent('UTooltip'),
+            { text: 'Hidden from students (Availability date in future)' },
+            () => [
+              h(resolveComponent('UIcon'), {
+                name: 'i-lucide-clock',
+                class: 'w-4 h-4 text-neutral-400 dark:text-neutral-500'
+              })
+            ]
+          ),
         h(
           'span',
           {
-            class: isEligible
-              ? 'font-bold text-gray-900 dark:text-white'
-              : 'text-gray-500 dark:text-gray-400'
+            class: [
+              isEligible
+                ? 'font-bold text-gray-900 dark:text-white'
+                : 'text-gray-500 dark:text-gray-400',
+              isUnpublished ? 'opacity-60 line-through' : ''
+            ]
           },
           row.getValue('title') || '—'
         )
@@ -331,7 +432,99 @@ const assignmentColumns: any[] = [
     }
   },
   actionsColumn<AssignmentRow>((row) => [
-    [{ label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openAssignmentEdit(row.original) }]
+    [
+      {
+        label: 'View Redemptions',
+        icon: 'i-lucide-history',
+        onSelect: () => openAssignmentRedemptions(row.original)
+      },
+      {
+        label: row.original.published === false ? 'Publish' : 'Unpublish',
+        icon: row.original.published === false ? 'i-lucide-eye' : 'i-lucide-eye-off',
+        onSelect: () => toggleAssignmentPublish(row.original)
+      },
+      {
+        label: 'Edit',
+        icon: 'i-lucide-pencil',
+        onSelect: () => openAssignmentEdit(row.original)
+      }
+    ]
+  ])
+]
+
+const studentColumns: any[] = [
+  {
+    accessorKey: 'studentName',
+    header: 'Student',
+    cell: ({ row }: { row: any }) => {
+      const name = row.getValue('studentName') || '—'
+      const email = row.original.studentEmail
+      return h('div', { class: 'flex flex-col' }, [
+        h('span', { class: 'font-semibold text-neutral-900 dark:text-neutral-100' }, name),
+        email && h('span', { class: 'text-xs text-neutral-500 dark:text-neutral-400' }, email)
+      ])
+    }
+  },
+  {
+    accessorKey: 'sectionName',
+    header: 'Section',
+    cell: ({ row }: { row: any }) => row.getValue('sectionName') || '—'
+  },
+  {
+    accessorKey: 'passBalances',
+    header: 'Pass Balances',
+    cell: ({ row }: { row: any }) => {
+      const balances = row.original.passBalances || []
+      if (!balances.length) return '—'
+
+      return h(
+        'div',
+        { class: 'flex flex-wrap gap-2' },
+        balances.map((pb: any) =>
+          h(
+            'div',
+            {
+              class:
+                'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800'
+            },
+            [
+              h(resolveComponent('UIcon'), { name: 'i-lucide-ticket', class: 'w-3 h-3' }),
+              h('span', `${pb.passTypeName}:`),
+              h('span', { class: 'font-bold' }, `${pb.balance}`),
+              h(
+                'span',
+                { class: 'text-neutral-400 dark:text-neutral-500 text-[10px]' },
+                `/ ${pb.initialBalance}`
+              )
+            ]
+          )
+        )
+      )
+    }
+  },
+  {
+    accessorKey: 'totalRedemptions',
+    header: 'Redemptions',
+    cell: ({ row }: { row: any }) => {
+      const count = row.getValue('totalRedemptions') || 0
+      return h(
+        'span',
+        {
+          class:
+            count > 0 ? 'font-semibold text-neutral-900 dark:text-neutral-100' : 'text-neutral-400'
+        },
+        `${count} redeemed`
+      )
+    }
+  },
+  actionsColumn<StudentRosterRow>((row) => [
+    [
+      {
+        label: 'View History',
+        icon: 'i-lucide-history',
+        onSelect: () => openStudentRedemptions(row.original)
+      }
+    ]
   ])
 ]
 </script>

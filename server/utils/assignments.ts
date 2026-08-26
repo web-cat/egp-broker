@@ -74,8 +74,8 @@ export async function recalculateAssignmentEligibleDates(assignmentId: string, t
     const pt = e.passType
 
     // --- Calculate From Date ---
-    // minDaysPastDue default 0
-    const minDays = pt.minDaysPastDue ?? 0
+    // minDaysPastDue default 0 (cannot be negative)
+    const minDays = Math.max(0, pt.minDaysPastDue ?? 0)
     const fromDate = new Date(assignment.dueDate.getTime() + minDays * 24 * 60 * 60 * 1000)
 
     if (minFrom === null || fromDate < minFrom) {
@@ -298,11 +298,16 @@ export async function getCourseAssignments(courseId: string): Promise<Assignment
     availableFrom: a.availableFrom?.toISOString() ?? null,
     acceptUntil: a.acceptUntil?.toISOString() ?? null,
     eligibleUntil: a.eligibleUntil?.toISOString() ?? null,
+    published: a.published,
     createdAt: a.createdAt.toISOString(),
     eligiblePassTypeNames: a.passEligibilities.map((pe) => pe.passType.name),
     eligiblePassTypes: a.passEligibilities.map((pe) => ({
       id: pe.passType.id,
-      name: pe.passType.name
+      name: pe.passType.name,
+      hoursPerPass: pe.passType.hoursPerPass,
+      extensionOnly: pe.passType.extensionOnly,
+      minDaysPastDue: pe.passType.minDaysPastDue,
+      maxDaysPastDue: pe.passType.maxDaysPastDue
     })),
     eligibilities: a.passEligibilities.map((pe) => ({
       passTypeId: pe.passType.id,

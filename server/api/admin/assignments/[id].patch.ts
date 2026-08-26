@@ -38,7 +38,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
         ? new Date(body.acceptUntil)
         : body.acceptUntil === null
           ? null
-          : undefined
+          : undefined,
+      published: body.published !== undefined ? body.published : undefined
     }
   })
 

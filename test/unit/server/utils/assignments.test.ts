@@ -207,6 +207,7 @@ describe('Assignment Eligibility Logic', () => {
           dueDate: mockDate,
           availableFrom: mockDate,
           acceptUntil: mockDate,
+          published: true,
           createdAt: mockDate,
           course: { label: 'C1', title: 'Course 1' },
           passEligibilities: [{ passType: { name: 'Late Pass' } }]
@@ -235,6 +236,7 @@ describe('Assignment Eligibility Logic', () => {
         availableFrom: mockDate.toISOString(),
         acceptUntil: mockDate.toISOString(),
         eligibleUntil: null,
+        published: true,
         createdAt: mockDate.toISOString(),
         eligiblePassTypeNames: ['Late Pass']
       })

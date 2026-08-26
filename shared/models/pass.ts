@@ -26,6 +26,7 @@ export const redemptionRowSchema = z.object({
   cost: z.number(),
   hoursPerPass: z.number(),
   availableFrom: z.string().nullable(),
+  dueDate: z.string().nullable().optional(),
   acceptUntil: z.string().nullable(),
   isActive: z.boolean()
 })
@@ -48,8 +49,8 @@ export const passTypeDataSchema = z.object({
   coolDownUnit: z.enum(['HOUR', 'DAY', 'WEEK']).nullable(),
   coolDownReset: z.enum(['HOUR', 'DAY', 'WEEK']).nullable(),
   coolDownResetOffset: z.number().nullable(),
-  minDaysPastDue: z.number().nullable(),
-  maxDaysPastDue: z.number().nullable(),
+  minDaysPastDue: z.number().int().min(0).nullable(),
+  maxDaysPastDue: z.number().int().min(0).nullable(),
   createdAt: z.string()
 })
 

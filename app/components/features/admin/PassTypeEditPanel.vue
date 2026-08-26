@@ -53,6 +53,7 @@
               name="minDaysPastDue"
               :label="$t('admin.passType.minDaysPastDueLabel')"
               type="number"
+              min="0"
               :placeholder="$t('admin.passType.nonePlaceholder')"
             />
             <BaseFormInput
@@ -60,6 +61,7 @@
               name="maxDaysPastDue"
               :label="$t('admin.passType.maxDaysPastDueLabel')"
               type="number"
+              min="0"
               :placeholder="$t('admin.passType.nonePlaceholder')"
             />
           </div>

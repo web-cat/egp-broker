@@ -23,13 +23,18 @@ export const assignmentRowSchema = z.object({
   availableFrom: z.string().nullable(),
   acceptUntil: z.string().nullable(),
   eligibleUntil: z.string().nullable().optional(),
+  published: z.boolean().default(true),
   createdAt: z.string(),
   eligiblePassTypeNames: z.array(z.string()).optional(),
   eligiblePassTypes: z
     .array(
       z.object({
         id: z.string(),
-        name: z.string()
+        name: z.string(),
+        hoursPerPass: z.number().optional(),
+        extensionOnly: z.boolean().optional(),
+        minDaysPastDue: z.number().nullable().optional(),
+        maxDaysPastDue: z.number().nullable().optional()
       })
     )
     .optional(),
@@ -57,7 +62,8 @@ export const createAssignmentSchema = z.object({
   courseId: z.string().min(1, 'Course is required'),
   dueDate: z.string().nullable().optional(),
   availableFrom: z.string().nullable().optional(),
-  acceptUntil: z.string().nullable().optional()
+  acceptUntil: z.string().nullable().optional(),
+  published: z.boolean().optional()
 })
 
 export const updateAssignmentSchema = z.object({
@@ -66,6 +72,7 @@ export const updateAssignmentSchema = z.object({
   dueDate: z.string().nullable().optional(),
   availableFrom: z.string().nullable().optional(),
   acceptUntil: z.string().nullable().optional(),
+  published: z.boolean().optional(),
   manualPassTypeIds: z.array(z.string()).optional()
 })
 
