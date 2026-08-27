@@ -106,6 +106,30 @@
     </BaseDataTable>
   </div>
 
+  <!-- Course Sections -->
+  <div class="space-y-4 pt-8">
+    <div class="flex items-center justify-between px-1">
+      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Course Sections</h3>
+      <UButton
+        icon="i-lucide-refresh-cw"
+        variant="ghost"
+        color="neutral"
+        size="sm"
+        :loading="sectionsStatus === 'pending'"
+        @click="() => refreshSections()"
+      />
+    </div>
+    <BaseDataTable
+      :data="sectionsData?.data"
+      :columns="sectionColumns"
+      :loading="sectionsStatus === 'pending'"
+      searchable
+      search-placeholder="Search course sections…"
+      empty-icon="i-lucide-layers"
+      empty-text="No course sections found. Sync with Canvas to import sections."
+    />
+  </div>
+
   <!-- Student Roster & Pass Balances -->
   <div class="space-y-4 pt-8">
     <div class="flex items-center justify-between px-1">
@@ -206,6 +230,11 @@ const {
   openAssignmentCreate,
   openAssignmentEdit,
   onAssignmentItemCreated,
+
+  // Course Sections
+  sectionsData,
+  sectionsStatus,
+  refreshSections,
 
   // Student Roster
   studentsData,
@@ -453,6 +482,79 @@ const assignmentColumns: any[] = [
       }
     ]
   ])
+]
+
+const sectionColumns: any[] = [
+  {
+    accessorKey: 'name',
+    header: 'Section Name',
+    cell: ({ row }: { row: any }) => {
+      return h('div', { class: 'flex items-center gap-2' }, [
+        h(resolveComponent('UIcon'), {
+          name: 'i-lucide-layers',
+          class: 'w-4 h-4 text-primary-500'
+        }),
+        h(
+          'span',
+          { class: 'font-semibold text-neutral-900 dark:text-neutral-100' },
+          row.getValue('name') || '—'
+        )
+      ])
+    }
+  },
+  {
+    accessorKey: 'canvasSectionId',
+    header: 'Canvas ID',
+    cell: ({ row }: { row: any }) => {
+      return h(
+        'span',
+        { class: 'font-mono text-xs text-neutral-600 dark:text-neutral-400' },
+        row.getValue('canvasSectionId') || '—'
+      )
+    }
+  },
+  {
+    accessorKey: 'totalStudents',
+    header: 'Enrolled Students',
+    cell: ({ row }: { row: any }) => {
+      const count = row.getValue('totalStudents') || 0
+      return h('div', { class: 'flex items-center gap-1.5' }, [
+        h(resolveComponent('UIcon'), {
+          name: 'i-lucide-users',
+          class: 'w-3.5 h-3.5 text-neutral-400'
+        }),
+        h(
+          'span',
+          {
+            class:
+              count > 0 ? 'font-medium text-neutral-900 dark:text-neutral-100' : 'text-neutral-400'
+          },
+          `${count} student${count === 1 ? '' : 's'}`
+        )
+      ])
+    }
+  },
+  {
+    accessorKey: 'totalOverrides',
+    header: 'Section Overrides',
+    cell: ({ row }: { row: any }) => {
+      const count = row.getValue('totalOverrides') || 0
+      return h('div', { class: 'flex items-center gap-1.5' }, [
+        h(resolveComponent('UIcon'), {
+          name: 'i-lucide-calendar-clock',
+          class: 'w-3.5 h-3.5 text-neutral-400'
+        }),
+        h(
+          'span',
+          {
+            class:
+              count > 0 ? 'font-medium text-neutral-900 dark:text-neutral-100' : 'text-neutral-400'
+          },
+          `${count} override${count === 1 ? '' : 's'}`
+        )
+      ])
+    }
+  }
 ]
 
 const studentColumns: any[] = [

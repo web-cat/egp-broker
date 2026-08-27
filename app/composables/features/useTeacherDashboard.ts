@@ -2,6 +2,7 @@ import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import type { SyncStatusResponse } from '@@/shared/schemas/sync.schema'
 import type { StudentRosterRow } from '@@/shared/models/teacher'
+import type { CourseSectionRow } from '@@/shared/models/section'
 import type { ApiResponse } from '@@/shared/types/api'
 import { useAdminCrud } from '~/composables/features/admin/useAdminCrud'
 
@@ -34,6 +35,15 @@ export const useTeacherDashboard = () => {
     onRowUpdated: onAssignmentRowUpdated,
     onItemCreated: onAssignmentItemCreated
   } = useAdminCrud<AssignmentRow>('/api/me/assignments')
+
+  // --- Course Sections Data ---
+  const {
+    data: sectionsData,
+    status: sectionsStatus,
+    refresh: refreshSections
+  } = useFetch<ApiResponse<CourseSectionRow[]>>('/api/me/sections', {
+    lazy: true
+  })
 
   // --- Student Roster Data ---
   const {
@@ -100,7 +110,7 @@ export const useTeacherDashboard = () => {
       if (assignmentsData.value) {
         assignmentsData.value.data = res.data
       }
-      await refreshAssignments()
+      await Promise.all([refreshAssignments(), refreshStudents(), refreshSections()])
 
       toast.add({
         title: 'Assignments synced',
@@ -177,6 +187,11 @@ export const useTeacherDashboard = () => {
     openAssignmentEdit,
     onAssignmentRowUpdated,
     onAssignmentItemCreated,
+
+    // Course Sections
+    sectionsData,
+    sectionsStatus,
+    refreshSections,
 
     // Student Roster
     studentsData,

@@ -3,6 +3,7 @@ import prisma from '@@/server/utils/db'
 import type { RedemptionRow } from '@@/shared/models/pass'
 import { calculatePassExtension } from '@@/shared/utils/extension'
 import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
+import { notifyPassRedemption } from '@@/server/services/alert.service'
 
 /**
  * Retrieves pass redemptions for a student in a course.
@@ -61,11 +62,25 @@ export async function redeemPass(
   passTypeId: string,
   promptResponses?: Record<string, any>
 ) {
-  return await prisma.$transaction(async (tx) => {
+  let alertData: {
+    userName?: string | null
+    userEmail?: string | null
+    passTypeName: string
+    assignmentTitle: string
+    courseName?: string | null
+    cost: number
+  } | null = null
+
+  const redemption = await prisma.$transaction(async (tx) => {
     // 1. Get pool and verify initial balance
     const pool = await tx.studentPassPool.findUnique({
       where: { userId_passTypeId: { userId, passTypeId } },
-      include: { passType: true }
+      include: {
+        passType: {
+          include: { course: true }
+        },
+        user: true
+      }
     })
 
     if (!pool || pool.balance <= 0) {
@@ -135,7 +150,7 @@ export async function redeemPass(
     }
 
     // 5. Create redemption record
-    const redemption = await tx.passRedemption.create({
+    const newRedemption = await tx.passRedemption.create({
       data: {
         poolId: pool.id,
         assignmentId,
@@ -153,6 +168,34 @@ export async function redeemPass(
       data: { balance: { decrement: extension.cost } }
     })
 
-    return redemption
+    alertData = {
+      userName: pool.user?.name,
+      userEmail: pool.user?.email,
+      passTypeName: pool.passType?.name || 'Pass',
+      assignmentTitle: assignment.title,
+      courseName: pool.passType?.course?.name,
+      cost: extension.cost
+    }
+
+    return newRedemption
   })
+
+  if (alertData) {
+    try {
+      await notifyPassRedemption({
+        userName: alertData.userName,
+        userEmail: alertData.userEmail,
+        passTypeName: alertData.passTypeName,
+        assignmentTitle: alertData.assignmentTitle,
+        courseName: alertData.courseName,
+        cost: alertData.cost,
+        newDueDate: redemption.dueDate
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[redemption-alert] Failed to trigger redemption notification:', message)
+    }
+  }
+
+  return redemption
 }

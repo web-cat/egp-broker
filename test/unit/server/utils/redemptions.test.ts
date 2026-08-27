@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getStudentRedemptions, redeemPass } from '../../../../server/utils/redemptions'
 import prisma from '@@/server/utils/db'
+import { notifyPassRedemption } from '@@/server/services/alert.service'
+
+vi.mock('@@/server/services/alert.service', () => ({
+  notifyPassRedemption: vi.fn().mockResolvedValue(true)
+}))
 
 vi.mock('@@/server/utils/db', () => ({
   default: {
@@ -124,6 +129,11 @@ describe('Redemption Utilities', () => {
         where: { id: 'pool1' },
         data: { balance: { decrement: 1 } }
       })
+      expect(notifyPassRedemption).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cost: 1
+        })
+      )
     })
 
     it('throws error if balance is insufficient for multi-pass catch-up cost', async () => {

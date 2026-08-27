@@ -5,6 +5,7 @@ import type {
   StudentRedemptionHistoryRow
 } from '@@/shared/models/teacher'
 import type { AssignmentOverrideDetails } from '@@/shared/models/override'
+import type { CourseSectionRow } from '@@/shared/models/section'
 
 /**
  * Retrieves all redemptions for a specific assignment in a course.
@@ -247,4 +248,34 @@ export async function getAssignmentOverrides(
       acceptUntil: o.acceptUntil?.toISOString() ?? null
     }
   })
+}
+
+/**
+ * Retrieves all sections for a course along with enrolled student counts and override counts.
+ */
+export async function getCourseSections(courseId: string): Promise<CourseSectionRow[]> {
+  const sections = await prisma.courseSection.findMany({
+    where: { courseId },
+    include: {
+      _count: {
+        select: {
+          enrollments: {
+            where: {
+              role: 'STUDENT'
+            }
+          },
+          overrides: true
+        }
+      }
+    },
+    orderBy: { name: 'asc' }
+  })
+
+  return sections.map((s) => ({
+    id: s.id,
+    name: s.name,
+    canvasSectionId: s.canvasSectionId,
+    totalStudents: s._count.enrollments,
+    totalOverrides: s._count.overrides
+  }))
 }

@@ -289,6 +289,15 @@ export default defineNuxtConfig({
       from: '' // NUXT_EMAIL_FROM
     },
 
+    // Push Alerts Configuration (ntfy)
+    ntfy: {
+      serverUrl: 'https://ntfy.sh', // NUXT_NTFY_SERVER_URL
+      topic: 'egp-broker-admin', // NUXT_NTFY_TOPIC
+      token: '', // NUXT_NTFY_TOKEN
+      priority: 'default', // NUXT_NTFY_PRIORITY
+      alertOnRedemption: false // NUXT_NTFY_ALERT_ON_REDEMPTION
+    },
+
     // Rate Limiting Configuration
     rateLimit: {
       loginMax: 5, // NUXT_RATE_LIMIT_LOGIN_MAX
