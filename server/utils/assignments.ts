@@ -285,6 +285,7 @@ export async function getCourseAssignments(
     orderBy: [{ dueDate: 'desc' }, { title: 'asc' }],
     include: {
       course: { select: { label: true, title: true } },
+      tool: { select: { id: true, name: true } },
       passEligibilities: {
         include: { passType: true }
       }
@@ -311,6 +312,8 @@ export async function getCourseAssignments(
         canvasAssignmentId: a.canvasAssignmentId ?? null,
         courseLabel: a.course.label ?? null,
         courseTitle: a.course.title ?? null,
+        toolId: a.toolId ?? null,
+        toolName: a.tool?.name ?? null,
         dueDate,
         availableFrom,
         acceptUntil,
@@ -323,6 +326,7 @@ export async function getCourseAssignments(
           name: pe.passType.name,
           hoursPerPass: pe.passType.hoursPerPass,
           extensionOnly: pe.passType.extensionOnly,
+          extendsCutoffOnly: pe.passType.extendsCutoffOnly,
           minDaysPastDue: pe.passType.minDaysPastDue,
           maxDaysPastDue: pe.passType.maxDaysPastDue
         })),
@@ -410,4 +414,57 @@ export async function deleteAssignment(id: string) {
       where: { id }
     })
   })
+}
+
+/**
+ * Matches a Canvas external tool launch URL against registered LtiTools.
+ * Returns the matching LtiTool id, or null if no match is found.
+ */
+export function matchLtiToolForLaunchUrl(
+  launchUrl: string | undefined | null,
+  tools: Array<{ id: string; baseUrl: string }>
+): string | null {
+  if (!launchUrl || !tools.length) return null
+
+  try {
+    const targetUrl = new URL(launchUrl)
+    const normalizedTarget = `${targetUrl.origin}${targetUrl.pathname}`.toLowerCase()
+
+    // Sort tools by baseUrl length descending so more specific paths match first
+    const sortedTools = [...tools].sort((a, b) => b.baseUrl.length - a.baseUrl.length)
+
+    for (const tool of sortedTools) {
+      if (!tool.baseUrl) continue
+      try {
+        const toolUrl = new URL(tool.baseUrl)
+        const normalizedTool =
+          `${toolUrl.origin}${toolUrl.pathname.replace(/\/+$/, '')}`.toLowerCase()
+        if (
+          normalizedTarget === normalizedTool ||
+          normalizedTarget.startsWith(`${normalizedTool}/`) ||
+          targetUrl.hostname.toLowerCase() === toolUrl.hostname.toLowerCase()
+        ) {
+          return tool.id
+        }
+      } catch {
+        // Fallback prefix string match if baseUrl is not standard URL
+        const cleanBase = tool.baseUrl.toLowerCase().replace(/\/+$/, '')
+        if (launchUrl.toLowerCase().startsWith(cleanBase)) {
+          return tool.id
+        }
+      }
+    }
+  } catch {
+    // If launchUrl is not a standard URL, fallback to string prefix match
+    for (const tool of tools) {
+      if (
+        tool.baseUrl &&
+        launchUrl.toLowerCase().startsWith(tool.baseUrl.toLowerCase().replace(/\/+$/, ''))
+      ) {
+        return tool.id
+      }
+    }
+  }
+
+  return null
 }

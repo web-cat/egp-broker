@@ -24,6 +24,8 @@
       "coolDownDescription": "Limits how often students can request this pass type.",
       "extensionOnlyLabel": "Extension Only",
       "extensionOnlyDescription": "Can this pass only be used for extensions?",
+      "extendsCutoffOnlyLabel": "Prolonger uniquement la date limite tardive",
+      "extendsCutoffOnlyDescription": "Déplacer uniquement la date limite finale (acceptUntil) sans modifier la date d'échéance ?",
       "allowRequestsLabel": "Allow Requests",
       "allowRequestsDescription": "Can students request more of these passes?",
       "notifications": {

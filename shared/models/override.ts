@@ -12,7 +12,7 @@ export const courseSectionSchema = z.object({
   updatedAt: z.string().optional()
 })
 
-export type CourseSectionRow = z.infer<typeof courseSectionSchema>
+export type CourseSectionData = z.infer<typeof courseSectionSchema>
 
 /**
  * Schema for an Assignment Override.

@@ -116,6 +116,13 @@
             </UFormField>
 
             <UFormField
+              :label="$t('admin.passType.extendsCutoffOnlyLabel')"
+              :description="$t('admin.passType.extendsCutoffOnlyDescription')"
+            >
+              <USwitch v-model="state.extendsCutoffOnly" />
+            </UFormField>
+
+            <UFormField
               :label="$t('admin.passType.allowRequestsLabel')"
               :description="$t('admin.passType.allowRequestsDescription')"
             >
@@ -182,6 +189,7 @@ const state = reactive({
   initialBalance: 3,
   hoursPerPass: 24,
   extensionOnly: false,
+  extendsCutoffOnly: false,
   allowRequests: false,
   minDaysPastDue: null as number | null,
   maxDaysPastDue: null as number | null,
@@ -202,6 +210,7 @@ watch(
       state.initialBalance = passType.initialBalance
       state.hoursPerPass = passType.hoursPerPass
       state.extensionOnly = passType.extensionOnly
+      state.extendsCutoffOnly = passType.extendsCutoffOnly ?? false
       state.allowRequests = passType.allowRequests
       state.minDaysPastDue = passType.minDaysPastDue
       state.maxDaysPastDue = passType.maxDaysPastDue
@@ -216,6 +225,7 @@ watch(
       state.initialBalance = 3
       state.hoursPerPass = 24
       state.extensionOnly = false
+      state.extendsCutoffOnly = false
       state.allowRequests = false
       state.minDaysPastDue = null
       state.maxDaysPastDue = null
@@ -238,6 +248,7 @@ const handleSubmit = async () => {
       initialBalance: state.initialBalance,
       hoursPerPass: state.hoursPerPass,
       extensionOnly: state.extensionOnly,
+      extendsCutoffOnly: state.extendsCutoffOnly,
       allowRequests: state.allowRequests,
       minDaysPastDue: state.minDaysPastDue,
       maxDaysPastDue: state.maxDaysPastDue,

@@ -34,22 +34,31 @@ export interface CanvasSection {
   }>
 }
 
+export interface CanvasExternalToolTagAttributes {
+  url?: string
+  new_tab?: boolean
+  resource_link_id?: string
+  content_type?: string
+  content_id?: number
+  external_data?: string
+}
+
 export interface CanvasAssignment {
   id: number
   name: string
-  description: string
-  created_at: string
-  updated_at: string
+  description?: string
+  created_at?: string
+  updated_at?: string
   due_at: string | null
   lock_at: string | null
   unlock_at: string | null
-  has_submitted_submissions: boolean
-  points_possible: number
-  grading_type: string
+  has_submitted_submissions?: boolean
+  points_possible?: number
+  grading_type?: string
   submission_types: string[]
-  published: boolean
-  html_url: string
-  url: string
+  published?: boolean
+  html_url?: string
+  url?: string
   has_overrides?: boolean
   all_dates?: any[]
   quiz_id?: number
@@ -58,6 +67,7 @@ export interface CanvasAssignment {
   rubric_settings?: any
   allowed_extensions?: string[]
   overrides?: CanvasAssignmentOverride[]
+  external_tool_tag_attributes?: CanvasExternalToolTagAttributes
 }
 
 /**

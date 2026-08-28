@@ -20,6 +20,7 @@ export async function getCoursePassTypes(courseId: string): Promise<PassTypeData
     name: pt.name,
     description: pt.description,
     extensionOnly: pt.extensionOnly,
+    extendsCutoffOnly: pt.extendsCutoffOnly,
     initialBalance: pt.initialBalance,
     allowRequests: pt.allowRequests,
     hoursPerPass: pt.hoursPerPass,

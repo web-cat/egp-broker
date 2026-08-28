@@ -25,6 +25,8 @@ export const assignmentRowSchema = z.object({
   eligibleUntil: z.string().nullable().optional(),
   published: z.boolean().default(true),
   createdAt: z.string(),
+  toolId: z.string().nullable().optional(),
+  toolName: z.string().nullable().optional(),
   eligiblePassTypeNames: z.array(z.string()).optional(),
   eligiblePassTypes: z
     .array(
@@ -33,6 +35,7 @@ export const assignmentRowSchema = z.object({
         name: z.string(),
         hoursPerPass: z.number().optional(),
         extensionOnly: z.boolean().optional(),
+        extendsCutoffOnly: z.boolean().optional(),
         minDaysPastDue: z.number().nullable().optional(),
         maxDaysPastDue: z.number().nullable().optional()
       })

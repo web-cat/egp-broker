@@ -8,6 +8,28 @@
   >
     <template #body>
       <div class="space-y-6">
+        <!-- Associated LTI Tool -->
+        <div
+          class="flex items-center justify-between p-3.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50"
+        >
+          <div class="flex items-center gap-2.5">
+            <UIcon name="i-lucide-wrench" class="w-4 h-4 text-primary-500" />
+            <span
+              class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400"
+            >
+              LTI Tool:
+            </span>
+            <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+              {{ assignment?.toolName || 'None' }}
+            </span>
+          </div>
+          <UBadge v-if="assignment?.toolName" color="primary" variant="subtle" size="xs">
+            <UIcon name="i-lucide-link" class="w-3 h-3 mr-1" />
+            Connected
+          </UBadge>
+          <UBadge v-else color="neutral" variant="subtle" size="xs"> Not Configured </UBadge>
+        </div>
+
         <!-- Master Assignment Baseline Dates Card -->
         <div
           class="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 p-4"

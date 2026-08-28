@@ -368,8 +368,9 @@ model PassType {
   description String? // Optional teacher-facing note
 
   // Policy
-  extensionOnly  Boolean @default(false)
-  initialBalance Int     @default(3) // Passes each student starts with
+  extensionOnly     Boolean @default(false)
+  extendsCutoffOnly Boolean @default(false)
+  initialBalance    Int     @default(3) // Passes each student starts with
   allowRequests  Boolean @default(false) // Can a student request more?
   hoursPerPass   Float   @default(24) // Hours of extension each pass buys
   titlePattern   String? // Pattern-based matching (regex against Assignment.title)

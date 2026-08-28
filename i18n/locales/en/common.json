@@ -24,6 +24,8 @@
       "coolDownDescription": "Limits how often students can request this pass type.",
       "extensionOnlyLabel": "Extension Only",
       "extensionOnlyDescription": "Can this pass only be used for extensions?",
+      "extendsCutoffOnlyLabel": "Extend Late Deadline Only",
+      "extendsCutoffOnlyDescription": "Only move the late/cutoff deadline (acceptUntil) without changing the due date?",
       "allowRequestsLabel": "Allow Requests",
       "allowRequestsDescription": "Can students request more of these passes?",
       "notifications": {

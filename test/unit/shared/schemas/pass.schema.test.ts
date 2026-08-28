@@ -63,12 +63,36 @@ describe('Pass Type Schemas', () => {
   })
 
   describe('passTypeDataSchema', () => {
+    it('accepts and parses extendsCutoffOnly property', () => {
+      const data = {
+        id: 'pt1',
+        name: 'Late Pass',
+        description: null,
+        extensionOnly: true,
+        extendsCutoffOnly: true,
+        initialBalance: 3,
+        allowRequests: false,
+        hoursPerPass: 24,
+        titlePattern: null,
+        coolDownPeriod: null,
+        coolDownUnit: null,
+        coolDownReset: null,
+        coolDownResetOffset: null,
+        minDaysPastDue: 0,
+        maxDaysPastDue: null,
+        createdAt: new Date().toISOString()
+      }
+      const parsed = passTypeDataSchema.parse(data)
+      expect(parsed.extendsCutoffOnly).toBe(true)
+    })
+
     it('rejects negative minDaysPastDue', () => {
       const data = {
         id: 'pt1',
         name: 'Late Pass',
         description: null,
         extensionOnly: true,
+        extendsCutoffOnly: false,
         initialBalance: 3,
         allowRequests: false,
         hoursPerPass: 24,

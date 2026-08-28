@@ -308,9 +308,11 @@ const passTypeColumns: any[] = [
     header: 'Policy',
     cell: ({ row }: { row: any }) => {
       const ext = row.original.extensionOnly
+      const cutoff = row.original.extendsCutoffOnly
       const req = row.original.allowRequests
       const tags = []
-      if (ext) tags.push('Extension Only')
+      if (cutoff) tags.push('Cutoff Only')
+      else if (ext) tags.push('Extension Only')
       if (req) tags.push('Requests Allowed')
       return tags.join(', ') || 'Standard'
     }

@@ -217,6 +217,107 @@ describe('calculatePassExtension', () => {
     })
   })
 
+  describe('extendsCutoffOnly: true (Extends Late/Cutoff Deadline Only)', () => {
+    const passTypeCutoff24h = {
+      extensionOnly: true,
+      extendsCutoffOnly: true,
+      hoursPerPass: 24,
+      minDaysPastDue: null,
+      maxDaysPastDue: null
+    }
+
+    it('keeps dueDate unchanged and extends acceptUntil by hoursPerPass', () => {
+      const assignment = {
+        dueDate: '2026-03-10T23:59:00.000Z',
+        acceptUntil: '2026-03-10T23:59:00.000Z'
+      }
+      const now = new Date('2026-03-11T08:00:00.000Z')
+      const result = calculatePassExtension({
+        assignment,
+        passType: passTypeCutoff24h,
+        latestRedemption: null,
+        now
+      })
+
+      expect(result.isEligible).toBe(true)
+      expect(result.cost).toBe(1)
+      expect(result.newDueDate?.toISOString()).toBe('2026-03-10T23:59:00.000Z')
+      expect(result.newAcceptUntil?.toISOString()).toBe('2026-03-11T23:59:00.000Z')
+      expect(result.isClipped).toBe(false)
+    })
+
+    it('extends from initial acceptUntil when acceptUntil differs from dueDate', () => {
+      const assignment = {
+        dueDate: '2026-03-10T23:59:00.000Z',
+        acceptUntil: '2026-03-12T23:59:00.000Z' // 2 days late window already
+      }
+      const now = new Date('2026-03-13T08:00:00.000Z')
+      const result = calculatePassExtension({
+        assignment,
+        passType: passTypeCutoff24h,
+        latestRedemption: null,
+        now
+      })
+
+      expect(result.isEligible).toBe(true)
+      expect(result.cost).toBe(1)
+      expect(result.newDueDate?.toISOString()).toBe('2026-03-10T23:59:00.000Z')
+      expect(result.newAcceptUntil?.toISOString()).toBe('2026-03-13T23:59:00.000Z')
+    })
+
+    it('stacks contiguously from previous redemption acceptUntil', () => {
+      const assignment = {
+        dueDate: '2026-03-10T23:59:00.000Z',
+        acceptUntil: '2026-03-10T23:59:00.000Z'
+      }
+      const latestRedemption = {
+        dueDate: '2026-03-10T23:59:00.000Z',
+        acceptUntil: '2026-03-11T23:59:00.000Z'
+      }
+      const now = new Date('2026-03-12T08:00:00.000Z')
+      const result = calculatePassExtension({
+        assignment,
+        passType: passTypeCutoff24h,
+        latestRedemption,
+        now
+      })
+
+      expect(result.isEligible).toBe(true)
+      expect(result.cost).toBe(1)
+      expect(result.newDueDate?.toISOString()).toBe('2026-03-10T23:59:00.000Z')
+      expect(result.newAcceptUntil?.toISOString()).toBe('2026-03-12T23:59:00.000Z')
+    })
+
+    it('clips acceptUntil to maxDaysPastDue while keeping dueDate fixed', () => {
+      const assignment = {
+        dueDate: '2026-05-20T23:59:00.000Z',
+        acceptUntil: '2026-05-20T23:59:00.000Z'
+      }
+      const passType48hMax3 = {
+        extensionOnly: true,
+        extendsCutoffOnly: true,
+        hoursPerPass: 48,
+        minDaysPastDue: 0,
+        maxDaysPastDue: 3
+      }
+      const latestRedemption = {
+        dueDate: '2026-05-20T23:59:00.000Z',
+        acceptUntil: '2026-05-22T23:59:00.000Z'
+      }
+      const result = calculatePassExtension({
+        assignment,
+        passType: passType48hMax3,
+        latestRedemption,
+        now: new Date('2026-05-23T09:15:00.000Z')
+      })
+
+      expect(result.cost).toBe(1)
+      expect(result.newDueDate?.toISOString()).toBe('2026-05-20T23:59:00.000Z')
+      expect(result.newAcceptUntil?.toISOString()).toBe('2026-05-23T23:59:00.000Z')
+      expect(result.isClipped).toBe(true)
+    })
+  })
+
   describe('extensionOnly: false (Standard Resubmission/Retry Pass)', () => {
     const passTypeRetry = {
       extensionOnly: false,

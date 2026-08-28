@@ -13,6 +13,7 @@ export interface PassExtensionInput {
   }
   passType: {
     extensionOnly: boolean
+    extendsCutoffOnly?: boolean
     hoursPerPass: number
     minDaysPastDue?: number | null
     maxDaysPastDue?: number | null
@@ -87,7 +88,22 @@ export function calculatePassExtension(input: PassExtensionInput): PassExtension
   }
 
   // Check if student already redeemed a pass and the extended deadline has not passed yet
-  if (latestRedemption?.dueDate) {
+  if (passType.extendsCutoffOnly) {
+    if (latestRedemption?.acceptUntil) {
+      const prevAcceptUntil = new Date(latestRedemption.acceptUntil)
+      if (now.getTime() <= prevAcceptUntil.getTime()) {
+        return {
+          isEligible: false,
+          reason:
+            'Assignment is not eligible for another pass until the current extended cutoff deadline has passed.',
+          cost: 0,
+          newDueDate: null,
+          newAcceptUntil: null,
+          isClipped: false
+        }
+      }
+    }
+  } else if (latestRedemption?.dueDate) {
     const prevDueDate = new Date(latestRedemption.dueDate)
     if (now.getTime() <= prevDueDate.getTime()) {
       return {
@@ -103,7 +119,7 @@ export function calculatePassExtension(input: PassExtensionInput): PassExtension
   }
 
   // --- Non-extension pass (Standard Resubmission/Retry) ---
-  if (!passType.extensionOnly) {
+  if (!passType.extensionOnly && !passType.extendsCutoffOnly) {
     const rawDueDate = new Date(now.getTime() + durationMs)
     let newDueDate = rawDueDate
     let isClipped = false
@@ -123,7 +139,63 @@ export function calculatePassExtension(input: PassExtensionInput): PassExtension
     }
   }
 
-  // --- Extension-only pass ---
+  // --- Cutoff-only Extension pass (Leaves DueDate fixed, moves AcceptUntil) ---
+  if (passType.extendsCutoffOnly) {
+    const baseAcceptUntil = assignment.acceptUntil ? new Date(assignment.acceptUntil) : origDueDate
+
+    const currentCutoff = latestRedemption?.acceptUntil
+      ? new Date(latestRedemption.acceptUntil)
+      : baseAcceptUntil
+
+    if (maxAllowedDate && currentCutoff.getTime() >= maxAllowedDate.getTime()) {
+      return {
+        isEligible: false,
+        reason: 'Assignment has already reached the maximum days limit.',
+        cost: 0,
+        newDueDate: null,
+        newAcceptUntil: null,
+        isClipped: false
+      }
+    }
+
+    let cost = 1
+    if (now.getTime() > currentCutoff.getTime()) {
+      const elapsedPastCurrent = now.getTime() - currentCutoff.getTime()
+      cost = Math.floor(elapsedPastCurrent / durationMs) + 1
+    }
+
+    const rawAcceptUntil = new Date(currentCutoff.getTime() + cost * durationMs)
+    let newAcceptUntil = rawAcceptUntil
+    let isClipped = false
+
+    if (maxAllowedDate && rawAcceptUntil.getTime() > maxAllowedDate.getTime()) {
+      newAcceptUntil = maxAllowedDate
+      isClipped = true
+    }
+
+    if (newAcceptUntil.getTime() < now.getTime()) {
+      return {
+        isEligible: false,
+        reason: 'Extension cannot move deadline past the current time within allowed limits.',
+        cost,
+        newDueDate: null,
+        newAcceptUntil: null,
+        isClipped
+      }
+    }
+
+    const newDueDate = assignment.dueDate ? new Date(assignment.dueDate) : null
+
+    return {
+      isEligible: true,
+      cost,
+      newDueDate,
+      newAcceptUntil,
+      isClipped
+    }
+  }
+
+  // --- DueDate Extension-only pass ---
   // Current effective deadline (latest redemption's dueDate, or original assignment dueDate)
   const currentDueDate = latestRedemption?.dueDate
     ? new Date(latestRedemption.dueDate)

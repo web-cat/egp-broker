@@ -8,6 +8,7 @@ import {
   fetchCanvasSections,
   getPlatformCanvasDomain
 } from '@@/server/utils/canvas'
+import { matchLtiToolForLaunchUrl, syncAssignmentEligibility } from '@@/server/utils/assignments'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentRow[]>> => {
   const session = await getUserSession(event)
@@ -167,9 +168,17 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
     `[Canvas Sync] Retrieved ${canvasAssignments.length} assignment(s) from Canvas. Processing DB upserts...`
   )
 
+  // Fetch registered LTI tools once for matching external tool URLs
+  const registeredTools = await prisma.ltiTool.findMany({
+    select: { id: true, baseUrl: true }
+  })
+
   // 4. Sync Logic
   for (const ca of canvasAssignments) {
     const canvasIdStr = ca.id.toString()
+    const launchUrl = ca.external_tool_tag_attributes?.url
+    const matchedToolId = matchLtiToolForLaunchUrl(launchUrl, registeredTools)
+    const canvasResourceLinkId = ca.external_tool_tag_attributes?.resource_link_id
 
     // Attempt 1: Find by canvasAssignmentId
     let assignment = await prisma.assignment.findFirst({
@@ -191,21 +200,32 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
     }
 
     if (assignment) {
-      // Update
+      // Update existing assignment
+      const updateData: Record<string, any> = {
+        title: ca.name,
+        canvasAssignmentId: canvasIdStr,
+        dueDate: ca.due_at ? new Date(ca.due_at) : null,
+        availableFrom: ca.unlock_at ? new Date(ca.unlock_at) : null,
+        acceptUntil: ca.lock_at ? new Date(ca.lock_at) : null,
+        published: ca.published ?? true
+      }
+
+      // Automatically link external tool if matched and not previously configured
+      if (matchedToolId && !assignment.toolId) {
+        updateData.toolId = matchedToolId
+      }
+
+      // Automatically link resource link ID if present and not already set
+      if (canvasResourceLinkId && !assignment.resourceLinkId) {
+        updateData.resourceLinkId = canvasResourceLinkId
+      }
+
       assignment = await prisma.assignment.update({
         where: { id: assignment.id },
-        data: {
-          title: ca.name,
-          canvasAssignmentId: canvasIdStr,
-          dueDate: ca.due_at ? new Date(ca.due_at) : null,
-          availableFrom: ca.unlock_at ? new Date(ca.unlock_at) : null,
-          acceptUntil: ca.lock_at ? new Date(ca.lock_at) : null,
-          published: ca.published ?? true
-          // Do not overwrite resourceLinkId if it exists
-        }
+        data: updateData
       })
     } else {
-      // Create new
+      // Create new assignment with matched tool and resource link ID
       assignment = await prisma.assignment.create({
         data: {
           courseId: course.id,
@@ -215,7 +235,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
           availableFrom: ca.unlock_at ? new Date(ca.unlock_at) : null,
           acceptUntil: ca.lock_at ? new Date(ca.lock_at) : null,
           published: ca.published ?? true,
-          resourceLinkId: undefined // Optional now
+          toolId: matchedToolId ?? undefined,
+          resourceLinkId: canvasResourceLinkId || undefined
         }
       })
     }
@@ -343,6 +364,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
     orderBy: [{ dueDate: 'desc' }, { title: 'asc' }],
     include: {
       course: { select: { label: true, title: true } },
+      tool: { select: { id: true, name: true } },
       passEligibilities: {
         include: { passType: true }
       }
@@ -358,6 +380,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
       canvasAssignmentId: a.canvasAssignmentId,
       courseLabel: a.course.label,
       courseTitle: a.course.title,
+      toolId: a.toolId ?? null,
+      toolName: a.tool?.name ?? null,
       dueDate: a.dueDate?.toISOString() ?? null,
       availableFrom: a.availableFrom?.toISOString() ?? null,
       acceptUntil: a.acceptUntil?.toISOString() ?? null,

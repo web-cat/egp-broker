@@ -4,7 +4,8 @@ import {
   syncPassTypeEligibility,
   recalculateAssignmentEligibleDates,
   getCourseAssignments,
-  setManualEligibilities
+  setManualEligibilities,
+  matchLtiToolForLaunchUrl
 } from '../../../../server/utils/assignments'
 import prisma from '@@/server/utils/db'
 
@@ -216,6 +217,8 @@ describe('Assignment Eligibility Logic', () => {
           resourceLinkId: 'rl1',
           title: 'A1',
           canvasAssignmentId: 'c1',
+          toolId: 'tool-1',
+          tool: { id: 'tool-1', name: 'CodeWorkout' },
           dueDate: mockDate,
           availableFrom: mockDate,
           acceptUntil: mockDate,
@@ -244,6 +247,8 @@ describe('Assignment Eligibility Logic', () => {
         canvasAssignmentId: 'c1',
         courseLabel: 'C1',
         courseTitle: 'Course 1',
+        toolId: 'tool-1',
+        toolName: 'CodeWorkout',
         dueDate: mockDate.toISOString(),
         availableFrom: mockDate.toISOString(),
         acceptUntil: mockDate.toISOString(),
@@ -313,6 +318,42 @@ describe('Assignment Eligibility Logic', () => {
         }
       })
       expect(prisma.$transaction).toHaveBeenCalled()
+    })
+  })
+
+  describe('matchLtiToolForLaunchUrl', () => {
+    const tools = [
+      { id: 'tool-cw', baseUrl: 'https://codeworkout.org' },
+      { id: 'tool-webcat', baseUrl: 'https://web-cat.cs.vt.edu/Web-CAT' },
+      { id: 'tool-gradescope', baseUrl: 'https://www.gradescope.com' }
+    ]
+
+    it('returns null if launchUrl or tools list is empty', () => {
+      expect(matchLtiToolForLaunchUrl(null, tools)).toBeNull()
+      expect(matchLtiToolForLaunchUrl('', tools)).toBeNull()
+      expect(matchLtiToolForLaunchUrl('https://codeworkout.org/launch', [])).toBeNull()
+    })
+
+    it('matches tool by baseUrl prefix or domain', () => {
+      expect(matchLtiToolForLaunchUrl('https://codeworkout.org/lti/launch', tools)).toBe('tool-cw')
+      expect(
+        matchLtiToolForLaunchUrl(
+          'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/lti',
+          tools
+        )
+      ).toBe('tool-webcat')
+      expect(
+        matchLtiToolForLaunchUrl('https://www.gradescope.com/courses/10/assignments/20', tools)
+      ).toBe('tool-gradescope')
+    })
+
+    it('handles case-insensitivity and trailing slashes in baseUrl', () => {
+      const customTools = [{ id: 'tool-1', baseUrl: 'https://Example.COM/app/' }]
+      expect(matchLtiToolForLaunchUrl('https://example.com/app/lti', customTools)).toBe('tool-1')
+    })
+
+    it('returns null when no registered tool matches the launch URL', () => {
+      expect(matchLtiToolForLaunchUrl('https://unregistered-tool.com/launch', tools)).toBeNull()
     })
   })
 })
