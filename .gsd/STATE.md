@@ -1,33 +1,38 @@
 ---
-updated: 2026-09-02T21:08:10-04:00
+updated: 2026-09-02T21:16:10-04:00
 ---
 
 # Project State
 
 ## Current Position
 
-**Milestone:** v1.0 - CBTF Scheduler
-**Phase:** 0 - Project Initialization & Discovery
-**Status:** planning
-**Plan:** Codebase mapping completed; entering deep questioning for CBTF Scheduler specification
+**Milestone:** v1.0 — CBTF Scheduler
+**Phase:** 1 - Foundation & Data Layer
+**Status:** ready-to-plan
+**Plan:** None active (ready for `/plan 1`)
 
 ## Last Action
 
-Codebase mapped via `/map`. Created `.gsd/ARCHITECTURE.md` and `.gsd/STACK.md`. Verified baseline test suite passes (76 test files, 290 unit tests passing).
+Completed `/new-project` workflow:
+- Conducted deep questioning and established decisions.
+- Created finalized `.gsd/SPEC.md`.
+- Generated `.gsd/REQUIREMENTS.md` with 15 traceable items.
+- Generated `.gsd/ROADMAP.md` covering 4 phases.
+- Initialized `.gsd/DECISIONS.md`, `.gsd/JOURNAL.md`, and `.gsd/TODO.md`.
 
 ## Next Steps
 
-1. Conduct deep questioning and clarification on `cbtf-scheduler.md` requirements.
-2. Produce `.gsd/SPEC.md` for CBTF Scheduler feature.
-3. Formulate `.gsd/REQUIREMENTS.md` and `.gsd/ROADMAP.md`.
-4. Initialize `.gsd/DECISIONS.md` and `.gsd/JOURNAL.md`.
+1. Run `/discuss-phase 1` (optional) or `/plan 1` to design and execute Phase 1: Foundation & Data Layer.
+2. Update Prisma schema with CBTF models, relations, and enums.
+3. Generate and apply database migrations within Docker.
 
 ## Active Decisions
 
 | Decision | Choice | Made | Affects |
 | --- | --- | --- | --- |
-| Brownfield Mapping | Ran `/map` before `/new-project` | 2026-09-02 | Overall architecture & planning |
-| Architecture Standard | Nuxt 4 + Zod + Prisma + Vitest per GEMINI.md | 2026-09-02 | All phases |
+| [DECISION-001](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L8) | Single CBTF Facility scope | 2026-09-02 | All phases |
+| [DECISION-002](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L20) | Add PROCTOR to GlobalRole | 2026-09-02 | Phase 1, Phase 4 |
+| [DECISION-003](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L32) | Add studentId field on User | 2026-09-02 | Phase 1, Phase 4 |
 
 ## Blockers
 
@@ -35,10 +40,8 @@ None.
 
 ## Concerns
 
-- Need to clarify CBTF room model (single room or multi-room support, opening/closing schedule exceptions).
-- Need to clarify proctor access/authentication & role assignments.
-- Integration details with existing `Assignment` and pass redemptions.
+None. Testing baseline verified passing (290 tests).
 
 ## Session Context
 
-Baseline unit tests pass without issues in Docker container `app-dev`. Ready for Deep Questioning phase of `/new-project`.
+Project initialized. All core specifications and documentation are committed.

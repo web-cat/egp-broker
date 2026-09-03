@@ -4,64 +4,64 @@
 
 ## Runtime
 
-| Technology | Version | Purpose |
-|---|---|---|
-| Node.js | 24.x | Server JavaScript runtime |
-| Nuxt | 4.2.0 | Full-stack Vue meta-framework |
-| Vue | 3.5.13 | Frontend UI framework |
-| Nitro | ^2.9.x / H3 ^1.15.0 | High-performance server engine |
-| PostgreSQL | 18 (Alpine) | Primary relational database |
-| Prisma ORM | 6.18.0 / 6.14.0 | Database schema modeling & client |
+| Technology | Version             | Purpose                           |
+| ---------- | ------------------- | --------------------------------- |
+| Node.js    | 24.x                | Server JavaScript runtime         |
+| Nuxt       | 4.2.0               | Full-stack Vue meta-framework     |
+| Vue        | 3.5.13              | Frontend UI framework             |
+| Nitro      | ^2.9.x / H3 ^1.15.0 | High-performance server engine    |
+| PostgreSQL | 18 (Alpine)         | Primary relational database       |
+| Prisma ORM | 6.18.0 / 6.14.0     | Database schema modeling & client |
 
 ## Dependencies
 
 ### Production
 
-| Package | Version | Purpose |
-|---|---|---|
-| `@nuxt/ui` | 4.1.0 | UI component library built on Tailwind CSS |
-| `@nuxtjs/i18n` | ^10.0.6 | Internationalization (en, fr, etc.) |
-| `@pinia/nuxt` / `pinia` | ^0.11.2 / ^3.0.3 | Global reactive state management |
-| `pinia-plugin-persistedstate`| ^4.5.0 | State persistence |
-| `@casl/ability` / `@casl/vue`| ^6.8.0 / ^2.2.6 | Attribute- and role-based permissions |
-| `zod` | ^4.0.17 | Runtime schema validation & type inference |
-| `jose` | ^6.1.3 | JSON Web Token (JWT) & JWKS cryptographic signing |
-| `nuxt-auth-utils` | ^0.5.23 | Secure encrypted session management |
-| `nuxt-security` | ^2.4.0 | Security headers, rate limiting, CSRF protection |
-| `nodemailer` | ^7.0.10 | Transactional email delivery |
-| `handlebars` | ^4.7.8 | Template rendering for email notifications |
-| `@prisma/client` | 6.18.0 | Prisma Client ORM |
+| Package                       | Version          | Purpose                                           |
+| ----------------------------- | ---------------- | ------------------------------------------------- |
+| `@nuxt/ui`                    | 4.1.0            | UI component library built on Tailwind CSS        |
+| `@nuxtjs/i18n`                | ^10.0.6          | Internationalization (en, fr, etc.)               |
+| `@pinia/nuxt` / `pinia`       | ^0.11.2 / ^3.0.3 | Global reactive state management                  |
+| `pinia-plugin-persistedstate` | ^4.5.0           | State persistence                                 |
+| `@casl/ability` / `@casl/vue` | ^6.8.0 / ^2.2.6  | Attribute- and role-based permissions             |
+| `zod`                         | ^4.0.17          | Runtime schema validation & type inference        |
+| `jose`                        | ^6.1.3           | JSON Web Token (JWT) & JWKS cryptographic signing |
+| `nuxt-auth-utils`             | ^0.5.23          | Secure encrypted session management               |
+| `nuxt-security`               | ^2.4.0           | Security headers, rate limiting, CSRF protection  |
+| `nodemailer`                  | ^7.0.10          | Transactional email delivery                      |
+| `handlebars`                  | ^4.7.8           | Template rendering for email notifications        |
+| `@prisma/client`              | 6.18.0           | Prisma Client ORM                                 |
 
 ### Development
 
-| Package | Version | Purpose |
-|---|---|---|
-| `typescript` | ^5.9.2 | Type checker and compiler |
-| `vitest` | ^3.2.0 | Fast unit and integration testing runner |
-| `@vue/test-utils` | 2.4.6 | Vue component test harness |
-| `@playwright/test` | ^1.58.2 | End-to-end browser automation suite |
-| `tailwindcss` / `@tailwindcss/vite` | 4.0.0 | Utility-first CSS styling engine |
-| `eslint` / `@nuxt/eslint` | ^9.33.0 / 1.9.0 | Code quality and linting |
-| `prettier` | ^3.6.2 | Opinionated code formatting |
-| `husky` | ^9.1.7 | Git hooks automation |
-| `@commitlint/cli` | 20.1.0 | Conventional commit message enforcement |
-| `git-cliff` | CLI | Changelog generator from conventional commits |
+| Package                             | Version         | Purpose                                       |
+| ----------------------------------- | --------------- | --------------------------------------------- |
+| `typescript`                        | ^5.9.2          | Type checker and compiler                     |
+| `vitest`                            | ^3.2.0          | Fast unit and integration testing runner      |
+| `@vue/test-utils`                   | 2.4.6           | Vue component test harness                    |
+| `@playwright/test`                  | ^1.58.2         | End-to-end browser automation suite           |
+| `tailwindcss` / `@tailwindcss/vite` | 4.0.0           | Utility-first CSS styling engine              |
+| `eslint` / `@nuxt/eslint`           | ^9.33.0 / 1.9.0 | Code quality and linting                      |
+| `prettier`                          | ^3.6.2          | Opinionated code formatting                   |
+| `husky`                             | ^9.1.7          | Git hooks automation                          |
+| `@commitlint/cli`                   | 20.1.0          | Conventional commit message enforcement       |
+| `git-cliff`                         | CLI             | Changelog generator from conventional commits |
 
 ## Infrastructure & Environment
 
-| Service | Provider | Purpose |
-|---|---|---|
-| App Container | Docker (`app-dev`) | Development environment running Nuxt on port 3000 |
-| Database | Docker (`postgres`) | PostgreSQL 18 on port 5432 |
-| Database Admin | Docker (`adminer`) | Adminer web UI on port 8080 |
-| Browser Automation | Docker (`playwright`) | Playwright container on port 3001 |
+| Service            | Provider              | Purpose                                           |
+| ------------------ | --------------------- | ------------------------------------------------- |
+| App Container      | Docker (`app-dev`)    | Development environment running Nuxt on port 3000 |
+| Database           | Docker (`postgres`)   | PostgreSQL 18 on port 5432                        |
+| Database Admin     | Docker (`adminer`)    | Adminer web UI on port 8080                       |
+| Browser Automation | Docker (`playwright`) | Playwright container on port 3001                 |
 
 ## Key Configuration Variables
 
-| Variable | Purpose | Location |
-|---|---|---|
-| `NUXT_DATABASE_URL` | PostgreSQL connection string | `.env` |
-| `NUXT_SESSION_PASSWORD` | AES-256 session cookie encryption key | `.env` |
-| `NUXT_PUBLIC_SITE_URL` | Base canonical application URL | `.env` |
-| `NUXT_EMAIL_*` | SMTP host, user, password, from address | `.env` |
-| `NUXT_NTFY_*` | ntfy alert topic and endpoint | `.env` |
+| Variable                | Purpose                                 | Location |
+| ----------------------- | --------------------------------------- | -------- |
+| `NUXT_DATABASE_URL`     | PostgreSQL connection string            | `.env`   |
+| `NUXT_SESSION_PASSWORD` | AES-256 session cookie encryption key   | `.env`   |
+| `NUXT_PUBLIC_SITE_URL`  | Base canonical application URL          | `.env`   |
+| `NUXT_EMAIL_*`          | SMTP host, user, password, from address | `.env`   |
+| `NUXT_NTFY_*`           | ntfy alert topic and endpoint           | `.env`   |

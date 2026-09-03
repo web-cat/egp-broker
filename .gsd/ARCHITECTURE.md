@@ -57,18 +57,21 @@ The codebase strictly enforces the Nuxt 4 Constitution defined in `GEMINI.md`:
 ## Key Components
 
 ### 1. Presentation Layer (`app/`)
+
 - **Student Dashboard (`app/components/features/dashboard/Student.vue`)**: Displays student enrollments, assignment deadlines, pass balances, and allows redeeming tokens/passes to extend due dates or retake assignments.
 - **Teacher Dashboard (`app/components/features/dashboard/Teacher.vue`)**: Allows instructors to configure pass types, view student pass pools, monitor redemptions, and inspect assignment overrides.
 - **Admin Section (`app/pages/admin/` & `app/components/features/admin/`)**: Full administration UI for managing LTI platforms, tool deployments, CAS servers, courses, assignments, and grade translations.
 - **Base Components (`app/components/base/`)**: Isolated, reusable UI atoms conforming to design tokens (BaseDataTable, BaseModal, BaseButton, BaseInput).
 
 ### 2. Domain & API Layer (`server/`)
+
 - **LTI 1.3 Launch & OIDC Handshake (`server/utils/lti-launch.ts`, `server/api/lti13/`)**: Handles IMS Global LTI 1.3 authentication, id_token verification with JWKS endpoints, course contextualization, and automatic user enrollment.
 - **Canvas LMS Sync (`server/utils/canvas.ts`, `server/api/me/assignments/sync.post.ts`)**: Integrates with Canvas REST APIs to synchronize course assignments, sections, and external tool placements.
 - **Pass & Redemption Management (`server/utils/redemptions.ts`, `server/utils/pass-types.ts`)**: Enforces pass policies, cooldown windows, balance deductions, and generates assignment deadline overrides in both the local database and external LMS.
 - **Authentication & Sessions (`server/utils/session.ts`, `server/api/auth/`)**: Multi-provider authentication supporting local credentials, Virginia Tech CAS, and LTI SSO.
 
 ### 3. Data Model (`prisma/schema.prisma`)
+
 - **User & Roles**: `User` with `GlobalRole` (ADMIN, INSTRUCTOR, USER) and `Enrollment` with `CourseRole` (TEACHER, STUDENT, TA, OBSERVER, DESIGNER).
 - **LTI Integration**: `LtiPlatform`, `LtiDeployment`, `LtiTool`, `LtiIdentity`, `LtiResult`.
 - **Course & Content**: `Course`, `CourseSection`, `Assignment`, `GradeTranslation`.
@@ -82,13 +85,13 @@ The codebase strictly enforces the Nuxt 4 Constitution defined in `GEMINI.md`:
 
 ## Integration Points
 
-| Service | Protocol | Purpose |
-|---|---|---|
-| Canvas LMS | LTI 1.3 / REST API | Course enrollment, assignment metadata, student overrides, grade sync |
-| CAS Server | CAS 2.0 / 3.0 | Institutional single sign-on authentication |
+| Service        | Protocol               | Purpose                                                                     |
+| -------------- | ---------------------- | --------------------------------------------------------------------------- |
+| Canvas LMS     | LTI 1.3 / REST API     | Course enrollment, assignment metadata, student overrides, grade sync       |
+| CAS Server     | CAS 2.0 / 3.0          | Institutional single sign-on authentication                                 |
 | External Tools | LTI 1.1 / 1.3 / SPLICE | Direct student launch into educational tools (e.g. Gradescope, CodeWorkout) |
-| SMTP | SMTP | Email verification and password resets |
-| ntfy | HTTP | Administrator alert delivery |
+| SMTP           | SMTP                   | Email verification and password resets                                      |
+| ntfy           | HTTP                   | Administrator alert delivery                                                |
 
 ## Conventions & Architectural Standards
 
