@@ -1,16 +1,16 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 2
+> **Current Phase**: Phase 3
 > **Milestone**: v1.0 — CBTF Scheduler
 
 ## Must-Haves (from SPEC)
 
 - [x] Facility model with seat capacity, weekly hours, exceptions, and custom seat allocation sequence.
-- [ ] Arrival throttling ($\lceil \text{total\_seats} / 12 \rceil$) on 5-minute boundary, 1-hour duration reservations.
-- [ ] Deterministic sequential seat allocation across consecutive reservations.
-- [ ] 3-step student progressive narrowing wizard (morning/afternoon -> 3-4 days -> 1 slot per hour).
-- [ ] Student dashboard status tracking and rescheduling for missed/upcoming reservations.
-- [ ] Retake pass integration establishing new scheduling windows.
+- [x] Arrival throttling ($\lceil \text{total\_seats} / 12 \rceil$) on 5-minute boundary, 1-hour duration reservations.
+- [x] Deterministic sequential seat allocation across consecutive reservations.
+- [x] 3-step student progressive narrowing wizard (morning/afternoon -> 3-4 days -> 1 slot per hour).
+- [x] Student dashboard status tracking and rescheduling for missed/upcoming reservations.
+- [x] Retake pass integration establishing new scheduling windows.
 - [ ] Proctor operational console for live arrivals, departures, student ID check-in with photo verification, and checkout.
 - [ ] Admin management of facility configuration and proctor shifts.
 
@@ -42,7 +42,7 @@
 
 ### Phase 2: Core Scheduling Engine & Business Logic
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Completed (2026-09-02)
 **Objective**: Build server-side scheduling algorithms for progressive slot recommendation, arrival throttling, sequential seat allocation, reservation lifecycle, and pass redemption integration.
 **Requirements**: REQ-04, REQ-05, REQ-06, REQ-09, REQ-10
 **Deliverables**:

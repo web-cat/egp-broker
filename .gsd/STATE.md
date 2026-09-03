@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-02T22:04:40-04:00
+updated: 2026-09-02T22:26:50-04:00
 ---
 
 # Project State
@@ -7,20 +7,23 @@ updated: 2026-09-02T22:04:40-04:00
 ## Current Position
 
 **Milestone:** v1.0 — CBTF Scheduler
-**Phase:** 2 - Core Scheduling Engine & Business Logic
-**Status:** planning
-**Plan:** Ready for execution (Plans 2.1 and 2.2 created)
+**Phase:** 3 - Student & Instructor Interfaces
+**Status:** ready-to-plan
+**Plan:** None active (ready for `/plan 3`)
 
 ## Last Action
 
-Completed planning for Phase 2:
-- Created `.gsd/phases/2/2.1-PLAN.md` (Core scheduling & sequential seat allocation engine, retake pass window integration, unit tests).
-- Created `.gsd/phases/2/2.2-PLAN.md` (Student availability & reservation lifecycle API endpoints, transactions, API unit tests).
+Executed Phase 2: Core Scheduling Engine & Business Logic:
+- Implemented `server/utils/cbtf.ts` with operating hours resolution, 5-minute boundary slot generation, arrival throttle limit ($\le \lceil \text{total\_seats} / 12 \rceil$), sequential seat allocation engine (preserving order across slots and wrapping around), student scheduling window resolution (with pass redemption retake support), and progressive narrowing recommendations (morning vs afternoon, top 3-4 days, 1 slot per hour).
+- Created student availability endpoint `GET /api/me/cbtf/availability`.
+- Created reservation endpoints `GET /api/me/cbtf/reservations`, `POST /api/me/cbtf/reservations`, `PATCH /api/me/cbtf/reservations/[id]`, and `DELETE /api/me/cbtf/reservations/[id]`.
+- Implemented unit and API integration tests in `test/unit/server/utils/cbtf.test.ts` (17 tests) and `test/unit/server/api/me/cbtf-reservations.test.ts` (10 tests). All 44 CBTF tests pass.
+- Verified full test suite regression: 79 test files passed, 334 tests passed, 0 failures.
+- Passed `pnpm lint` (prettier & eslint).
 
 ## Next Steps
 
-1. Obtain approval on implementation plan for Phase 2.
-2. Execute Phase 2 starting with Plan 2.1.
+1. Run `/plan 3` to plan Phase 3: Student & Instructor Interfaces (Teacher dashboard assignment toggle & window editor, student dashboard status badge, 3-step progressive narrowing reservation modal `CbtfScheduleModal.vue`, and rescheduling workflows).
 
 ## Active Decisions
 
@@ -36,8 +39,8 @@ None.
 
 ## Concerns
 
-None. Phase 1 foundation is fully deployed and verified with 307 tests passing.
+None. 334/334 tests passing.
 
 ## Session Context
 
-Phase 2 plans established across 2 execution waves. Ready for user review.
+Phase 2 completed and verified empirically. Ready for Phase 3 UI development.
