@@ -74,17 +74,24 @@
 **Deliverables**:
 
 - Instructor Dashboard & Assignment Edit Panel:
-  - Toggle for "Require CBTF Reservation".
+  - Toggle for "Require CBTF Reservation" (`isSchedulable`).
   - Date-time pickers for reservation start/end window.
+  - Schedulable badge in assignments table.
 - Student Dashboard Integration:
-  - CBTF status pill on assignment rows (Not Scheduled, Scheduled for [Date/Time], Missed, Completed).
-  - "Schedule Exam" / "Reschedule" action button.
+  - Top "Upcoming CBTF Reservation" stat card next to pass pools.
+  - CBTF status badge and action button on assignment rows.
 - Progressive Narrowing Modal (`CbtfScheduleModal.vue`):
-  - Step 1: Morning vs. Afternoon preference selector.
-  - Step 2: 3–4 Recommended Days card selection with utilization indicators.
-  - Step 3: Hourly time slot radio selection and confirmation.
-- Feature composable `useCbtfStudent.ts` with error handling and reactive state.
-- Vitest unit tests for modal and composables.
+  - Stepper wizard: Step 1 (Morning/Afternoon) -> Step 2 (3-4 Days) -> Step 3 (Hourly slots) -> Step 4 (Confirmation).
+  - Reschedule and cancellation actions directly inside modal.
+- Admin CBTF Facility Management (`/admin/cbtf`):
+  - Facility settings (capacity, seat allocation sequence).
+  - Weekly operating hours editor.
+  - Schedule exceptions (closures and custom hours) manager.
+  - Proctor shift scheduling.
+  - Global reservations table with status filtering and management.
+  - Server endpoints under `server/api/admin/cbtf/*`.
+- Feature composables (`useCbtfStudent.ts`, `useCbtfAdmin.ts`).
+- Vitest unit tests for composables, API endpoints, and components.
 
 ---
 

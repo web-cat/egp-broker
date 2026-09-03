@@ -57,8 +57,26 @@ Add a `studentId` string field (`@unique`, optional) to the `User` model.
 
 ### Rationale
 
-Enables fast indexed lookup during student check-in and check-out at testing center check-in desks.
+Enforces fast indexed lookup during student check-in and check-out at testing center check-in desks.
 
 ---
 
-_Last updated: 2026-09-02_
+## [DECISION-004] Student Dashboard Layout, Stepper Modal & Admin Facility Pages
+
+**Date**: 2026-09-02
+**Status**: Accepted
+
+### Context
+
+Clarification requested for Phase 3 UI architecture, progressive narrowing workflow, and administrative facilities.
+
+### Decision
+
+1. **Student Dashboard (Option A)**: Display inline status and action button in the assignments table plus an "Upcoming Test Reservation" card at the top alongside Pass Pools.
+2. **Progressive Narrowing Wizard**: Implement as a dedicated multi-step modal (`CbtfScheduleModal.vue`) with a clear stepper (Time of Day -> Recommended Days -> Hourly Slots -> Confirmation).
+3. **Reschedule & Cancel Workflows**: Place both rescheduling and cancellation controls directly within the reservation modal.
+4. **Admin Facility Management**: Build full-featured admin management under `/admin/cbtf` (`app/pages/admin/cbtf.vue`) covering Facility settings, Operating Hours, Schedule Exceptions, Proctor Shifts, and Reservations Log with matching server endpoints under `server/api/admin/cbtf/*`.
+
+### Rationale
+
+Provides seamless, prominent visibility of upcoming test bookings for students, avoids scheduling errors with guided progressive narrowing, and gives administrators complete CRUD control over all CBTF data models.
