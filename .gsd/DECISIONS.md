@@ -80,3 +80,36 @@ Clarification requested for Phase 3 UI architecture, progressive narrowing workf
 ### Rationale
 
 Provides seamless, prominent visibility of upcoming test bookings for students, avoids scheduling errors with guided progressive narrowing, and gives administrators complete CRUD control over all CBTF data models.
+
+---
+
+## [DECISION-005] Proctor Console Design & ID Card Swipe Station
+
+**Date**: 2026-09-03
+**Status**: Accepted
+
+### Context
+
+Clarification requested for Phase 4 regarding `/proctor` operational console access, duty tracking, screen layout, check-in time tolerance, and card swipe hardware handling.
+
+### Decision
+
+1. **Access & Duty Status**: Permit access to `/proctor` at any time for users with `PROCTOR` or `ADMIN` roles. Provide an explicit toggle switch allowing proctors to turn on/turn off their "on duty" status.
+2. **Layout Architecture (Option A Command Center)**:
+   - **Header**: Live digital clock, on-duty toggle, real-time counters (Seated, Arriving, Scheduled to Depart).
+   - **Left Column**: High-speed ID card swipe check-in / check-out station with automatic swipe parsing, visual photo verification card, seat badge, and clear status alerts.
+   - **Right Column**: Live tabs/panels for:
+     - **Currently Seated Roster**: Workstation seat number, student name, student ID, exam title, elapsed/remaining time countdown, and 1-click checkout.
+     - **Arriving Feed**: Students scheduled for the current or upcoming slot who have not yet checked in.
+     - **Departures Feed**: Students who are due to finish or recently checked out.
+3. **Check-in Tolerance Windows**:
+   - Disallow early check-in beyond 5 minutes prior to start time (`checkInLeadMinutes`, default: 5) to prevent collision with currently seated students.
+   - Disallow check-in after 15 minutes past start time (`checkInGraceMinutes`, default: 15) without explicit proctor override.
+   - Persist `checkInLeadMinutes` and `checkInGraceMinutes` on `CbtfFacility` so administrators can configure both thresholds from `/admin/cbtf`.
+4. **Card Swipe Peripheral Expedited Handling**:
+   - Support hardware magnetic stripe / barcode USB wedge readers by auto-focusing the input, automatically stripping track sentinel characters (e.g. `;`, `%`, `?`), and triggering instant lookup on `Enter`.
+
+### Rationale
+
+Empowers proctors with a rapid, error-proof check-in/out station optimized for physical card swipers, guarantees workstation seats are not double-occupied before previous exam ends, and gives facility administrators full control over early/late arrival policies.
+

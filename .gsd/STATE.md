@@ -8,21 +8,20 @@ updated: 2026-09-02T23:35:00-04:00
 
 **Milestone:** v1.0 — CBTF Scheduler
 **Phase:** 4 - Proctor Console & Facility Administration
-**Status:** ready-to-plan
-**Plan:** Ready for Phase 4 planning/discussion
+**Status:** planning
+**Plan:** Ready for execution (Plans 4.1, 4.2, and 4.3 created)
 
 ## Last Action
 
-Completed Phase 3: Student & Instructor Interfaces + Admin CBTF Management:
-
-- Wave 1 (Plan 3.1): Instructor assignment configuration (`AssignmentEditPanel.vue` toggle & datetime window pickers, `Teacher.vue` CBTF badge, endpoint and utility updates).
-- Wave 2 (Plan 3.2): Student dashboard integration (Option A top card with upcoming reservation details, assignments table status and action triggers, `useCbtfStudent.ts`, 4-step progressive narrowing wizard modal `CbtfScheduleModal.vue` with rescheduling & cancellation flows, unit tests).
-- Wave 3 (Plan 3.3): Admin facility management console (`/admin/cbtf`) with 5 tabs (Facility Settings, Operating Hours, Schedule Exceptions, Proctor Shifts, Reservations Log), `useCbtfAdmin.ts`, server endpoints under `server/api/admin/cbtf/*`, and comprehensive unit tests.
-- Full verification: All 81 test files (351 unit tests) passing with 0 failures; Prettier & ESLint clean.
+Created execution plans for Phase 4 based on user discussion and decisions:
+- `.gsd/phases/4/4.1-PLAN.md`: Data model check-in tolerance updates, proctor server utilities, and endpoints.
+- `.gsd/phases/4/4.2-PLAN.md`: Card swipe parser, proctor route protection, and `useCbtfProctor` composable.
+- `.gsd/phases/4/4.3-PLAN.md`: Proctor Command Center page (`/proctor`) and verification.
 
 ## Next Steps
 
-1. Discuss and plan Phase 4: Live Proctor Console (`/proctor`) with barcode/studentId check-in, photo verification, seated roster, and departure handling.
+1. Obtain user approval on Phase 4 implementation plan.
+2. Execute Phase 4 across waves 4.1 $\rightarrow$ 4.2 $\rightarrow$ 4.3.
 
 ## Active Decisions
 
