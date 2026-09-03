@@ -6,11 +6,11 @@
 
 ## Priority Levels
 
-| Level | Use For |
-|---|---|
-| `high` 🔴 | Blocking issues, urgent fixes |
-| `medium` 🟡 | Normal priority (default) |
-| `low` 🟢 | Nice-to-have, future ideas |
+| Level       | Use For                       |
+| ----------- | ----------------------------- |
+| `high` 🔴   | Blocking issues, urgent fixes |
+| `medium` 🟡 | Normal priority (default)     |
+| `low` 🟢    | Nice-to-have, future ideas    |
 
 ---
 

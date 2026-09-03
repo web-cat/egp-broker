@@ -175,9 +175,10 @@ export function toPublicUser(user: User): PublicUser {
 export const userRowSchema = z.object({
   id: z.string(),
   email: z.string().email(),
+  studentId: z.string().nullable().optional(),
   firstName: z.string(),
   lastName: z.string(),
-  globalRole: z.enum(['ADMIN', 'INSTRUCTOR', 'USER']),
+  globalRole: z.enum(['ADMIN', 'INSTRUCTOR', 'USER', 'PROCTOR']),
   avatarUrl: z.string().nullable(),
   createdAt: z.string(),
   emailVerified: z.boolean()

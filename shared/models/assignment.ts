@@ -24,6 +24,9 @@ export const assignmentRowSchema = z.object({
   acceptUntil: z.string().nullable(),
   eligibleUntil: z.string().nullable().optional(),
   published: z.boolean().default(true),
+  isSchedulable: z.boolean().default(false),
+  scheduleWindowStart: z.string().nullable().optional(),
+  scheduleWindowEnd: z.string().nullable().optional(),
   createdAt: z.string(),
   toolId: z.string().nullable().optional(),
   toolName: z.string().nullable().optional(),
@@ -66,7 +69,10 @@ export const createAssignmentSchema = z.object({
   dueDate: z.string().nullable().optional(),
   availableFrom: z.string().nullable().optional(),
   acceptUntil: z.string().nullable().optional(),
-  published: z.boolean().optional()
+  published: z.boolean().optional(),
+  isSchedulable: z.boolean().optional(),
+  scheduleWindowStart: z.string().nullable().optional(),
+  scheduleWindowEnd: z.string().nullable().optional()
 })
 
 export const updateAssignmentSchema = z.object({
@@ -76,6 +82,9 @@ export const updateAssignmentSchema = z.object({
   availableFrom: z.string().nullable().optional(),
   acceptUntil: z.string().nullable().optional(),
   published: z.boolean().optional(),
+  isSchedulable: z.boolean().optional(),
+  scheduleWindowStart: z.string().nullable().optional(),
+  scheduleWindowEnd: z.string().nullable().optional(),
   manualPassTypeIds: z.array(z.string()).optional()
 })
 

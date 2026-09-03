@@ -16,11 +16,22 @@ const seedUsers = [
   },
   {
     email: 'demo@example.com',
+    studentId: '906000001',
     password:
       '$scrypt$n=16384,r=8,p=1$J1715Bk7oV9rbFwFCPtSpA$y61smy4tql8Il9ybDfpOikdxkkcBVm6T5bJFlL1BDnDrURseVB25keJDYwdlgVVJYIhaP5flZvdT3OMKN7YQkw', // Demo123!
     firstName: 'Demo',
     lastName: 'User',
     globalRole: 'USER' as const,
+    emailVerified: true,
+    emailVerifiedAt: new Date()
+  },
+  {
+    email: 'proctor@example.com',
+    password:
+      '$scrypt$n=16384,r=8,p=1$J1715Bk7oV9rbFwFCPtSpA$y61smy4tql8Il9ybDfpOikdxkkcBVm6T5bJFlL1BDnDrURseVB25keJDYwdlgVVJYIhaP5flZvdT3OMKN7YQkw', // Demo123!
+    firstName: 'Pat',
+    lastName: 'Proctor',
+    globalRole: 'PROCTOR' as const,
     emailVerified: true,
     emailVerifiedAt: new Date()
   }
@@ -30,6 +41,11 @@ async function main() {
   console.log('🌱 Starting database seeding...')
 
   // Clean up existing data
+  await prisma.cbtfReservation.deleteMany()
+  await prisma.cbtfProctorShift.deleteMany()
+  await prisma.cbtfScheduleException.deleteMany()
+  await prisma.cbtfOperatingHours.deleteMany()
+  await prisma.cbtfFacility.deleteMany()
   await prisma.passRedemption.deleteMany()
   await prisma.studentPassPool.deleteMany()
   await prisma.passPrompt.deleteMany()
@@ -50,6 +66,7 @@ async function main() {
     const user = await prisma.user.create({
       data: {
         email: userData.email,
+        studentId: (userData as { studentId?: string }).studentId,
         password: userData.password, // Already hashed
         firstName: userData.firstName,
         lastName: userData.lastName,
@@ -207,7 +224,10 @@ async function main() {
         resourceLinkId: 'link-2',
         title: 'Variables and Loops',
         dueDate: new Date(now.getTime() + oneDay), // Tomorrow
-        acceptUntil: new Date(now.getTime() + oneDay)
+        acceptUntil: new Date(now.getTime() + oneDay),
+        isSchedulable: true,
+        scheduleWindowStart: new Date(now.getTime() - oneDay),
+        scheduleWindowEnd: new Date(now.getTime() + 10 * oneDay)
       },
       {
         courseId: course2.id,
@@ -234,6 +254,26 @@ async function main() {
     ]
   })
   console.log('✅ 5 assignments created')
+
+  // Create Default CBTF Testing Facility
+  const seatOrder = Array.from({ length: 48 }, (_, i) => i + 1)
+  const facility = await prisma.cbtfFacility.create({
+    data: {
+      name: 'Main CBTF Facility',
+      totalSeats: 48,
+      seatAllocationOrder: seatOrder,
+      operatingHours: {
+        create: [
+          { dayOfWeek: 1, openTime: '08:00', closeTime: '18:00' }, // Mon
+          { dayOfWeek: 2, openTime: '08:00', closeTime: '18:00' }, // Tue
+          { dayOfWeek: 3, openTime: '08:00', closeTime: '18:00' }, // Wed
+          { dayOfWeek: 4, openTime: '08:00', closeTime: '18:00' }, // Thu
+          { dayOfWeek: 5, openTime: '08:00', closeTime: '17:00' } // Fri
+        ]
+      }
+    }
+  })
+  console.log(`✅ CBTF Facility created: ${facility.name} with ${facility.totalSeats} seats`)
 
   // Display created users for reference
   console.log('\n📋 Created users:')
