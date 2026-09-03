@@ -112,4 +112,3 @@ Clarification requested for Phase 4 regarding `/proctor` operational console acc
 ### Rationale
 
 Empowers proctors with a rapid, error-proof check-in/out station optimized for physical card swipers, guarantees workstation seats are not double-occupied before previous exam ends, and gives facility administrators full control over early/late arrival policies.
-

@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-02T23:35:00-04:00
+updated: 2026-09-03T02:30:00-04:00
 ---
 
 # Project State
@@ -8,20 +8,21 @@ updated: 2026-09-02T23:35:00-04:00
 
 **Milestone:** v1.0 — CBTF Scheduler
 **Phase:** 4 - Proctor Console & Facility Administration
-**Status:** planning
-**Plan:** Ready for execution (Plans 4.1, 4.2, and 4.3 created)
+**Status:** completed
+**Plan:** Milestone v1.0 fully completed and verified
 
 ## Last Action
 
-Created execution plans for Phase 4 based on user discussion and decisions:
-- `.gsd/phases/4/4.1-PLAN.md`: Data model check-in tolerance updates, proctor server utilities, and endpoints.
-- `.gsd/phases/4/4.2-PLAN.md`: Card swipe parser, proctor route protection, and `useCbtfProctor` composable.
-- `.gsd/phases/4/4.3-PLAN.md`: Proctor Command Center page (`/proctor`) and verification.
+Completed Phase 4: Proctor Console & Facility Administration:
+
+- Plan 4.1: Added `checkInLeadMinutes` (default: 5) and `checkInGraceMinutes` (default: 15) to `CbtfFacility` schema, applied migration `20260903062205_add_cbtf_checkin_tolerances`, updated admin facility settings inputs in `app/pages/admin/cbtf.vue`, implemented proctor server utilities in `server/utils/cbtf.ts`, and created secured endpoints under `server/api/proctor/*` (`feed`, `lookup`, `check-in`, `check-out`, `status`) with 13 passing unit tests.
+- Plan 4.2: Created `app/middleware/proctor-only.ts` route protection, added console link in `app/layouts/default.vue`, implemented `app/utils/cardSwipe.ts` to parse magnetic stripe Track 1/Track 2 data, and built `app/composables/features/proctor/useCbtfProctor.ts` with 10 passing unit tests.
+- Plan 4.3: Built Option A Proctor Command Center (`app/pages/proctor/index.vue`) with live digital clock, on-duty toggle switch, real-time counters, auto-focused card swipe action station with student photo verification, and live seated roster with remaining countdown timers and quick checkout.
+- Full verification: All 84 test files (374 unit tests) passing with 0 failures; Prettier and ESLint clean.
 
 ## Next Steps
 
-1. Obtain user approval on Phase 4 implementation plan.
-2. Execute Phase 4 across waves 4.1 $\rightarrow$ 4.2 $\rightarrow$ 4.3.
+1. Milestone v1.0 audit / review (`/audit-milestone` or demo walkthrough).
 
 ## Active Decisions
 
@@ -31,6 +32,7 @@ Created execution plans for Phase 4 based on user discussion and decisions:
 | [DECISION-002](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L20) | Add PROCTOR to GlobalRole                                      | 2026-09-02 | Phase 1, Phase 4 |
 | [DECISION-003](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L32) | Add studentId field on User                                    | 2026-09-02 | Phase 1, Phase 4 |
 | [DECISION-004](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L62) | Student Dashboard Option A, Stepper Modal & Admin CBTF Console | 2026-09-02 | Phase 3, Phase 4 |
+| [DECISION-005](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L84) | Proctor Console Command Center & Card Swipe Integration        | 2026-09-03 | Phase 4          |
 
 ## Blockers
 
@@ -38,8 +40,8 @@ None.
 
 ## Concerns
 
-None. Phase 1, 2, and 3 fully completed and verified.
+None. All 4 phases fully completed, tested, and verified.
 
 ## Session Context
 
-Phase 3 fully implemented and tested. Moving to Phase 4 (Proctor Console).
+CBTF Scheduler feature completely implemented across foundation, scheduling engine, instructor/student interfaces, admin console, and proctor operations station.

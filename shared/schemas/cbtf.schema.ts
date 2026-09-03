@@ -21,7 +21,9 @@ export const cbtfFacilityConfigSchema = z.object({
   totalSeats: z.number().int().min(1, 'At least 1 seat is required').max(500),
   seatAllocationOrder: z
     .array(z.number().int().positive())
-    .min(1, 'Seat allocation order must not be empty')
+    .min(1, 'Seat allocation order must not be empty'),
+  checkInLeadMinutes: z.number().int().min(0).max(60).default(5),
+  checkInGraceMinutes: z.number().int().min(0).max(60).default(15)
 })
 
 export const cbtfOperatingHoursInputSchema = z

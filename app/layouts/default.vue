@@ -36,6 +36,15 @@
         />
 
         <BaseButton
+          v-if="user?.globalRole === 'PROCTOR' || user?.globalRole === 'ADMIN'"
+          variant="ghost"
+          color="neutral"
+          icon="i-lucide-building-2"
+          :to="localePath('/proctor')"
+          title="Testing Center Console"
+        />
+
+        <BaseButton
           v-if="user?.globalRole === 'ADMIN'"
           variant="ghost"
           color="neutral"

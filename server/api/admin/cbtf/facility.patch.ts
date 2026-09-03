@@ -41,6 +41,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     data.seatAllocationOrder = Array.from({ length: validation.data.totalSeats }, (_, i) => i + 1)
   }
 
+  if (validation.data.checkInLeadMinutes !== undefined) {
+    data.checkInLeadMinutes = validation.data.checkInLeadMinutes
+  }
+
+  if (validation.data.checkInGraceMinutes !== undefined) {
+    data.checkInGraceMinutes = validation.data.checkInGraceMinutes
+  }
+
   const updated = await prisma.cbtfFacility.update({
     where: { id: facility.id },
     data,

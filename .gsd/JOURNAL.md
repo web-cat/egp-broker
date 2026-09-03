@@ -6,6 +6,33 @@
 
 ## Sessions
 
+## Session: 2026-09-03 02:30
+
+### Objective
+
+Execute Phase 4: Proctor Console & Live Facility Administration.
+
+### Accomplished
+
+- ✅ Plan 4.1: Added `checkInLeadMinutes` (default: 5) and `checkInGraceMinutes` (default: 15) to `CbtfFacility` schema, ran migration `20260903062205_add_cbtf_checkin_tolerances`, updated admin inputs in `app/pages/admin/cbtf.vue`, implemented proctor helper functions in `server/utils/cbtf.ts` (`getProctorLiveFeed`, `lookupStudentForProctor`, `checkInReservation`, `checkOutReservation`), and built server endpoints under `server/api/proctor/*` (`feed`, `lookup`, `check-in`, `check-out`, `status`) with 13 unit tests.
+- ✅ Plan 4.2: Implemented `app/middleware/proctor-only.ts` route protection, added `Testing Center Console` link in `app/layouts/default.vue`, implemented `app/utils/cardSwipe.ts` to parse magnetic stripe Track 1/Track 2 card swipes and barcodes, and built `app/composables/features/proctor/useCbtfProctor.ts` with 10 unit tests.
+- ✅ Plan 4.3: Built Option A single-screen Proctor Command Center (`app/pages/proctor/index.vue`) featuring live digital clock, on-duty toggle switch, real-time counters, auto-focused card swipe station with student photo verification card, seat assignment badge, status alerts, and live seated roster with remaining countdown timers and 1-click checkout.
+- ✅ Verified entire unit test suite passes: 84 test files, 374 tests passed, 0 failures.
+- ✅ Passed `pnpm lint` with 0 errors.
+
+### Verification
+
+- [x] All 23 proctor unit tests pass (100%).
+- [x] Full regression test suite passes (374/374 tests).
+- [x] Prettier and ESLint clean.
+
+### Handoff Notes
+
+- Phase 4 complete.
+- Milestone v1.0 — CBTF Scheduler fully implemented and verified!
+
+---
+
 ## Session: 2026-09-02 23:35
 
 ### Objective

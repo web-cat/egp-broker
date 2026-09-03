@@ -51,6 +51,27 @@
             max="500"
           />
 
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <BaseFormInput
+              v-model.number="facilityForm.checkInLeadMinutes"
+              name="checkInLeadMinutes"
+              label="Early Check-in Allowance (Minutes)"
+              description="Maximum minutes before exam start time a student may check in."
+              type="number"
+              min="0"
+              max="60"
+            />
+            <BaseFormInput
+              v-model.number="facilityForm.checkInGraceMinutes"
+              name="checkInGraceMinutes"
+              label="Late Check-in Grace Period (Minutes)"
+              description="Maximum minutes past exam start time before student is flagged late."
+              type="number"
+              min="0"
+              max="60"
+            />
+          </div>
+
           <div class="space-y-1">
             <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
               Sequential Seat Allocation Order
@@ -344,7 +365,9 @@ const savingFacility = ref(false)
 const facilityForm = reactive({
   name: '',
   totalSeats: 48,
-  seatAllocationOrderStr: ''
+  seatAllocationOrderStr: '',
+  checkInLeadMinutes: 5,
+  checkInGraceMinutes: 15
 })
 
 const parsedSeatsCount = computed(() => {
@@ -365,6 +388,8 @@ watch(
     if (fac) {
       facilityForm.name = fac.name || ''
       facilityForm.totalSeats = fac.totalSeats || 48
+      facilityForm.checkInLeadMinutes = fac.checkInLeadMinutes ?? 5
+      facilityForm.checkInGraceMinutes = fac.checkInGraceMinutes ?? 15
       const order = Array.isArray(fac.seatAllocationOrder) ? fac.seatAllocationOrder : []
       facilityForm.seatAllocationOrderStr = order.join(', ')
     }
@@ -383,6 +408,8 @@ const handleSaveFacility = async () => {
     await saveFacility({
       name: facilityForm.name,
       totalSeats: facilityForm.totalSeats,
+      checkInLeadMinutes: facilityForm.checkInLeadMinutes,
+      checkInGraceMinutes: facilityForm.checkInGraceMinutes,
       seatAllocationOrder: order.length > 0 ? order : undefined
     })
   } finally {

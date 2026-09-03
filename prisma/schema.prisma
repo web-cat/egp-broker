@@ -582,6 +582,11 @@ model CbtfFacility {
   /// Definable sequence order for allocating seats across consecutive slots (e.g. [1, 15, 29, 2, ...])
   seatAllocationOrder Json
 
+  /// Maximum minutes before scheduled start time a student is permitted to check in (default: 5)
+  checkInLeadMinutes  Int      @default(5)
+  /// Maximum minutes after scheduled start time a student is permitted to check in before marked late/missed (default: 15)
+  checkInGraceMinutes Int      @default(15)
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
