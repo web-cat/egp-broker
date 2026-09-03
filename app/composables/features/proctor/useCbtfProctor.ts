@@ -176,6 +176,73 @@ export function useCbtfProctor() {
     lookupError.value = null
   }
 
+  // Note Modal State & Actions
+  const isNoteModalOpen = ref(false)
+  const selectedNoteTarget = ref<{
+    reservationId?: string
+    seatNumber?: number
+    studentName?: string
+    assignmentTitle?: string
+    notes?: any[]
+  } | null>(null)
+
+  const openNoteModal = (target?: {
+    reservationId?: string
+    seatNumber?: number
+    studentName?: string
+    assignmentTitle?: string
+    notes?: any[]
+  }) => {
+    selectedNoteTarget.value = target || null
+    isNoteModalOpen.value = true
+  }
+
+  const closeNoteModal = () => {
+    isNoteModalOpen.value = false
+    selectedNoteTarget.value = null
+  }
+
+  const addNote = async (payload: {
+    reservationId?: string
+    seatNumber?: number
+    content: string
+    hasPhotos?: boolean
+  }) => {
+    try {
+      const res = await $fetch<ApiResponse<any>>('/api/proctor/notes', {
+        method: 'POST',
+        body: payload
+      })
+      toast.add({
+        title: 'Incident Note Logged',
+        description: `Note saved for Seat #${res.data.seatNumber || payload.seatNumber || '—'} (${res.data.studentName || 'Student'}).`,
+        color: 'warning'
+      })
+      await refreshFeed()
+      closeNoteModal()
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Save Note',
+        description: err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
+  const fetchNotes = async (reservationId: string) => {
+    try {
+      const res = await $fetch<ApiResponse<any[]>>('/api/proctor/notes', {
+        params: { reservationId }
+      })
+      return res.data || []
+    } catch (err: any) {
+      console.error('Failed to fetch notes:', err)
+      return []
+    }
+  }
+
   return {
     isOnDuty,
     toggleDuty,
@@ -193,6 +260,12 @@ export function useCbtfProctor() {
     lookupStudent,
     confirmCheckIn,
     confirmCheckOut,
-    clearLookup
+    clearLookup,
+    isNoteModalOpen,
+    selectedNoteTarget,
+    openNoteModal,
+    closeNoteModal,
+    addNote,
+    fetchNotes
   }
 }

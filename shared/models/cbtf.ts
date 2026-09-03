@@ -10,7 +10,8 @@ import type {
   CbtfScheduleException,
   CbtfProctorShift,
   CbtfReservation,
-  CbtfReservationStatus
+  CbtfReservationStatus,
+  CbtfReservationNote
 } from '@prisma/client'
 
 export type {
@@ -19,7 +20,8 @@ export type {
   CbtfScheduleException,
   CbtfProctorShift,
   CbtfReservation,
-  CbtfReservationStatus
+  CbtfReservationStatus,
+  CbtfReservationNote
 }
 
 export interface CbtfFacilitySummary {
@@ -76,6 +78,19 @@ export interface CbtfReservationDto {
   checkedOutAt: string | null
   checkedInByUserId: string | null
   checkedOutByUserId: string | null
+  noteCount?: number
+  notes?: CbtfReservationNoteDto[]
+}
+
+export interface CbtfReservationNoteDto {
+  id: string
+  reservationId: string
+  authorId: string
+  authorName?: string
+  content: string
+  hasPhotos: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface CbtfRecommendedDay {

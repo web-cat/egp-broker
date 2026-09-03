@@ -59,6 +59,7 @@ model User {
   overrideStudents AssignmentOverrideStudent[]
   cbtfReservations CbtfReservation[]
   proctorShifts    CbtfProctorShift[]
+  cbtfNotesAuthored CbtfReservationNote[]
 
   // Current context
   currentCourseId String?
@@ -680,10 +681,31 @@ model CbtfReservation {
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
+  notes              CbtfReservationNote[]
+
   @@index([facilityId, startTime])
   @@index([assignmentId, userId])
   @@index([userId, status])
   @@index([status, startTime])
   @@index([seatNumber, startTime])
+}
+
+/// Proctor observation notes and incident logs for a reservation.
+model CbtfReservationNote {
+  id            String          @id @default(cuid())
+  reservationId String
+  reservation   CbtfReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  authorId      String
+  author        User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  content       String          @db.Text
+  hasPhotos     Boolean         @default(false)
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([reservationId])
+  @@index([authorId])
 }
 

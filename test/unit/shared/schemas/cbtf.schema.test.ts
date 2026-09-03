@@ -9,7 +9,8 @@ import {
   proctorCheckInInputSchema,
   proctorCheckOutInputSchema,
   cbtfAvailabilityQuerySchema,
-  cbtfReservationRowSchema
+  cbtfReservationRowSchema,
+  createReservationNoteInputSchema
 } from '../../../../shared/schemas/cbtf.schema'
 import { userRowSchema } from '../../../../shared/models/user'
 import {
@@ -247,6 +248,60 @@ describe('CBTF Shared Schemas', () => {
         isSchedulable: false
       }
       expect(updateAssignmentSchema.safeParse(updateData).success).toBe(true)
+    })
+  })
+
+  describe('createReservationNoteInputSchema', () => {
+    it('validates a note with reservationId', () => {
+      const valid = {
+        reservationId: 'res-123',
+        content: 'Student arrived with unapproved notes',
+        hasPhotos: true
+      }
+      const result = createReservationNoteInputSchema.safeParse(valid)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.hasPhotos).toBe(true)
+      }
+    })
+
+    it('validates a note with seatNumber', () => {
+      const valid = {
+        seatNumber: 12,
+        content: 'Glancing at neighboring screen',
+        hasPhotos: false
+      }
+      const result = createReservationNoteInputSchema.safeParse(valid)
+      expect(result.success).toBe(true)
+    })
+
+    it('defaults hasPhotos to false when omitted', () => {
+      const valid = {
+        reservationId: 'res-456',
+        content: 'Spilled water on desk, cleaned up'
+      }
+      const result = createReservationNoteInputSchema.safeParse(valid)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.hasPhotos).toBe(false)
+      }
+    })
+
+    it('rejects when neither reservationId nor seatNumber is provided', () => {
+      const invalid = {
+        content: 'Missing target'
+      }
+      const result = createReservationNoteInputSchema.safeParse(invalid)
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects empty content', () => {
+      const invalid = {
+        reservationId: 'res-123',
+        content: '   '
+      }
+      const result = createReservationNoteInputSchema.safeParse(invalid)
+      expect(result.success).toBe(false)
     })
   })
 })

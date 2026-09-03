@@ -21,6 +21,9 @@ vi.mock('@@/server/utils/db', () => ({
     },
     user: {
       findFirst: vi.fn()
+    },
+    cbtfReservationNote: {
+      count: vi.fn().mockResolvedValue(0)
     }
   }
 }))

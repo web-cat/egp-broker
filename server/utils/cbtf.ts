@@ -8,6 +8,7 @@
 import { createError } from 'h3'
 import type { PrismaClient } from '@prisma/client'
 import prisma from '@@/server/utils/db'
+import { sendCbtfIncidentNotification } from './cbtf-notifications'
 import type {
   CbtfFacility,
   CbtfReservation,
@@ -537,7 +538,20 @@ export function toCbtfReservationDto(res: any): CbtfReservationDto {
         : res.checkedOutAt
       : null,
     checkedInByUserId: res.checkedInByUserId ?? null,
-    checkedOutByUserId: res.checkedOutByUserId ?? null
+    checkedOutByUserId: res.checkedOutByUserId ?? null,
+    noteCount: res.notes ? res.notes.length : undefined,
+    notes: res.notes
+      ? res.notes.map((n: any) => ({
+          id: n.id,
+          reservationId: n.reservationId,
+          authorId: n.authorId,
+          authorName: n.author ? `${n.author.firstName} ${n.author.lastName}`.trim() : undefined,
+          content: n.content,
+          hasPhotos: Boolean(n.hasPhotos),
+          createdAt: n.createdAt instanceof Date ? n.createdAt.toISOString() : n.createdAt,
+          updatedAt: n.updatedAt instanceof Date ? n.updatedAt.toISOString() : n.updatedAt
+        }))
+      : undefined
   }
 }
 
@@ -578,6 +592,12 @@ export async function getProctorLiveFeed(prisma: PrismaClient, facilityId?: stri
     },
     include: {
       assignment: { select: { title: true } },
+      notes: {
+        include: {
+          author: { select: { firstName: true, lastName: true } }
+        },
+        orderBy: { createdAt: 'asc' }
+      },
       user: {
         select: {
           firstName: true,
@@ -697,7 +717,13 @@ export async function lookupStudentForProctor(prisma: PrismaClient, studentId: s
       status: 'CHECKED_IN'
     },
     include: {
-      assignment: { select: { title: true } }
+      assignment: { select: { title: true } },
+      notes: {
+        include: {
+          author: { select: { firstName: true, lastName: true } }
+        },
+        orderBy: { createdAt: 'asc' }
+      }
     },
     orderBy: { startTime: 'desc' }
   })
@@ -721,7 +747,13 @@ export async function lookupStudentForProctor(prisma: PrismaClient, studentId: s
       status: 'SCHEDULED'
     },
     include: {
-      assignment: { select: { title: true } }
+      assignment: { select: { title: true } },
+      notes: {
+        include: {
+          author: { select: { firstName: true, lastName: true } }
+        },
+        orderBy: { createdAt: 'asc' }
+      }
     },
     orderBy: { startTime: 'asc' }
   })
@@ -897,6 +929,12 @@ export async function checkOutReservation(
     },
     include: {
       assignment: { select: { title: true } },
+      notes: {
+        include: {
+          author: { select: { firstName: true, lastName: true } }
+        },
+        orderBy: { createdAt: 'asc' }
+      },
       user: {
         select: {
           firstName: true,
@@ -908,5 +946,104 @@ export async function checkOutReservation(
     }
   })
 
+  // Trigger incident email notification if any notes exist for this test session
+  const noteCount =
+    (await (prisma as any).cbtfReservationNote?.count?.({
+      where: { reservationId }
+    })) ?? 0
+  if (noteCount > 0) {
+    sendCbtfIncidentNotification(reservationId).catch((err: any) => {
+      console.error('[CBTF Notification] Checkout notification dispatch error:', err)
+    })
+  }
+
   return toCbtfReservationDto(updated)
+}
+
+/**
+ * Adds a proctor observation note / incident report to a reservation.
+ */
+export async function addReservationNote(
+  prisma: PrismaClient,
+  data: {
+    reservationId?: string
+    seatNumber?: number
+    authorId: string
+    content: string
+    hasPhotos?: boolean
+  }
+) {
+  let targetReservationId = data.reservationId
+
+  if (!targetReservationId && data.seatNumber) {
+    const facility = await getPrimaryCbtfFacility(prisma)
+    // Locate the active (seated or scheduled) reservation at this seat
+    const activeAtSeat = await prisma.cbtfReservation.findFirst({
+      where: {
+        facilityId: facility.id,
+        seatNumber: data.seatNumber,
+        status: { in: ['CHECKED_IN', 'SCHEDULED'] }
+      },
+      orderBy: { startTime: 'asc' }
+    })
+
+    if (!activeAtSeat) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: `No active reservation found at Workstation Seat #${data.seatNumber}`
+      })
+    }
+    targetReservationId = activeAtSeat.id
+  }
+
+  if (!targetReservationId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Either reservationId or seatNumber is required'
+    })
+  }
+
+  const note = await prisma.cbtfReservationNote.create({
+    data: {
+      reservationId: targetReservationId,
+      authorId: data.authorId,
+      content: data.content.trim(),
+      hasPhotos: Boolean(data.hasPhotos)
+    },
+    include: {
+      author: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true
+        }
+      },
+      reservation: {
+        select: {
+          id: true,
+          seatNumber: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              studentId: true
+            }
+          }
+        }
+      }
+    }
+  })
+
+  return {
+    id: note.id,
+    reservationId: note.reservationId,
+    seatNumber: note.reservation.seatNumber,
+    studentName: `${note.reservation.user.firstName} ${note.reservation.user.lastName}`.trim(),
+    authorId: note.authorId,
+    authorName: `${note.author.firstName} ${note.author.lastName}`.trim(),
+    content: note.content,
+    hasPhotos: note.hasPhotos,
+    createdAt: note.createdAt.toISOString(),
+    updatedAt: note.updatedAt.toISOString()
+  }
 }

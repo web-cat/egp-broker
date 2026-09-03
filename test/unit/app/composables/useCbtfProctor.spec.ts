@@ -131,4 +131,38 @@ describe('useCbtfProctor Composable', () => {
     expect(lookupResult.value).toBeNull()
     expect(mockRefreshFeed).toHaveBeenCalled()
   })
+
+  it('manages note modal open/close and records incident note', async () => {
+    mockFetch.mockResolvedValueOnce({
+      data: { id: 'note-1', seatNumber: 12, studentName: 'Bob' }
+    })
+
+    const { isNoteModalOpen, selectedNoteTarget, openNoteModal, closeNoteModal, addNote } =
+      useCbtfProctor()
+
+    expect(isNoteModalOpen.value).toBe(false)
+    expect(selectedNoteTarget.value).toBeNull()
+
+    openNoteModal({ seatNumber: 12, studentName: 'Bob' })
+    expect(isNoteModalOpen.value).toBe(true)
+    expect(selectedNoteTarget.value?.seatNumber).toBe(12)
+
+    await addNote({ seatNumber: 12, content: 'Glancing at neighbor', hasPhotos: true })
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/proctor/notes', {
+      method: 'POST',
+      body: { seatNumber: 12, content: 'Glancing at neighbor', hasPhotos: true }
+    })
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Incident Note Logged', color: 'warning' })
+    )
+    expect(isNoteModalOpen.value).toBe(false)
+    expect(selectedNoteTarget.value).toBeNull()
+
+    // Test explicit closeNoteModal
+    openNoteModal({ seatNumber: 5 })
+    expect(isNoteModalOpen.value).toBe(true)
+    closeNoteModal()
+    expect(isNoteModalOpen.value).toBe(false)
+  })
 })

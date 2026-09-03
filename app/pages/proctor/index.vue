@@ -50,6 +50,15 @@
           </div>
         </div>
 
+        <UButton
+          size="sm"
+          color="warning"
+          variant="soft"
+          icon="i-lucide-file-warning"
+          label="Add Incident / Note"
+          @click="openNoteModal()"
+        />
+
         <div
           class="flex items-center gap-2 pl-2 border-l border-neutral-200 dark:border-neutral-800"
         >
@@ -232,6 +241,26 @@
                   @click="clearAndRefocus"
                 />
 
+                <!-- Add Incident Note Action -->
+                <UButton
+                  v-if="lookupResult.reservation"
+                  size="sm"
+                  color="warning"
+                  variant="soft"
+                  icon="i-lucide-file-plus-2"
+                  label="Add Note"
+                  @click="
+                    openNoteModal({
+                      reservationId: lookupResult.reservation.id,
+                      seatNumber: lookupResult.reservation.seatNumber,
+                      studentName:
+                        `${lookupResult.student?.firstName} ${lookupResult.student?.lastName}`.trim(),
+                      assignmentTitle: lookupResult.reservation.assignmentTitle,
+                      notes: lookupResult.reservation.notes
+                    })
+                  "
+                />
+
                 <!-- Check In Action -->
                 <UButton
                   v-if="
@@ -359,6 +388,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Proctor Incident / Observation Note Modal -->
+    <FeaturesProctorProctorNoteModal
+      v-model="isNoteModalOpen"
+      :target="selectedNoteTarget"
+      :seated-roster="seated"
+      @submit="handleSaveNote"
+    />
   </div>
 </template>
 
@@ -384,8 +421,21 @@ const {
   lookupStudent,
   confirmCheckIn,
   confirmCheckOut,
-  clearLookup
+  clearLookup,
+  isNoteModalOpen,
+  selectedNoteTarget,
+  openNoteModal,
+  addNote
 } = useCbtfProctor()
+
+const handleSaveNote = async (payload: {
+  reservationId?: string
+  seatNumber?: number
+  content: string
+  hasPhotos: boolean
+}) => {
+  await addNote(payload)
+}
 
 const activeFeedTab = ref('seated')
 const rawSwipeInput = ref('')
@@ -523,14 +573,32 @@ const seatedColumns: any[] = [
     id: 'actions',
     header: 'Action',
     cell: ({ row }: { row: any }) =>
-      h(resolveComponent('UButton'), {
-        size: 'xs',
-        color: 'primary',
-        variant: 'soft',
-        icon: 'i-lucide-log-out',
-        label: 'Check Out',
-        onClick: () => confirmCheckOut(row.original.id)
-      })
+      h('div', { class: 'flex items-center gap-1.5' }, [
+        h(resolveComponent('UButton'), {
+          size: 'xs',
+          color: row.original.noteCount ? 'warning' : 'neutral',
+          variant: row.original.noteCount ? 'solid' : 'ghost',
+          icon: row.original.noteCount ? 'i-lucide-file-warning' : 'i-lucide-file-plus-2',
+          label: row.original.noteCount ? `Notes (${row.original.noteCount})` : 'Note',
+          title: 'Add or view notes for this student',
+          onClick: () =>
+            openNoteModal({
+              reservationId: row.original.id,
+              seatNumber: row.original.seatNumber,
+              studentName: row.original.studentName,
+              assignmentTitle: row.original.assignmentTitle,
+              notes: row.original.notes
+            })
+        }),
+        h(resolveComponent('UButton'), {
+          size: 'xs',
+          color: 'primary',
+          variant: 'soft',
+          icon: 'i-lucide-log-out',
+          label: 'Check Out',
+          onClick: () => confirmCheckOut(row.original.id)
+        })
+      ])
   }
 ]
 
