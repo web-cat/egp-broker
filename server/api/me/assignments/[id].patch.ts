@@ -62,7 +62,18 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
         : body.acceptUntil === null
           ? null
           : undefined,
-      published: body.published !== undefined ? body.published : undefined
+      published: body.published !== undefined ? body.published : undefined,
+      isSchedulable: body.isSchedulable !== undefined ? body.isSchedulable : undefined,
+      scheduleWindowStart: body.scheduleWindowStart
+        ? new Date(body.scheduleWindowStart)
+        : body.scheduleWindowStart === null
+          ? null
+          : undefined,
+      scheduleWindowEnd: body.scheduleWindowEnd
+        ? new Date(body.scheduleWindowEnd)
+        : body.scheduleWindowEnd === null
+          ? null
+          : undefined
     }
   })
 

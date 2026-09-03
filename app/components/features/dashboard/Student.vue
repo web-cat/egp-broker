@@ -46,6 +46,34 @@
         </div>
       </div>
     </BaseCard>
+
+    <!-- Upcoming CBTF Exam Reservation -->
+    <BaseCard>
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
+            Testing Center Exam
+          </p>
+          <div v-if="nextUpcomingReservation" class="mt-1">
+            <p
+              class="text-sm font-bold text-neutral-900 dark:text-neutral-100 truncate max-w-[180px]"
+            >
+              {{ nextUpcomingReservation.assignmentTitle }}
+            </p>
+            <p class="text-xs text-primary-600 dark:text-primary-400 font-semibold mt-0.5">
+              Seat #{{ nextUpcomingReservation.seatNumber }} •
+              {{ formatUpcomingDate(nextUpcomingReservation.startTime) }}
+            </p>
+          </div>
+          <p v-else class="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">
+            None Scheduled
+          </p>
+        </div>
+        <div class="p-4 bg-indigo-100 dark:bg-indigo-900/50 rounded-full">
+          <UIcon name="i-lucide-building-2" class="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+        </div>
+      </div>
+    </BaseCard>
   </div>
 
   <!-- My Assignments -->
@@ -101,6 +129,14 @@
     :loading="redemptionLoading"
     @confirm="handleConfirmRedemption"
   />
+
+  <FeaturesCbtfScheduleModal
+    v-model:open="showCbtfModal"
+    :assignment="selectedCbtfAssignment"
+    :existing-reservation="selectedCbtfReservation"
+    @reserved="refreshCbtfReservations"
+    @cancelled="refreshCbtfReservations"
+  />
 </template>
 
 <script setup lang="ts">
@@ -140,8 +176,19 @@ const {
   selectedLatestRedemption,
   redemptionLoading,
   handleConfirmRedemption,
-  dateCellRenderer
+  dateCellRenderer,
+  // CBTF State
+  showCbtfModal,
+  selectedCbtfAssignment,
+  selectedCbtfReservation,
+  nextUpcomingReservation,
+  refreshCbtfReservations
 } = useStudentDashboard(props.isPreview)
+
+const formatUpcomingDate = (dateStr: string) => {
+  const d = new Date(dateStr)
+  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+}
 
 const assignmentRowClass = (row: any) => {
   if (row.original.highlight) {

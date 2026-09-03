@@ -406,6 +406,23 @@ const assignmentColumns: any[] = [
               })
             ]
           ),
+        row.original.isSchedulable &&
+          h(
+            resolveComponent('UBadge'),
+            {
+              color: 'primary',
+              variant: 'subtle',
+              size: 'xs',
+              class: 'font-normal'
+            },
+            () => [
+              h(resolveComponent('UIcon'), {
+                name: 'i-lucide-building-2',
+                class: 'w-3 h-3 mr-1 text-primary-500'
+              }),
+              'CBTF'
+            ]
+          ),
         h(
           'button',
           {

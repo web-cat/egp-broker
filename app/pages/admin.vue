@@ -43,6 +43,7 @@ const adminLinks = [
   { label: 'Deployments', icon: 'i-lucide-share-2', to: '/admin/deployments' },
   { label: 'LTI Tools', icon: 'i-lucide-wrench', to: '/admin/tools' },
   { label: 'Platforms', icon: 'i-lucide-layers', to: '/admin/platforms' },
+  { label: 'Testing Center', icon: 'i-lucide-building-2', to: '/admin/cbtf' },
   { label: 'Users', icon: 'i-lucide-users', to: '/admin/users' }
 ]
 

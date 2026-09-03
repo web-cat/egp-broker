@@ -118,3 +118,33 @@ export type ProctorCheckInInput = z.infer<typeof proctorCheckInInputSchema>
 export type ProctorCheckOutInput = z.infer<typeof proctorCheckOutInputSchema>
 export type CbtfAvailabilityQuery = z.infer<typeof cbtfAvailabilityQuerySchema>
 export type CbtfReservationRow = z.infer<typeof cbtfReservationRowSchema>
+
+export const updateFacilityInputSchema = cbtfFacilityConfigSchema.partial()
+
+export const upsertOperatingHoursInputSchema = z
+  .object({
+    facilityId: z.string().min(1),
+    dayOfWeek: z.number().int().min(0).max(6),
+    openTime: z.string().regex(cbtfTimeRegex, 'Invalid open time format (HH:mm)'),
+    closeTime: z.string().regex(cbtfTimeRegex, 'Invalid close time format (HH:mm)')
+  })
+  .refine((data) => data.closeTime > data.openTime, {
+    message: 'closeTime must be after openTime',
+    path: ['closeTime']
+  })
+
+export const createScheduleExceptionInputSchema = z.object({
+  facilityId: z.string().min(1),
+  date: z.string(),
+  isClosed: z.boolean().optional(),
+  openTime: z.string().regex(cbtfTimeRegex).nullable().optional(),
+  closeTime: z.string().regex(cbtfTimeRegex).nullable().optional(),
+  reason: z.string().max(200).nullable().optional()
+})
+
+export const createProctorShiftInputSchema = z.object({
+  facilityId: z.string().min(1),
+  userId: z.string().min(1),
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime()
+})

@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 3
+> **Current Phase**: Phase 4
 > **Milestone**: v1.0 — CBTF Scheduler
 
 ## Must-Haves (from SPEC)
@@ -12,7 +12,7 @@
 - [x] Student dashboard status tracking and rescheduling for missed/upcoming reservations.
 - [x] Retake pass integration establishing new scheduling windows.
 - [ ] Proctor operational console for live arrivals, departures, student ID check-in with photo verification, and checkout.
-- [ ] Admin management of facility configuration and proctor shifts.
+- [x] Admin management of facility configuration and proctor shifts.
 
 ---
 
@@ -66,10 +66,10 @@
 
 ---
 
-### Phase 3: Student & Instructor Interfaces
+### Phase 3: Student & Instructor Interfaces + Admin CBTF Management
 
-**Status**: ⬜ Not Started
-**Objective**: Implement frontend user flows for instructors to configure schedulable assignments and for students to book/manage reservations from their dashboard.
+**Status**: ✅ Completed (2026-09-02)
+**Objective**: Implement frontend user flows for instructors to configure schedulable assignments, for students to book/manage reservations from their dashboard, and for administrators to manage facilities, hours, exceptions, proctor shifts, and reservations.
 **Requirements**: REQ-03, REQ-07, REQ-08, REQ-09
 **Deliverables**:
 

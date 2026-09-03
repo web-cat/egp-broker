@@ -38,6 +38,40 @@
             type="datetime-local"
           />
 
+          <!-- CBTF Scheduling Options -->
+          <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                  Require CBTF Testing Center Reservation
+                </p>
+                <p class="text-xs text-neutral-500">
+                  Students must reserve a workstation slot at the testing facility to take this
+                  exam.
+                </p>
+              </div>
+              <USwitch v-model="state.isSchedulable" />
+            </div>
+
+            <div
+              v-if="state.isSchedulable"
+              class="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-4 border-l-2 border-primary-500/50"
+            >
+              <BaseFormInput
+                v-model="state.scheduleWindowStart"
+                name="scheduleWindowStart"
+                label="Reservation Window Start"
+                type="datetime-local"
+              />
+              <BaseFormInput
+                v-model="state.scheduleWindowEnd"
+                name="scheduleWindowEnd"
+                label="Reservation Window End"
+                type="datetime-local"
+              />
+            </div>
+          </div>
+
           <!-- Pass Type Eligibility Multi-Select (edit mode only) -->
           <UFormField v-if="isEdit" label="Eligible Pass Types" name="passTypes">
             <USelectMenu
@@ -103,6 +137,9 @@ interface AssignmentData {
   dueDate: string | null
   availableFrom: string | null
   acceptUntil: string | null
+  isSchedulable?: boolean | null
+  scheduleWindowStart?: string | null
+  scheduleWindowEnd?: string | null
   eligibilities?: {
     passTypeId: string
     passTypeName: string
@@ -130,6 +167,9 @@ const emit = defineEmits<{
       dueDate: string | null
       availableFrom: string | null
       acceptUntil: string | null
+      isSchedulable?: boolean | null
+      scheduleWindowStart?: string | null
+      scheduleWindowEnd?: string | null
     }
   ]
   created: []
@@ -151,7 +191,10 @@ const state = reactive({
   canvasAssignmentId: '',
   dueDate: '',
   availableFrom: '',
-  acceptUntil: ''
+  acceptUntil: '',
+  isSchedulable: false,
+  scheduleWindowStart: '',
+  scheduleWindowEnd: ''
 })
 
 // --- Pass type eligibility state ---
@@ -194,6 +237,9 @@ watch(
       state.dueDate = toLocalDatetime(assignment.dueDate)
       state.availableFrom = toLocalDatetime(assignment.availableFrom)
       state.acceptUntil = toLocalDatetime(assignment.acceptUntil)
+      state.isSchedulable = !!assignment.isSchedulable
+      state.scheduleWindowStart = toLocalDatetime(assignment.scheduleWindowStart ?? null)
+      state.scheduleWindowEnd = toLocalDatetime(assignment.scheduleWindowEnd ?? null)
 
       // Pre-select all currently eligible pass types (auto + manual)
       if (assignment.eligibilities) {
@@ -207,6 +253,9 @@ watch(
       state.dueDate = ''
       state.availableFrom = ''
       state.acceptUntil = ''
+      state.isSchedulable = false
+      state.scheduleWindowStart = ''
+      state.scheduleWindowEnd = ''
       selectedPassTypeIds.value = []
     }
   },
@@ -221,7 +270,16 @@ const handleSubmit = async () => {
       canvasAssignmentId: state.canvasAssignmentId || null,
       dueDate: state.dueDate ? new Date(state.dueDate).toISOString() : null,
       availableFrom: state.availableFrom ? new Date(state.availableFrom).toISOString() : null,
-      acceptUntil: state.acceptUntil ? new Date(state.acceptUntil).toISOString() : null
+      acceptUntil: state.acceptUntil ? new Date(state.acceptUntil).toISOString() : null,
+      isSchedulable: state.isSchedulable,
+      scheduleWindowStart:
+        state.isSchedulable && state.scheduleWindowStart
+          ? new Date(state.scheduleWindowStart).toISOString()
+          : null,
+      scheduleWindowEnd:
+        state.isSchedulable && state.scheduleWindowEnd
+          ? new Date(state.scheduleWindowEnd).toISOString()
+          : null
     }
 
     if (isEdit.value) {

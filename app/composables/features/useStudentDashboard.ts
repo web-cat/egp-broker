@@ -2,9 +2,16 @@ import type { SimplePassPool, RedemptionRow, PassTypeData } from '@@/shared/mode
 import type { ApiResponse } from '@@/shared/types/api'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import { calculatePassExtension } from '@@/shared/utils/extension'
+import { useCbtfStudent } from '~/composables/features/useCbtfStudent'
 
 export const useStudentDashboard = (isPreview = false) => {
   const toast = useToast()
+
+  const {
+    nextUpcomingReservation,
+    getReservationForAssignment,
+    refreshReservations: refreshCbtfReservations
+  } = useCbtfStudent()
 
   // Fetch pass pools for the current course
   const { data: passPools } = useFetch<ApiResponse<SimplePassPool[]>>('/api/me/pass-pools')
@@ -77,7 +84,10 @@ export const useStudentDashboard = (isPreview = false) => {
         // 0. Published check: Hide if unpublished
         if (a.published === false) return false
 
-        // 1. Only show assignments where passes can be used
+        // 1. Always show assignments that require CBTF scheduling
+        if (a.isSchedulable) return true
+
+        // 2. Only show assignments where passes can be used
         const hasPassTypes =
           (a.eligiblePassTypes && a.eligiblePassTypes.length > 0) ||
           (a.eligiblePassTypeNames && a.eligiblePassTypeNames.length > 0)
@@ -138,6 +148,19 @@ export const useStudentDashboard = (isPreview = false) => {
   const selectedPassType = ref<any>(null)
   const selectedPassHours = ref(24)
   const redemptionLoading = ref(false)
+
+  // CBTF Modal & Selection State
+  const showCbtfModal = ref(false)
+  const selectedCbtfAssignment = ref<AssignmentRow | null>(null)
+  const selectedCbtfReservation = computed(() => {
+    if (!selectedCbtfAssignment.value) return null
+    return getReservationForAssignment(selectedCbtfAssignment.value.id) || null
+  })
+
+  const openCbtfModal = (assignment: AssignmentRow) => {
+    selectedCbtfAssignment.value = assignment
+    showCbtfModal.value = true
+  }
 
   const selectedLatestRedemption = computed(() => {
     if (!selectedAssignment.value || !redemptionsData.value?.data) return null
@@ -328,6 +351,94 @@ export const useStudentDashboard = (isPreview = false) => {
         const content = formatDate(row.getValue('availableFrom')) || '—'
         return h('span', { class: 'text-gray-500 dark:text-gray-400' }, content)
       }
+    },
+    {
+      accessorKey: 'cbtfSlot',
+      header: 'Testing Center',
+      cell: ({ row }: { row: any }) => {
+        if (!row.original.isSchedulable) return '—'
+
+        const res = getReservationForAssignment(row.original.id)
+
+        if (!res) {
+          return h(
+            'button',
+            {
+              type: 'button',
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-primary-50 text-primary-700 dark:bg-primary-950/50 dark:text-primary-300 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors cursor-pointer',
+              onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                openCbtfModal(row.original)
+              }
+            },
+            [
+              h(resolveComponent('UIcon'), {
+                name: 'i-lucide-calendar-plus',
+                class: 'w-3.5 h-3.5'
+              }),
+              'Schedule Exam'
+            ]
+          )
+        }
+
+        if (res.status === 'SCHEDULED') {
+          return h(
+            'button',
+            {
+              type: 'button',
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-100 transition-colors cursor-pointer',
+              onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                openCbtfModal(row.original)
+              }
+            },
+            [
+              h(resolveComponent('UIcon'), {
+                name: 'i-lucide-calendar-check',
+                class: 'w-3.5 h-3.5'
+              }),
+              `Seat #${res.seatNumber}`
+            ]
+          )
+        }
+
+        if (res.status === 'CHECKED_IN') {
+          return h(
+            'span',
+            {
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+            },
+            [
+              h(resolveComponent('UIcon'), { name: 'i-lucide-user-check', class: 'w-3.5 h-3.5' }),
+              `In Exam (Seat #${res.seatNumber})`
+            ]
+          )
+        }
+
+        if (res.status === 'MISSED') {
+          return h(
+            'button',
+            {
+              type: 'button',
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-colors cursor-pointer',
+              onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                openCbtfModal(row.original)
+              }
+            },
+            [
+              h(resolveComponent('UIcon'), { name: 'i-lucide-alert-circle', class: 'w-3.5 h-3.5' }),
+              'Missed (Reschedule)'
+            ]
+          )
+        }
+
+        return h('span', { class: 'text-xs text-neutral-500 font-medium' }, res.status)
+      }
     }
   ]
 
@@ -351,6 +462,14 @@ export const useStudentDashboard = (isPreview = false) => {
     redemptionLoading,
     handleConfirmRedemption,
     assignmentColumns,
-    dateCellRenderer
+    dateCellRenderer,
+
+    // CBTF State
+    showCbtfModal,
+    selectedCbtfAssignment,
+    selectedCbtfReservation,
+    openCbtfModal,
+    nextUpcomingReservation,
+    refreshCbtfReservations
   }
 }

@@ -17,6 +17,11 @@ export function useAdminStats() {
         label: 'Grade Translations',
         value: s?.translations ?? '—',
         to: '/admin/grade-translations'
+      },
+      {
+        label: 'Testing Center',
+        value: 'Manage',
+        to: '/admin/cbtf'
       }
     ]
   })
