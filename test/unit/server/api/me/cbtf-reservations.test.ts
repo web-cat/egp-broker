@@ -63,6 +63,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValue(null)
   })
 
   describe('GET /api/me/cbtf/availability', () => {
@@ -211,6 +212,64 @@ describe('API: CBTF Student Reservation Endpoints', () => {
         expect.objectContaining({
           statusCode: 409,
           statusMessage: expect.stringContaining('already have an active reservation')
+        })
+      )
+    })
+
+    it('rejects booking when start time is in the past', async () => {
+      const pastTime = new Date(Date.now() - 3600000).toISOString()
+      // Align with 5-minute boundary in the past
+      const pastDate = new Date(pastTime)
+      pastDate.setUTCMinutes(Math.floor(pastDate.getUTCMinutes() / 5) * 5, 0, 0)
+
+      const event = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        {
+          assignmentId: 'clh1234567890123456789012',
+          startTime: pastDate.toISOString()
+        }
+      )
+
+      await expect(reservationsPost(event)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 400,
+          statusMessage: 'Cannot schedule a reservation in the past'
+        })
+      )
+    })
+
+    it('rejects booking when student has overlapping reservation for another assignment', async () => {
+      const event = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        {
+          assignmentId: 'clh1234567890123456789012',
+          startTime: '2026-10-05T09:15:00.000Z'
+        }
+      )
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'clh1234567890123456789012',
+        courseId: 'course-1',
+        isSchedulable: true
+      } as any)
+      vi.mocked(prisma.enrollment.findFirst).mockResolvedValue({ id: 'enr-1' } as any)
+
+      // First call (existingActive for this assignment): null
+      // Second call (conflictingSlot for any assignment): found conflicting reservation
+      vi.mocked(prisma.cbtfReservation.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'res-other',
+          assignmentId: 'other-asg',
+          assignment: { title: 'Midterm 2' }
+        } as any)
+
+      await expect(reservationsPost(event)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 409,
+          statusMessage: expect.stringContaining('overlapping this time slot')
         })
       )
     })
@@ -380,6 +439,57 @@ describe('API: CBTF Student Reservation Endpoints', () => {
       expect(response.statusCode).toBe(200)
       expect(response.data.status).toBe('SCHEDULED')
       expect(response.data.startTime).toBe(newStartTime)
+    })
+
+    it('rejects rescheduling when new start time is in the past', async () => {
+      const pastTime = new Date(Date.now() - 3600000).toISOString()
+      const pastDate = new Date(pastTime)
+      pastDate.setUTCMinutes(Math.floor(pastDate.getUTCMinutes() / 5) * 5, 0, 0)
+
+      const event = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        { startTime: pastDate.toISOString() },
+        { id: 'res-1' }
+      )
+
+      await expect(reservationPatch(event)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 400,
+          statusMessage: 'Cannot reschedule to a time slot in the past'
+        })
+      )
+    })
+
+    it('rejects rescheduling when new time conflicts with student another active reservation', async () => {
+      const newStartTime = '2026-10-06T11:00:00.000Z'
+      const event = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        { startTime: newStartTime },
+        { id: 'res-1' }
+      )
+
+      vi.mocked(prisma.cbtfReservation.findUnique).mockResolvedValue({
+        id: 'res-1',
+        userId: 'usr-1',
+        status: 'SCHEDULED',
+        assignment: { title: 'Midterm 1' }
+      } as any)
+
+      // Conflict with another reservation
+      vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValueOnce({
+        id: 'res-conflict',
+        assignmentId: 'asg-2',
+        assignment: { title: 'Quiz 2' }
+      } as any)
+
+      await expect(reservationPatch(event)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 409,
+          statusMessage: expect.stringContaining('overlapping this time slot')
+        })
+      )
     })
   })
 

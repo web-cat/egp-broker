@@ -53,6 +53,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
 
   const newEndTime = new Date(newStartTime.getTime() + 60 * 60 * 1000)
 
+  // Ensure new time is in the future
+  if (newStartTime < new Date()) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Cannot reschedule to a time slot in the past'
+    })
+  }
+
   const existing = await prisma.cbtfReservation.findUnique({
     where: { id: reservationId },
     include: {
@@ -68,6 +76,26 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     throw createError({
       statusCode: 400,
       statusMessage: `Cannot reschedule reservation in ${existing.status} status`
+    })
+  }
+
+  // Check for time collision with student's other active reservations
+  const conflictingSlot = await prisma.cbtfReservation.findFirst({
+    where: {
+      userId: session.user.id,
+      id: { not: existing.id },
+      status: { in: ['SCHEDULED', 'CHECKED_IN'] },
+      startTime: { lt: newEndTime },
+      endTime: { gt: newStartTime }
+    },
+    include: {
+      assignment: { select: { title: true } }
+    }
+  })
+  if (conflictingSlot) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: `You already have an active test reservation for "${conflictingSlot.assignment?.title || 'another assignment'}" overlapping this time slot`
     })
   }
 

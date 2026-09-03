@@ -50,6 +50,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
   // 2. Test reservations are strictly 1 hour
   const endTime = new Date(startTime.getTime() + 60 * 60 * 1000)
 
+  // 2b. Ensure reservation is in the future
+  if (startTime < new Date()) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Cannot schedule a reservation in the past'
+    })
+  }
+
   // 3. Verify assignment exists and is schedulable
   const assignment = await prisma.assignment.findUnique({
     where: { id: assignmentId },
@@ -100,6 +108,25 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       statusCode: 409,
       statusMessage:
         'You already have an active reservation for this assignment. Please reschedule or cancel it.'
+    })
+  }
+
+  // 5b. Prevent time collision: student cannot have another active reservation overlapping this time slot
+  const conflictingSlot = await prisma.cbtfReservation.findFirst({
+    where: {
+      userId: session.user.id,
+      status: { in: ['SCHEDULED', 'CHECKED_IN'] },
+      startTime: { lt: endTime },
+      endTime: { gt: startTime }
+    },
+    include: {
+      assignment: { select: { title: true } }
+    }
+  })
+  if (conflictingSlot) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: `You already have an active test reservation for "${conflictingSlot.assignment?.title || 'another assignment'}" overlapping this time slot`
     })
   }
 
