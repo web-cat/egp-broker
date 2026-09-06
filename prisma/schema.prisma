@@ -94,7 +94,14 @@ enum Protocol {
   SPLICE
 }
 
-/// An external LTI tool configuration (e.g. Gradescope, Piazza).
+enum PassPortRegistrationStatus {
+  NOT_REGISTERED
+  PENDING
+  REGISTERED
+  FAILED
+}
+
+/// An external LTI tool configuration (e.g. Gradescope, Piazza, CodeWorkout).
 model LtiTool {
   id                 String      @id @default(cuid())
   platformId         String?
@@ -108,12 +115,28 @@ model LtiTool {
   protocol           Protocol
   key                String?
   secret             String?
-  supportsExtensionApi Boolean   @default(false)
+
+  // Dual role flags
+  supportsProxy        Boolean   @default(true)
+  supportsPassport     Boolean   @default(false)
+  supportsExtensionApi Boolean   @default(false) // retained for backward compatibility
+
+  // PassPort credentials & endpoints
+  passportClientId            String?
+  passportClientSecret        String?
+  passportRegistrationUrl     String?
+  passportExtensionUrl        String?
+  passportRegistrationToken   String?                    @unique
+  passportRegistrationStatus  PassPortRegistrationStatus @default(NOT_REGISTERED)
+  passportRegistrationError   String?
+  passportRegisteredAt        DateTime?
+  passportRequestedProperties Json?
 
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
   @@index([platformId])
+  @@index([passportRegistrationStatus])
 }
 
 /// A specific installation/deployment of the tool within an LTI Platform.
