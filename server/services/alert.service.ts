@@ -23,6 +23,16 @@ export interface PassRedemptionAlertData {
   courseName?: string | null
 }
 
+export interface PassPortSyncFailureAlertData {
+  toolName: string
+  assignmentTitle: string
+  courseLabel?: string | null
+  studentName?: string | null
+  studentEmail?: string | null
+  error: string
+  requestId?: string
+}
+
 /**
  * Send an administrative alert to the configured ntfy topic.
  */
@@ -103,5 +113,30 @@ export async function notifyPassRedemption(data: PassRedemptionAlertData): Promi
     title: `Pass Redeemed: ${data.passTypeName}`,
     message,
     tags: ['ticket', 'admission_tickets']
+  })
+}
+
+/**
+ * Notify administrator about a PassPort extension sync failure.
+ * This is an urgent operational alert triggered when an external tool fails to accept an extension webhook.
+ */
+export async function notifyPassPortSyncFailure(
+  data: PassPortSyncFailureAlertData
+): Promise<boolean> {
+  const identity =
+    data.studentName && data.studentEmail
+      ? `${data.studentName} (${data.studentEmail})`
+      : data.studentName || data.studentEmail || 'A student'
+
+  const courseInfo = data.courseLabel ? ` in ${data.courseLabel}` : ''
+  const reqInfo = data.requestId ? ` (Request ID: ${data.requestId})` : ''
+
+  const message = `PassPort extension sync failed for ${identity}${courseInfo} on assignment "${data.assignmentTitle}" with external tool "${data.toolName}".\nError: ${data.error}${reqInfo}`
+
+  return await sendAdminAlert({
+    title: `PassPort Sync Failure: ${data.toolName}`,
+    message,
+    priority: 'urgent',
+    tags: ['warning', 'passport', 'rotating_light']
   })
 }

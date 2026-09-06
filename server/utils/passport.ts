@@ -1,12 +1,20 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHmac } from 'node:crypto'
 import type { H3Event } from 'h3'
 import { createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { getServerSiteUrl } from '@@/server/utils/site'
 import { toToolRow } from '@@/server/utils/lti-tools'
 import type { ToolRow } from '@@/shared/models/tool'
-import type { PassPortPhase1Request } from '@@/shared/models/passport'
-import { passPortPhase2CredentialsSchema } from '@@/shared/models/passport'
+import type {
+  PassPortPhase1Request,
+  PassPortExtensionPayload,
+  PassPortRollbackPayload
+} from '@@/shared/models/passport'
+import {
+  passPortPhase2CredentialsSchema,
+  passPortExtensionPayloadSchema,
+  passPortRollbackPayloadSchema
+} from '@@/shared/models/passport'
 
 /**
  * Initiates the 2-Phase Dynamic Registration Handshake for an LtiTool.
@@ -127,4 +135,227 @@ export async function handlePassPortCredentialsDelivery(
   })
 
   return toToolRow(updatedTool)
+}
+
+/**
+ * Signs a PassPort payload using HMAC-SHA256 with the shared client_secret.
+ */
+export function signPassPortRequest(
+  secret: string,
+  body: unknown,
+  timestamp?: number
+): { signature: string; timestamp: number } {
+  const ts = timestamp ?? Math.floor(Date.now() / 1000)
+  const message = typeof body === 'string' ? body : JSON.stringify(body)
+  const signature = createHmac('sha256', secret).update(message).digest('hex')
+  return { signature, timestamp: ts }
+}
+
+export interface BuildPassPortExtensionParams {
+  context: {
+    lmsInstanceGuid: string
+    issuer: string
+    ltiContextId: string
+    lmsInstance?: string | null
+    ltiDeploymentId?: string | null
+    canvasCourseId?: string | number | null
+  }
+  user: {
+    ltiUserId: string
+    brokerUserId?: string | null
+    canvasUserId?: string | number | null
+    firstName?: string | null
+    lastName?: string | null
+    email?: string | null
+    displayName?: string | null
+    courseRole?: string | null
+  }
+  resource: {
+    ltiResourceLinkId: string
+    brokerAssignmentId?: string | null
+    canvasAssignmentId?: string | number | null
+    title?: string | null
+    externalUrl?: string | null
+  }
+  extension: {
+    passType: string
+    originalDueDate: string | Date
+    newDueDate: string | Date
+    appliedAt?: string | Date | null
+  }
+  requestedProperties?: string[] | null
+  requestId?: string
+}
+
+/**
+ * Builds a compliant PassPort extension payload, strictly filtering optional
+ * properties according to the tool's requested_properties list.
+ */
+export function buildPassPortExtensionPayload(
+  params: BuildPassPortExtensionParams
+): PassPortExtensionPayload {
+  const reqProps = new Set(params.requestedProperties || [])
+
+  // Context: mandatory baseline + optional requested
+  const context: Record<string, any> = {
+    lms_instance_guid: params.context.lmsInstanceGuid,
+    issuer: params.context.issuer,
+    lti_context_id: params.context.ltiContextId
+  }
+  if (reqProps.has('lms_instance') && params.context.lmsInstance) {
+    context.lms_instance = params.context.lmsInstance
+  }
+  if (reqProps.has('lti_deployment_id') && params.context.ltiDeploymentId) {
+    context.lti_deployment_id = params.context.ltiDeploymentId
+  }
+  if (reqProps.has('canvas_course_id') && params.context.canvasCourseId != null) {
+    context.canvas_course_id = String(params.context.canvasCourseId)
+  }
+
+  // User: mandatory baseline + optional requested
+  const user: Record<string, any> = {
+    lti_user_id: params.user.ltiUserId
+  }
+  if (reqProps.has('broker_user_id') && params.user.brokerUserId) {
+    user.broker_user_id = params.user.brokerUserId
+  }
+  if (reqProps.has('canvas_user_id') && params.user.canvasUserId != null) {
+    user.canvas_user_id = String(params.user.canvasUserId)
+  }
+  if (reqProps.has('first_name') && params.user.firstName) {
+    user.first_name = params.user.firstName
+  }
+  if (reqProps.has('last_name') && params.user.lastName) {
+    user.last_name = params.user.lastName
+  }
+  if (reqProps.has('email') && params.user.email) {
+    user.email = params.user.email
+  }
+  if (reqProps.has('display_name') && params.user.displayName) {
+    user.display_name = params.user.displayName
+  }
+  if (reqProps.has('course_role') && params.user.courseRole) {
+    user.course_role = params.user.courseRole
+  }
+
+  // Resource: mandatory baseline + optional requested
+  const resource: Record<string, any> = {
+    lti_resource_link_id: params.resource.ltiResourceLinkId
+  }
+  if (reqProps.has('broker_assignment_id') && params.resource.brokerAssignmentId) {
+    resource.broker_assignment_id = params.resource.brokerAssignmentId
+  }
+  if (reqProps.has('canvas_assignment_id') && params.resource.canvasAssignmentId != null) {
+    resource.canvas_assignment_id = String(params.resource.canvasAssignmentId)
+  }
+  if (reqProps.has('title') && params.resource.title) {
+    resource.title = params.resource.title
+  }
+  if (reqProps.has('external_url') && params.resource.externalUrl) {
+    resource.external_url = params.resource.externalUrl
+  }
+
+  // Extension: all fields mandatory
+  const originalDueDate =
+    params.extension.originalDueDate instanceof Date
+      ? params.extension.originalDueDate.toISOString()
+      : params.extension.originalDueDate
+
+  const newDueDate =
+    params.extension.newDueDate instanceof Date
+      ? params.extension.newDueDate.toISOString()
+      : params.extension.newDueDate
+
+  const appliedAt = params.extension.appliedAt
+    ? params.extension.appliedAt instanceof Date
+      ? params.extension.appliedAt.toISOString()
+      : params.extension.appliedAt
+    : new Date().toISOString()
+
+  const extension = {
+    pass_type: params.extension.passType,
+    original_due_date: originalDueDate,
+    new_due_date: newDueDate,
+    applied_at: appliedAt
+  }
+
+  const payload = {
+    request_id: params.requestId || randomUUID(),
+    context,
+    user,
+    resource,
+    extension
+  }
+
+  return passPortExtensionPayloadSchema.parse(payload)
+}
+
+/**
+ * Dispatches an HMAC-signed extension POST request to an external tool's extension_handler.
+ */
+export async function sendPassPortExtension(
+  tool: {
+    passportExtensionUrl?: string | null
+    passportClientId?: string | null
+    passportClientSecret?: string | null
+  },
+  payload: PassPortExtensionPayload
+): Promise<void> {
+  if (!tool.passportExtensionUrl) {
+    throw new Error('Tool is missing passportExtensionUrl')
+  }
+  if (!tool.passportClientId || !tool.passportClientSecret) {
+    throw new Error('Tool is missing PassPort credentials (clientId or clientSecret)')
+  }
+
+  const { signature, timestamp } = signPassPortRequest(tool.passportClientSecret, payload)
+
+  await $fetch(tool.passportExtensionUrl, {
+    method: 'POST',
+    body: payload,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-PassPort-Client-ID': tool.passportClientId,
+      'X-PassPort-Signature': signature,
+      'X-PassPort-Timestamp': String(timestamp)
+    },
+    timeout: 10000
+  })
+}
+
+/**
+ * Dispatches an HMAC-signed rollback DELETE request to an external tool's extension_handler.
+ */
+export async function sendPassPortRollback(
+  tool: {
+    passportExtensionUrl?: string | null
+    passportClientId?: string | null
+    passportClientSecret?: string | null
+  },
+  requestId: string
+): Promise<void> {
+  if (!tool.passportExtensionUrl) {
+    throw new Error('Tool is missing passportExtensionUrl')
+  }
+  if (!tool.passportClientId || !tool.passportClientSecret) {
+    throw new Error('Tool is missing PassPort credentials (clientId or clientSecret)')
+  }
+
+  const payload: PassPortRollbackPayload = passPortRollbackPayloadSchema.parse({
+    request_id: requestId
+  })
+
+  const { signature, timestamp } = signPassPortRequest(tool.passportClientSecret, payload)
+
+  await $fetch(tool.passportExtensionUrl, {
+    method: 'DELETE',
+    body: payload,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-PassPort-Client-ID': tool.passportClientId,
+      'X-PassPort-Signature': signature,
+      'X-PassPort-Timestamp': String(timestamp)
+    },
+    timeout: 10000
+  })
 }
