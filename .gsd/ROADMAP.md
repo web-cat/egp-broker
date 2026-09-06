@@ -18,11 +18,12 @@
 
 ### Phase 1: Foundation & Data Layer
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Completed (2026-09-06)
 **Objective**: Extend `LtiTool` model in `prisma/schema.prisma` with dual roles, separate credentials, registration token, status enum, and PassPort metadata. Run migration in docker. Create shared Zod schemas and TypeScript interfaces in `shared/models/tool.ts` and `shared/models/passport.ts`. Write unit tests for schemas and model operations.
 **Requirements**: REQ-01, REQ-02, REQ-10
 
 **Deliverables**:
+
 - Prisma schema updates:
   - `PassPortRegistrationStatus` enum (`NOT_REGISTERED`, `PENDING`, `REGISTERED`, `FAILED`).
   - `LtiTool` fields: `supportsProxy`, `supportsPassport`, `passportClientId`, `passportClientSecret`, `passportRegistrationUrl`, `passportExtensionUrl`, `passportRegistrationToken`, `passportRegistrationStatus`, `passportRegistrationError`, `passportRegisteredAt`, `passportRequestedProperties`.
@@ -40,6 +41,7 @@
 **Requirements**: REQ-03, REQ-04, REQ-10
 
 **Deliverables**:
+
 - `server/utils/passport.ts`:
   - Token generation and verification utilities.
   - Phase 1 outbound POST request dispatch with timeout and error handling.
@@ -60,6 +62,7 @@
 **Requirements**: REQ-05, REQ-10
 
 **Deliverables**:
+
 - `ToolEditPanel.vue`:
   - Role selection checkboxes: "LTI Proxy" (`supportsProxy`) and "PassPort Extension" (`supportsPassport`).
   - Dual credential sections:
@@ -83,6 +86,7 @@
 **Requirements**: REQ-06, REQ-07, REQ-08, REQ-09, REQ-10
 
 **Deliverables**:
+
 - `server/utils/passport.ts`:
   - `signPassPortRequest`: HMAC-SHA256 signer attaching `X-PassPort-Client-ID`, `X-PassPort-Signature`, `X-PassPort-Timestamp`.
   - `buildPassPortExtensionPayload`: Formats context, user, resource, and extension payloads, strictly omitting optional fields not in `passportRequestedProperties`.
