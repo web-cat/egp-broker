@@ -8,29 +8,26 @@ updated: 2026-09-06T11:05:00-04:00
 
 **Milestone:** v2.0 — PassPort Integration
 **Phase:** 1 - Foundation & Data Layer
-**Status:** ready-to-plan
-**Plan:** Ready for `/plan 1`
+**Status:** ready-to-execute
+**Plan:** Plans 1.1 and 1.2 created and verified
 
 ## Last Action
 
-Initialized GSD project for Milestone v2.0 — PassPort API Client Integration & External Tool Extension Management:
-- Completed & archived Milestone v1.0 (CBTF Scheduler) into `.gsd/milestones/v1.0-cbtf-scheduler/`.
-- Clarified high-leverage architectural questions via user consultation:
-  - Phase 2 dynamic registration uses registration token parameter in callback URL (`DECISION-006`).
-  - PassPort extension dispatch fails fast on tool error, triggers admin `ntfy` alert, and shows student advice message (`DECISION-007`).
-  - `LtiTool` model uses explicit boolean flags `supportsProxy` and `supportsPassport` with separate credential fields (`DECISION-008`).
-- Created finalized `SPEC.md`, `REQUIREMENTS.md` (10 traceable requirements), and `ROADMAP.md` (4 structured phases).
+Created execution plans for Phase 1 (Foundation & Data Layer):
+- Plan 1.1: Prisma Schema Extension & Database Migration (Wave 1)
+- Plan 1.2: Shared Validation Contracts, Server Model Utils & Unit Tests (Wave 2)
+Validated plans against all 6 dimensions with Plan Checker (Status: PASSED).
 
 ## Next Steps
 
-1. Run `/plan 1` to create execution plans for Phase 1: Foundation & Data Layer.
+1. Run `/execute 1` to execute all Phase 1 plans.
 
 ## Active Decisions
 
-| Decision | Choice | Made | Affects |
-|---|---|---|---|
-| [DECISION-006](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L112) | Registration token binding in callback URL (`?token=<cuid>`) | 2026-09-06 | Phase 1, Phase 2 |
-| [DECISION-007](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L131) | Fail-fast extension sync with admin ntfy & student advice notification | 2026-09-06 | Phase 4 |
+| Decision                                                                    | Choice                                                                                    | Made       | Affects          |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------- | ---------------- |
+| [DECISION-006](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L112) | Registration token binding in callback URL (`?token=<cuid>`)                              | 2026-09-06 | Phase 1, Phase 2 |
+| [DECISION-007](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L131) | Fail-fast extension sync with admin ntfy & student advice notification                    | 2026-09-06 | Phase 4          |
 | [DECISION-008](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L156) | Dual roles (`supportsProxy`, `supportsPassport`) & dedicated credential fields on LtiTool | 2026-09-06 | Phase 1, Phase 3 |
 
 ## Blockers
