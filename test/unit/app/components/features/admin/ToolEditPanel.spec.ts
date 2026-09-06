@@ -46,12 +46,14 @@ const globalStubs = {
   },
   UCheckbox: {
     props: ['modelValue', 'label'],
-    template: '<label><input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)" />{{ label }}</label>'
+    template:
+      '<label><input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)" />{{ label }}</label>'
   },
   USelect: true,
   BaseFormInput: {
     props: ['modelValue', 'label', 'name'],
-    template: '<div><label>{{ label }}</label><input :name="name" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" /></div>'
+    template:
+      '<div><label>{{ label }}</label><input :name="name" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" /></div>'
   },
   UBadge: {
     props: ['color', 'variant', 'icon'],
@@ -63,7 +65,8 @@ const globalStubs = {
   },
   UAlert: {
     props: ['color', 'title', 'description'],
-    template: '<div class="alert" :data-color="color"><span>{{ title }}</span><p>{{ description }}</p></div>'
+    template:
+      '<div class="alert" :data-color="color"><span>{{ title }}</span><p>{{ description }}</p></div>'
   }
 }
 
@@ -213,14 +216,21 @@ describe('ToolEditPanel', () => {
     await flushPromises()
 
     // Find and click the "Register with PassPort" button
-    const regButton = wrapper.findAll('button').find((b) => b.text().includes('Register with PassPort'))
+    const regButton = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Register with PassPort'))
     expect(regButton).toBeDefined()
     await regButton!.trigger('click')
     await flushPromises()
 
     expect(mockRegisterPassPort).toHaveBeenCalledWith('tool-3')
     expect(wrapper.emitted('saved')).toBeTruthy()
-    expect(wrapper.emitted('saved')![0]).toEqual(['tool-3', { ...mockTool, passportRegistrationStatus: 'PENDING' }])
-    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'PassPort registration initiated' }))
+    expect(wrapper.emitted('saved')![0]).toEqual([
+      'tool-3',
+      { ...mockTool, passportRegistrationStatus: 'PENDING' }
+    ])
+    expect(mockToastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'PassPort registration initiated' })
+    )
   })
 })
