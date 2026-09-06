@@ -16,10 +16,10 @@
 
 ## Items
 
-- [ ] Plan Phase 1: Database models, schema extensions, and Zod contracts for PassPort `high` — 2026-09-06
-- [ ] Implement Phase 2 dynamic registration endpoints and utilities `high` — 2026-09-06
-- [ ] Enhance admin tool management UI with PassPort status badges and trigger actions `medium` — 2026-09-06
-- [ ] Connect PassPort extension webhook dispatch to pass redemption workflow with fail-fast `high` — 2026-09-06
+- [x] Plan Phase 1: Database models, schema extensions, and Zod contracts for PassPort `high` — 2026-09-06
+- [x] Implement Phase 2 dynamic registration endpoints and utilities `high` — 2026-09-06
+- [x] Enhance admin tool management UI with PassPort status badges and trigger actions `medium` — 2026-09-06
+- [x] Connect PassPort extension webhook dispatch to pass redemption workflow with fail-fast `high` — 2026-09-06
 
 ---
 
