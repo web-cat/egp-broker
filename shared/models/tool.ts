@@ -5,8 +5,9 @@
  */
 
 import { z } from 'zod'
+import { passPortRegistrationStatusSchema } from './passport'
 
-export type { LtiTool, Protocol } from '@prisma/client'
+export type { LtiTool, Protocol, PassPortRegistrationStatus } from '@prisma/client'
 
 // =============================================================================
 // INTERFACES
@@ -18,7 +19,16 @@ export const toolRowSchema = z.object({
   baseUrl: z.string(),
   protocol: z.enum(['LTI11', 'LTI13', 'SPLICE']),
   key: z.string().nullable(),
+  supportsProxy: z.boolean(),
+  supportsPassport: z.boolean(),
   supportsExtensionApi: z.boolean(),
+  passportClientId: z.string().nullable(),
+  passportRegistrationUrl: z.string().nullable(),
+  passportExtensionUrl: z.string().nullable(),
+  passportRegistrationStatus: passPortRegistrationStatusSchema,
+  passportRegistrationError: z.string().nullable(),
+  passportRegisteredAt: z.string().nullable(),
+  passportRequestedProperties: z.array(z.string()).nullable(),
   platformId: z.string().nullable(),
   platformIssuer: z.string().nullable(),
   createdAt: z.string()
@@ -36,7 +46,26 @@ export const createToolSchema = z.object({
   protocol: z.enum(['LTI11', 'LTI13', 'SPLICE']),
   key: z.string().nullable().optional(),
   secret: z.string().nullable().optional(),
+  supportsProxy: z.boolean().default(true),
+  supportsPassport: z.boolean().default(false),
   supportsExtensionApi: z.boolean().default(false),
+  passportClientId: z.string().nullable().optional(),
+  passportClientSecret: z.string().nullable().optional(),
+  passportRegistrationUrl: z
+    .string()
+    .url('Must be a valid URL')
+    .nullable()
+    .optional()
+    .or(z.literal('')),
+  passportExtensionUrl: z
+    .string()
+    .url('Must be a valid URL')
+    .nullable()
+    .optional()
+    .or(z.literal('')),
+  passportRegistrationStatus: passPortRegistrationStatusSchema.optional(),
+  passportRegistrationError: z.string().nullable().optional(),
+  passportRequestedProperties: z.array(z.string()).nullable().optional(),
   platformId: z.string().nullable().optional()
 })
 
@@ -64,6 +93,12 @@ export const initialToolState: CreateToolData = {
   protocol: 'LTI13',
   key: '',
   secret: '',
+  supportsProxy: true,
+  supportsPassport: false,
   supportsExtensionApi: false,
+  passportClientId: '',
+  passportClientSecret: '',
+  passportRegistrationUrl: '',
+  passportExtensionUrl: '',
   platformId: null
 }
