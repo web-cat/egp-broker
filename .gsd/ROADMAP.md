@@ -5,12 +5,12 @@
 
 ## Must-Haves (from SPEC)
 
-- [ ] Dual-role `LtiTool` model with `supportsProxy` and `supportsPassport`, separate key/secret pairs, and registration metadata.
-- [ ] 2-Phase Dynamic Registration client handshake (Phase 1 POST to tool registration URL with tokenized callback, Phase 2 POST to `/api/passport/v1/credentials`).
-- [ ] Admin tool management UI on `/admin/tools` with role toggles, dual credentials, registration trigger button, status badges, and notifications.
-- [ ] HMAC-SHA256 signed PassPort extension webhook dispatch on pass redemption respecting requested properties.
-- [ ] Fail-fast safety: Abort redemption on tool sync failure, send `ntfy` admin alert, return student guidance error, and support downstream `DELETE` rollback.
-- [ ] 100% behavioral test coverage with Vitest; ESLint and Prettier clean.
+- [x] Dual-role `LtiTool` model with `supportsProxy` and `supportsPassport`, separate key/secret pairs, and registration metadata.
+- [x] 2-Phase Dynamic Registration client handshake (Phase 1 POST to tool registration URL with tokenized callback, Phase 2 POST to `/api/passport/v1/credentials`).
+- [x] Admin tool management UI on `/admin/tools` with role toggles, dual credentials, registration trigger button, status badges, and notifications.
+- [x] HMAC-SHA256 signed PassPort extension webhook dispatch on pass redemption respecting requested properties.
+- [x] Fail-fast safety: Abort redemption on tool sync failure, send `ntfy` admin alert, return student guidance error, and support downstream `DELETE` rollback.
+- [x] 100% behavioral test coverage with Vitest; ESLint and Prettier clean.
 
 ---
 
@@ -81,7 +81,7 @@
 
 ### Phase 4: Extension Dispatch, Pass Redemption Hook & Fail-Fast Alerting
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Completed (2026-09-06)
 **Objective**: Build HMAC-SHA256 PassPort request signer with property filtering. Integrate into `server/utils/redemptions.ts` to dispatch extensions on pass redemption. Implement fail-fast transaction rollback, `ntfy` admin alert via `alert.service.ts`, student error advice, and downstream rollback `DELETE` handling. Write unit tests covering signing, redemption, failure alerts, and rollback.
 **Requirements**: REQ-06, REQ-07, REQ-08, REQ-09, REQ-10
 
