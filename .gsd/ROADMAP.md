@@ -57,7 +57,7 @@
 
 ### Phase 3: Admin Tool Management UI & Registration Feedback
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Update `ToolEditPanel.vue` and `app/pages/admin/tools.vue` with Proxy and PassPort role toggles, dedicated credential inputs, dynamic registration trigger button, status badges (`NOT_REGISTERED`, `PENDING`, `REGISTERED`, `FAILED`), error displays, and user notifications. Write unit tests for UI states and composables.
 **Requirements**: REQ-05, REQ-10
 
