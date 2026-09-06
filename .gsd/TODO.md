@@ -16,10 +16,11 @@
 
 ## Items
 
-- [ ] Execute Phase 1: Database models and migrations for CBTF `high` — 2026-09-02
-- [ ] Add seed script entries for testing facility and demo proctors `medium` — 2026-09-02
-- [ ] Investigate barcode/magnetic stripe scanner input compatibility for proctor check-in `low` — 2026-09-02
+- [ ] Plan Phase 1: Database models, schema extensions, and Zod contracts for PassPort `high` — 2026-09-06
+- [ ] Implement Phase 2 dynamic registration endpoints and utilities `high` — 2026-09-06
+- [ ] Enhance admin tool management UI with PassPort status badges and trigger actions `medium` — 2026-09-06
+- [ ] Connect PassPort extension webhook dispatch to pass redemption workflow with fail-fast `high` — 2026-09-06
 
 ---
 
-_Last updated: 2026-09-02_
+_Last updated: 2026-09-06_

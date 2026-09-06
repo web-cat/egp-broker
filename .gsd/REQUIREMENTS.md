@@ -1,21 +1,16 @@
-# REQUIREMENTS.md
+# REQUIREMENTS.md — System Requirements
 
-## Format & Traceability
+## Traceability Matrix
 
-| ID     | Requirement                                                                                                                                             | Source      | Status  |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------- |
-| REQ-01 | Single facility model storing seat capacity, recurring weekly hours (day of week, open time, close time), date exceptions, and seat allocation sequence | SPEC Goal 1 | Pending |
-| REQ-02 | Add `studentId` field to `User` and `PROCTOR` role to `GlobalRole` enum                                                                                 | SPEC Goal 5 | Pending |
-| REQ-03 | Instructor assignment scheduling configuration: `isSchedulable`, `scheduleWindowStart`, `scheduleWindowEnd` properties on `Assignment`                  | SPEC Goal 4 | Pending |
-| REQ-04 | 5-minute boundary reservation slots with 1-hour duration ending at or before facility close time                                                        | SPEC Goal 2 | Pending |
-| REQ-05 | Arrival throttling: max students scheduled at identical slot $\le \lceil \text{total\_seats} / 12 \rceil$                                               | SPEC Goal 2 | Pending |
-| REQ-06 | Sequential seat allocation engine respecting custom seat sequence across consecutive reservations                                                       | SPEC Goal 2 | Pending |
-| REQ-07 | Progressive student scheduling wizard (morning/afternoon preference -> 3-4 recommended low-utilization days -> 1 slot per hour selection)               | SPEC Goal 3 | Pending |
-| REQ-08 | Student dashboard reservation status display and single active reservation constraint per assignment                                                    | SPEC Goal 3 | Pending |
-| REQ-09 | Rescheduling capability for missed or upcoming reservations within open scheduling window                                                               | SPEC Goal 3 | Pending |
-| REQ-10 | Integration with pass redemptions: redeeming retake pass creates a new schedulable window based on pass duration                                        | SPEC Goal 4 | Pending |
-| REQ-11 | Proctor shift scheduling: proctors assigned to work hours within facility open times                                                                    | SPEC Goal 5 | Pending |
-| REQ-12 | Proctor live console displaying current arrivals, departing students, and active seated roster                                                          | SPEC Goal 5 | Pending |
-| REQ-13 | Proctor check-in workflow with student ID entry/scan, photo verification, seat assignment display, and mismatch validation                              | SPEC Goal 5 | Pending |
-| REQ-14 | Proctor checkout workflow to mark session complete and vacate seat                                                                                      | SPEC Goal 5 | Pending |
-| REQ-15 | Admin management UI for facility settings, operating schedule, exceptions, and seat allocation order                                                    | SPEC Goal 1 | Pending |
+| ID | Requirement | Source | Status |
+|---|---|---|---|
+| REQ-01 | **Dual-Role LtiTool Schema**: Extend `LtiTool` model with `supportsProxy`, `supportsPassport`, separate key/secrets (`key`/`secret` for proxy, `passportClientId`/`passportClientSecret`), `passportRegistrationUrl`, `passportExtensionUrl`, `passportRegistrationToken`, `passportRegistrationStatus` enum, `passportRegistrationError`, `passportRegisteredAt`, and `passportRequestedProperties`. | SPEC Goal 1 | Pending |
+| REQ-02 | **Shared Schemas & Validation**: Create Zod validation schemas and TypeScript interfaces for PassPort payloads (Phase 1, Phase 2, Extension Request, Rollback Delete, and Tool Row projections). | SPEC Goal 1 | Pending |
+| REQ-03 | **Phase 1 Registration Dispatch**: Implement admin endpoint `POST /api/admin/tools/:id/passport/register` to generate secure registration token, set status `PENDING`, and dispatch registration POST to tool's `passportRegistrationUrl`. | SPEC Goal 2 | Pending |
+| REQ-04 | **Phase 2 Credential Receiver**: Implement public callback endpoint `POST /api/passport/v1/credentials?token=<cuid>` validating token, updating tool credentials, extension endpoint, requested properties, and setting status `REGISTERED`. | SPEC Goal 2 | Pending |
+| REQ-05 | **Admin Tool Management UI**: Update `ToolEditPanel.vue` and `/admin/tools` with role checkboxes (Proxy vs PassPort), dual credential fields, registration trigger button, live status badge (`NOT_REGISTERED`, `PENDING`, `REGISTERED`, `FAILED`), error banner, and toast feedback. | SPEC Goal 3 | Pending |
+| REQ-06 | **PassPort Webhook Signer**: Implement HMAC-SHA256 signing utility generating `X-PassPort-Signature`, `X-PassPort-Client-ID`, and `X-PassPort-Timestamp` with payload filtering strictly respecting `passportRequestedProperties`. | SPEC Goal 4 | Pending |
+| REQ-07 | **Pass Redemption Integration**: Hook into `server/utils/redemptions.ts` to dispatch PassPort extension request when redeeming passes for assignments linked to PassPort tools. | SPEC Goal 4 | Pending |
+| REQ-08 | **Fail-Fast Error Handling & Admin Alert**: On extension dispatch failure, abort pass redemption transaction, trigger admin `ntfy` notification with student/assignment/tool summary, and return clear student-facing error message. | SPEC Goal 5 | Pending |
+| REQ-09 | **Downstream Rollback**: If LMS sync fails after PassPort tool sync succeeds, dispatch signed `DELETE` request with original `request_id` to tool's `extension_handler`. | SPEC Goal 5 | Pending |
+| REQ-10 | **Verification & Quality**: Comprehensive Vitest unit tests for all schemas, server endpoints, utilities, and UI components; Prettier and ESLint clean. | SPEC Goal 1-5 | Pending |

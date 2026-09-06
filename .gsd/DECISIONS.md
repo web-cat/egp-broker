@@ -108,7 +108,81 @@ Clarification requested for Phase 4 regarding `/proctor` operational console acc
    - Persist `checkInLeadMinutes` and `checkInGraceMinutes` on `CbtfFacility` so administrators can configure both thresholds from `/admin/cbtf`.
 4. **Card Swipe Peripheral Expedited Handling**:
    - Support hardware magnetic stripe / barcode USB wedge readers by auto-focusing the input, automatically stripping track sentinel characters (e.g. `;`, `%`, `?`), and triggering instant lookup on `Enter`.
+---
+
+## [DECISION-006] PassPort Registration Callback Token Binding
+
+**Date**: 2026-09-06
+**Status**: Accepted
+
+### Context
+
+During Phase 1 PassPort dynamic registration, the Broker initiates registration by POSTing to the external tool's registration URL with a `callback_url`. In Phase 2, the tool pushes its credentials to this callback. We need to securely and deterministically bind the Phase 2 credential delivery to the specific pending `LtiTool`.
+
+### Decision
+
+Generate a unique secure registration token (cuid) stored on `LtiTool.passportRegistrationToken` during Phase 1. Include this token in the callback URL query string: `https://<broker-domain>/api/passport/v1/credentials?token=<cuid>`. When the external tool delivers credentials to this endpoint, the Broker validates the token to find and update the pending `LtiTool`.
 
 ### Rationale
 
-Empowers proctors with a rapid, error-proof check-in/out station optimized for physical card swipers, guarantees workstation seats are not double-occupied before previous exam ends, and gives facility administrators full control over early/late arrival policies.
+Eliminates ambiguity when multiple tools or instances register concurrently, prevents spoofed credential delivery, and ensures strict authorization and idempotency.
+
+---
+
+## [DECISION-007] Fail-Fast Extension Sync with Admin Ntfy and Student Notification
+
+**Date**: 2026-09-06
+**Status**: Accepted
+
+### Context
+
+When a student redeems a pass on an assignment linked to an external tool that supports PassPort, the Broker posts the extension to the tool's `extension_handler`. If that network request fails or returns an error (4xx/5xx), we need a clear policy on pass redemption and error reporting.
+
+### Decision
+
+Fail-fast:
+1. Block pass redemption: If the PassPort extension POST fails, abort the transaction so the student's pass balance is not decremented and no orphan override is created.
+2. Send an immediate administrative alert via `ntfy` (using `alert.service.ts`), providing a summary with student name/email, assignment title, course, and external tool name/URL.
+3. Return a user-friendly error to the student UI advising them that extension sync with the external tool failed and instructing them to contact their course instructor.
+4. If a downstream LMS sync fails after the tool sync succeeded, send a signed `DELETE` request to the tool's `extension_handler` with the `request_id` to rollback the external extension.
+
+### Rationale
+
+Prevents desynchronization between the Broker, the LMS, and the external learning tool. Ensures students are immediately aware of the issue and instructors/admins are promptly alerted to resolve tool connectivity or configuration problems.
+
+---
+
+## [DECISION-008] Dual Roles and Dedicated Credential Fields on LtiTool
+
+**Date**: 2026-09-06
+**Status**: Accepted
+
+### Context
+
+`LtiTool` records may serve two distinct purposes:
+1. As an external LTI tool whose launch/outcomes can be proxied (LTI proxy role).
+2. As an external tool that supports the PassPort API for recording student extensions (PassPort extension role).
+Tools can support either role or both roles simultaneously, each requiring distinct keys, secrets, and endpoints.
+
+### Decision
+
+Extend the `LtiTool` model in `prisma/schema.prisma` with explicit boolean flags:
+- `supportsProxy: Boolean @default(true)`
+- `supportsPassport: Boolean @default(false)`
+Separate credentials and endpoints:
+- Proxy credentials: `key: String?`, `secret: String?`
+- PassPort credentials & endpoints:
+  - `passportClientId: String?`
+  - `passportClientSecret: String?`
+  - `passportRegistrationUrl: String?`
+  - `passportExtensionUrl: String?`
+  - `passportRegistrationToken: String? @unique`
+  - `passportRegistrationStatus: PassPortRegistrationStatus @default(NOT_REGISTERED)` (`NOT_REGISTERED`, `PENDING`, `REGISTERED`, `FAILED`)
+  - `passportRegistrationError: String?`
+  - `passportRegisteredAt: DateTime?`
+  - `passportRequestedProperties: Json?`
+Maintain `supportsExtensionApi: Boolean @default(false)` for backwards compatibility during migration.
+
+### Rationale
+
+Provides clear separation of concerns between LTI proxying and PassPort webhook extension delivery, supports tools that only do one or both, and ensures strict typing across the stack.

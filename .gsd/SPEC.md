@@ -1,58 +1,46 @@
-# SPEC.md — Project Specification: CBTF Scheduler
+# SPEC.md — Project Specification
 
 > **Status**: `FINALIZED`
+> **Project**: PassPort API Client Integration & External Tool Extension Management
+> **Milestone**: v2.0 — PassPort Integration
 
 ## Vision
 
-Provide an integrated Computer-Based Testing Facility (CBTF) scheduling and proctoring system within the EGP Broker platform. The scheduler manages physical workstation capacity, operating hours, and proctor shifts while guiding students through a streamlined progressive selection workflow to reserve 1-hour exam slots. In addition, it equips testing center proctors with real-time check-in, visual photo verification, seat assignment management, and checkout operations to uphold testing integrity.
+Empower the EGP Broker to act as a seamless client for the PassPort Protocol v1, dynamically registering with external learning tools (such as CodeWorkout, Web-CAT, etc.) and automatically dispatching cryptographically signed extension webhooks when students redeem passes for tool-backed assignments. This enables cross-platform deadline extensions while maintaining independent proxy and PassPort capabilities for all external LTI tools.
 
 ## Goals
 
-1. **Facility & Capacity Management**: Model a single testing center facility with configurable seat counts, weekly recurring operating hours (M-F), custom calendar exceptions (holidays, lunch breaks, proctor shortages), and a deterministic sequential seat allocation order across 5-minute boundaries.
-2. **Deterministic & Throttled Scheduling Engine**: Enforce reservation constraints:
-   - 1-hour (60 minute) reservation duration on 5-minute boundaries.
-   - Arrival throttling: maximum concurrent arrivals capped at $\lceil \text{total\_seats} / 12 \rceil$.
-   - Seat assignment order preserved across consecutive slots.
-   - Room must remain open for at least 1 hour past the reservation start time.
-3. **Student Progressive Narrowing Experience**: Replace large overwhelming calendar views with a 3-step narrowing wizard:
-   - Time-of-day preference (Morning vs. Afternoon).
-   - Dynamic recommendation of 3–4 days with lowest center utilization / highest open seat availability.
-   - Fixed selection offering a randomly selected open slot per hour within the preferred window.
-   - Prevent double-booking and allow rescheduling within the instructor's test window (or pass redemption window).
-4. **Instructor Exam Window Management**: Allow instructors to designate assignments as requiring CBTF scheduling, configure open/close scheduling windows, and leverage the existing pass system to issue retake scheduling windows.
-5. **Proctor Operations Console**: Provide an operational station interface for proctors:
-   - Live roster of arriving, seated, and departing students.
-   - ID card check-in with visual photo verification and instant seat routing (plus explicit rejection if unreserved or off-schedule).
-   - ID card checkout to vacate seats and complete exam sessions.
-   - Work schedule assignment for proctors aligned with facility open hours.
+1. **Dual-Role LtiTool Support**: Extend the existing `LtiTool` model and admin management to clearly support both external tools where LMS requests can be proxied (`supportsProxy`) and external tools that support the PassPort API for recording student extensions (`supportsPassport`), including separate key/secret pairs for each role.
+2. **2-Phase Dynamic Registration Client**: Implement the client-side PassPort Dynamic Registration handshake, allowing administrators to initiate registration with an external tool (`POST [tool]/api/passport/v1/register`), securely receiving credentials via a callback endpoint (`POST /api/passport/v1/credentials?token=<cuid>`), and storing assigned endpoints and requested property sets.
+3. **Admin Tool Management & Registration Status**: Provide rich controls and visual status badges on `/admin/tools` (`ToolEditPanel.vue`) to trigger dynamic registration, display live registration status (`NOT_REGISTERED`, `PENDING`, `REGISTERED`, `FAILED`), show timestamp and error details, and surface toast notifications.
+4. **PassPort Extension Dispatch on Pass Redemption**: In `server/utils/redemptions.ts`, check if the assignment is associated with an `LtiTool` supporting PassPort. If so, build a compliant payload (with only the requested optional properties), sign it with HMAC-SHA256 (`X-PassPort-Signature`, `X-PassPort-Client-ID`, `X-PassPort-Timestamp`), and POST it to the tool's `extension_handler`.
+5. **Fail-Fast Safety, Alerting, & Rollback**: If external tool extension sync fails, fail-fast by aborting pass redemption, sending an administrative `ntfy` alert with student/assignment/tool details, and displaying an on-screen student notification advising them to contact their instructor. If a downstream LMS sync fails after external tool sync, issue a signed `DELETE` rollback request.
 
 ## Non-Goals (Out of Scope)
 
-- Multi-facility or multi-campus physical room routing in v1 (single facility model per institution).
-- Dynamic exam durations (all CBTF reservations are strictly fixed at 1 hour).
-- Direct hardware turnstile or electronic gate integrations (check-in/checkout is operated by proctors via workstation web console).
-- Live exam screen recording or AI-based proctoring webcam feeds (human proctors in the physical facility conduct monitoring).
+- Implementing the *server* receiving side of the PassPort extension endpoint (the Broker is a *client* pushing extensions to tools; the tools implement the extension endpoint).
+- Changes to LTI 1.3 launch proxying protocols or CAS authentication workflows.
+- Arbitrary custom webhook payload formats beyond the PassPort Protocol v1 specification.
 
-## Users & Roles
+## Users
 
-- **Students**: View schedulable assignments on dashboard, execute the progressive reservation wizard, view reservation status, and reschedule within active windows.
-- **Instructors / Teachers**: Flag assignments as schedulable, define test availability windows, and issue retake passes.
-- **Proctors (`PROCTOR` global role)**: Monitor active sessions, check students in by ID, verify identity photos, guide students to assigned workstations, and check students out.
-- **Facility Administrators / Admins**: Configure facility seats, seat allocation sequence, recurring open/close schedules, date-specific exceptions, and assign proctor shifts.
+- **System Administrators**: Configure external LTI tools, toggle Proxy vs. PassPort roles, trigger dynamic registration, inspect registration statuses, and receive ntfy alerts if extension sync fails.
+- **Instructors**: Link course assignments to external tools with confidence that student deadline extensions will propagate automatically to the tool.
+- **Students**: Redeem resubmission/late passes with guaranteed synchronized deadlines in both Canvas and external tools, receiving immediate clear alerts if tool communication fails.
 
 ## Constraints
 
-- **Architecture Standards**: Nuxt 4, Vue 3, Nitro, Prisma ORM 6, PostgreSQL, and Zod per `GEMINI.md`.
-- **Testing Standard**: 100% test coverage with Vitest for new models, server utilities, API endpoints, and feature composables.
-- **Database Migrations**: Clean Prisma schema updates with migrations (`docker compose exec app-dev pnpm prisma migrate dev`).
-- **Student ID Uniqueness**: Student identification number stored on `User` for proctor entry and lookup.
+- **Strict Nuxt 4 Architecture**: Enforce layered sovereignty (stateless base components, feature-specific composables, Zod validation on all endpoints, projected database queries).
+- **Environment Parity**: Run all migrations, tests, and builds inside the `app-dev` Docker container.
+- **Protocol Fidelity**: Adhere strictly to the PassPort Protocol v1 specification defined in `docs/extension-api.md`.
+- **100% Behavioral Coverage**: All new endpoints, utilities, and components must have corresponding Vitest unit tests.
 
 ## Success Criteria
 
-- [ ] Facility configuration persists capacity, custom seat allocation order, weekly operating hours, and date exceptions.
-- [ ] Concurrent arrival throttling strictly enforces $\lceil \text{total\_seats} / 12 \rceil$ per 5-minute interval.
-- [ ] Consecutive seat allocation order is respected across successive bookings.
-- [ ] Students can reserve, view status on dashboard, and reschedule exams within their eligibility window.
-- [ ] Pass redemptions for schedulable assignments grant retake scheduling windows matching pass duration.
-- [ ] Proctors can search/scan student IDs, view student photos, see seat assignments, check students in, and check them out.
-- [ ] All new logic is covered by unit tests with 0 test regressions.
+- [ ] `LtiTool` schema supports both `supportsProxy` and `supportsPassport`, separate key/secret pairs, registration token, status enum, extension URL, and requested properties.
+- [ ] Admin can initiate dynamic registration from `/admin/tools`, and the tool receives a Phase 1 POST request with secure callback URL.
+- [ ] Broker's `/api/passport/v1/credentials` endpoint validates Phase 2 payload and updates tool status to `REGISTERED`.
+- [ ] Admin UI displays live registration status, handles manual overrides, and shows actionable notifications on error.
+- [ ] Pass redemption triggers HMAC-SHA256 signed extension request to tool's `extension_handler` when assignment is backed by a PassPort tool.
+- [ ] Extension sync failure rolls back pass redemption, sends ntfy admin alert, and shows student advice message.
+- [ ] All unit tests pass with zero regressions; ESLint and Prettier clean.

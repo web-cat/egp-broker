@@ -1,18 +1,16 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 4
-> **Milestone**: v1.0 — CBTF Scheduler
+> **Current Phase**: Phase 1
+> **Milestone**: v2.0 — PassPort Integration
 
 ## Must-Haves (from SPEC)
 
-- [x] Facility model with seat capacity, weekly hours, exceptions, and custom seat allocation sequence.
-- [x] Arrival throttling ($\lceil \text{total\_seats} / 12 \rceil$) on 5-minute boundary, 1-hour duration reservations.
-- [x] Deterministic sequential seat allocation across consecutive reservations.
-- [x] 3-step student progressive narrowing wizard (morning/afternoon -> 3-4 days -> 1 slot per hour).
-- [x] Student dashboard status tracking and rescheduling for missed/upcoming reservations.
-- [x] Retake pass integration establishing new scheduling windows.
-- [x] Proctor operational console for live arrivals, departures, student ID check-in with photo verification, and checkout.
-- [x] Admin management of facility configuration and proctor shifts.
+- [ ] Dual-role `LtiTool` model with `supportsProxy` and `supportsPassport`, separate key/secret pairs, and registration metadata.
+- [ ] 2-Phase Dynamic Registration client handshake (Phase 1 POST to tool registration URL with tokenized callback, Phase 2 POST to `/api/passport/v1/credentials`).
+- [ ] Admin tool management UI on `/admin/tools` with role toggles, dual credentials, registration trigger button, status badges, and notifications.
+- [ ] HMAC-SHA256 signed PassPort extension webhook dispatch on pass redemption respecting requested properties.
+- [ ] Fail-fast safety: Abort redemption on tool sync failure, send `ntfy` admin alert, return student guidance error, and support downstream `DELETE` rollback.
+- [ ] 100% behavioral test coverage with Vitest; ESLint and Prettier clean.
 
 ---
 
@@ -20,98 +18,86 @@
 
 ### Phase 1: Foundation & Data Layer
 
-**Status**: ✅ Completed (2026-09-02)
-**Objective**: Establish the database models, relations, migrations, seed data, and shared Zod schemas for CBTF facility, proctors, and reservations.
-**Requirements**: REQ-01, REQ-02, REQ-03
-**Deliverables**:
+**Status**: ⬜ Not Started
+**Objective**: Extend `LtiTool` model in `prisma/schema.prisma` with dual roles, separate credentials, registration token, status enum, and PassPort metadata. Run migration in docker. Create shared Zod schemas and TypeScript interfaces in `shared/models/tool.ts` and `shared/models/passport.ts`. Write unit tests for schemas and model operations.
+**Requirements**: REQ-01, REQ-02, REQ-10
 
+**Deliverables**:
 - Prisma schema updates:
-  - `GlobalRole.PROCTOR` enum entry.
-  - `User.studentId` unique/indexed field.
-  - `Assignment.isSchedulable`, `Assignment.scheduleWindowStart`, `Assignment.scheduleWindowEnd`.
-  - `CbtfFacility` (name, totalSeats, seatAllocationOrder).
-  - `CbtfOperatingHours` (dayOfWeek, openTime, closeTime).
-  - `CbtfScheduleException` (date, isClosed, openTime, closeTime, reason).
-  - `CbtfProctorShift` (userId, date, startTime, endTime).
-  - `CbtfReservation` (userId, assignmentId, seatNumber, startTime, endTime, status: SCHEDULED, CHECKED_IN, COMPLETED, MISSED, CANCELLED, checkedInAt, checkedOutAt).
-- Prisma migration executed in `app-dev` container.
-- Shared Zod validation schemas and TypeScript interfaces in `shared/`.
-- Unit tests verifying schemas and models.
+  - `PassPortRegistrationStatus` enum (`NOT_REGISTERED`, `PENDING`, `REGISTERED`, `FAILED`).
+  - `LtiTool` fields: `supportsProxy`, `supportsPassport`, `passportClientId`, `passportClientSecret`, `passportRegistrationUrl`, `passportExtensionUrl`, `passportRegistrationToken`, `passportRegistrationStatus`, `passportRegistrationError`, `passportRegisteredAt`, `passportRequestedProperties`.
+  - Retain `supportsExtensionApi` for backwards compatibility.
+- Prisma migration generated and applied via `docker compose exec app-dev pnpm prisma migrate dev`.
+- Shared Zod validation schemas and TypeScript contracts in `shared/models/passport.ts` and `shared/models/tool.ts`.
+- Unit tests verifying model validation, projection schemas, and defaults.
 
 ---
 
-### Phase 2: Core Scheduling Engine & Business Logic
+### Phase 2: PassPort Dynamic Registration Handshake Engine
 
-**Status**: ✅ Completed (2026-09-02)
-**Objective**: Build server-side scheduling algorithms for progressive slot recommendation, arrival throttling, sequential seat allocation, reservation lifecycle, and pass redemption integration.
-**Requirements**: REQ-04, REQ-05, REQ-06, REQ-09, REQ-10
+**Status**: ⬜ Not Started
+**Objective**: Build server-side registration orchestration (`server/utils/passport.ts`), Phase 1 dispatch endpoint (`POST /api/admin/tools/:id/passport/register`), and Phase 2 credentials callback endpoint (`POST /api/passport/v1/credentials?token=<cuid>`). Write unit tests covering registration flows, error states, and token validation.
+**Requirements**: REQ-03, REQ-04, REQ-10
+
 **Deliverables**:
-
-- `server/utils/cbtf.ts`:
-  - Operating hours & exception calculation for any target date.
-  - 5-minute boundary slot generator ensuring 1-hour open window.
-  - Arrival throttle verification ($\le \lceil \text{total\_seats} / 12 \rceil$).
-  - Sequential seat allocation algorithm tracking seat order across bookings.
-  - Progressive narrowing query utility:
-    - Step 1: Morning vs Afternoon slot availability.
-    - Step 2: 3–4 lowest-utilization / highest-availability days.
-    - Step 3: Random selection of 1 open slot per hour.
-- Server API endpoints:
-  - `GET /api/me/cbtf/availability`: Returns recommended days and sample slots per student query.
-  - `POST /api/me/cbtf/reservations`: Reserves a slot, assigns seat, verifies constraints.
-  - `PATCH /api/me/cbtf/reservations/:id`: Reschedule existing or missed reservation.
-  - `DELETE /api/me/cbtf/reservations/:id`: Cancel reservation.
-- Pass redemption hook: Adjusting scheduling window upon pass redemption.
-- Full Vitest suite for scheduling engine edge cases.
+- `server/utils/passport.ts`:
+  - Token generation and verification utilities.
+  - Phase 1 outbound POST request dispatch with timeout and error handling.
+  - Status transition helpers (`markRegistrationPending`, `completeRegistration`, `failRegistration`).
+- Server endpoints:
+  - `POST /api/admin/tools/:id/passport/register`: Admin endpoint to initiate Phase 1 dynamic registration.
+  - `POST /api/passport/v1/credentials`: Public webhook receiver with query parameter `?token=<cuid>` to accept tool credentials, store extension handler URL and requested properties, and update tool to `REGISTERED`.
+- Comprehensive Vitest unit tests covering:
+  - Phase 1 dispatch (successful 202 Accepted response, network error, invalid registration URL).
+  - Phase 2 callback (token match, token mismatch/not found, invalid body, successful credential storage).
 
 ---
 
-### Phase 3: Student & Instructor Interfaces + Admin CBTF Management
+### Phase 3: Admin Tool Management UI & Registration Feedback
 
-**Status**: ✅ Completed (2026-09-02)
-**Objective**: Implement frontend user flows for instructors to configure schedulable assignments, for students to book/manage reservations from their dashboard, and for administrators to manage facilities, hours, exceptions, proctor shifts, and reservations.
-**Requirements**: REQ-03, REQ-07, REQ-08, REQ-09
+**Status**: ⬜ Not Started
+**Objective**: Update `ToolEditPanel.vue` and `app/pages/admin/tools.vue` with Proxy and PassPort role toggles, dedicated credential inputs, dynamic registration trigger button, status badges (`NOT_REGISTERED`, `PENDING`, `REGISTERED`, `FAILED`), error displays, and user notifications. Write unit tests for UI states and composables.
+**Requirements**: REQ-05, REQ-10
+
 **Deliverables**:
-
-- Instructor Dashboard & Assignment Edit Panel:
-  - Toggle for "Require CBTF Reservation" (`isSchedulable`).
-  - Date-time pickers for reservation start/end window.
-  - Schedulable badge in assignments table.
-- Student Dashboard Integration:
-  - Top "Upcoming CBTF Reservation" stat card next to pass pools.
-  - CBTF status badge and action button on assignment rows.
-- Progressive Narrowing Modal (`CbtfScheduleModal.vue`):
-  - Stepper wizard: Step 1 (Morning/Afternoon) -> Step 2 (3-4 Days) -> Step 3 (Hourly slots) -> Step 4 (Confirmation).
-  - Reschedule and cancellation actions directly inside modal.
-- Admin CBTF Facility Management (`/admin/cbtf`):
-  - Facility settings (capacity, seat allocation sequence).
-  - Weekly operating hours editor.
-  - Schedule exceptions (closures and custom hours) manager.
-  - Proctor shift scheduling.
-  - Global reservations table with status filtering and management.
-  - Server endpoints under `server/api/admin/cbtf/*`.
-- Feature composables (`useCbtfStudent.ts`, `useCbtfAdmin.ts`).
-- Vitest unit tests for composables, API endpoints, and components.
+- `ToolEditPanel.vue`:
+  - Role selection checkboxes: "LTI Proxy" (`supportsProxy`) and "PassPort Extension" (`supportsPassport`).
+  - Dual credential sections:
+    - LTI Proxy Credentials (Key, Secret).
+    - PassPort Configuration (Registration URL, Extension Handler URL, Client ID, Client Secret).
+  - Dynamic Registration Action Station:
+    - "Register with PassPort" action button (enabled when `passportRegistrationUrl` is present).
+    - Status Badge indicator (`Not Registered`, `Pending`, `Registered`, `Failed`).
+    - Error banner displaying `passportRegistrationError` with dismiss/retry.
+    - Last registered timestamp indicator.
+  - User feedback: Toasts on registration initiate, success, or failure.
+- Update `useLtiTools.ts` composable to expose registration trigger function and status polling/refresh.
+- Vitest unit tests for component rendering, interaction, and role toggling.
 
 ---
 
-### Phase 4: Proctor Console & Facility Administration
+### Phase 4: Extension Dispatch, Pass Redemption Hook & Fail-Fast Alerting
 
-**Status**: ✅ Completed (2026-09-03)
-**Objective**: Build the live proctor operation station for check-in/out with ID card swipe reader support, photo verification, seated roster with countdowns, and administrator console for facility parameters.
-**Requirements**: REQ-11, REQ-12, REQ-13, REQ-14, REQ-15
+**Status**: ⬜ Not Started
+**Objective**: Build HMAC-SHA256 PassPort request signer with property filtering. Integrate into `server/utils/redemptions.ts` to dispatch extensions on pass redemption. Implement fail-fast transaction rollback, `ntfy` admin alert via `alert.service.ts`, student error advice, and downstream rollback `DELETE` handling. Write unit tests covering signing, redemption, failure alerts, and rollback.
+**Requirements**: REQ-06, REQ-07, REQ-08, REQ-09, REQ-10
+
 **Deliverables**:
-
-- Proctor Console (`/proctor` or `/cbtf/proctor`):
-  - Live arrival feed (students arriving in current time window).
-  - Live seated roster with assigned workstation numbers.
-  - Live departure list (students finishing their 1-hour block).
-  - Student check-in: ID scan/entry form, visual avatar/photo display, seat confirmation, error feedback if off-schedule.
-  - Student checkout: ID scan/entry, mark session completed, vacate workstation.
-- Facility Management (`/admin/cbtf`):
-  - Total seats & seat allocation sequence editor.
-  - Weekly recurring operating hours editor.
-  - Schedule exceptions (holidays, breaks) manager.
-  - Proctor shift scheduler.
-- CASL permissions and route guards for proctor & admin views.
-- Vitest tests covering proctor APIs and UI components.
+- `server/utils/passport.ts`:
+  - `signPassPortRequest`: HMAC-SHA256 signer attaching `X-PassPort-Client-ID`, `X-PassPort-Signature`, `X-PassPort-Timestamp`.
+  - `buildPassPortExtensionPayload`: Formats context, user, resource, and extension payloads, strictly omitting optional fields not in `passportRequestedProperties`.
+  - `sendPassPortExtension`: Dispatches POST to tool `extension_handler`.
+  - `sendPassPortRollback`: Dispatches signed DELETE to tool `extension_handler`.
+- `server/services/alert.service.ts`:
+  - `notifyPassPortSyncFailure`: Sends urgent admin alert via `ntfy` detailing student, assignment, course, tool name, and error message.
+- `server/utils/redemptions.ts`:
+  - Pre-redemption or in-redemption PassPort dispatch when `assignment.tool.supportsPassport === true`.
+  - Fail-fast handling: If dispatch fails, rollback transaction, trigger admin ntfy alert, and throw structured user-facing error with student advice.
+  - Downstream failure rollback: If Canvas/LMS sync fails subsequently, invoke `sendPassPortRollback`.
+- Vitest unit tests covering:
+  - Request signing and header generation.
+  - Property set filtering according to `passportRequestedProperties`.
+  - Pass redemption with successful PassPort tool dispatch.
+  - Pass redemption failure when PassPort tool fails (fail-fast, no pass deduction).
+  - Admin `ntfy` notification triggered on sync failure.
+  - Rollback signed DELETE dispatch on downstream failure.

@@ -1,38 +1,37 @@
 ---
-updated: 2026-09-03T02:30:00-04:00
+updated: 2026-09-06T11:05:00-04:00
 ---
 
 # Project State
 
 ## Current Position
 
-**Milestone:** v1.0 — CBTF Scheduler
-**Phase:** 4 - Proctor Console & Facility Administration
-**Status:** completed
-**Plan:** Milestone v1.0 fully completed and verified
+**Milestone:** v2.0 — PassPort Integration
+**Phase:** 1 - Foundation & Data Layer
+**Status:** ready-to-plan
+**Plan:** Ready for `/plan 1`
 
 ## Last Action
 
-Completed Phase 4: Proctor Console & Facility Administration:
-
-- Plan 4.1: Added `checkInLeadMinutes` (default: 5) and `checkInGraceMinutes` (default: 15) to `CbtfFacility` schema, applied migration `20260903062205_add_cbtf_checkin_tolerances`, updated admin facility settings inputs in `app/pages/admin/cbtf.vue`, implemented proctor server utilities in `server/utils/cbtf.ts`, and created secured endpoints under `server/api/proctor/*` (`feed`, `lookup`, `check-in`, `check-out`, `status`) with 13 passing unit tests.
-- Plan 4.2: Created `app/middleware/proctor-only.ts` route protection, added console link in `app/layouts/default.vue`, implemented `app/utils/cardSwipe.ts` to parse magnetic stripe Track 1/Track 2 data, and built `app/composables/features/proctor/useCbtfProctor.ts` with 10 passing unit tests.
-- Plan 4.3: Built Option A Proctor Command Center (`app/pages/proctor/index.vue`) with live digital clock, on-duty toggle switch, real-time counters, auto-focused card swipe action station with student photo verification, and live seated roster with remaining countdown timers and quick checkout.
-- Full verification: All 84 test files (374 unit tests) passing with 0 failures; Prettier and ESLint clean.
+Initialized GSD project for Milestone v2.0 — PassPort API Client Integration & External Tool Extension Management:
+- Completed & archived Milestone v1.0 (CBTF Scheduler) into `.gsd/milestones/v1.0-cbtf-scheduler/`.
+- Clarified high-leverage architectural questions via user consultation:
+  - Phase 2 dynamic registration uses registration token parameter in callback URL (`DECISION-006`).
+  - PassPort extension dispatch fails fast on tool error, triggers admin `ntfy` alert, and shows student advice message (`DECISION-007`).
+  - `LtiTool` model uses explicit boolean flags `supportsProxy` and `supportsPassport` with separate credential fields (`DECISION-008`).
+- Created finalized `SPEC.md`, `REQUIREMENTS.md` (10 traceable requirements), and `ROADMAP.md` (4 structured phases).
 
 ## Next Steps
 
-1. Milestone v1.0 audit / review (`/audit-milestone` or demo walkthrough).
+1. Run `/plan 1` to create execution plans for Phase 1: Foundation & Data Layer.
 
 ## Active Decisions
 
-| Decision                                                                   | Choice                                                         | Made       | Affects          |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------- | ---------- | ---------------- |
-| [DECISION-001](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L8)  | Single CBTF Facility scope                                     | 2026-09-02 | All phases       |
-| [DECISION-002](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L20) | Add PROCTOR to GlobalRole                                      | 2026-09-02 | Phase 1, Phase 4 |
-| [DECISION-003](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L32) | Add studentId field on User                                    | 2026-09-02 | Phase 1, Phase 4 |
-| [DECISION-004](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L62) | Student Dashboard Option A, Stepper Modal & Admin CBTF Console | 2026-09-02 | Phase 3, Phase 4 |
-| [DECISION-005](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L84) | Proctor Console Command Center & Card Swipe Integration        | 2026-09-03 | Phase 4          |
+| Decision | Choice | Made | Affects |
+|---|---|---|---|
+| [DECISION-006](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L112) | Registration token binding in callback URL (`?token=<cuid>`) | 2026-09-06 | Phase 1, Phase 2 |
+| [DECISION-007](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L131) | Fail-fast extension sync with admin ntfy & student advice notification | 2026-09-06 | Phase 4 |
+| [DECISION-008](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L156) | Dual roles (`supportsProxy`, `supportsPassport`) & dedicated credential fields on LtiTool | 2026-09-06 | Phase 1, Phase 3 |
 
 ## Blockers
 
@@ -40,8 +39,8 @@ None.
 
 ## Concerns
 
-None. All 4 phases fully completed, tested, and verified.
+None.
 
 ## Session Context
 
-CBTF Scheduler feature completely implemented across foundation, scheduling engine, instructor/student interfaces, admin console, and proctor operations station.
+Project initialized and ready for Phase 1 planning and execution.
