@@ -18,7 +18,7 @@ Empower the EGP Broker to act as a seamless client for the PassPort Protocol v1,
 
 ## Non-Goals (Out of Scope)
 
-- Implementing the *server* receiving side of the PassPort extension endpoint (the Broker is a *client* pushing extensions to tools; the tools implement the extension endpoint).
+- Implementing the _server_ receiving side of the PassPort extension endpoint (the Broker is a _client_ pushing extensions to tools; the tools implement the extension endpoint).
 - Changes to LTI 1.3 launch proxying protocols or CAS authentication workflows.
 - Arbitrary custom webhook payload formats beyond the PassPort Protocol v1 specification.
 

@@ -15,10 +15,13 @@ Lint and formatting checks pass with 0 errors.
 ## Must-Haves Verification
 
 ### ✅ 1. Cryptographic HMAC-SHA256 Request Signing (`signPassPortRequest`)
+
 **Status:** PASS  
 **Evidence:**
+
 - `server/utils/passport.ts` generates HMAC-SHA256 signature and Unix timestamp.
 - Verified by `test/unit/server/utils/passport-extension.test.ts`:
+
 ```
 ✓ test/unit/server/utils/passport-extension.test.ts (10 tests)
   ✓ signPassPortRequest > generates a valid HMAC-SHA256 hex signature
@@ -26,11 +29,14 @@ Lint and formatting checks pass with 0 errors.
 ```
 
 ### ✅ 2. Privacy-Preserving Property Set Filtering (`buildPassPortExtensionPayload`)
+
 **Status:** PASS  
 **Evidence:**
+
 - Strict inclusion of mandatory baseline (`lms_instance_guid`, `issuer`, `lti_context_id`, `lti_user_id`, `lti_resource_link_id`, `extension.*`).
 - Optional context, user, and resource properties omitted unless explicitly declared in `passportRequestedProperties`.
 - Verified by `test/unit/server/utils/passport-extension.test.ts`:
+
 ```
   ✓ buildPassPortExtensionPayload > includes baseline mandatory properties and omits optional properties by default
   ✓ buildPassPortExtensionPayload > includes optional properties when requested in requestedProperties
@@ -38,11 +44,14 @@ Lint and formatting checks pass with 0 errors.
 ```
 
 ### ✅ 3. Extension Dispatch & Rollback HTTP Utilities (`sendPassPortExtension`, `sendPassPortRollback`)
+
 **Status:** PASS  
 **Evidence:**
+
 - `sendPassPortExtension` dispatches POST to `passportExtensionUrl` with 10s timeout and required `X-PassPort-*` headers.
 - `sendPassPortRollback` dispatches signed DELETE with `{ request_id }` payload.
 - Verified by `test/unit/server/utils/passport-extension.test.ts`:
+
 ```
   ✓ sendPassPortExtension > successfully dispatches signed POST request to tool extension_handler
   ✓ sendPassPortExtension > throws error if tool lacks credentials or URL
@@ -52,10 +61,13 @@ Lint and formatting checks pass with 0 errors.
 ```
 
 ### ✅ 4. Urgent Admin Fail-Fast Alerting (`notifyPassPortSyncFailure`)
+
 **Status:** PASS  
 **Evidence:**
+
 - Dispatches high-priority `ntfy` alert with student identity, course, assignment, tool name, request ID, and error message.
 - Verified by `test/unit/server/services/alert-passport.test.ts`:
+
 ```
 ✓ test/unit/server/services/alert-passport.test.ts (3 tests)
   ✓ Alert Service - PassPort Extension Sync Failure > sends urgent alert with full context
@@ -64,8 +76,10 @@ Lint and formatting checks pass with 0 errors.
 ```
 
 ### ✅ 5. Pass Redemption Hook with Fail-Fast Safety & Rollback Recovery
+
 **Status:** PASS  
 **Evidence:**
+
 - `server/utils/redemptions.ts`:
   - Detects `assignment.tool?.supportsPassport === true`.
   - Validates `REGISTERED` status and credential presence before dispatch.
@@ -74,6 +88,7 @@ Lint and formatting checks pass with 0 errors.
   - On failure: database transaction aborts immediately (no pass deduction), alert is sent to admin via `notifyPassPortSyncFailure`, and student receives 502 with friendly guidance.
   - On downstream failure: catches error and dispatches signed `DELETE` rollback request (`sendPassPortRollback`) to keep external tool synchronized.
 - Verified by `test/unit/server/utils/redemptions-passport.test.ts`:
+
 ```
 ✓ test/unit/server/utils/redemptions-passport.test.ts (5 tests)
   ✓ redeemPass with PassPort integration > redeems normally when assignment has no tool or tool does not support passport
@@ -84,14 +99,19 @@ Lint and formatting checks pass with 0 errors.
 ```
 
 ### ✅ 6. Behavioral Regression & Lint Cleanliness
+
 **Status:** PASS  
 **Evidence:**
+
 - Full unit test suite passes:
+
 ```
 Test Files  96 passed (96)
      Tests  450 passed (450)
 ```
+
 - Prettier and ESLint:
+
 ```
 > pnpm run lint:prettier && pnpm run lint:eslint
 0 errors, 0 warnings

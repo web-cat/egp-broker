@@ -108,6 +108,7 @@ Clarification requested for Phase 4 regarding `/proctor` operational console acc
    - Persist `checkInLeadMinutes` and `checkInGraceMinutes` on `CbtfFacility` so administrators can configure both thresholds from `/admin/cbtf`.
 4. **Card Swipe Peripheral Expedited Handling**:
    - Support hardware magnetic stripe / barcode USB wedge readers by auto-focusing the input, automatically stripping track sentinel characters (e.g. `;`, `%`, `?`), and triggering instant lookup on `Enter`.
+
 ---
 
 ## [DECISION-006] PassPort Registration Callback Token Binding
@@ -141,6 +142,7 @@ When a student redeems a pass on an assignment linked to an external tool that s
 ### Decision
 
 Fail-fast:
+
 1. Block pass redemption: If the PassPort extension POST fails, abort the transaction so the student's pass balance is not decremented and no orphan override is created.
 2. Send an immediate administrative alert via `ntfy` (using `alert.service.ts`), providing a summary with student name/email, assignment title, course, and external tool name/URL.
 3. Return a user-friendly error to the student UI advising them that extension sync with the external tool failed and instructing them to contact their course instructor.
@@ -160,16 +162,18 @@ Prevents desynchronization between the Broker, the LMS, and the external learnin
 ### Context
 
 `LtiTool` records may serve two distinct purposes:
+
 1. As an external LTI tool whose launch/outcomes can be proxied (LTI proxy role).
 2. As an external tool that supports the PassPort API for recording student extensions (PassPort extension role).
-Tools can support either role or both roles simultaneously, each requiring distinct keys, secrets, and endpoints.
+   Tools can support either role or both roles simultaneously, each requiring distinct keys, secrets, and endpoints.
 
 ### Decision
 
 Extend the `LtiTool` model in `prisma/schema.prisma` with explicit boolean flags:
+
 - `supportsProxy: Boolean @default(true)`
 - `supportsPassport: Boolean @default(false)`
-Separate credentials and endpoints:
+  Separate credentials and endpoints:
 - Proxy credentials: `key: String?`, `secret: String?`
 - PassPort credentials & endpoints:
   - `passportClientId: String?`
@@ -181,7 +185,7 @@ Separate credentials and endpoints:
   - `passportRegistrationError: String?`
   - `passportRegisteredAt: DateTime?`
   - `passportRequestedProperties: Json?`
-Maintain `supportsExtensionApi: Boolean @default(false)` for backwards compatibility during migration.
+    Maintain `supportsExtensionApi: Boolean @default(false)` for backwards compatibility during migration.
 
 ### Rationale
 
