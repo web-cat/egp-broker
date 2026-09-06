@@ -4,7 +4,7 @@ import type { ToolRow, AdminToolQuery, CreateToolData, UpdateToolData } from '@@
 /**
  * Transforms a Prisma LtiTool record into a projected ToolRow.
  */
-function toToolRow(t: any): ToolRow {
+export function toToolRow(t: any): ToolRow {
   return {
     id: t.id,
     name: t.name,
