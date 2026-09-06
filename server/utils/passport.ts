@@ -12,7 +12,10 @@ import { passPortPhase2CredentialsSchema } from '@@/shared/models/passport'
  * Initiates the 2-Phase Dynamic Registration Handshake for an LtiTool.
  * Sends Phase 1 POST request to tool's passportRegistrationUrl with a tokenized callback URL.
  */
-export async function initiatePassPortRegistration(toolId: string, event: H3Event): Promise<ToolRow> {
+export async function initiatePassPortRegistration(
+  toolId: string,
+  event: H3Event
+): Promise<ToolRow> {
   const tool = await prisma.ltiTool.findUnique({
     where: { id: toolId },
     include: { platform: { select: { issuer: true } } }

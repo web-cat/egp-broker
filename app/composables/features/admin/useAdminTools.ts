@@ -25,9 +25,16 @@ export const useAdminTools = () => {
     })
   }
 
+  const registerPassPort = async (id: string) => {
+    return await $fetch<ApiResponse<ToolRow>>(`/api/admin/tools/${id}/passport/register`, {
+      method: 'POST'
+    })
+  }
+
   return {
     fetchTools,
     saveTool,
-    deleteTool
+    deleteTool,
+    registerPassPort
   }
 }

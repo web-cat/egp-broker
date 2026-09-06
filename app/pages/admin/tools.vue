@@ -26,6 +26,7 @@
 </template>
 
 <script setup lang="ts">
+import { h, resolveComponent } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import type { ToolRow } from '@@/shared/models/tool'
 
@@ -45,7 +46,7 @@ const {
   onItemCreated
 } = useAdminCrud<ToolRow>('/api/admin/tools', { p: platformFilter })
 
-const { deleteTool: apiDeleteTool } = useAdminTools()
+const { deleteTool: apiDeleteTool, registerPassPort } = useAdminTools()
 
 // --- Page title ---
 const { setTitle } = useAdminPageTitle()
@@ -71,6 +72,75 @@ const toolColumns: TableColumn<ToolRow>[] = [
       h('UBadge', { variant: 'subtle', color: 'neutral' }, row.getValue('protocol') as string)
   },
   {
+    id: 'roles',
+    header: 'Roles',
+    cell: ({ row }) => {
+      const badges = []
+      if (row.original.supportsProxy) {
+        badges.push(
+          h(
+            resolveComponent('UBadge'),
+            { variant: 'subtle', color: 'neutral', size: 'xs' },
+            () => 'Proxy'
+          )
+        )
+      }
+      if (row.original.supportsPassport) {
+        badges.push(
+          h(
+            resolveComponent('UBadge'),
+            { variant: 'subtle', color: 'primary', size: 'xs' },
+            () => 'PassPort'
+          )
+        )
+      }
+      return badges.length > 0 ? h('div', { class: 'flex items-center gap-1' }, badges) : '—'
+    }
+  },
+  {
+    accessorKey: 'passportRegistrationStatus',
+    header: 'PassPort Status',
+    cell: ({ row }) => {
+      if (!row.original.supportsPassport) return '—'
+
+      const status = row.original.passportRegistrationStatus
+      const err = row.original.passportRegistrationError
+
+      switch (status) {
+        case 'REGISTERED':
+          return h(
+            resolveComponent('UBadge'),
+            { color: 'success', variant: 'subtle', icon: 'i-lucide-check-circle' },
+            () => 'Registered'
+          )
+        case 'PENDING':
+          return h(
+            resolveComponent('UBadge'),
+            { color: 'info', variant: 'subtle', icon: 'i-lucide-clock' },
+            () => 'Pending'
+          )
+        case 'FAILED':
+          return h(
+            resolveComponent('UBadge'),
+            {
+              color: 'error',
+              variant: 'subtle',
+              icon: 'i-lucide-alert-circle',
+              title: err || 'Registration failed'
+            },
+            () => (err ? `Failed: ${err}` : 'Failed')
+          )
+        case 'NOT_REGISTERED':
+        default:
+          return h(
+            resolveComponent('UBadge'),
+            { color: 'neutral', variant: 'subtle', icon: 'i-lucide-circle-dashed' },
+            () => 'Not Registered'
+          )
+      }
+    }
+  },
+  {
     accessorKey: 'platformIssuer',
     header: 'Platform',
     cell: ({ row }) => {
@@ -88,18 +158,55 @@ const toolColumns: TableColumn<ToolRow>[] = [
     header: 'Created',
     cell: dateCellRenderer('createdAt')
   },
-  actionsColumn<ToolRow>((row) => [
-    [{ label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEdit(row.original) }],
-    [
+  actionsColumn<ToolRow>((row) => {
+    const actions: any[][] = [
+      [{ label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEdit(row.original) }]
+    ]
+
+    if (row.original.supportsPassport) {
+      actions.push([
+        {
+          label: 'Register with PassPort',
+          icon: 'i-lucide-send',
+          onSelect: () => handleRegisterPassPort(row.original)
+        }
+      ])
+    }
+
+    actions.push([
       {
         label: 'Delete',
         icon: 'i-lucide-trash-2',
         color: 'error' as const,
         onSelect: () => deleteTool(row.original)
       }
-    ]
-  ])
+    ])
+
+    return actions
+  })
 ]
+
+async function handleRegisterPassPort(tool: ToolRow) {
+  const toast = useToast()
+  try {
+    toast.add({ title: 'Initiating PassPort registration...', color: 'info' })
+    await registerPassPort(tool.id)
+    toast.add({ title: 'PassPort registration initiated', color: 'success' })
+    onItemCreated() // Refresh table
+  } catch (err: any) {
+    const errorMsg =
+      err?.data?.statusMessage ||
+      err?.data?.message ||
+      err?.message ||
+      'Failed to initiate registration'
+    toast.add({
+      title: 'PassPort registration failed',
+      description: errorMsg,
+      color: 'error'
+    })
+    onItemCreated() // Refresh table
+  }
+}
 
 async function deleteTool(row: ToolRow) {
   if (!confirm('Are you sure you want to delete this tool?')) return
