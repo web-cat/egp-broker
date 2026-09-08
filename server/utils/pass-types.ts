@@ -39,7 +39,11 @@ export async function getStudentPassPools(
   userId: string,
   courseId: string
 ): Promise<SimplePassPool[]> {
-  const pools = await prisma.studentPassPool.findMany({
+  const passTypes = await prisma.passType.findMany({
+    where: { courseId }
+  })
+
+  const existingPools = await prisma.studentPassPool.findMany({
     where: {
       userId,
       passType: { courseId }
@@ -49,5 +53,31 @@ export async function getStudentPassPools(
     }
   })
 
-  return pools.map(toSimplePassPool)
+  const existingPassTypeIds = new Set(existingPools.map((p) => p.passTypeId))
+  const missingPassTypes = passTypes.filter((pt) => !existingPassTypeIds.has(pt.id))
+
+  if (missingPassTypes.length > 0) {
+    await prisma.studentPassPool.createMany({
+      data: missingPassTypes.map((pt) => ({
+        userId,
+        passTypeId: pt.id,
+        balance: pt.initialBalance
+      })),
+      skipDuplicates: true
+    })
+
+    const allPools = await prisma.studentPassPool.findMany({
+      where: {
+        userId,
+        passType: { courseId }
+      },
+      include: {
+        passType: true
+      }
+    })
+
+    return allPools.map(toSimplePassPool)
+  }
+
+  return existingPools.map(toSimplePassPool)
 }

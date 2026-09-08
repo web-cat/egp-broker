@@ -85,8 +85,8 @@ export async function redeemPass(
 
   try {
     const redemption = await prisma.$transaction(async (tx) => {
-      // 1. Get pool and verify initial balance
-      const pool = await tx.studentPassPool.findUnique({
+      // 1. Get pool and verify initial balance (lazily provision if pool does not exist yet)
+      let pool = await tx.studentPassPool.findUnique({
         where: { userId_passTypeId: { userId, passTypeId } },
         include: {
           passType: {
@@ -100,7 +100,53 @@ export async function redeemPass(
         }
       })
 
-      if (!pool || pool.balance <= 0) {
+      if (!pool) {
+        const passType = await tx.passType.findUnique({
+          where: { id: passTypeId },
+          include: { course: true }
+        })
+
+        if (!passType) {
+          throw createError({
+            statusCode: 404,
+            statusMessage: 'Pass type not found'
+          })
+        }
+
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          include: {
+            ltiIdentities: true
+          }
+        })
+
+        if (!user) {
+          throw createError({
+            statusCode: 404,
+            statusMessage: 'User not found'
+          })
+        }
+
+        pool = await tx.studentPassPool.create({
+          data: {
+            userId,
+            passTypeId,
+            balance: passType.initialBalance
+          },
+          include: {
+            passType: {
+              include: { course: true }
+            },
+            user: {
+              include: {
+                ltiIdentities: true
+              }
+            }
+          }
+        })
+      }
+
+      if (pool.balance <= 0) {
         throw createError({
           statusCode: 400,
           statusMessage: 'Insufficient pass balance'

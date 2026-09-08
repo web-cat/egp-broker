@@ -16,7 +16,14 @@ vi.mock('@@/server/utils/db', () => ({
     },
     studentPassPool: {
       findUnique: vi.fn(),
+      create: vi.fn(),
       update: vi.fn()
+    },
+    passType: {
+      findUnique: vi.fn()
+    },
+    user: {
+      findUnique: vi.fn()
     },
     assignment: {
       findUnique: vi.fn()
@@ -67,10 +74,87 @@ describe('Redemption Utilities', () => {
   })
 
   describe('redeemPass', () => {
-    it('throws error if pass balance is 0 or pool not found', async () => {
-      vi.mocked(prisma.studentPassPool.findUnique).mockResolvedValue(null)
+    it('throws error if existing pass pool balance is 0', async () => {
+      vi.mocked(prisma.studentPassPool.findUnique).mockResolvedValue({
+        id: 'pool1',
+        balance: 0,
+        passType: { id: 'pt1', hoursPerPass: 24, extensionOnly: true }
+      } as any)
 
       await expect(redeemPass('u1', 'a1', 'pt1')).rejects.toThrow('Insufficient pass balance')
+    })
+
+    it('throws 404 if pool not found and pass type does not exist', async () => {
+      vi.mocked(prisma.studentPassPool.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.passType.findUnique).mockResolvedValue(null)
+
+      await expect(redeemPass('u1', 'a1', 'pt1')).rejects.toThrow('Pass type not found')
+    })
+
+    it('lazily provisions pool with initialBalance when pool does not exist yet', async () => {
+      const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      vi.mocked(prisma.studentPassPool.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.passType.findUnique).mockResolvedValue({
+        id: 'pt1',
+        name: 'Late Pass',
+        initialBalance: 3,
+        hoursPerPass: 24,
+        extensionOnly: true,
+        courseId: 'c1',
+        course: { id: 'c1', name: 'Course 1' }
+      } as any)
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: 'u1',
+        email: 'user@example.com',
+        ltiIdentities: []
+      } as any)
+
+      const createdPool = {
+        id: 'new-pool',
+        userId: 'u1',
+        passTypeId: 'pt1',
+        balance: 3,
+        passType: {
+          id: 'pt1',
+          name: 'Late Pass',
+          hoursPerPass: 24,
+          extensionOnly: true,
+          courseId: 'c1',
+          course: { id: 'c1', name: 'Course 1' }
+        },
+        user: { id: 'u1', email: 'user@example.com', ltiIdentities: [] }
+      }
+      vi.mocked(prisma.studentPassPool.create).mockResolvedValue(createdPool as any)
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'a1',
+        dueDate,
+        acceptUntil: dueDate,
+        passEligibilities: [{ passTypeId: 'pt1' }]
+      } as any)
+
+      vi.mocked(prisma.passRedemption.findFirst).mockResolvedValue(null)
+      vi.mocked(prisma.passRedemption.create).mockResolvedValue({
+        id: 'r1',
+        cost: 1
+      } as any)
+
+      const result = await redeemPass('u1', 'a1', 'pt1')
+
+      expect(prisma.studentPassPool.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            userId: 'u1',
+            passTypeId: 'pt1',
+            balance: 3
+          }
+        })
+      )
+      expect(result.id).toBe('r1')
+      expect(prisma.studentPassPool.update).toHaveBeenCalledWith({
+        where: { id: 'new-pool' },
+        data: { balance: { decrement: 1 } }
+      })
     })
 
     it('throws error if assignment is not eligible for pass type', async () => {

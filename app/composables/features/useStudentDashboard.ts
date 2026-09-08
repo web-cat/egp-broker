@@ -14,7 +14,8 @@ export const useStudentDashboard = (isPreview = false) => {
   } = useCbtfStudent()
 
   // Fetch pass pools for the current course
-  const { data: passPools } = useFetch<ApiResponse<SimplePassPool[]>>('/api/me/pass-pools')
+  const { data: passPools, refresh: refreshPassPools } =
+    useFetch<ApiResponse<SimplePassPool[]>>('/api/me/pass-pools')
 
   // Fetch pass types for the current course (used for preview fallback)
   const { data: passTypesData } = useFetch<ApiResponse<PassTypeData[]>>('/api/me/pass-types', {
@@ -68,7 +69,7 @@ export const useStudentDashboard = (isPreview = false) => {
 
     if (!error.value) {
       // Refresh data after successful redemption
-      await Promise.all([refreshAssignments(), refreshRedemptions()])
+      await Promise.all([refreshAssignments(), refreshRedemptions(), refreshPassPools()])
     }
 
     return { data, error }
