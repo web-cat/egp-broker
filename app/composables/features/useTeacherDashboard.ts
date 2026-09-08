@@ -81,7 +81,8 @@ export const useTeacherDashboard = () => {
       lastRosterSyncAt: string | null
     }>
   >('/api/me/course/roster-sync-status', {
-    lazy: true
+    lazy: true,
+    server: false
   })
 
   const isRosterSyncing = computed(() => rosterSyncStatusData.value?.data?.isSyncing ?? false)

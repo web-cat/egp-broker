@@ -203,7 +203,7 @@ const { data: rosterSyncStatus } = useFetch<
     isSyncing: boolean
     lastRosterSyncAt: string | null
   }>
->('/api/me/course/roster-sync-status', { lazy: true })
+>('/api/me/course/roster-sync-status', { lazy: true, server: false })
 
 if (route.query.sync === 'roster') {
   rosterSyncModalOpen.value = true

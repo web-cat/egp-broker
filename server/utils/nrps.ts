@@ -248,25 +248,37 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
       }
 
       // Upsert LtiIdentity
-      await prisma.ltiIdentity.upsert({
+      // Note: LtiIdentity has compound foreign key on (platformId, deploymentId) referencing LtiDeployment(platformId, deploymentId).
+      // deploymentIdClaim is course.deployment?.deploymentId (the LTI deployment_id string claim, NOT the deployment CUID id).
+      const deploymentIdClaim = course.deployment?.deploymentId ?? null
+      const existingIdentity = await prisma.ltiIdentity.findFirst({
         where: {
-          platformId_ltiSub: {
-            platformId: platform.id,
-            ltiSub
-          }
-        },
-        update: {
-          platformUserId: platformUserId || undefined,
-          deploymentId: course.deploymentId || undefined
-        },
-        create: {
-          userId: user.id,
           platformId: platform.id,
-          ltiSub,
-          platformUserId,
-          deploymentId: course.deploymentId || ''
+          OR: [{ ltiSub }, { userId: user.id }]
         }
       })
+
+      if (existingIdentity) {
+        await prisma.ltiIdentity.update({
+          where: { id: existingIdentity.id },
+          data: {
+            userId: user.id,
+            ltiSub,
+            platformUserId: platformUserId ?? existingIdentity.platformUserId,
+            deploymentId: deploymentIdClaim ?? existingIdentity.deploymentId
+          }
+        })
+      } else {
+        await prisma.ltiIdentity.create({
+          data: {
+            userId: user.id,
+            platformId: platform.id,
+            ltiSub,
+            platformUserId,
+            deploymentId: deploymentIdClaim
+          }
+        })
+      }
 
       // Upsert Enrollment
       await prisma.enrollment.upsert({

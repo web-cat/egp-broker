@@ -103,8 +103,14 @@ const checkStatus = async () => {
         isSyncing.value = true
       }
     }
-  } catch (err) {
-    console.error('[RosterSyncModal] Status check error:', err)
+  } catch (err: unknown) {
+    const error = err as { statusCode?: number }
+    if (error?.statusCode === 401) {
+      stopPolling()
+      isOpen.value = false
+      return
+    }
+    console.warn('[RosterSyncModal] Status check error:', err)
   }
 }
 

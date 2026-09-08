@@ -22,6 +22,9 @@ vi.mock('@@/server/utils/db', () => ({
       upsert: vi.fn()
     },
     ltiIdentity: {
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      create: vi.fn(),
       upsert: vi.fn()
     },
     enrollment: {
@@ -146,6 +149,7 @@ describe('NRPS Roster Synchronization Service', () => {
       canvasCourseId: '12345',
       nrpsContextMembershipsUrl: 'https://canvas.example.edu/api/lti/courses/12345/names_and_roles',
       deployment: {
+        deploymentId: 'canvas-deploy-123',
         platform: mockPlatform
       }
     }
@@ -247,6 +251,18 @@ describe('NRPS Roster Synchronization Service', () => {
               canvasSectionId: 'sec-canvas-42'
             }
           }
+        })
+      )
+
+      // Verify LtiIdentity created with correct deploymentId string claim
+      expect(prisma.ltiIdentity.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'user-stud-1',
+            platformId: 'plat-1',
+            ltiSub: 'lti-sub-student-1',
+            deploymentId: 'canvas-deploy-123'
+          })
         })
       )
 
