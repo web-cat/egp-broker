@@ -43,7 +43,9 @@ vi.mock('@@/server/utils/db', () => ({
 
 vi.mock('@@/server/utils/canvas', () => ({
   getPlatformCanvasDomain: vi.fn().mockReturnValue('canvas.example.edu'),
-  fetchCanvasSections: vi.fn().mockResolvedValue([])
+  fetchCanvasSections: vi.fn().mockResolvedValue([]),
+  fetchCanvasCourseEnrollments: vi.fn().mockResolvedValue([]),
+  fetchCanvasSectionEnrollments: vi.fn().mockResolvedValue([])
 }))
 
 // Mock useRuntimeConfig
@@ -484,21 +486,27 @@ describe('NRPS Roster Synchronization Service', () => {
       )
     })
 
-    it('falls back to Canvas API to sync sections when NRPS retrieves 0 sections and teacher has API key', async () => {
+    it('falls back to Canvas API to sync sections when NRPS retrieves 0 sections and teacher has API key (via students array)', async () => {
       const { fetchCanvasSections } = await import('@@/server/utils/canvas')
       vi.mocked(fetchCanvasSections).mockResolvedValueOnce([
         {
           id: 555,
           name: 'Canvas API Section 01',
           course_id: 12345,
-          enrollments: [
+          students: [
             {
-              id: 1,
-              user_id: 9991,
-              course_section_id: 555,
-              role: 'StudentEnrollment',
-              type: 'StudentEnrollment',
-              user: { email: 'student9991@example.edu' }
+              id: 9991,
+              name: 'Canvas Student',
+              login_id: 's9991',
+              email: 'student9991@example.edu',
+              enrollments: [
+                {
+                  id: 1,
+                  user_id: 9991,
+                  course_section_id: 555,
+                  type: 'StudentEnrollment'
+                }
+              ]
             }
           ]
         } as any
@@ -529,6 +537,10 @@ describe('NRPS Roster Synchronization Service', () => {
         ]
       })
 
+      vi.mocked(prisma.user.findFirst)
+        .mockResolvedValueOnce(null) // member lookup in loop
+        .mockResolvedValueOnce({ id: 'user-db-9991' } as any) // email match in fallback
+
       vi.mocked(prisma.user.upsert).mockResolvedValueOnce({
         id: 'user-db-9991',
         email: 'student9991@example.edu'
@@ -539,10 +551,6 @@ describe('NRPS Roster Synchronization Service', () => {
         .mockResolvedValueOnce(null) // existingIdentity for member
         .mockResolvedValueOnce({ platformApiKey: 'test-canvas-api-token' } as any) // teacherIdentity with key
         .mockResolvedValueOnce(null) // ltiIdent lookup by platformUserId
-
-      vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({
-        id: 'user-db-9991'
-      } as any)
 
       vi.mocked(prisma.courseSection.upsert).mockResolvedValueOnce({
         id: 'db-sec-555',
@@ -581,6 +589,102 @@ describe('NRPS Roster Synchronization Service', () => {
             role: 'STUDENT'
           },
           data: { courseSectionId: 'db-sec-555' }
+        })
+      )
+      expect(result.sectionCount).toBe(1)
+      expect(result.studentsWithSection).toBe(1)
+    })
+
+    it('falls back to fetchCanvasCourseEnrollments when sections contain no student records', async () => {
+      const { fetchCanvasSections, fetchCanvasCourseEnrollments } = await import(
+        '@@/server/utils/canvas'
+      )
+      vi.mocked(fetchCanvasSections).mockResolvedValueOnce([
+        {
+          id: 777,
+          name: 'Empty Section',
+          course_id: 12345
+        } as any
+      ])
+
+      vi.mocked(fetchCanvasCourseEnrollments).mockResolvedValueOnce([
+        {
+          id: 10,
+          user_id: 8888,
+          course_id: 12345,
+          course_section_id: 777,
+          type: 'StudentEnrollment',
+          user: {
+            id: 8888,
+            login_id: 'student8888',
+            email: 'student8888@example.edu'
+          }
+        }
+      ])
+
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        ...mockCourse,
+        canvasCourseId: '12345'
+      } as any)
+
+      mockFetch.mockResolvedValueOnce({
+        access_token: 'nrps-bearer-token',
+        token_type: 'Bearer',
+        expires_in: 3600
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        id: 'https://canvas.example.edu/api/lti/courses/12345/names_and_roles?rlid=rlid-nav-1',
+        members: [
+          {
+            status: 'Active',
+            user_id: 'sub-no-sec-2',
+            name: 'Student 8888',
+            email: 'student8888@example.edu',
+            roles: ['http://purl.imsglobal.org/vocab/lis/v2/membership#Learner']
+          }
+        ]
+      })
+
+      vi.mocked(prisma.user.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'user-db-8888' } as any)
+
+      vi.mocked(prisma.user.upsert).mockResolvedValueOnce({
+        id: 'user-db-8888',
+        email: 'student8888@example.edu'
+      } as any)
+
+      vi.mocked(prisma.ltiIdentity.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ platformApiKey: 'test-canvas-api-token' } as any)
+        .mockResolvedValueOnce(null)
+
+      vi.mocked(prisma.courseSection.upsert).mockResolvedValueOnce({
+        id: 'db-sec-777',
+        canvasSectionId: '777',
+        courseId: 'course-1',
+        name: 'Empty Section'
+      } as any)
+
+      vi.mocked(prisma.enrollment.count).mockResolvedValueOnce(1).mockResolvedValueOnce(0)
+
+      const result = await syncCourseRosterFromNrps('course-1')
+
+      expect(result.success).toBe(true)
+      expect(fetchCanvasCourseEnrollments).toHaveBeenCalledWith(
+        'canvas.example.edu',
+        '12345',
+        'test-canvas-api-token'
+      )
+      expect(prisma.enrollment.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: 'user-db-8888',
+            courseId: 'course-1',
+            role: 'STUDENT'
+          },
+          data: { courseSectionId: 'db-sec-777' }
         })
       )
       expect(result.sectionCount).toBe(1)

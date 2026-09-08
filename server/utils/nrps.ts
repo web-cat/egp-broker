@@ -3,7 +3,12 @@ import crypto from 'node:crypto'
 import prisma from '@@/server/utils/db'
 import { parseCourseRole } from '@@/server/utils/lti'
 import { getGravatarUrl } from '@@/server/utils/gravatar'
-import { fetchCanvasSections, getPlatformCanvasDomain } from '@@/server/utils/canvas'
+import {
+  fetchCanvasCourseEnrollments,
+  fetchCanvasSectionEnrollments,
+  fetchCanvasSections,
+  getPlatformCanvasDomain
+} from '@@/server/utils/canvas'
 
 const STALE_LOCK_MS = 10 * 60 * 1000 // 10 minutes
 
@@ -489,6 +494,8 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
               teacherIdentity.platformApiKey
             )
 
+            const sectionMap = new Map<string, string>()
+
             for (const cs of canvasSections) {
               const canvasSecIdStr = cs.id.toString()
               const sectionName = cs.name || `Section ${canvasSecIdStr}`
@@ -510,77 +517,170 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
                 }
               })
 
+              sectionMap.set(canvasSecIdStr, dbSection.id)
+
               if (!knownSectionIds.has(dbSection.id)) {
                 knownSectionIds.add(dbSection.id)
                 sectionsUpsertedCount++
               }
+            }
 
+            interface StudentSectionAssignment {
+              platformUserId?: string | null
+              userEmail?: string | null
+              userLoginId?: string | null
+              canvasSectionId: string
+            }
+            const studentAssignments: StudentSectionAssignment[] = []
+
+            // Source A: From section.students or section.enrollments returned with sections
+            for (const cs of canvasSections) {
+              const secIdStr = cs.id.toString()
+              if (cs.students && Array.isArray(cs.students)) {
+                for (const st of cs.students) {
+                  const targetSecId = st.enrollments?.[0]?.course_section_id?.toString() || secIdStr
+                  studentAssignments.push({
+                    platformUserId: st.id ? st.id.toString() : null,
+                    userEmail: st.email || null,
+                    userLoginId: st.login_id || null,
+                    canvasSectionId: targetSecId
+                  })
+                }
+              }
               if (cs.enrollments && Array.isArray(cs.enrollments)) {
                 for (const en of cs.enrollments) {
-                  const platformUserId = en.user_id?.toString()
-                  const userEmail = en.user?.email || null
-                  const userLoginId = en.user?.login_id || null
-
-                  let matchedUserId: string | null = null
-
-                  if (platformUserId) {
-                    const ltiIdent = await prisma.ltiIdentity.findFirst({
-                      where: {
-                        platformId: platform.id,
-                        platformUserId
-                      },
-                      select: { userId: true }
-                    })
-                    if (ltiIdent) {
-                      matchedUserId = ltiIdent.userId
-                    }
-                  }
-
-                  if (!matchedUserId && userEmail) {
-                    const userByEmail = await prisma.user.findUnique({
-                      where: { email: userEmail },
-                      select: { id: true }
-                    })
-                    if (userByEmail) {
-                      matchedUserId = userByEmail.id
-                    }
-                  }
-
-                  if (!matchedUserId && userLoginId) {
-                    const userByLogin = await prisma.user.findFirst({
-                      where: {
-                        email: { startsWith: `${userLoginId}@` },
-                        enrollments: { some: { courseId } }
-                      },
-                      select: { id: true }
-                    })
-                    if (userByLogin) {
-                      matchedUserId = userByLogin.id
-                    }
-                  }
-
-                  if (matchedUserId) {
-                    if (platformUserId) {
-                      await prisma.ltiIdentity.updateMany({
-                        where: {
-                          platformId: platform.id,
-                          userId: matchedUserId,
-                          platformUserId: null
-                        },
-                        data: { platformUserId }
-                      })
-                    }
-
-                    await prisma.enrollment.updateMany({
-                      where: {
-                        userId: matchedUserId,
-                        courseId,
-                        role: 'STUDENT'
-                      },
-                      data: { courseSectionId: dbSection.id }
-                    })
-                  }
+                  studentAssignments.push({
+                    platformUserId: en.user_id?.toString() || en.user?.id?.toString() || null,
+                    userEmail: en.user?.email || null,
+                    userLoginId: en.user?.login_id || null,
+                    canvasSectionId: en.course_section_id?.toString() || secIdStr
+                  })
                 }
+              }
+            }
+
+            // Source B: If Source A yielded no student mappings, query course enrollments directly
+            if (studentAssignments.length === 0) {
+              console.info(
+                '[NRPS Fallback] Section list contained 0 student mappings. Fetching course enrollments from Canvas API...'
+              )
+              const courseEnrollments = await fetchCanvasCourseEnrollments(
+                domain,
+                canvasCourseId,
+                teacherIdentity.platformApiKey
+              )
+              for (const en of courseEnrollments) {
+                if (en.course_section_id) {
+                  studentAssignments.push({
+                    platformUserId: en.user_id?.toString() || en.user?.id?.toString() || null,
+                    userEmail: en.user?.email || null,
+                    userLoginId: en.user?.login_id || null,
+                    canvasSectionId: en.course_section_id.toString()
+                  })
+                }
+              }
+            }
+
+            // Source C: If still 0 and sections exist, query per-section enrollments
+            if (studentAssignments.length === 0 && canvasSections.length > 0) {
+              console.info(
+                '[NRPS Fallback] Course enrollments API yielded 0 students. Fetching per-section enrollments from Canvas API...'
+              )
+              for (const cs of canvasSections) {
+                const secEnrollments = await fetchCanvasSectionEnrollments(
+                  domain,
+                  cs.id,
+                  teacherIdentity.platformApiKey
+                )
+                for (const en of secEnrollments) {
+                  studentAssignments.push({
+                    platformUserId: en.user_id?.toString() || en.user?.id?.toString() || null,
+                    userEmail: en.user?.email || null,
+                    userLoginId: en.user?.login_id || null,
+                    canvasSectionId: cs.id.toString()
+                  })
+                }
+              }
+            }
+
+            console.info(
+              `[NRPS Fallback] Gathered ${studentAssignments.length} student section assignment(s) from Canvas API.`
+            )
+
+            // Match and link each student assignment to student enrollment in database
+            for (const assign of studentAssignments) {
+              const targetSectionDbId = sectionMap.get(assign.canvasSectionId)
+              if (!targetSectionDbId) continue
+
+              let matchedUserId: string | null = null
+
+              if (assign.platformUserId) {
+                const ltiIdent = await prisma.ltiIdentity.findFirst({
+                  where: {
+                    platformId: platform.id,
+                    platformUserId: assign.platformUserId,
+                    user: {
+                      enrollments: {
+                        some: { courseId, role: 'STUDENT' }
+                      }
+                    }
+                  },
+                  select: { userId: true }
+                })
+                if (ltiIdent) {
+                  matchedUserId = ltiIdent.userId
+                }
+              }
+
+              if (!matchedUserId && assign.userEmail) {
+                const userByEmail = await prisma.user.findFirst({
+                  where: {
+                    email: { equals: assign.userEmail, mode: 'insensitive' },
+                    enrollments: { some: { courseId, role: 'STUDENT' } }
+                  },
+                  select: { id: true }
+                })
+                if (userByEmail) {
+                  matchedUserId = userByEmail.id
+                }
+              }
+
+              if (!matchedUserId && assign.userLoginId) {
+                const userByLogin = await prisma.user.findFirst({
+                  where: {
+                    OR: [
+                      { email: { startsWith: `${assign.userLoginId}@`, mode: 'insensitive' } },
+                      { email: assign.userLoginId }
+                    ],
+                    enrollments: { some: { courseId, role: 'STUDENT' } }
+                  },
+                  select: { id: true }
+                })
+                if (userByLogin) {
+                  matchedUserId = userByLogin.id
+                }
+              }
+
+              if (matchedUserId) {
+                if (assign.platformUserId) {
+                  await prisma.ltiIdentity.updateMany({
+                    where: {
+                      platformId: platform.id,
+                      userId: matchedUserId,
+                      platformUserId: null
+                    },
+                    data: { platformUserId: assign.platformUserId }
+                  })
+                }
+
+                await prisma.enrollment.updateMany({
+                  where: {
+                    userId: matchedUserId,
+                    courseId,
+                    role: 'STUDENT'
+                  },
+                  data: { courseSectionId: targetSectionDbId }
+                })
               }
             }
 
@@ -594,6 +694,31 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
             console.info(
               `[NRPS Fallback] Canvas API section sync complete: ${sectionsUpsertedCount} section(s), ${studentsWithSectionCount} student(s) in sections.`
             )
+
+            if (studentsWithSectionCount === 0 && studentAssignments.length > 0) {
+              console.warn(
+                `[NRPS Fallback Diagnostic] Gathered ${studentAssignments.length} assignments but 0 matched DB students. Sample assignment:`,
+                JSON.stringify(studentAssignments[0])
+              )
+              const sampleDbStudent = await prisma.enrollment.findFirst({
+                where: { courseId, role: 'STUDENT' },
+                include: {
+                  user: {
+                    include: {
+                      ltiIdentities: { where: { platformId: platform.id } }
+                    }
+                  }
+                }
+              })
+              console.warn(
+                '[NRPS Fallback Diagnostic] Sample DB student:',
+                JSON.stringify({
+                  userId: sampleDbStudent?.userId,
+                  email: sampleDbStudent?.user.email,
+                  ltiIdentities: sampleDbStudent?.user.ltiIdentities
+                })
+              )
+            }
           }
         }
       } catch (fallbackErr: any) {

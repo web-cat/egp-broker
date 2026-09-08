@@ -16,6 +16,23 @@ export interface CanvasAssignmentOverride {
   student_ids?: number[]
 }
 
+export interface CanvasSectionStudent {
+  id: number
+  name?: string
+  sortable_name?: string
+  short_name?: string
+  login_id?: string
+  email?: string
+  enrollments?: Array<{
+    id: number
+    user_id: number
+    course_section_id: number
+    role?: string
+    type?: string
+    enrollment_state?: string
+  }>
+}
+
 export interface CanvasSection {
   id: number
   name: string
@@ -25,6 +42,7 @@ export interface CanvasSection {
   start_at?: string | null
   end_at?: string | null
   total_students?: number
+  students?: CanvasSectionStudent[]
   enrollments?: Array<{
     id: number
     user_id: number
@@ -38,6 +56,24 @@ export interface CanvasSection {
       email?: string
     }
   }>
+}
+
+export interface CanvasEnrollment {
+  id: number
+  user_id: number
+  course_id: number
+  course_section_id: number
+  enrollment_state?: string
+  type: string
+  role?: string
+  user?: {
+    id: number
+    name?: string
+    sortable_name?: string
+    short_name?: string
+    login_id?: string
+    email?: string
+  }
 }
 
 export interface CanvasExternalToolTagAttributes {
@@ -247,7 +283,7 @@ export async function fetchCanvasSections(
   accessToken: string
 ): Promise<CanvasSection[]> {
   const sections: CanvasSection[] = []
-  let url = `https://${domain}/api/v1/courses/${courseId}/sections?include[]=enrollments&include[]=user&per_page=100`
+  let url = `https://${domain}/api/v1/courses/${courseId}/sections?include[]=students&include[]=enrollments&per_page=100`
 
   try {
     while (url) {
@@ -266,6 +302,16 @@ export async function fetchCanvasSections(
 
       if (records && Array.isArray(records)) {
         sections.push(...records)
+        if (records.length > 0) {
+          const sample = records[0]
+          const sampleStudentsCount = Array.isArray(sample.students) ? sample.students.length : 0
+          const sampleEnrollmentsCount = Array.isArray(sample.enrollments)
+            ? sample.enrollments.length
+            : 0
+          console.info(
+            `[Canvas API] Sample section: id=${sample.id}, name="${sample.name}", students=${sampleStudentsCount}, enrollments=${sampleEnrollmentsCount}`
+          )
+        }
       }
 
       // Parse Link header for pagination
@@ -293,4 +339,105 @@ export async function fetchCanvasSections(
   }
 
   return sections
+}
+
+/**
+ * Fetches course enrollments directly from the Canvas API.
+ * Uses pagination to retrieve all student enrollments.
+ */
+export async function fetchCanvasCourseEnrollments(
+  domain: string,
+  courseId: string,
+  accessToken: string
+): Promise<CanvasEnrollment[]> {
+  const enrollments: CanvasEnrollment[] = []
+  let url = `https://${domain}/api/v1/courses/${courseId}/enrollments?type[]=StudentEnrollment&include[]=user&per_page=100`
+
+  try {
+    while (url) {
+      console.info(`[Canvas API] GET ${url}`)
+      const response = await $fetch.raw<CanvasEnrollment[]>(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json'
+        }
+      })
+
+      const records = response._data
+      console.info(
+        `[Canvas API] Status ${response.status}, received: ${Array.isArray(records) ? `${records.length} enrollments` : typeof records}`
+      )
+
+      if (records && Array.isArray(records)) {
+        enrollments.push(...records)
+      }
+
+      const linkHeader = response.headers.get('link')
+      if (linkHeader) {
+        const links = linkHeader.split(',')
+        const nextLink = links.find((link) => link.includes('rel="next"'))
+        if (nextLink) {
+          const match = nextLink.match(/<([^>]+)>/)
+          url = match ? match[1] : ''
+        } else {
+          url = ''
+        }
+      } else {
+        url = ''
+      }
+    }
+  } catch (error: any) {
+    console.warn(`[Canvas API] Could not fetch course enrollments: ${error?.message || error}`)
+  }
+
+  return enrollments
+}
+
+/**
+ * Fetches enrollments for a specific section directly from the Canvas API.
+ */
+export async function fetchCanvasSectionEnrollments(
+  domain: string,
+  sectionId: number | string,
+  accessToken: string
+): Promise<CanvasEnrollment[]> {
+  const enrollments: CanvasEnrollment[] = []
+  let url = `https://${domain}/api/v1/sections/${sectionId}/enrollments?type[]=StudentEnrollment&include[]=user&per_page=100`
+
+  try {
+    while (url) {
+      console.info(`[Canvas API] GET ${url}`)
+      const response = await $fetch.raw<CanvasEnrollment[]>(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json'
+        }
+      })
+
+      const records = response._data
+      if (records && Array.isArray(records)) {
+        enrollments.push(...records)
+      }
+
+      const linkHeader = response.headers.get('link')
+      if (linkHeader) {
+        const links = linkHeader.split(',')
+        const nextLink = links.find((link) => link.includes('rel="next"'))
+        if (nextLink) {
+          const match = nextLink.match(/<([^>]+)>/)
+          url = match ? match[1] : ''
+        } else {
+          url = ''
+        }
+      } else {
+        url = ''
+      }
+    }
+  } catch (error: any) {
+    console.warn(
+      `[Canvas API] Could not fetch section ${sectionId} enrollments: ${error?.message || error}`
+    )
+  }
+
+  return enrollments
 }
