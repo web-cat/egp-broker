@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 import { getGravatarUrl } from './gravatar'
 import { parseCourseRole } from './lti'
+import { acquireRosterSyncLock, syncCourseRosterFromNrps } from './nrps'
 import type { LtiSessionUser } from '@@/shared/schemas/auth.schema'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,12 +33,14 @@ interface CourseArgs {
   title: string | undefined
   canvasCourseId: string | undefined
   workflowState: string | undefined
+  nrpsContextMembershipsUrl?: string | null
 }
 
 interface EnrollmentArgs {
   userId: string
   courseId: string
   courseRole: string
+  courseSectionId?: string | null
 }
 
 interface AssignmentArgs {
@@ -53,6 +56,7 @@ export interface LtiLaunchResult {
   userRole: string
   sourcedId: string | null
   needsConfiguration: boolean
+  syncRequired: boolean
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -278,6 +282,10 @@ export async function handleLtiLaunch(
       }
     })
 
+    // Extract NRPS claim if present
+    const nrpsClaim = claims['https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice']
+    const nrpsContextMembershipsUrl = nrpsClaim?.context_memberships_url || null
+
     // B. Upsert Course
     const course = await tx.course.upsert({
       where: {
@@ -286,14 +294,16 @@ export async function handleLtiLaunch(
       update: {
         label: context.label,
         title: context.title,
-        canvasCourseId: customClaims.canvas_course_id?.toString()
+        canvasCourseId: customClaims.canvas_course_id?.toString(),
+        ...(nrpsContextMembershipsUrl ? { nrpsContextMembershipsUrl } : {})
       },
       create: {
         deploymentId: deployment.id,
         ltiContextId: context.id,
         label: context.label,
         title: context.title,
-        canvasCourseId: customClaims.canvas_course_id?.toString()
+        canvasCourseId: customClaims.canvas_course_id?.toString(),
+        nrpsContextMembershipsUrl
       }
     })
 
@@ -343,16 +353,70 @@ export async function handleLtiLaunch(
 
     // D. Identity and Enrollment
     const userRole = parseCourseRole(roles)
-    await tx.enrollment.upsert({
+
+    // Check if section ID is provided in custom claim
+    const rawSectionIds = customClaims.canvas_section_ids?.toString()
+    let courseSectionId: string | null = null
+    if (rawSectionIds && !rawSectionIds.startsWith('$')) {
+      const sectionIdStr = rawSectionIds.split(',')[0].trim()
+      if (sectionIdStr) {
+        const section = await tx.courseSection.upsert({
+          where: {
+            courseId_canvasSectionId: { courseId: course.id, canvasSectionId: sectionIdStr }
+          },
+          create: {
+            courseId: course.id,
+            canvasSectionId: sectionIdStr,
+            name: `Section ${sectionIdStr}`
+          },
+          update: {}
+        })
+        courseSectionId = section.id
+      }
+    }
+
+    const enrollment = await tx.enrollment.upsert({
       where: { userId_courseId: { userId: user.id, courseId: course.id } },
-      update: { role: userRole as any },
-      create: { userId: user.id, courseId: course.id, role: userRole as any }
+      update: {
+        role: userRole as any,
+        ...(courseSectionId ? { courseSectionId } : {})
+      },
+      create: {
+        userId: user.id,
+        courseId: course.id,
+        role: userRole as any,
+        courseSectionId
+      }
     })
 
     user = await tx.user.update({
       where: { id: user.id },
       data: { currentCourseId: course.id }
     })
+
+    // Roster Sync Evaluation & Concurrency Gating
+    let syncRequired = false
+    if (course.isRosterSyncing) {
+      // Sync is already running by another process; flag UI to wait on existing sync
+      syncRequired = true
+    } else if (course.nrpsContextMembershipsUrl || nrpsContextMembershipsUrl) {
+      const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(userRole)
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      const isStale = !course.lastRosterSyncAt || new Date(course.lastRosterSyncAt) < oneDayAgo
+      const isMissingSection = userRole === 'STUDENT' && !enrollment.courseSectionId
+
+      if ((isStaff && isStale) || isMissingSection) {
+        const acquired = await acquireRosterSyncLock(course.id)
+        if (acquired) {
+          syncCourseRosterFromNrps(course.id).catch((err) => {
+            console.error('[NRPS] Background launch sync error:', err)
+          })
+          syncRequired = true
+        } else {
+          syncRequired = true
+        }
+      }
+    }
 
     // E. Differentiate Assignment Placement vs. Course Navigation Placement
     const rawAssignmentId = customClaims.canvas_assignment_id?.toString()
@@ -368,7 +432,8 @@ export async function handleLtiLaunch(
         assignmentId: null,
         userRole,
         sourcedId: null,
-        needsConfiguration: false
+        needsConfiguration: false,
+        syncRequired
       }
     }
 
@@ -416,7 +481,8 @@ export async function handleLtiLaunch(
       assignmentId: assignment.id,
       userRole,
       sourcedId: ltiResult.id,
-      needsConfiguration
+      needsConfiguration,
+      syncRequired
     }
   })
 }

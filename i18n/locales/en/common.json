@@ -463,5 +463,17 @@
       "label": "Display mode",
       "list": "List"
     }
+  },
+  "dashboard": {
+    "rosterSync": {
+      "modalTitle": "Roster Synchronization",
+      "modalDescription": "Updating course roster and section enrollments from your learning management system.",
+      "inProgressTitle": "Syncing Course Roster...",
+      "inProgressMessage": "Please wait while student enrollments and section assignments are synchronized.",
+      "completedTitle": "Sync Complete",
+      "completedMessage": "The course roster and enrollments have been updated successfully.",
+      "syncRosterButton": "Sync Roster",
+      "lastSynced": "Last synced: {date}"
+    }
   }
 }

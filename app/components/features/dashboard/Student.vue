@@ -137,13 +137,21 @@
     @reserved="refreshCbtfReservations"
     @cancelled="refreshCbtfReservations"
   />
+
+  <FeaturesDashboardRosterSyncModal
+    v-model:open="rosterSyncModalOpen"
+    @synced="handleRosterSynced"
+  />
 </template>
 
 <script setup lang="ts">
+import type { ApiResponse } from '@@/shared/types/api'
 // Feature Composable
 import { useStudentDashboard } from '~/composables/features/useStudentDashboard'
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 
 const props = withDefaults(
   defineProps<{
@@ -162,12 +170,14 @@ const props = withDefaults(
 
 const {
   passPools,
+  refreshPassPools,
   assignmentsStatus,
   refreshAssignments,
   filteredAssignments,
   assignmentColumns,
   redemptionsData,
   redemptionsStatus,
+  refreshRedemptions,
   // Modal State
   showRedemptionModal,
   selectedAssignment,
@@ -184,6 +194,37 @@ const {
   nextUpcomingReservation,
   refreshCbtfReservations
 } = useStudentDashboard(props.isPreview)
+
+// --- Roster Sync (NRPS) ---
+const rosterSyncModalOpen = ref(false)
+
+const { data: rosterSyncStatus } = useFetch<
+  ApiResponse<{
+    isSyncing: boolean
+    lastRosterSyncAt: string | null
+  }>
+>('/api/me/course/roster-sync-status', { lazy: true })
+
+if (route.query.sync === 'roster') {
+  rosterSyncModalOpen.value = true
+}
+
+watch(
+  () => rosterSyncStatus.value?.data?.isSyncing,
+  (isSyncing) => {
+    if (isSyncing) {
+      rosterSyncModalOpen.value = true
+    }
+  }
+)
+
+const handleRosterSynced = async () => {
+  if (route.query.sync === 'roster') {
+    const { sync: _ignoredSync, ...remainingQuery } = route.query
+    router.replace({ query: remainingQuery })
+  }
+  await Promise.all([refreshAssignments(), refreshPassPools(), refreshRedemptions()])
+}
 
 const formatUpcomingDate = (dateStr: string) => {
   const d = new Date(dateStr)

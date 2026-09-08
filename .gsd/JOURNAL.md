@@ -35,8 +35,6 @@ Complete Milestone v2.0: PassPort Integration (Phases 1-4).
 
 ---
 
-
-
 ### Objective
 
 Execute Phase 4: Proctor Console & Live Facility Administration.

@@ -307,6 +307,11 @@ model Course {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // NRPS Roster Sync
+  lastRosterSyncAt            DateTime?
+  isRosterSyncing             Boolean   @default(false)
+  nrpsContextMembershipsUrl   String?
+
   @@unique([deploymentId, ltiContextId])
   @@index([deploymentId])
 }

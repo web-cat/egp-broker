@@ -463,5 +463,17 @@
       "label": "Mode d'affichage",
       "list": "Liste"
     }
+  },
+  "dashboard": {
+    "rosterSync": {
+      "modalTitle": "Synchronisation de la liste des étudiants",
+      "modalDescription": "Mise à jour des inscriptions et des sections depuis votre système de gestion de l'apprentissage.",
+      "inProgressTitle": "Synchronisation en cours...",
+      "inProgressMessage": "Veuillez patienter pendant la mise à jour des inscriptions et des sections.",
+      "completedTitle": "Synchronisation terminée",
+      "completedMessage": "La liste des étudiants et les inscriptions ont été mises à jour avec succès.",
+      "syncRosterButton": "Synchroniser la liste",
+      "lastSynced": "Dernière synchro : {date}"
+    }
   }
 }

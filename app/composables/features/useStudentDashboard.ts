@@ -445,6 +445,7 @@ export const useStudentDashboard = (isPreview = false) => {
 
   return {
     passPools: effectivePassPools,
+    refreshPassPools,
     assignmentsData,
     assignmentsStatus,
     filteredAssignments,

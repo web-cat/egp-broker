@@ -132,18 +132,34 @@
 
   <!-- Student Roster & Pass Balances -->
   <div class="space-y-4 pt-8">
-    <div class="flex items-center justify-between px-1">
-      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-        Students & Pass Balances
-      </h3>
-      <UButton
-        icon="i-lucide-refresh-cw"
-        variant="ghost"
-        color="neutral"
-        size="sm"
-        :loading="studentsStatus === 'pending'"
-        @click="() => refreshStudents()"
-      />
+    <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+      <div>
+        <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          Students & Pass Balances
+        </h3>
+        <p v-if="lastRosterSyncAt" class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+          {{ t('dashboard.rosterSync.lastSynced', { date: formatDate(lastRosterSyncAt) }) }}
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <UButton
+          icon="i-lucide-users"
+          :label="t('dashboard.rosterSync.syncRosterButton')"
+          variant="outline"
+          color="primary"
+          size="sm"
+          :loading="isRosterSyncing"
+          @click="triggerManualRosterSync"
+        />
+        <UButton
+          icon="i-lucide-refresh-cw"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          :loading="studentsStatus === 'pending'"
+          @click="() => refreshStudents()"
+        />
+      </div>
     </div>
     <BaseDataTable
       :data="studentsData?.data"
@@ -186,13 +202,16 @@
   <FeaturesDashboardStudentRedemptionsModal
     v-model:open="studentRedemptionsOpen"
     :student="selectedStudentForRedemptions"
+    @saved="onStudentBalancesUpdated"
   />
+
+  <FeaturesDashboardRosterSyncModal v-model:open="rosterSyncModalOpen" @synced="onRosterSynced" />
 </template>
 
 <script setup lang="ts">
 import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
-import type { StudentRosterRow } from '@@/shared/models/teacher'
+import type { StudentRosterRow, StudentPassBalance } from '@@/shared/models/teacher'
 
 import { formatDate } from '~/utils/date'
 // Feature Composables
@@ -249,6 +268,13 @@ const {
   selectedStudentForRedemptions,
   openStudentRedemptions,
 
+  // Roster Sync (NRPS)
+  rosterSyncModalOpen,
+  isRosterSyncing,
+  lastRosterSyncAt,
+  triggerManualRosterSync,
+  onRosterSynced,
+
   // Sync & API Key
   canSync,
   platformName,
@@ -282,6 +308,22 @@ const toggleAssignmentPublish = async (assignment: AssignmentRow) => {
       color: 'error'
     })
   }
+}
+
+// Handle in-place update and background sync when a student's pass pool balances are edited
+const onStudentBalancesUpdated = (newBalances: StudentPassBalance[]) => {
+  if (selectedStudentForRedemptions.value) {
+    selectedStudentForRedemptions.value.passBalances = newBalances
+  }
+  if (studentsData.value?.data && selectedStudentForRedemptions.value) {
+    const student = studentsData.value.data.find(
+      (s) => s.userId === selectedStudentForRedemptions.value?.userId
+    )
+    if (student) {
+      student.passBalances = newBalances
+    }
+  }
+  refreshStudents()
 }
 
 // When an assignment is saved with eligibility changes, do a full refresh

@@ -65,3 +65,19 @@ export const studentRedemptionHistoryRowSchema = z.object({
 })
 
 export type StudentRedemptionHistoryRow = z.infer<typeof studentRedemptionHistoryRowSchema>
+
+/**
+ * Schema for teacher updating a student's pass pool balances
+ */
+export const updateStudentPassPoolsSchema = z.object({
+  balances: z
+    .array(
+      z.object({
+        passTypeId: z.string().min(1, 'Pass type ID is required'),
+        balance: z.number().int().min(0, 'Balance cannot be negative').max(1000)
+      })
+    )
+    .min(1, 'At least one pass pool balance must be provided')
+})
+
+export type UpdateStudentPassPoolsInput = z.infer<typeof updateStudentPassPoolsSchema>

@@ -21,10 +21,8 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 403, statusMessage: 'Invalid nonce' })
 
     // Execute launch logic
-    const { user, assignmentId, needsConfiguration, userRole, sourcedId } = await handleLtiLaunch(
-      prisma,
-      { claims, platform }
-    )
+    const { user, assignmentId, needsConfiguration, userRole, sourcedId, syncRequired } =
+      await handleLtiLaunch(prisma, { claims, platform })
 
     // Set the session
     await setUserSession(event, {
@@ -39,19 +37,21 @@ export default defineEventHandler(async (event) => {
       lti: { ...session.lti, sourcedId }
     })
 
+    const syncParam = syncRequired ? '?sync=roster' : ''
+
     // Routing
     if (!assignmentId) {
-      return sendRedirect(event, '/', 303)
+      return sendRedirect(event, `/${syncParam}`, 303)
     }
 
     if (needsConfiguration) {
       const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(userRole)
       return isStaff
-        ? sendRedirect(event, `/setup/${assignmentId}`, 303)
-        : sendRedirect(event, '/not-ready', 303)
+        ? sendRedirect(event, `/setup/${assignmentId}${syncParam}`, 303)
+        : sendRedirect(event, `/not-ready${syncParam}`, 303)
     }
 
-    return sendRedirect(event, `/launch/${assignmentId}`)
+    return sendRedirect(event, `/launch/${assignmentId}${syncParam}`)
   } catch (error: unknown) {
     if (error && typeof error === 'object' && 'statusCode' in error) {
       throw error

@@ -71,6 +71,64 @@ export const useTeacherDashboard = () => {
     studentRedemptionsOpen.value = true
   }
 
+  // --- Roster Sync (NRPS) ---
+  const route = useRoute()
+  const router = useRouter()
+
+  const { data: rosterSyncStatusData, refresh: refreshRosterSyncStatus } = useFetch<
+    ApiResponse<{
+      isSyncing: boolean
+      lastRosterSyncAt: string | null
+    }>
+  >('/api/me/course/roster-sync-status', {
+    lazy: true
+  })
+
+  const isRosterSyncing = computed(() => rosterSyncStatusData.value?.data?.isSyncing ?? false)
+  const lastRosterSyncAt = computed(
+    () => rosterSyncStatusData.value?.data?.lastRosterSyncAt ?? null
+  )
+  const rosterSyncModalOpen = ref(false)
+
+  if (route.query.sync === 'roster') {
+    rosterSyncModalOpen.value = true
+  }
+
+  watch(isRosterSyncing, (syncing) => {
+    if (syncing) {
+      rosterSyncModalOpen.value = true
+    }
+  })
+
+  const triggerManualRosterSync = async () => {
+    try {
+      await $fetch('/api/me/course/roster-sync', {
+        method: 'POST'
+      })
+      rosterSyncModalOpen.value = true
+      await refreshRosterSyncStatus()
+    } catch (err: unknown) {
+      const error = err as { data?: { message?: string; statusMessage?: string }; message?: string }
+      toast.add({
+        title: 'Sync failed',
+        description:
+          error.data?.message ||
+          error.data?.statusMessage ||
+          error.message ||
+          'Failed to start roster sync',
+        color: 'error'
+      })
+    }
+  }
+
+  const onRosterSynced = async () => {
+    if (route.query.sync === 'roster') {
+      const { sync: _ignoredSync, ...remainingQuery } = route.query
+      router.replace({ query: remainingQuery })
+    }
+    await Promise.all([refreshRosterSyncStatus(), refreshStudents(), refreshSections()])
+  }
+
   // --- Sync Logic ---
   const { data: syncStatus, refresh: refreshSyncStatus } = useFetch<{ data: SyncStatusResponse }>(
     '/api/me/sync-status',
@@ -205,6 +263,13 @@ export const useTeacherDashboard = () => {
     studentRedemptionsOpen,
     selectedStudentForRedemptions,
     openStudentRedemptions,
+
+    // Roster Sync (NRPS)
+    rosterSyncModalOpen,
+    isRosterSyncing,
+    lastRosterSyncAt,
+    triggerManualRosterSync,
+    onRosterSynced,
 
     // Sync & API Key
     canSync,

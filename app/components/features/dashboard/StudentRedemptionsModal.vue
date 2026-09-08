@@ -17,12 +17,44 @@
           v-if="student?.passBalances?.length"
           class="p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
         >
-          <p
-            class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-3"
-          >
-            Current Pass Balances
-          </p>
-          <div class="flex flex-wrap gap-3">
+          <div class="flex items-center justify-between mb-3">
+            <p
+              class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400"
+            >
+              Current Pass Balances
+            </p>
+            <div v-if="!isEditingBalances">
+              <UButton
+                size="xs"
+                variant="ghost"
+                color="primary"
+                icon="i-lucide-pencil"
+                label="Edit Balances"
+                @click="startEditingBalances"
+              />
+            </div>
+            <div v-else class="flex items-center gap-2">
+              <UButton
+                size="xs"
+                variant="ghost"
+                color="neutral"
+                label="Cancel"
+                :disabled="savingBalances"
+                @click="cancelEditingBalances"
+              />
+              <UButton
+                size="xs"
+                color="primary"
+                label="Save"
+                icon="i-lucide-check"
+                :loading="savingBalances"
+                @click="saveBalances"
+              />
+            </div>
+          </div>
+
+          <!-- Read-only View -->
+          <div v-if="!isEditingBalances" class="flex flex-wrap gap-3">
             <div
               v-for="pb in student.passBalances"
               :key="pb.passTypeId"
@@ -39,6 +71,59 @@
                 {{ pb.balance }}
                 <span class="text-xs font-normal text-neutral-400">/ {{ pb.initialBalance }}</span>
               </span>
+            </div>
+          </div>
+
+          <!-- Edit Mode View -->
+          <div v-else class="flex flex-wrap gap-3">
+            <div
+              v-for="pb in student.passBalances"
+              :key="pb.passTypeId"
+              class="flex items-center gap-3 px-3 py-2 rounded-md bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 shadow-xs"
+            >
+              <div class="flex items-center gap-1.5">
+                <UIcon
+                  name="i-lucide-ticket"
+                  class="w-4 h-4 text-primary-600 dark:text-primary-400"
+                />
+                <span class="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                  {{ pb.passTypeName }}:
+                </span>
+              </div>
+              <div class="flex items-center gap-1">
+                <UButton
+                  size="xs"
+                  variant="soft"
+                  color="neutral"
+                  icon="i-lucide-minus"
+                  :disabled="savingBalances || (editableBalances[pb.passTypeId] ?? 0) <= 0"
+                  @click="
+                    editableBalances[pb.passTypeId] = Math.max(
+                      0,
+                      (editableBalances[pb.passTypeId] ?? 0) - 1
+                    )
+                  "
+                />
+                <UInput
+                  v-model.number="editableBalances[pb.passTypeId]"
+                  type="number"
+                  min="0"
+                  max="1000"
+                  class="w-16 text-center font-bold"
+                  size="xs"
+                  :disabled="savingBalances"
+                />
+                <UButton
+                  size="xs"
+                  variant="soft"
+                  color="neutral"
+                  icon="i-lucide-plus"
+                  :disabled="savingBalances"
+                  @click="
+                    editableBalances[pb.passTypeId] = (editableBalances[pb.passTypeId] ?? 0) + 1
+                  "
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -77,7 +162,12 @@
 </template>
 
 <script setup lang="ts">
-import type { StudentRosterRow, StudentRedemptionHistoryRow } from '@@/shared/models/teacher'
+import type {
+  StudentRosterRow,
+  StudentRedemptionHistoryRow,
+  StudentPassBalance
+} from '@@/shared/models/teacher'
+import type { ApiResponse } from '@@/shared/types/api'
 import { formatDate } from '~/utils/date'
 
 const props = defineProps<{
@@ -85,12 +175,78 @@ const props = defineProps<{
   student: StudentRosterRow | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'update:open': [value: boolean]
+  saved: [balances: StudentPassBalance[]]
 }>()
+
+const toast = useToast()
 
 const redemptions = ref<StudentRedemptionHistoryRow[]>([])
 const loading = ref(false)
+
+// Edit pass balances state
+const isEditingBalances = ref(false)
+const editableBalances = ref<Record<string, number>>({})
+const savingBalances = ref(false)
+
+const startEditingBalances = () => {
+  if (!props.student?.passBalances) return
+  const map: Record<string, number> = {}
+  for (const pb of props.student.passBalances) {
+    map[pb.passTypeId] = pb.balance
+  }
+  editableBalances.value = map
+  isEditingBalances.value = true
+}
+
+const cancelEditingBalances = () => {
+  isEditingBalances.value = false
+  editableBalances.value = {}
+}
+
+const saveBalances = async () => {
+  if (!props.student?.userId) return
+  savingBalances.value = true
+  try {
+    const payload = {
+      balances: Object.entries(editableBalances.value).map(([passTypeId, balance]) => ({
+        passTypeId,
+        balance: Math.max(0, Math.floor(Number(balance) || 0))
+      }))
+    }
+
+    const res = await $fetch<ApiResponse<StudentPassBalance[]>>(
+      `/api/me/students/${props.student.userId}/pass-pools`,
+      {
+        method: 'PATCH',
+        body: payload
+      }
+    )
+
+    if (res.data) {
+      emit('saved', res.data)
+      toast.add({
+        title: 'Pass balances updated',
+        color: 'success'
+      })
+      isEditingBalances.value = false
+    }
+  } catch (err: unknown) {
+    const error = err as { data?: { message?: string; statusMessage?: string }; message?: string }
+    toast.add({
+      title: 'Failed to update balances',
+      description:
+        error.data?.message ||
+        error.data?.statusMessage ||
+        error.message ||
+        'An error occurred while updating pass balances',
+      color: 'error'
+    })
+  } finally {
+    savingBalances.value = false
+  }
+}
 
 const fetchRedemptions = async () => {
   if (!props.student?.userId) return
@@ -111,6 +267,8 @@ const fetchRedemptions = async () => {
 watch(
   () => [props.open, props.student?.userId],
   ([isOpen, id]) => {
+    isEditingBalances.value = false
+    editableBalances.value = {}
     if (isOpen && id) {
       fetchRedemptions()
     } else {
