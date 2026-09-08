@@ -262,227 +262,250 @@ export async function handleLtiLaunch(
 ): Promise<LtiLaunchResult> {
   const { claims, platform } = payload
 
-  return await prisma.$transaction(async (tx) => {
-    const deploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
-    const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
-    const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
-    const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom'] || {}
-    const platformClaims = claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform'] || {}
-    const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles'] || []
-    const agsEndpoint = claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
+  const launchData = await prisma.$transaction(
+    async (tx) => {
+      const deploymentId = claims['https://purl.imsglobal.org/spec/lti/claim/deployment_id']
+      const context = claims['https://purl.imsglobal.org/spec/lti/claim/context']
+      const resourceLink = claims['https://purl.imsglobal.org/spec/lti/claim/resource_link']
+      const customClaims = claims['https://purl.imsglobal.org/spec/lti/claim/custom'] || {}
+      const platformClaims = claims['https://purl.imsglobal.org/spec/lti/claim/tool_platform'] || {}
+      const roles = claims['https://purl.imsglobal.org/spec/lti/claim/roles'] || []
+      const agsEndpoint = claims['https://purl.imsglobal.org/spec/lti-ags/claim/endpoint']?.lineitem
 
-    // A. Upsert Deployment
-    const deployment = await tx.ltiDeployment.upsert({
-      where: { platformId_deploymentId: { platformId: platform.id, deploymentId } },
-      update: { deploymentHost: platformClaims?.guid || null },
-      create: {
-        platformId: platform.id,
-        deploymentId,
-        deploymentHost: platformClaims?.guid || null
-      }
-    })
-
-    // Extract NRPS claim if present
-    const nrpsClaim = claims['https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice']
-    const nrpsContextMembershipsUrl = nrpsClaim?.context_memberships_url || null
-
-    // B. Upsert Course
-    const course = await tx.course.upsert({
-      where: {
-        deploymentId_ltiContextId: { deploymentId: deployment.id, ltiContextId: context.id }
-      },
-      update: {
-        label: context.label,
-        title: context.title,
-        canvasCourseId: customClaims.canvas_course_id?.toString(),
-        ...(nrpsContextMembershipsUrl ? { nrpsContextMembershipsUrl } : {})
-      },
-      create: {
-        deploymentId: deployment.id,
-        ltiContextId: context.id,
-        label: context.label,
-        title: context.title,
-        canvasCourseId: customClaims.canvas_course_id?.toString(),
-        nrpsContextMembershipsUrl
-      }
-    })
-
-    // C. Find or Create User
-    let user = await tx.user.findFirst({
-      where: { ltiIdentities: { some: { platformId: platform.id, ltiSub: claims.sub } } }
-    })
-
-    if (!user && claims.email) {
-      user = await tx.user.upsert({
-        where: { email: claims.email },
-        update: { currentCourseId: course.id },
+      // A. Upsert Deployment
+      const deployment = await tx.ltiDeployment.upsert({
+        where: { platformId_deploymentId: { platformId: platform.id, deploymentId } },
+        update: { deploymentHost: platformClaims?.guid || null },
         create: {
-          email: claims.email,
-          firstName: claims.given_name || claims.name?.split(' ')[0] || 'LTI',
-          lastName: claims.family_name || 'User',
-          avatarUrl: getGravatarUrl(claims.email),
-          currentCourseId: course.id
+          platformId: platform.id,
+          deploymentId,
+          deploymentHost: platformClaims?.guid || null
         }
       })
-    }
 
-    if (!user) throw new Error('Could not find or create user context')
+      // Extract NRPS claim if present
+      const nrpsClaim = claims['https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice']
+      const nrpsContextMembershipsUrl = nrpsClaim?.context_memberships_url || null
 
-    // Ensure LtiIdentity is created/linked
-    const platformUserId = customClaims.canvas_user_id?.toString() || null
-    await tx.ltiIdentity.upsert({
-      where: {
-        platformId_ltiSub: {
-          platformId: platform.id,
-          ltiSub: claims.sub
+      // B. Upsert Course
+      const course = await tx.course.upsert({
+        where: {
+          deploymentId_ltiContextId: { deploymentId: deployment.id, ltiContextId: context.id }
+        },
+        update: {
+          label: context.label,
+          title: context.title,
+          canvasCourseId: customClaims.canvas_course_id?.toString(),
+          ...(nrpsContextMembershipsUrl ? { nrpsContextMembershipsUrl } : {})
+        },
+        create: {
+          deploymentId: deployment.id,
+          ltiContextId: context.id,
+          label: context.label,
+          title: context.title,
+          canvasCourseId: customClaims.canvas_course_id?.toString(),
+          nrpsContextMembershipsUrl
         }
-      },
-      update: {
-        userId: user.id,
-        platformUserId,
-        deploymentId
-      },
-      create: {
-        userId: user.id,
-        platformId: platform.id,
-        ltiSub: claims.sub,
-        platformUserId,
-        deploymentId
-      }
-    })
+      })
 
-    // D. Identity and Enrollment
-    const userRole = parseCourseRole(roles)
+      // C. Find or Create User
+      let user = await tx.user.findFirst({
+        where: { ltiIdentities: { some: { platformId: platform.id, ltiSub: claims.sub } } }
+      })
 
-    // Check if section ID is provided in custom claim
-    const rawSectionIds = customClaims.canvas_section_ids?.toString()
-    let courseSectionId: string | null = null
-    if (rawSectionIds && !rawSectionIds.startsWith('$')) {
-      const sectionIdStr = rawSectionIds.split(',')[0].trim()
-      if (sectionIdStr) {
-        const section = await tx.courseSection.upsert({
-          where: {
-            courseId_canvasSectionId: { courseId: course.id, canvasSectionId: sectionIdStr }
-          },
+      if (!user && claims.email) {
+        user = await tx.user.upsert({
+          where: { email: claims.email },
+          update: { currentCourseId: course.id },
           create: {
-            courseId: course.id,
-            canvasSectionId: sectionIdStr,
-            name: `Section ${sectionIdStr}`
-          },
-          update: {}
+            email: claims.email,
+            firstName: claims.given_name || claims.name?.split(' ')[0] || 'LTI',
+            lastName: claims.family_name || 'User',
+            avatarUrl: getGravatarUrl(claims.email),
+            currentCourseId: course.id
+          }
         })
-        courseSectionId = section.id
       }
-    }
 
-    const enrollment = await tx.enrollment.upsert({
-      where: { userId_courseId: { userId: user.id, courseId: course.id } },
-      update: {
-        role: userRole as any,
-        ...(courseSectionId ? { courseSectionId } : {})
-      },
-      create: {
-        userId: user.id,
-        courseId: course.id,
-        role: userRole as any,
-        courseSectionId
-      }
-    })
+      if (!user) throw new Error('Could not find or create user context')
 
-    user = await tx.user.update({
-      where: { id: user.id },
-      data: { currentCourseId: course.id }
-    })
+      // Ensure LtiIdentity is created/linked
+      const platformUserId = customClaims.canvas_user_id?.toString() || null
+      await tx.ltiIdentity.upsert({
+        where: {
+          platformId_ltiSub: {
+            platformId: platform.id,
+            ltiSub: claims.sub
+          }
+        },
+        update: {
+          userId: user.id,
+          platformUserId,
+          deploymentId
+        },
+        create: {
+          userId: user.id,
+          platformId: platform.id,
+          ltiSub: claims.sub,
+          platformUserId,
+          deploymentId
+        }
+      })
 
-    // Roster Sync Evaluation & Concurrency Gating
-    let syncRequired = false
-    if (course.isRosterSyncing) {
-      // Sync is already running by another process; flag UI to wait on existing sync
-      syncRequired = true
-    } else if (course.nrpsContextMembershipsUrl || nrpsContextMembershipsUrl) {
-      const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(userRole)
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-      const isStale = !course.lastRosterSyncAt || new Date(course.lastRosterSyncAt) < oneDayAgo
-      const isMissingSection = userRole === 'STUDENT' && !enrollment.courseSectionId
+      // D. Identity and Enrollment
+      const userRole = parseCourseRole(roles)
 
-      if ((isStaff && isStale) || isMissingSection) {
-        const acquired = await acquireRosterSyncLock(course.id)
-        if (acquired) {
-          syncCourseRosterFromNrps(course.id).catch((err) => {
-            console.error('[NRPS] Background launch sync error:', err)
+      // Check if section ID is provided in custom claim
+      const rawSectionIds = customClaims.canvas_section_ids?.toString()
+      let courseSectionId: string | null = null
+      if (rawSectionIds && !rawSectionIds.startsWith('$')) {
+        const sectionIdStr = rawSectionIds.split(',')[0].trim()
+        if (sectionIdStr) {
+          const section = await tx.courseSection.upsert({
+            where: {
+              courseId_canvasSectionId: { courseId: course.id, canvasSectionId: sectionIdStr }
+            },
+            create: {
+              courseId: course.id,
+              canvasSectionId: sectionIdStr,
+              name: `Section ${sectionIdStr}`
+            },
+            update: {}
           })
-          syncRequired = true
-        } else {
-          syncRequired = true
+          courseSectionId = section.id
         }
       }
-    }
 
-    // E. Differentiate Assignment Placement vs. Course Navigation Placement
-    const rawAssignmentId = customClaims.canvas_assignment_id?.toString()
-    const hasAssignmentContext = Boolean(
-      rawAssignmentId &&
-        !rawAssignmentId.startsWith('$') &&
-        rawAssignmentId !== '$Canvas.assignment.id'
-    )
-
-    if (!hasAssignmentContext) {
-      return {
-        user,
-        assignmentId: null,
-        userRole,
-        sourcedId: null,
-        needsConfiguration: false,
-        syncRequired
-      }
-    }
-
-    // F. Strict Assignment Lookup (Standard LTI 1:1)
-    let assignment = await tx.assignment.findUnique({
-      where: { courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id } },
-      include: { tool: true }
-    })
-
-    if (!assignment) {
-      assignment = await tx.assignment.create({
-        data: {
+      const enrollment = await tx.enrollment.upsert({
+        where: { userId_courseId: { userId: user.id, courseId: course.id } },
+        update: {
+          role: userRole as any,
+          ...(courseSectionId ? { courseSectionId } : {})
+        },
+        create: {
+          userId: user.id,
           courseId: course.id,
-          resourceLinkId: resourceLink.id,
-          title: resourceLink.title,
-          canvasAssignmentId: rawAssignmentId || agsEndpoint?.split('/').filter(Boolean).pop()
+          role: userRole as any,
+          courseSectionId
+        }
+      })
+
+      user = await tx.user.update({
+        where: { id: user.id },
+        data: { currentCourseId: course.id }
+      })
+
+      // E. Differentiate Assignment Placement vs. Course Navigation Placement
+      const rawAssignmentId = customClaims.canvas_assignment_id?.toString()
+      const hasAssignmentContext = Boolean(
+        rawAssignmentId &&
+          !rawAssignmentId.startsWith('$') &&
+          rawAssignmentId !== '$Canvas.assignment.id'
+      )
+
+      if (!hasAssignmentContext) {
+        return {
+          user,
+          course,
+          enrollment,
+          userRole,
+          assignmentId: null,
+          sourcedId: null,
+          needsConfiguration: false,
+          nrpsContextMembershipsUrl
+        }
+      }
+
+      // F. Strict Assignment Lookup (Standard LTI 1:1)
+      let assignment = await tx.assignment.findUnique({
+        where: {
+          courseId_resourceLinkId: { courseId: course.id, resourceLinkId: resourceLink.id }
         },
         include: { tool: true }
       })
-    }
 
-    const ltiResult = await tx.ltiResult.upsert({
-      where: {
-        platformId_ltiSub_assignmentId: {
+      if (!assignment) {
+        assignment = await tx.assignment.create({
+          data: {
+            courseId: course.id,
+            resourceLinkId: resourceLink.id,
+            title: resourceLink.title,
+            canvasAssignmentId: rawAssignmentId || agsEndpoint?.split('/').filter(Boolean).pop()
+          },
+          include: { tool: true }
+        })
+      }
+
+      const ltiResult = await tx.ltiResult.upsert({
+        where: {
+          platformId_ltiSub_assignmentId: {
+            platformId: platform.id,
+            ltiSub: claims.sub,
+            assignmentId: assignment.id
+          }
+        },
+        update: { lisOutcomeServiceUrl: agsEndpoint, deploymentId },
+        create: {
           platformId: platform.id,
           ltiSub: claims.sub,
-          assignmentId: assignment.id
+          userId: user.id,
+          assignmentId: assignment.id,
+          deploymentId,
+          lisOutcomeServiceUrl: agsEndpoint
         }
-      },
-      update: { lisOutcomeServiceUrl: agsEndpoint, deploymentId },
-      create: {
-        platformId: platform.id,
-        ltiSub: claims.sub,
-        userId: user.id,
+      })
+
+      const needsConfiguration = !assignment.toolId
+
+      return {
+        user,
+        course,
+        enrollment,
+        userRole,
         assignmentId: assignment.id,
-        deploymentId,
-        lisOutcomeServiceUrl: agsEndpoint
+        sourcedId: ltiResult.id,
+        needsConfiguration,
+        nrpsContextMembershipsUrl
       }
-    })
-
-    const needsConfiguration = !assignment.toolId
-
-    return {
-      user,
-      assignmentId: assignment.id,
-      userRole,
-      sourcedId: ltiResult.id,
-      needsConfiguration,
-      syncRequired
+    },
+    {
+      timeout: 10000
     }
-  })
+  )
+
+  // Roster Sync Evaluation & Concurrency Gating (executed outside transaction to avoid lock contention)
+  let syncRequired = false
+  if (launchData.course.isRosterSyncing) {
+    // Sync is already running by another process; flag UI to wait on existing sync
+    syncRequired = true
+  } else if (launchData.course.nrpsContextMembershipsUrl || launchData.nrpsContextMembershipsUrl) {
+    const isStaff = ['TA', 'TEACHER', 'DESIGNER', 'ADMIN'].includes(launchData.userRole)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const isStale =
+      !launchData.course.lastRosterSyncAt ||
+      new Date(launchData.course.lastRosterSyncAt) < oneDayAgo
+    const isMissingSection =
+      launchData.userRole === 'STUDENT' && !launchData.enrollment.courseSectionId
+
+    if ((isStaff && isStale) || isMissingSection) {
+      const acquired = await acquireRosterSyncLock(launchData.course.id)
+      if (acquired) {
+        syncCourseRosterFromNrps(launchData.course.id).catch((err) => {
+          console.error('[NRPS] Background launch sync error:', err)
+        })
+        syncRequired = true
+      } else {
+        syncRequired = true
+      }
+    }
+  }
+
+  return {
+    user: launchData.user,
+    assignmentId: launchData.assignmentId,
+    userRole: launchData.userRole,
+    sourcedId: launchData.sourcedId,
+    needsConfiguration: launchData.needsConfiguration,
+    syncRequired
+  }
 }
