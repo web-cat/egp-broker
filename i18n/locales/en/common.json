@@ -473,7 +473,13 @@
       "completedTitle": "Sync Complete",
       "completedMessage": "The course roster and enrollments have been updated successfully.",
       "syncRosterButton": "Sync Roster",
-      "lastSynced": "Last synced: {date}"
+      "lastSynced": "Last synced: {date}",
+      "totalStudentsLabel": "Enrolled Students",
+      "totalSectionsLabel": "Course Sections",
+      "studentsAssignedLabel": "In Sections",
+      "studentsUnassignedLabel": "{count} unassigned",
+      "noSectionsWarning": "0 sections were detected from Canvas. If this course uses multiple sections, ensure the Canvas Developer Key has custom field canvas_section_ids ($Canvas.course.sectionIds) enabled.",
+      "closeButton": "Done"
     }
   }
 }

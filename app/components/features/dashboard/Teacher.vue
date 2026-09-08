@@ -109,7 +109,17 @@
   <!-- Course Sections -->
   <div class="space-y-4 pt-8">
     <div class="flex items-center justify-between px-1">
-      <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Course Sections</h3>
+      <div class="flex items-center gap-3">
+        <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          Course Sections
+        </h3>
+        <UBadge
+          :label="`${sectionsData?.data?.length ?? 0} section${(sectionsData?.data?.length ?? 0) === 1 ? '' : 's'}`"
+          color="neutral"
+          variant="subtle"
+          size="sm"
+        />
+      </div>
       <UButton
         icon="i-lucide-refresh-cw"
         variant="ghost"
@@ -128,6 +138,25 @@
       empty-icon="i-lucide-layers"
       empty-text="No course sections found. Sync with Canvas to import sections."
     />
+    <div
+      v-if="sectionsData?.data && sectionsData.data.length === 0 && lastRosterSyncAt"
+      class="p-3 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 rounded-lg text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5"
+    >
+      <UIcon
+        name="i-lucide-info"
+        class="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400"
+      />
+      <div>
+        <p class="font-medium">No sections detected in Canvas roster sync.</p>
+        <p class="text-amber-700 dark:text-amber-400 mt-0.5">
+          If your course uses multiple sections, ensure your Canvas LTI Developer Key includes
+          <code class="bg-amber-100 dark:bg-amber-900/50 px-1 py-0.5 rounded font-mono"
+            >canvas_section_ids: $Canvas.course.sectionIds</code
+          >
+          under Custom Fields.
+        </p>
+      </div>
+    </div>
   </div>
 
   <!-- Student Roster & Pass Balances -->
@@ -137,8 +166,18 @@
         <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
           Students & Pass Balances
         </h3>
-        <p v-if="lastRosterSyncAt" class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-          {{ t('dashboard.rosterSync.lastSynced', { date: formatDate(lastRosterSyncAt) }) }}
+        <p
+          v-if="lastRosterSyncAt"
+          class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 flex flex-wrap items-center gap-x-2"
+        >
+          <span>{{
+            t('dashboard.rosterSync.lastSynced', { date: formatDate(lastRosterSyncAt) })
+          }}</span>
+          <span v-if="rosterSyncDetails" class="text-neutral-400 dark:text-neutral-500">•</span>
+          <span v-if="rosterSyncDetails" class="font-medium text-neutral-600 dark:text-neutral-300">
+            {{ rosterSyncDetails.studentsWithSection }} of {{ rosterSyncDetails.totalStudents }} in
+            sections
+          </span>
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -272,6 +311,7 @@ const {
   rosterSyncModalOpen,
   isRosterSyncing,
   lastRosterSyncAt,
+  rosterSyncDetails,
   triggerManualRosterSync,
   onRosterSynced,
 

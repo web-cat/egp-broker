@@ -3,6 +3,7 @@ import type { AssignmentRow } from '@@/shared/models/assignment'
 import type { SyncStatusResponse } from '@@/shared/schemas/sync.schema'
 import type { StudentRosterRow } from '@@/shared/models/teacher'
 import type { CourseSectionRow } from '@@/shared/models/section'
+import type { RosterSyncStatusData } from '@@/shared/models/course'
 import type { ApiResponse } from '@@/shared/types/api'
 import { useAdminCrud } from '~/composables/features/admin/useAdminCrud'
 
@@ -76,10 +77,7 @@ export const useTeacherDashboard = () => {
   const router = useRouter()
 
   const { data: rosterSyncStatusData, refresh: refreshRosterSyncStatus } = useFetch<
-    ApiResponse<{
-      isSyncing: boolean
-      lastRosterSyncAt: string | null
-    }>
+    ApiResponse<RosterSyncStatusData>
   >('/api/me/course/roster-sync-status', {
     lazy: true,
     server: false
@@ -89,6 +87,7 @@ export const useTeacherDashboard = () => {
   const lastRosterSyncAt = computed(
     () => rosterSyncStatusData.value?.data?.lastRosterSyncAt ?? null
   )
+  const rosterSyncDetails = computed(() => rosterSyncStatusData.value?.data ?? null)
   const rosterSyncModalOpen = ref(false)
 
   if (route.query.sync === 'roster') {
@@ -269,6 +268,7 @@ export const useTeacherDashboard = () => {
     rosterSyncModalOpen,
     isRosterSyncing,
     lastRosterSyncAt,
+    rosterSyncDetails,
     triggerManualRosterSync,
     onRosterSynced,
 

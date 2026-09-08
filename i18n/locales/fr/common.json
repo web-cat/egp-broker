@@ -473,7 +473,13 @@
       "completedTitle": "Synchronisation terminée",
       "completedMessage": "La liste des étudiants et les inscriptions ont été mises à jour avec succès.",
       "syncRosterButton": "Synchroniser la liste",
-      "lastSynced": "Dernière synchro : {date}"
+      "lastSynced": "Dernière synchro : {date}",
+      "totalStudentsLabel": "Étudiants inscrits",
+      "totalSectionsLabel": "Sections du cours",
+      "studentsAssignedLabel": "En section",
+      "studentsUnassignedLabel": "{count} non assignés",
+      "noSectionsWarning": "0 section détectée depuis Canvas. Si ce cours utilise des sections, assurez-vous que la clé développeur Canvas possède le champ personnalisé canvas_section_ids ($Canvas.course.sectionIds).",
+      "closeButton": "Terminé"
     }
   }
 }

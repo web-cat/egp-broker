@@ -26,6 +26,15 @@ export const courseRowSchema = z.object({
 
 export type CourseRow = z.infer<typeof courseRowSchema>
 
+export interface RosterSyncStatusData {
+  isSyncing: boolean
+  lastRosterSyncAt: string | null
+  totalStudents: number
+  totalSections: number
+  studentsWithSection: number
+  studentsWithoutSection: number
+}
+
 // =============================================================================
 // VALIDATION SCHEMAS
 // =============================================================================

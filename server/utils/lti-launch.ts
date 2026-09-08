@@ -311,6 +311,10 @@ export async function handleLtiLaunch(
         }
       })
 
+      console.info(
+        `[LTI Launch] Course: ${course.id}, Context: ${context.id}, resourceLinkId: ${resourceLinkId || 'NONE'}, NRPS URL: ${nrpsContextMembershipsUrl || 'NONE'}`
+      )
+
       // C. Find or Create User
       let user = await tx.user.findFirst({
         where: { ltiIdentities: { some: { platformId: platform.id, ltiSub: claims.sub } } }

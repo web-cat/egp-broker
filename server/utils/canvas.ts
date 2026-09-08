@@ -31,6 +31,12 @@ export interface CanvasSection {
     course_section_id: number
     role: string
     type: string
+    user?: {
+      id?: number
+      name?: string
+      login_id?: string
+      email?: string
+    }
   }>
 }
 
@@ -241,7 +247,7 @@ export async function fetchCanvasSections(
   accessToken: string
 ): Promise<CanvasSection[]> {
   const sections: CanvasSection[] = []
-  let url = `https://${domain}/api/v1/courses/${courseId}/sections?include[]=enrollments&per_page=100`
+  let url = `https://${domain}/api/v1/courses/${courseId}/sections?include[]=enrollments&include[]=user&per_page=100`
 
   try {
     while (url) {

@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import prisma from '@@/server/utils/db'
 import { parseCourseRole } from '@@/server/utils/lti'
 import { getGravatarUrl } from '@@/server/utils/gravatar'
+import { fetchCanvasSections, getPlatformCanvasDomain } from '@@/server/utils/canvas'
 
 const STALE_LOCK_MS = 10 * 60 * 1000 // 10 minutes
 
@@ -71,6 +72,9 @@ export async function releaseRosterSyncLock(courseId: string, success: boolean):
 export async function syncCourseRosterFromNrps(courseId: string): Promise<{
   success: boolean
   memberCount?: number
+  sectionCount?: number
+  studentsWithSection?: number
+  studentsWithoutSection?: number
   error?: string
 }> {
   try {
@@ -158,6 +162,10 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
       const separator = currentUrl.includes('?') ? '&' : '?'
       currentUrl = `${currentUrl}${separator}rlid=${encodeURIComponent(rlid)}`
     }
+
+    console.info(
+      `[NRPS] Starting sync for course ${courseId}. rlid: ${rlid || 'NONE'}. Request URL: ${currentUrl}`
+    )
     const allMembers: any[] = []
 
     const fetchRaw =
@@ -207,6 +215,11 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
     console.info(`[NRPS] Fetched ${allMembers.length} member(s) for course ${courseId}`)
 
     // 4. Process members and update database
+    let sectionsUpsertedCount = 0
+    let studentsWithSectionCount = 0
+    let studentsWithoutSectionCount = 0
+    const knownSectionIds = new Set<string>()
+
     for (const member of allMembers) {
       const ltiSub = member.user_id
       if (!ltiSub) continue
@@ -217,12 +230,83 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
       const lastName = member.family_name || nameParts.slice(1).join(' ') || 'User'
       const courseRole = parseCourseRole(member.roles)
 
-      // Extract custom Canvas parameters from message claim if present
-      const message = member.message?.[0]
-      const custom = message?.['https://purl.imsglobal.org/spec/lti/claim/custom'] || {}
-      const platformUserId = custom.canvas_user_id?.toString() || null
-      const rawSectionIds = custom.canvas_section_ids?.toString() || null
-      const rawSectionNames = custom.canvas_section_names?.toString() || null
+      // Extract custom parameters across all standard and vendor locations:
+      // 1. member.message[i]['https://purl.imsglobal.org/spec/lti/claim/custom']
+      // 2. member.message[i].custom
+      // 3. member['https://purl.imsglobal.org/spec/lti/claim/custom']
+      // 4. member.custom
+      // 5. Vendor claims: https://www.instructure.com/canvas_user_id, https://www.instructure.com/canvas_section_ids
+      let custom: Record<string, any> = {}
+      const messages = Array.isArray(member.message)
+        ? member.message
+        : member.message
+          ? [member.message]
+          : []
+
+      for (const msg of messages) {
+        if (msg && typeof msg === 'object') {
+          const ltiCustom = msg['https://purl.imsglobal.org/spec/lti/claim/custom']
+          if (ltiCustom && typeof ltiCustom === 'object') {
+            custom = { ...custom, ...ltiCustom }
+          }
+          if (msg.custom && typeof msg.custom === 'object') {
+            custom = { ...custom, ...msg.custom }
+          }
+          if (msg['https://www.instructure.com/canvas_user_id']) {
+            custom.canvas_user_id =
+              custom.canvas_user_id ?? msg['https://www.instructure.com/canvas_user_id']
+          }
+          if (msg['https://www.instructure.com/canvas_section_ids']) {
+            custom.canvas_section_ids =
+              custom.canvas_section_ids ?? msg['https://www.instructure.com/canvas_section_ids']
+          }
+        }
+      }
+
+      if (
+        member['https://purl.imsglobal.org/spec/lti/claim/custom'] &&
+        typeof member['https://purl.imsglobal.org/spec/lti/claim/custom'] === 'object'
+      ) {
+        custom = { ...custom, ...member['https://purl.imsglobal.org/spec/lti/claim/custom'] }
+      }
+      if (member.custom && typeof member.custom === 'object') {
+        custom = { ...custom, ...member.custom }
+      }
+      if (member['https://www.instructure.com/canvas_user_id']) {
+        custom.canvas_user_id =
+          custom.canvas_user_id ?? member['https://www.instructure.com/canvas_user_id']
+      }
+      if (member['https://www.instructure.com/canvas_section_ids']) {
+        custom.canvas_section_ids =
+          custom.canvas_section_ids ?? member['https://www.instructure.com/canvas_section_ids']
+      }
+
+      const platformUserId = (custom.canvas_user_id ?? custom.user_id)?.toString() || null
+
+      const rawSectionIds =
+        (
+          custom.canvas_section_ids ??
+          custom.section_ids ??
+          custom.canvas_section_id ??
+          custom.section_id ??
+          custom.user_section_ids ??
+          custom.course_section_ids
+        )?.toString() || null
+
+      const rawSectionNames =
+        (
+          custom.canvas_section_names ??
+          custom.section_names ??
+          custom.canvas_section_name ??
+          custom.section_name ??
+          custom.user_section_names
+        )?.toString() || null
+
+      if (rawSectionIds?.startsWith('$')) {
+        console.warn(
+          `[NRPS] Canvas variable substitution not evaluated: received literal "${rawSectionIds}". Ensure the LMS Developer Key has permission for section variable substitution.`
+        )
+      }
 
       // Resolve section if available
       let sectionDbId: string | null = null
@@ -253,6 +337,18 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
             update: sectionName !== `Section ${sectionIdStr}` ? { name: sectionName } : {}
           })
           sectionDbId = section.id
+          if (!knownSectionIds.has(section.id)) {
+            knownSectionIds.add(section.id)
+            sectionsUpsertedCount++
+          }
+        }
+      }
+
+      if (courseRole === 'STUDENT') {
+        if (sectionDbId) {
+          studentsWithSectionCount++
+        } else {
+          studentsWithoutSectionCount++
         }
       }
 
@@ -342,12 +438,180 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
       })
     }
 
-    // 5. Release lock and update sync timestamp
+    console.info(
+      `[NRPS] Sync result for course ${courseId}: ${allMembers.length} members processed, ${sectionsUpsertedCount} section(s) upserted, ${studentsWithSectionCount} student(s) linked to a section, ${studentsWithoutSectionCount} student(s) without a section.`
+    )
+
+    if (studentsWithSectionCount === 0 && allMembers.length > 0) {
+      const sample = allMembers[0]
+      console.info(
+        `[NRPS Diagnostic] 0 students linked to sections. Sample member keys: [${Object.keys(sample || {}).join(', ')}], message: ${JSON.stringify(sample?.message || null)}`
+      )
+    }
+
+    // 5. Fallback to Canvas API for section enrollments if NRPS did not retrieve any sections
+    if (studentsWithSectionCount === 0) {
+      try {
+        const teacherIdentity = await prisma.ltiIdentity.findFirst({
+          where: {
+            platformId: platform.id,
+            platformApiKey: { not: null },
+            user: {
+              enrollments: {
+                some: {
+                  courseId,
+                  role: { in: ['TEACHER', 'TA', 'ADMIN', 'DESIGNER'] }
+                }
+              }
+            }
+          },
+          select: {
+            platformApiKey: true
+          }
+        })
+
+        if (teacherIdentity?.platformApiKey) {
+          const domain = getPlatformCanvasDomain(platform, course.deployment?.deploymentHost)
+          const courseIdMatch = nrpsUrl.match(/\/courses\/(\d+)/)
+          const canvasCourseId =
+            course.canvasCourseId && !course.canvasCourseId.startsWith('$')
+              ? course.canvasCourseId
+              : courseIdMatch?.[1]
+
+          if (canvasCourseId) {
+            console.info(
+              `[NRPS Fallback] 0 sections from LTI NRPS, but found teacher Canvas API key. Fetching sections from Canvas API (${domain}, course ${canvasCourseId})...`
+            )
+
+            const canvasSections = await fetchCanvasSections(
+              domain,
+              canvasCourseId,
+              teacherIdentity.platformApiKey
+            )
+
+            for (const cs of canvasSections) {
+              const canvasSecIdStr = cs.id.toString()
+              const sectionName = cs.name || `Section ${canvasSecIdStr}`
+
+              const dbSection = await prisma.courseSection.upsert({
+                where: {
+                  courseId_canvasSectionId: {
+                    courseId,
+                    canvasSectionId: canvasSecIdStr
+                  }
+                },
+                create: {
+                  courseId,
+                  canvasSectionId: canvasSecIdStr,
+                  name: sectionName
+                },
+                update: {
+                  name: sectionName
+                }
+              })
+
+              if (!knownSectionIds.has(dbSection.id)) {
+                knownSectionIds.add(dbSection.id)
+                sectionsUpsertedCount++
+              }
+
+              if (cs.enrollments && Array.isArray(cs.enrollments)) {
+                for (const en of cs.enrollments) {
+                  const platformUserId = en.user_id?.toString()
+                  const userEmail = en.user?.email || null
+                  const userLoginId = en.user?.login_id || null
+
+                  let matchedUserId: string | null = null
+
+                  if (platformUserId) {
+                    const ltiIdent = await prisma.ltiIdentity.findFirst({
+                      where: {
+                        platformId: platform.id,
+                        platformUserId
+                      },
+                      select: { userId: true }
+                    })
+                    if (ltiIdent) {
+                      matchedUserId = ltiIdent.userId
+                    }
+                  }
+
+                  if (!matchedUserId && userEmail) {
+                    const userByEmail = await prisma.user.findUnique({
+                      where: { email: userEmail },
+                      select: { id: true }
+                    })
+                    if (userByEmail) {
+                      matchedUserId = userByEmail.id
+                    }
+                  }
+
+                  if (!matchedUserId && userLoginId) {
+                    const userByLogin = await prisma.user.findFirst({
+                      where: {
+                        email: { startsWith: `${userLoginId}@` },
+                        enrollments: { some: { courseId } }
+                      },
+                      select: { id: true }
+                    })
+                    if (userByLogin) {
+                      matchedUserId = userByLogin.id
+                    }
+                  }
+
+                  if (matchedUserId) {
+                    if (platformUserId) {
+                      await prisma.ltiIdentity.updateMany({
+                        where: {
+                          platformId: platform.id,
+                          userId: matchedUserId,
+                          platformUserId: null
+                        },
+                        data: { platformUserId }
+                      })
+                    }
+
+                    await prisma.enrollment.updateMany({
+                      where: {
+                        userId: matchedUserId,
+                        courseId,
+                        role: 'STUDENT'
+                      },
+                      data: { courseSectionId: dbSection.id }
+                    })
+                  }
+                }
+              }
+            }
+
+            studentsWithSectionCount = await prisma.enrollment.count({
+              where: { courseId, role: 'STUDENT', courseSectionId: { not: null } }
+            })
+            studentsWithoutSectionCount = await prisma.enrollment.count({
+              where: { courseId, role: 'STUDENT', courseSectionId: null }
+            })
+
+            console.info(
+              `[NRPS Fallback] Canvas API section sync complete: ${sectionsUpsertedCount} section(s), ${studentsWithSectionCount} student(s) in sections.`
+            )
+          }
+        }
+      } catch (fallbackErr: any) {
+        console.warn(
+          `[NRPS Fallback] Canvas API section sync fallback failed (${fallbackErr?.message || fallbackErr}). Continuing with NRPS data.`
+        )
+      }
+    }
+
+    // 6. Release lock and update sync timestamp
     await releaseRosterSyncLock(courseId, true)
 
     return {
       success: true,
-      memberCount: allMembers.length
+      memberCount: allMembers.length,
+      sectionCount: sectionsUpsertedCount,
+      studentsWithSection: studentsWithSectionCount,
+      studentsWithoutSection: studentsWithoutSectionCount
     }
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err)

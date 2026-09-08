@@ -10,7 +10,11 @@ vi.mock('@@/server/utils/db', () => ({
       findUnique: vi.fn()
     },
     enrollment: {
-      findUnique: vi.fn()
+      findUnique: vi.fn(),
+      count: vi.fn()
+    },
+    courseSection: {
+      count: vi.fn()
     }
   }
 }))
@@ -55,7 +59,7 @@ describe('API: /api/me/course/roster-sync endpoints', () => {
       })
     })
 
-    it('returns isSyncing and lastRosterSyncAt for current course', async () => {
+    it('returns isSyncing, lastRosterSyncAt, and section stats for current course', async () => {
       const event = mockEvent()
       const syncDate = new Date('2026-09-08T10:00:00Z')
       vi.mocked(prisma.course.findUnique).mockResolvedValue({
@@ -63,6 +67,10 @@ describe('API: /api/me/course/roster-sync endpoints', () => {
         isRosterSyncing: true,
         lastRosterSyncAt: syncDate
       } as any)
+      vi.mocked(prisma.enrollment.count)
+        .mockResolvedValueOnce(240) // total students
+        .mockResolvedValueOnce(230) // students with section
+      vi.mocked(prisma.courseSection.count).mockResolvedValueOnce(4) // total sections
 
       const response = await rosterSyncStatusGet(event)
 
@@ -70,7 +78,11 @@ describe('API: /api/me/course/roster-sync endpoints', () => {
         statusCode: 200,
         data: {
           isSyncing: true,
-          lastRosterSyncAt: syncDate.toISOString()
+          lastRosterSyncAt: syncDate.toISOString(),
+          totalStudents: 240,
+          totalSections: 4,
+          studentsWithSection: 230,
+          studentsWithoutSection: 10
         }
       })
     })
