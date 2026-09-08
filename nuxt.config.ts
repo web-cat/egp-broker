@@ -307,6 +307,7 @@ export default defineNuxtConfig({
 
     // LTI 1.3 Configuration
     ltiPrivateKey: process.env.NUXT_LTI_PRIVATE_KEY, //(PKCS8 format)
+    ltiPrivateKeyPem: process.env.NUXT_LTI_PRIVATE_KEY,
     ltiPublicKey: process.env.NUXT_LTI_PUBLIC_KEY,
     ltiKeyId: process.env.NUXT_LTI_KEY_ID,
 

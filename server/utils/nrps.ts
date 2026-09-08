@@ -100,7 +100,8 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
     }
 
     const config = useRuntimeConfig()
-    const privateKeyPem = config.ltiPrivateKeyPem
+    const rawKey = (config.ltiPrivateKey || config.ltiPrivateKeyPem) as string | undefined
+    const privateKeyPem = rawKey ? rawKey.replace(/\\n/g, '\n') : undefined
     const toolKid = config.ltiKeyId
 
     if (!privateKeyPem) {
