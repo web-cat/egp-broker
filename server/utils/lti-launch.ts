@@ -286,6 +286,7 @@ export async function handleLtiLaunch(
       // Extract NRPS claim if present
       const nrpsClaim = claims['https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice']
       const nrpsContextMembershipsUrl = nrpsClaim?.context_memberships_url || null
+      const resourceLinkId = resourceLink?.id || null
 
       // B. Upsert Course
       const course = await tx.course.upsert({
@@ -296,7 +297,8 @@ export async function handleLtiLaunch(
           label: context.label,
           title: context.title,
           canvasCourseId: customClaims.canvas_course_id?.toString(),
-          ...(nrpsContextMembershipsUrl ? { nrpsContextMembershipsUrl } : {})
+          ...(nrpsContextMembershipsUrl ? { nrpsContextMembershipsUrl } : {}),
+          ...(resourceLinkId ? { resourceLinkId } : {})
         },
         create: {
           deploymentId: deployment.id,
@@ -304,7 +306,8 @@ export async function handleLtiLaunch(
           label: context.label,
           title: context.title,
           canvasCourseId: customClaims.canvas_course_id?.toString(),
-          nrpsContextMembershipsUrl
+          nrpsContextMembershipsUrl,
+          resourceLinkId
         }
       })
 

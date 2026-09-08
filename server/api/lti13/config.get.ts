@@ -50,7 +50,8 @@ export default defineEventHandler((event) => {
       canvas_user_id: '$Canvas.user.id',
       canvas_course_id: '$Canvas.course.id',
       canvas_assignment_id: '$Canvas.assignment.id',
-      canvas_section_ids: '$Canvas.course.sectionIds'
+      canvas_section_ids: '$Canvas.course.sectionIds',
+      canvas_section_names: '$com.instructure.User.sectionNames'
     },
     scopes: [
       'https://purl.imsglobal.org/spec/lti-ags/scope/lineitem',

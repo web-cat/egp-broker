@@ -30,6 +30,9 @@ vi.mock('@@/server/utils/db', () => ({
     enrollment: {
       upsert: vi.fn()
     },
+    assignment: {
+      findFirst: vi.fn()
+    },
     $transaction: vi.fn((cb) => (typeof cb === 'function' ? cb(prisma) : Promise.all(cb)))
   }
 }))
@@ -147,6 +150,7 @@ describe('NRPS Roster Synchronization Service', () => {
     const mockCourse = {
       id: 'course-1',
       canvasCourseId: '12345',
+      resourceLinkId: 'rlid-nav-1',
       nrpsContextMembershipsUrl: 'https://canvas.example.edu/api/lti/courses/12345/names_and_roles',
       deployment: {
         deploymentId: 'canvas-deploy-123',
@@ -178,7 +182,8 @@ describe('NRPS Roster Synchronization Service', () => {
             {
               'https://purl.imsglobal.org/spec/lti/claim/custom': {
                 canvas_user_id: '901',
-                canvas_section_ids: 'sec-canvas-42'
+                canvas_section_ids: 'sec-canvas-42',
+                canvas_section_names: 'Lab Section 01'
               }
             }
           ]
@@ -208,7 +213,7 @@ describe('NRPS Roster Synchronization Service', () => {
       ]
 
       mockFetch.mockResolvedValueOnce({
-        id: 'https://canvas.example.edu/api/lti/courses/12345/names_and_roles',
+        id: 'https://canvas.example.edu/api/lti/courses/12345/names_and_roles?rlid=rlid-nav-1',
         members: mockMembers
       })
 
@@ -216,7 +221,7 @@ describe('NRPS Roster Synchronization Service', () => {
         id: 'db-sec-42',
         canvasSectionId: 'sec-canvas-42',
         courseId: 'course-1',
-        name: 'Section 42'
+        name: 'Lab Section 01'
       } as any)
 
       vi.mocked(prisma.user.upsert)
@@ -241,9 +246,9 @@ describe('NRPS Roster Synchronization Service', () => {
         })
       )
 
-      // Verify membership fetch with Authorization header
+      // Verify membership fetch with rlid and Authorization header
       expect(mockFetch).toHaveBeenCalledWith(
-        mockCourse.nrpsContextMembershipsUrl,
+        'https://canvas.example.edu/api/lti/courses/12345/names_and_roles?rlid=rlid-nav-1',
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: 'Bearer nrps-bearer-token',
@@ -317,6 +322,61 @@ describe('NRPS Roster Synchronization Service', () => {
             lastRosterSyncAt: expect.any(Date)
           })
         })
+      )
+    })
+
+    it('falls back to assignment resourceLinkId when course.resourceLinkId is null', async () => {
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        ...mockCourse,
+        resourceLinkId: null
+      } as any)
+
+      vi.mocked(prisma.assignment.findFirst).mockResolvedValue({
+        resourceLinkId: 'rlid-assignment-99'
+      } as any)
+
+      mockFetch.mockResolvedValueOnce({
+        access_token: 'nrps-bearer-token',
+        token_type: 'Bearer',
+        expires_in: 3600
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        id: 'https://canvas.example.edu/api/lti/courses/12345/names_and_roles?rlid=rlid-assignment-99',
+        members: []
+      })
+
+      const result = await syncCourseRosterFromNrps('course-1')
+      expect(result.success).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://canvas.example.edu/api/lti/courses/12345/names_and_roles?rlid=rlid-assignment-99',
+        expect.anything()
+      )
+    })
+
+    it('falls back to base NRPS URL if fetch with rlid fails', async () => {
+      vi.mocked(prisma.course.findUnique).mockResolvedValue(mockCourse as any)
+
+      mockFetch.mockResolvedValueOnce({
+        access_token: 'nrps-bearer-token',
+        token_type: 'Bearer',
+        expires_in: 3600
+      })
+
+      // 1st attempt with rlid fails
+      mockFetch.mockRejectedValueOnce(new Error('Canvas 404: Invalid Resource Link ID'))
+
+      // 2nd attempt with base URL succeeds
+      mockFetch.mockResolvedValueOnce({
+        id: 'https://canvas.example.edu/api/lti/courses/12345/names_and_roles',
+        members: []
+      })
+
+      const result = await syncCourseRosterFromNrps('course-1')
+      expect(result.success).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://canvas.example.edu/api/lti/courses/12345/names_and_roles',
+        expect.anything()
       )
     })
 

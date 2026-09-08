@@ -137,8 +137,27 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
       throw new Error('Failed to obtain access token for NRPS')
     }
 
+    // Resolve resource link ID (rlid) to receive expanded message custom claims (section IDs)
+    let rlid = course.resourceLinkId
+    if (!rlid) {
+      const assignmentWithRlid = await prisma.assignment.findFirst({
+        where: {
+          courseId,
+          resourceLinkId: { not: null }
+        },
+        select: { resourceLinkId: true }
+      })
+      if (assignmentWithRlid?.resourceLinkId) {
+        rlid = assignmentWithRlid.resourceLinkId
+      }
+    }
+
     // 3. Fetch membership pages from NRPS
     let currentUrl: string | null = nrpsUrl
+    if (rlid && !currentUrl.includes('rlid=')) {
+      const separator = currentUrl.includes('?') ? '&' : '?'
+      currentUrl = `${currentUrl}${separator}rlid=${encodeURIComponent(rlid)}`
+    }
     const allMembers: any[] = []
 
     const fetchRaw =
@@ -150,12 +169,30 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
           }
 
     while (currentUrl) {
-      const response: any = await fetchRaw(currentUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/vnd.ims.lti-nrps.v2.membershipcontainer+json'
+      let response: any
+      try {
+        response = await fetchRaw(currentUrl, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/vnd.ims.lti-nrps.v2.membershipcontainer+json'
+          }
+        })
+      } catch (err: any) {
+        if (currentUrl.includes('rlid=')) {
+          console.warn(
+            `[NRPS] Fetch with rlid failed (${err?.message || err}). Falling back to base NRPS URL without rlid.`
+          )
+          currentUrl = nrpsUrl
+          response = await fetchRaw(currentUrl, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'application/vnd.ims.lti-nrps.v2.membershipcontainer+json'
+            }
+          })
+        } else {
+          throw err
         }
-      })
+      }
 
       const data = response._data || response
       const members = data.members || []
@@ -185,6 +222,7 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
       const custom = message?.['https://purl.imsglobal.org/spec/lti/claim/custom'] || {}
       const platformUserId = custom.canvas_user_id?.toString() || null
       const rawSectionIds = custom.canvas_section_ids?.toString() || null
+      const rawSectionNames = custom.canvas_section_names?.toString() || null
 
       // Resolve section if available
       let sectionDbId: string | null = null
@@ -192,6 +230,14 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
         // May be a comma-separated list of section IDs; pick the first
         const sectionIdStr = rawSectionIds.split(',')[0].trim()
         if (sectionIdStr && !sectionIdStr.startsWith('$')) {
+          let sectionName = `Section ${sectionIdStr}`
+          if (rawSectionNames && !rawSectionNames.startsWith('$')) {
+            const parsedName = rawSectionNames.split(',')[0].trim()
+            if (parsedName) {
+              sectionName = parsedName
+            }
+          }
+
           const section = await prisma.courseSection.upsert({
             where: {
               courseId_canvasSectionId: {
@@ -202,9 +248,9 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
             create: {
               courseId,
               canvasSectionId: sectionIdStr,
-              name: `Section ${sectionIdStr}`
+              name: sectionName
             },
-            update: {}
+            update: sectionName !== `Section ${sectionIdStr}` ? { name: sectionName } : {}
           })
           sectionDbId = section.id
         }
