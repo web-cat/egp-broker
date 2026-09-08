@@ -1,36 +1,46 @@
-import type { H3Event } from 'h3'
-import { exportJWK, importSPKI } from 'jose' // Use importSPKI for Public Keys
+import { defineEventHandler, createError, type H3Event } from 'h3'
+import { exportJWK } from 'jose'
+import crypto from 'node:crypto'
 
 export default defineEventHandler(async (event: H3Event) => {
   const config = useRuntimeConfig(event)
-  // Use your Public Key for the JWKS endpoint
-  const publicKeyPem = config.ltiPublicKey
 
-  if (!publicKeyPem) {
+  // Use explicit public key if provided, or derive public key from private key
+  const rawPublicKey = (config.ltiPublicKey || process.env.NUXT_LTI_PUBLIC_KEY) as
+    | string
+    | undefined
+  const rawPrivateKey = (config.ltiPrivateKey ||
+    config.ltiPrivateKeyPem ||
+    process.env.NUXT_LTI_PRIVATE_KEY) as string | undefined
+
+  const publicKeyPem = rawPublicKey ? rawPublicKey.replace(/\\n/g, '\n') : undefined
+  const privateKeyPem = rawPrivateKey ? rawPrivateKey.replace(/\\n/g, '\n') : undefined
+
+  const keyPem = publicKeyPem || privateKeyPem
+
+  if (!keyPem) {
     throw createError({
       statusCode: 500,
-      statusMessage: 'LTI public key not configured'
+      statusMessage: 'LTI key not configured'
     })
   }
 
   try {
-    // 1. Fix: Add { extractable: true }
-    // 2. Fix: Use importSPKI to ensure we are exporting a Public Key
-    const publicKey = await importSPKI(publicKeyPem, 'RS256', { extractable: true })
-    const jwk = await exportJWK(publicKey)
+    // crypto.createPublicKey extracts the public key from either public or private PEM
+    const pubKeyObj = crypto.createPublicKey(keyPem)
+    const jwk = await exportJWK(pubKeyObj)
 
     return {
       keys: [
         {
           ...jwk,
-          kid: config.ltiKeyId, // Must match the KID in your SJWT header
+          kid: config.ltiKeyId || process.env.NUXT_LTI_KEY_ID || 'lti-key-1',
           use: 'sig',
           alg: 'RS256'
         }
       ]
     }
-  } catch (error: any) {
-    // Ensure logger is available or use console
+  } catch (error: unknown) {
     console.error('Failed to export JWK:', error)
     throw createError({
       statusCode: 500,
