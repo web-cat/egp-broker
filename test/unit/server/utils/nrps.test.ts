@@ -198,6 +198,12 @@ describe('NRPS Roster Synchronization Service', () => {
               }
             }
           ]
+        },
+        {
+          status: 'Active',
+          user_id: 'lti-sub-test-student',
+          name: 'Test Student',
+          roles: ['http://purl.imsglobal.org/vocab/lis/v2/membership#Learner']
         }
       ]
 
@@ -216,11 +222,15 @@ describe('NRPS Roster Synchronization Service', () => {
       vi.mocked(prisma.user.upsert)
         .mockResolvedValueOnce({ id: 'user-stud-1', email: 'jane@example.edu' } as any)
         .mockResolvedValueOnce({ id: 'user-teach-1', email: 'prof@example.edu' } as any)
+        .mockResolvedValueOnce({
+          id: 'user-test-student',
+          email: 'lti-sub-test-student@synthetic.canvas.local'
+        } as any)
 
       const result = await syncCourseRosterFromNrps('course-1')
 
       expect(result.success).toBe(true)
-      expect(result.memberCount).toBe(2)
+      expect(result.memberCount).toBe(3)
 
       // Verify token request
       expect(mockFetch).toHaveBeenCalledWith(
@@ -262,6 +272,18 @@ describe('NRPS Roster Synchronization Service', () => {
             platformId: 'plat-1',
             ltiSub: 'lti-sub-student-1',
             deploymentId: 'canvas-deploy-123'
+          })
+        })
+      )
+
+      // Verify user without email (Test Student) receives deterministic synthetic email
+      expect(prisma.user.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { email: 'lti-sub-test-student@synthetic.canvas.local' },
+          create: expect.objectContaining({
+            email: 'lti-sub-test-student@synthetic.canvas.local',
+            firstName: 'Test',
+            lastName: 'Student'
           })
         })
       )

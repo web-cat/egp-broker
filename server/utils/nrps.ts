@@ -175,8 +175,9 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
       if (!ltiSub) continue
 
       const email = member.email || null
-      const firstName = member.given_name || member.name?.split(' ')[0] || 'LTI'
-      const lastName = member.family_name || 'User'
+      const nameParts = (member.name || '').trim().split(/\s+/)
+      const firstName = member.given_name || nameParts[0] || 'LTI'
+      const lastName = member.family_name || nameParts.slice(1).join(' ') || 'User'
       const courseRole = parseCourseRole(member.roles)
 
       // Extract custom Canvas parameters from message claim if present
@@ -221,27 +222,21 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
         }
       })
 
-      if (!user && email) {
+      const syntheticEmail = `${ltiSub}@synthetic.canvas.local`
+      const effectiveEmail = email || syntheticEmail
+
+      if (!user) {
         user = await prisma.user.upsert({
-          where: { email },
+          where: { email: effectiveEmail },
           update: {
             firstName: firstName || undefined,
             lastName: lastName || undefined
           },
           create: {
-            email,
+            email: effectiveEmail,
             firstName,
             lastName,
-            avatarUrl: getGravatarUrl(email),
-            globalRole: 'USER'
-          }
-        })
-      } else if (!user) {
-        // User has no email and no prior identity; create user shell
-        user = await prisma.user.create({
-          data: {
-            firstName,
-            lastName,
+            avatarUrl: email ? getGravatarUrl(email) : null,
             globalRole: 'USER'
           }
         })

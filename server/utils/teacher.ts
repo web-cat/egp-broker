@@ -62,7 +62,8 @@ export async function getAssignmentRedemptions(
       assignmentTitle: r.assignment.title,
       studentId: student.id,
       studentName,
-      studentEmail: student.email,
+      studentEmail:
+        student.email && !student.email.endsWith('@synthetic.canvas.local') ? student.email : null,
       sectionName,
       passTypeName: r.pool.passType.name,
       cost: r.cost,
@@ -133,7 +134,8 @@ export async function getCourseStudentRoster(courseId: string): Promise<StudentR
     return {
       userId: user.id,
       studentName,
-      studentEmail: user.email,
+      studentEmail:
+        user.email && !user.email.endsWith('@synthetic.canvas.local') ? user.email : null,
       sectionName,
       passBalances,
       totalRedemptions

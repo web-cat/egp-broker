@@ -313,21 +313,20 @@ export async function handleLtiLaunch(
         where: { ltiIdentities: { some: { platformId: platform.id, ltiSub: claims.sub } } }
       })
 
-      if (!user && claims.email) {
+      if (!user) {
+        const effectiveEmail = claims.email || `${claims.sub}@synthetic.canvas.local`
         user = await tx.user.upsert({
-          where: { email: claims.email },
+          where: { email: effectiveEmail },
           update: { currentCourseId: course.id },
           create: {
-            email: claims.email,
+            email: effectiveEmail,
             firstName: claims.given_name || claims.name?.split(' ')[0] || 'LTI',
             lastName: claims.family_name || 'User',
-            avatarUrl: getGravatarUrl(claims.email),
+            avatarUrl: claims.email ? getGravatarUrl(claims.email) : null,
             currentCourseId: course.id
           }
         })
       }
-
-      if (!user) throw new Error('Could not find or create user context')
 
       // Ensure LtiIdentity is created/linked
       const platformUserId = customClaims.canvas_user_id?.toString() || null
