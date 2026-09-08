@@ -244,7 +244,11 @@
     @saved="onStudentBalancesUpdated"
   />
 
-  <FeaturesDashboardRosterSyncModal v-model:open="rosterSyncModalOpen" @synced="onRosterSynced" />
+  <FeaturesDashboardRosterSyncModal
+    v-model:open="rosterSyncModalOpen"
+    :show-details="true"
+    @synced="onRosterSynced"
+  />
 </template>
 
 <script setup lang="ts">

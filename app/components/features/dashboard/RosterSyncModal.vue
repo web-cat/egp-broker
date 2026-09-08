@@ -3,8 +3,8 @@
     v-model:open="isOpen"
     :title="$t('dashboard.rosterSync.modalTitle')"
     :description="$t('dashboard.rosterSync.modalDescription')"
-    :dismissible="!isSyncing"
-    :close="!isSyncing"
+    :dismissible="!isSyncing && showDetails"
+    :close="!isSyncing && showDetails"
   >
     <template #body>
       <div class="py-6 flex flex-col items-center justify-center text-center space-y-4">
@@ -19,7 +19,7 @@
           </div>
         </div>
 
-        <div v-else class="relative flex items-center justify-center">
+        <div v-else-if="showDetails" class="relative flex items-center justify-center">
           <div
             class="w-16 h-16 rounded-full bg-green-50 dark:bg-green-950/50 flex items-center justify-center"
           >
@@ -51,8 +51,8 @@
           <UProgress animation="carousel" color="primary" size="sm" />
         </div>
 
-        <!-- Sync Results Breakdown -->
-        <div v-if="!isSyncing && syncStatus" class="w-full max-w-md pt-2">
+        <!-- Sync Results Breakdown (Teachers only) -->
+        <div v-if="!isSyncing && showDetails && syncStatus" class="w-full max-w-md pt-2">
           <div class="grid grid-cols-3 gap-2 text-center">
             <div
               class="p-3 bg-neutral-50 dark:bg-neutral-900/60 rounded-lg border border-neutral-200 dark:border-neutral-800"
@@ -120,9 +120,11 @@ import type { RosterSyncStatusData } from '@@/shared/models/course'
 const props = withDefaults(
   defineProps<{
     open?: boolean
+    showDetails?: boolean
   }>(),
   {
-    open: false
+    open: false,
+    showDetails: false
   }
 )
 
@@ -151,9 +153,14 @@ const checkStatus = async () => {
       if (!res.data.isSyncing) {
         // Sync has completed
         isSyncing.value = false
-        syncStatus.value = res.data
         stopPolling()
         emit('synced')
+
+        if (props.showDetails) {
+          syncStatus.value = res.data
+        } else {
+          closeModal()
+        }
       } else {
         isSyncing.value = true
       }
@@ -162,7 +169,7 @@ const checkStatus = async () => {
     const error = err as { statusCode?: number }
     if (error?.statusCode === 401) {
       stopPolling()
-      isOpen.value = false
+      closeModal()
       return
     }
     console.warn('[RosterSyncModal] Status check error:', err)
