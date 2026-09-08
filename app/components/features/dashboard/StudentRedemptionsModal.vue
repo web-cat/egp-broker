@@ -2,11 +2,7 @@
   <UModal
     :open="open"
     :title="`Pass History: ${student?.studentName || ''}`"
-    :description="
-      student?.studentEmail
-        ? `${student.studentEmail}${student.sectionName ? ' • ' + student.sectionName : ''}`
-        : 'Student redemption history'
-    "
+    :description="studentDescription"
     :ui="{ content: 'max-w-4xl' }"
     @update:open="$emit('update:open', $event)"
   >
@@ -179,6 +175,17 @@ const emit = defineEmits<{
   'update:open': [value: boolean]
   saved: [balances: StudentPassBalance[]]
 }>()
+
+const studentDescription = computed(() => {
+  if (!props.student) return 'Student redemption history'
+  const email = props.student.studentEmail || 'No email'
+  const section = props.student.sectionName
+    ? props.student.sectionName.toLowerCase().startsWith('section')
+      ? props.student.sectionName
+      : `Section: ${props.student.sectionName}`
+    : 'No section assigned'
+  return `${email} • ${section}`
+})
 
 const toast = useToast()
 

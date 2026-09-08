@@ -625,8 +625,17 @@ const studentColumns: any[] = [
     cell: ({ row }: { row: any }) => {
       const name = row.getValue('studentName') || '—'
       const email = row.original.studentEmail
-      return h('div', { class: 'flex flex-col' }, [
-        h('span', { class: 'font-semibold text-neutral-900 dark:text-neutral-100' }, name),
+      return h('div', { class: 'flex flex-col items-start' }, [
+        h(
+          'button',
+          {
+            type: 'button',
+            class:
+              'text-left font-semibold text-primary-600 dark:text-primary-400 hover:underline cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-xs transition-colors',
+            onClick: () => openStudentRedemptions(row.original)
+          },
+          name
+        ),
         email && h('span', { class: 'text-xs text-neutral-500 dark:text-neutral-400' }, email)
       ])
     }
