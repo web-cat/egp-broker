@@ -7,7 +7,7 @@
 import { z } from 'zod'
 import { passPortRegistrationStatusSchema } from './passport'
 
-export type { LtiTool, Protocol, PassPortRegistrationStatus } from '@prisma/client'
+export type { LtiTool, Protocol } from '@prisma/client'
 
 // =============================================================================
 // INTERFACES
