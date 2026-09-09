@@ -39,8 +39,12 @@ export async function getStudentRedemptions(
 
   return redemptions.map((r: any) => {
     const isActive = (() => {
-      if (!r.availableFrom || !r.acceptUntil) return false
-      return now >= r.availableFrom && now <= r.acceptUntil
+      if (r.availableFrom && r.acceptUntil) {
+        return now >= r.availableFrom && now <= r.acceptUntil
+      }
+      if (r.acceptUntil) return now <= r.acceptUntil
+      if (r.dueDate) return now <= r.dueDate
+      return false
     })()
 
     return {
@@ -307,7 +311,11 @@ export async function redeemPass(
           extension: {
             passType: pool.passType.name,
             originalDueDate: effectiveDates.dueDate || new Date(),
-            newDueDate: extension.newDueDate,
+            newDueDate:
+              extension.newDueDate ||
+              extension.newAcceptUntil ||
+              effectiveDates.dueDate ||
+              new Date(),
             appliedAt: new Date()
           },
           requestedProperties: (tool.passportRequestedProperties as string[]) || null
@@ -380,7 +388,7 @@ export async function redeemPass(
           assignmentTitle: alertData.assignmentTitle,
           courseName: alertData.courseName,
           cost: alertData.cost,
-          newDueDate: redemption.dueDate
+          newDueDate: redemption.dueDate || redemption.acceptUntil
         })
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)

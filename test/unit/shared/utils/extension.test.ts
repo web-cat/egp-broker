@@ -15,7 +15,7 @@ describe('calculatePassExtension', () => {
       maxDaysPastDue: null
     }
 
-    it('Example 1: on-time / early redemption costs 1 pass and extends deadline by hoursPerPass', () => {
+    it('Example 1: on-time / early redemption costs 1 pass and extends until date by hoursPerPass without changing due date', () => {
       // Due 3/10 23:59, redeemed 3/11 08:00 (approx 8 hours past due, but <= 24h)
       const now = new Date('2026-03-11T08:00:00.000Z')
       const result = calculatePassExtension({
@@ -27,15 +27,15 @@ describe('calculatePassExtension', () => {
 
       expect(result.isEligible).toBe(true)
       expect(result.cost).toBe(1)
-      expect(result.newDueDate?.toISOString()).toBe('2026-03-11T23:59:00.000Z')
+      expect(result.newDueDate).toBeNull()
       expect(result.newAcceptUntil?.toISOString()).toBe('2026-03-11T23:59:00.000Z')
       expect(result.isClipped).toBe(false)
     })
 
-    it('Example 2: contiguous stacking from previous redemption', () => {
-      // First redemption moved deadline to 3/11 23:59
+    it('Example 2: contiguous stacking from previous redemption acceptUntil', () => {
+      // First redemption moved until date to 3/11 23:59
       const latestRedemption = {
-        dueDate: '2026-03-11T23:59:00.000Z',
+        dueDate: null,
         acceptUntil: '2026-03-11T23:59:00.000Z'
       }
       const now = new Date('2026-03-12T08:00:00.000Z')
@@ -48,7 +48,7 @@ describe('calculatePassExtension', () => {
 
       expect(result.isEligible).toBe(true)
       expect(result.cost).toBe(1)
-      expect(result.newDueDate?.toISOString()).toBe('2026-03-12T23:59:00.000Z')
+      expect(result.newDueDate).toBeNull()
       expect(result.newAcceptUntil?.toISOString()).toBe('2026-03-12T23:59:00.000Z')
     })
 
@@ -69,7 +69,7 @@ describe('calculatePassExtension', () => {
       expect(result.isEligible).toBe(true)
       expect(result.cost).toBe(2)
       // 4/5 23:59 + 48h = 4/7 23:59
-      expect(result.newDueDate?.toISOString()).toBe('2026-04-07T23:59:00.000Z')
+      expect(result.newDueDate).toBeNull()
       expect(result.newAcceptUntil?.toISOString()).toBe('2026-04-07T23:59:00.000Z')
     })
 
@@ -94,20 +94,22 @@ describe('calculatePassExtension', () => {
         now: new Date('2026-05-21T10:00:00.000Z')
       })
       expect(firstResult.cost).toBe(1)
-      expect(firstResult.newDueDate?.toISOString()).toBe('2026-05-22T23:59:00.000Z')
+      expect(firstResult.newDueDate).toBeNull()
+      expect(firstResult.newAcceptUntil?.toISOString()).toBe('2026-05-22T23:59:00.000Z')
 
       // Second pass on 5/23 09:15 with maxDays = 4 -> extends to 5/24 23:59 (exactly 4 days)
       const secondResult = calculatePassExtension({
         assignment,
         passType: passType48h,
         latestRedemption: {
-          dueDate: '2026-05-22T23:59:00.000Z',
+          dueDate: null,
           acceptUntil: '2026-05-22T23:59:00.000Z'
         },
         now: new Date('2026-05-23T09:15:00.000Z')
       })
       expect(secondResult.cost).toBe(1)
-      expect(secondResult.newDueDate?.toISOString()).toBe('2026-05-24T23:59:00.000Z')
+      expect(secondResult.newDueDate).toBeNull()
+      expect(secondResult.newAcceptUntil?.toISOString()).toBe('2026-05-24T23:59:00.000Z')
       expect(secondResult.isClipped).toBe(false)
     })
 
@@ -129,13 +131,14 @@ describe('calculatePassExtension', () => {
         assignment,
         passType: passType48hMax3,
         latestRedemption: {
-          dueDate: '2026-05-22T23:59:00.000Z',
+          dueDate: null,
           acceptUntil: '2026-05-22T23:59:00.000Z'
         },
         now: new Date('2026-05-23T09:15:00.000Z')
       })
       expect(result.cost).toBe(1)
-      expect(result.newDueDate?.toISOString()).toBe('2026-05-23T23:59:00.000Z')
+      expect(result.newDueDate).toBeNull()
+      expect(result.newAcceptUntil?.toISOString()).toBe('2026-05-23T23:59:00.000Z')
       expect(result.isClipped).toBe(true)
     })
 
@@ -160,7 +163,8 @@ describe('calculatePassExtension', () => {
         now: new Date('2026-05-23T09:15:00.000Z')
       })
       expect(result.cost).toBe(2)
-      expect(result.newDueDate?.toISOString()).toBe('2026-05-23T23:59:00.000Z')
+      expect(result.newDueDate).toBeNull()
+      expect(result.newAcceptUntil?.toISOString()).toBe('2026-05-23T23:59:00.000Z')
       expect(result.isClipped).toBe(true)
     })
 
@@ -187,7 +191,7 @@ describe('calculatePassExtension', () => {
       expect(result.reason).toContain('maximum days limit')
     })
 
-    it('Ineligibility: rejected if previous redemption due date has not yet passed', () => {
+    it('Ineligibility: rejected if previous redemption until date has not yet passed', () => {
       const assignment = {
         dueDate: '2026-05-20T23:59:00.000Z',
         acceptUntil: '2026-05-20T23:59:00.000Z'
@@ -198,12 +202,12 @@ describe('calculatePassExtension', () => {
         minDaysPastDue: 0,
         maxDaysPastDue: 5
       }
-      // Previous redemption extended due date to 5/21 23:59
+      // Previous redemption extended until date to 5/21 23:59
       const latestRedemption = {
-        dueDate: '2026-05-21T23:59:00.000Z',
+        dueDate: null,
         acceptUntil: '2026-05-21T23:59:00.000Z'
       }
-      // Student tries to redeem again on 5/21 at 12:00 (before previous extended due date has passed)
+      // Student tries to redeem again on 5/21 at 12:00 (before previous extended until date has passed)
       const now = new Date('2026-05-21T12:00:00.000Z')
 
       const result = calculatePassExtension({
@@ -213,7 +217,7 @@ describe('calculatePassExtension', () => {
         now
       })
       expect(result.isEligible).toBe(false)
-      expect(result.reason).toContain('until the current extended deadline has passed')
+      expect(result.reason).toContain('until the current extended cutoff deadline has passed')
     })
   })
 
@@ -226,7 +230,7 @@ describe('calculatePassExtension', () => {
       maxDaysPastDue: null
     }
 
-    it('keeps dueDate unchanged and extends acceptUntil by hoursPerPass', () => {
+    it('sets newDueDate to null and extends acceptUntil by hoursPerPass', () => {
       const assignment = {
         dueDate: '2026-03-10T23:59:00.000Z',
         acceptUntil: '2026-03-10T23:59:00.000Z'
@@ -241,7 +245,7 @@ describe('calculatePassExtension', () => {
 
       expect(result.isEligible).toBe(true)
       expect(result.cost).toBe(1)
-      expect(result.newDueDate?.toISOString()).toBe('2026-03-10T23:59:00.000Z')
+      expect(result.newDueDate).toBeNull()
       expect(result.newAcceptUntil?.toISOString()).toBe('2026-03-11T23:59:00.000Z')
       expect(result.isClipped).toBe(false)
     })
@@ -261,7 +265,7 @@ describe('calculatePassExtension', () => {
 
       expect(result.isEligible).toBe(true)
       expect(result.cost).toBe(1)
-      expect(result.newDueDate?.toISOString()).toBe('2026-03-10T23:59:00.000Z')
+      expect(result.newDueDate).toBeNull()
       expect(result.newAcceptUntil?.toISOString()).toBe('2026-03-13T23:59:00.000Z')
     })
 
@@ -271,7 +275,7 @@ describe('calculatePassExtension', () => {
         acceptUntil: '2026-03-10T23:59:00.000Z'
       }
       const latestRedemption = {
-        dueDate: '2026-03-10T23:59:00.000Z',
+        dueDate: null,
         acceptUntil: '2026-03-11T23:59:00.000Z'
       }
       const now = new Date('2026-03-12T08:00:00.000Z')
@@ -284,11 +288,11 @@ describe('calculatePassExtension', () => {
 
       expect(result.isEligible).toBe(true)
       expect(result.cost).toBe(1)
-      expect(result.newDueDate?.toISOString()).toBe('2026-03-10T23:59:00.000Z')
+      expect(result.newDueDate).toBeNull()
       expect(result.newAcceptUntil?.toISOString()).toBe('2026-03-12T23:59:00.000Z')
     })
 
-    it('clips acceptUntil to maxDaysPastDue while keeping dueDate fixed', () => {
+    it('clips acceptUntil to maxDaysPastDue while setting newDueDate to null', () => {
       const assignment = {
         dueDate: '2026-05-20T23:59:00.000Z',
         acceptUntil: '2026-05-20T23:59:00.000Z'
@@ -301,7 +305,7 @@ describe('calculatePassExtension', () => {
         maxDaysPastDue: 3
       }
       const latestRedemption = {
-        dueDate: '2026-05-20T23:59:00.000Z',
+        dueDate: null,
         acceptUntil: '2026-05-22T23:59:00.000Z'
       }
       const result = calculatePassExtension({
@@ -312,7 +316,7 @@ describe('calculatePassExtension', () => {
       })
 
       expect(result.cost).toBe(1)
-      expect(result.newDueDate?.toISOString()).toBe('2026-05-20T23:59:00.000Z')
+      expect(result.newDueDate).toBeNull()
       expect(result.newAcceptUntil?.toISOString()).toBe('2026-05-23T23:59:00.000Z')
       expect(result.isClipped).toBe(true)
     })

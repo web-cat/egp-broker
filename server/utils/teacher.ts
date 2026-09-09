@@ -51,8 +51,8 @@ export async function getAssignmentRedemptions(
     const sectionName = student.enrollments[0]?.courseSection?.name ?? null
 
     const isActive = (() => {
-      if (r.dueDate) return now <= r.dueDate
       if (r.acceptUntil) return now <= r.acceptUntil
+      if (r.dueDate) return now <= r.dueDate
       return false
     })()
 
@@ -172,8 +172,8 @@ export async function getStudentRedemptionHistory(
 
   return redemptions.map((r) => {
     const isActive = (() => {
-      if (r.dueDate) return now <= r.dueDate
       if (r.acceptUntil) return now <= r.acceptUntil
+      if (r.dueDate) return now <= r.dueDate
       return false
     })()
 

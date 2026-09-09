@@ -287,7 +287,8 @@ const redemptionColumns: any[] = [
   {
     accessorKey: 'dueDate',
     header: 'New Deadline',
-    cell: ({ row }: { row: any }) => formatDate(row.getValue('dueDate')) || '—'
+    cell: ({ row }: { row: any }) =>
+      formatDate(row.original.acceptUntil || row.original.dueDate) || '—'
   },
   {
     accessorKey: 'isActive',

@@ -125,7 +125,7 @@ const currentEffectiveDueDate = computed(() => {
             </div>
           </div>
 
-          <div class="pt-1">
+          <div v-if="newDueDate" class="pt-1">
             <div class="flex justify-between items-start text-sm">
               <span class="text-primary-600 dark:text-primary-400 font-semibold">New Due Date</span>
               <span class="text-right text-primary-600 dark:text-primary-400 font-bold">
@@ -134,7 +134,18 @@ const currentEffectiveDueDate = computed(() => {
             </div>
           </div>
 
-          <div v-if="newAcceptUntil" class="pt-1">
+          <div v-if="newAcceptUntil && !newDueDate" class="pt-1">
+            <div class="flex justify-between items-start text-sm">
+              <span class="text-primary-600 dark:text-primary-400 font-semibold"
+                >New Until Date</span
+              >
+              <span class="text-right text-primary-600 dark:text-primary-400 font-bold">
+                {{ formatDate(newAcceptUntil) || '—' }}
+              </span>
+            </div>
+          </div>
+
+          <div v-else-if="newAcceptUntil" class="pt-1">
             <div class="flex justify-between items-start text-xs text-gray-500 italic">
               <span>Extension Cutoff</span>
               <span>{{ formatDate(newAcceptUntil) }}</span>

@@ -101,6 +101,9 @@ export const useStudentDashboard = (isPreview = false) => {
         const latestRedemption = redemptionsData.value?.data?.find(
           (r: any) => r.assignmentTitle === a.title
         )
+        if (latestRedemption?.acceptUntil && new Date(latestRedemption.acceptUntil) > now) {
+          return true
+        }
         if (latestRedemption?.dueDate && new Date(latestRedemption.dueDate) > now) {
           return true
         }
