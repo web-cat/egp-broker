@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { redeemPass } from '../../../../server/utils/redemptions'
 import prisma from '@@/server/utils/db'
 import { notifyPassRedemption, notifyPassPortSyncFailure } from '@@/server/services/alert.service'
-import { sendPassPortExtension, sendPassPortRollback } from '@@/server/utils/passport'
+import {
+  buildPassPortExtensionPayload,
+  sendPassPortExtension,
+  sendPassPortRollback
+} from '@@/server/utils/passport'
 
 vi.mock('@@/server/services/alert.service', () => ({
   notifyPassRedemption: vi.fn().mockResolvedValue(true),
@@ -25,8 +29,12 @@ vi.mock('@@/server/utils/passport', () => ({
     },
     extension: {
       pass_type: 'Extension Pass',
+      original_available_from: null,
+      new_available_from: null,
       original_due_date: '2026-09-10T23:59:00.000Z',
-      new_due_date: '2026-09-12T23:59:00.000Z',
+      new_due_date: null,
+      original_accept_until: '2026-09-10T23:59:00.000Z',
+      new_accept_until: '2026-09-12T23:59:00.000Z',
       applied_at: '2026-09-08T12:00:00.000Z'
     }
   }),
@@ -171,6 +179,17 @@ describe('PassPort Pass Redemption Hook & Fail-Safe Handling', () => {
     const result = await redeemPass('user-1', 'asg-1', 'pt-1')
 
     expect(result.id).toBe('redemption-2')
+    expect(buildPassPortExtensionPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extension: expect.objectContaining({
+          passType: 'Late Pass',
+          originalDueDate: futureDueDate,
+          newDueDate: null,
+          originalAcceptUntil: futureDueDate,
+          newAcceptUntil: expect.any(Date)
+        })
+      })
+    )
     expect(sendPassPortExtension).toHaveBeenCalledWith(
       registeredTool,
       expect.objectContaining({

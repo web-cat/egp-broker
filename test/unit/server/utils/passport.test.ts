@@ -103,7 +103,7 @@ describe('PassPort Server Utilities', () => {
               'https://broker.university.edu/api/passport/v1/credentials?token='
             ),
             name: 'EGP Broker',
-            passport_version: '1.0'
+            passport_version: '1.1'
           })
         })
       )

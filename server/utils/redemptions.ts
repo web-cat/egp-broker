@@ -310,12 +310,12 @@ export async function redeemPass(
           },
           extension: {
             passType: pool.passType.name,
-            originalDueDate: effectiveDates.dueDate || new Date(),
-            newDueDate:
-              extension.newDueDate ||
-              extension.newAcceptUntil ||
-              effectiveDates.dueDate ||
-              new Date(),
+            originalAvailableFrom: effectiveDates.availableFrom,
+            newAvailableFrom: extension.newAvailableFrom,
+            originalDueDate: effectiveDates.dueDate,
+            newDueDate: extension.newDueDate,
+            originalAcceptUntil: effectiveDates.acceptUntil,
+            newAcceptUntil: extension.newAcceptUntil,
             appliedAt: new Date()
           },
           requestedProperties: (tool.passportRequestedProperties as string[]) || null

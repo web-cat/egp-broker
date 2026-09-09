@@ -33,7 +33,7 @@ export const passPortPhase1RequestSchema = z.object({
   broker_base_url: z.string().url('broker_base_url must be a valid URL'),
   callback_url: z.string().url('callback_url must be a valid URL'),
   name: z.string().min(1, 'Broker name is required'),
-  passport_version: z.literal('1.0')
+  passport_version: z.enum(['1.0', '1.1'])
 })
 
 export type PassPortPhase1Request = z.infer<typeof passPortPhase1RequestSchema>
@@ -45,7 +45,7 @@ export type PassPortPhase1Request = z.infer<typeof passPortPhase1RequestSchema>
  */
 export const passPortPhase2CredentialsSchema = z.object({
   tool_name: z.string().min(1, 'tool_name is required'),
-  passport_version: z.literal('1.0'),
+  passport_version: z.enum(['1.0', '1.1']),
   endpoints: z.object({
     extension_handler: z.string().url('extension_handler must be a valid URL')
   }),
@@ -92,8 +92,12 @@ export const passPortResourceSchema = z.object({
 
 export const passPortExtensionDetailsSchema = z.object({
   pass_type: z.string(),
-  original_due_date: z.string(),
-  new_due_date: z.string(),
+  original_available_from: z.string().nullish().default(null),
+  new_available_from: z.string().nullish().default(null),
+  original_due_date: z.string().nullish().default(null),
+  new_due_date: z.string().nullish().default(null),
+  original_accept_until: z.string().nullish().default(null),
+  new_accept_until: z.string().nullish().default(null),
   applied_at: z.string()
 })
 

@@ -62,7 +62,7 @@ export async function initiatePassPortRegistration(
     broker_base_url: siteUrl,
     callback_url: `${siteUrl}/api/passport/v1/credentials?token=${registrationToken}`,
     name: 'EGP Broker',
-    passport_version: '1.0'
+    passport_version: '1.1'
   }
 
   try {
@@ -179,12 +179,21 @@ export interface BuildPassPortExtensionParams {
   }
   extension: {
     passType: string
-    originalDueDate: string | Date
-    newDueDate: string | Date
+    originalAvailableFrom?: string | Date | null
+    newAvailableFrom?: string | Date | null
+    originalDueDate?: string | Date | null
+    newDueDate?: string | Date | null
+    originalAcceptUntil?: string | Date | null
+    newAcceptUntil?: string | Date | null
     appliedAt?: string | Date | null
   }
   requestedProperties?: string[] | null
   requestId?: string
+}
+
+function toIsoOrNull(val?: string | Date | null): string | null {
+  if (!val) return null
+  return val instanceof Date ? val.toISOString() : val
 }
 
 /**
@@ -255,17 +264,7 @@ export function buildPassPortExtensionPayload(
     resource.external_url = params.resource.externalUrl
   }
 
-  // Extension: all fields mandatory
-  const originalDueDate =
-    params.extension.originalDueDate instanceof Date
-      ? params.extension.originalDueDate.toISOString()
-      : params.extension.originalDueDate
-
-  const newDueDate =
-    params.extension.newDueDate instanceof Date
-      ? params.extension.newDueDate.toISOString()
-      : params.extension.newDueDate
-
+  // Extension: 3 dates (available_from, due_date, accept_until)
   const appliedAt = params.extension.appliedAt
     ? params.extension.appliedAt instanceof Date
       ? params.extension.appliedAt.toISOString()
@@ -274,8 +273,12 @@ export function buildPassPortExtensionPayload(
 
   const extension = {
     pass_type: params.extension.passType,
-    original_due_date: originalDueDate,
-    new_due_date: newDueDate,
+    original_available_from: toIsoOrNull(params.extension.originalAvailableFrom),
+    new_available_from: toIsoOrNull(params.extension.newAvailableFrom),
+    original_due_date: toIsoOrNull(params.extension.originalDueDate),
+    new_due_date: toIsoOrNull(params.extension.newDueDate),
+    original_accept_until: toIsoOrNull(params.extension.originalAcceptUntil),
+    new_accept_until: toIsoOrNull(params.extension.newAcceptUntil),
     applied_at: appliedAt
   }
 

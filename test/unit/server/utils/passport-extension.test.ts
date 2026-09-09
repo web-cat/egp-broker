@@ -78,8 +78,12 @@ describe('PassPort Extension Dispatch Utilities', () => {
       },
       extension: {
         passType: 'Late Pass',
+        originalAvailableFrom: new Date('2026-09-01T00:00:00Z'),
+        newAvailableFrom: new Date('2026-09-01T00:00:00Z'),
         originalDueDate: new Date('2026-09-10T23:59:00Z'),
         newDueDate: new Date('2026-09-12T23:59:00Z'),
+        originalAcceptUntil: new Date('2026-09-13T23:59:00Z'),
+        newAcceptUntil: new Date('2026-09-15T23:59:00Z'),
         appliedAt: new Date('2026-09-08T12:00:00Z')
       }
     }
@@ -109,13 +113,37 @@ describe('PassPort Extension Dispatch Utilities', () => {
       expect((payload.resource as any).title).toBeUndefined()
       expect((payload.resource as any).canvas_assignment_id).toBeUndefined()
 
-      // Extension is always complete
+      // Extension is always complete with all three dates
       expect(payload.extension.pass_type).toBe('Late Pass')
+      expect(payload.extension.original_available_from).toBe('2026-09-01T00:00:00.000Z')
+      expect(payload.extension.new_available_from).toBe('2026-09-01T00:00:00.000Z')
       expect(payload.extension.original_due_date).toBe('2026-09-10T23:59:00.000Z')
       expect(payload.extension.new_due_date).toBe('2026-09-12T23:59:00.000Z')
+      expect(payload.extension.original_accept_until).toBe('2026-09-13T23:59:00.000Z')
+      expect(payload.extension.new_accept_until).toBe('2026-09-15T23:59:00.000Z')
       expect(payload.extension.applied_at).toBe('2026-09-08T12:00:00.000Z')
 
       // Schema validity
+      expect(() => passPortExtensionPayloadSchema.parse(payload)).not.toThrow()
+    })
+
+    it('handles extension-only passes with null newDueDate and advanced newAcceptUntil', () => {
+      const payload = buildPassPortExtensionPayload({
+        ...baseParams,
+        extension: {
+          passType: 'Extension Only Pass',
+          originalDueDate: new Date('2026-09-10T23:59:00Z'),
+          newDueDate: null,
+          originalAcceptUntil: new Date('2026-09-12T23:59:00Z'),
+          newAcceptUntil: new Date('2026-09-14T23:59:00Z'),
+          appliedAt: new Date('2026-09-08T12:00:00Z')
+        }
+      })
+
+      expect(payload.extension.new_due_date).toBeNull()
+      expect(payload.extension.new_accept_until).toBe('2026-09-14T23:59:00.000Z')
+      expect(payload.extension.original_available_from).toBeNull()
+      expect(payload.extension.new_available_from).toBeNull()
       expect(() => passPortExtensionPayloadSchema.parse(payload)).not.toThrow()
     })
 
