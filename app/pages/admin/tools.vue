@@ -189,9 +189,17 @@ const toolColumns: TableColumn<ToolRow>[] = [
 async function handleRegisterPassPort(tool: ToolRow) {
   const toast = useToast()
   try {
-    toast.add({ title: 'Initiating PassPort registration...', color: 'info' })
+    toast.add({
+      id: 'passport-registration',
+      title: 'Initiating PassPort registration...',
+      color: 'info'
+    })
     await registerPassPort(tool.id)
-    toast.add({ title: 'PassPort registration initiated', color: 'success' })
+    toast.add({
+      id: 'passport-registration',
+      title: 'PassPort registration initiated',
+      color: 'success'
+    })
     onItemCreated() // Refresh table
   } catch (err: any) {
     const errorMsg =
@@ -200,6 +208,7 @@ async function handleRegisterPassPort(tool: ToolRow) {
       err?.message ||
       'Failed to initiate registration'
     toast.add({
+      id: 'passport-registration',
       title: 'PassPort registration failed',
       description: errorMsg,
       color: 'error'

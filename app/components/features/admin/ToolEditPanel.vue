@@ -117,6 +117,7 @@
 
               <UButton
                 v-if="state.passportRegistrationUrl"
+                type="button"
                 size="xs"
                 color="primary"
                 variant="outline"
@@ -364,11 +365,19 @@ async function onRegisterPassPort() {
   registering.value = true
   const toast = useToast()
   try {
-    toast.add({ title: 'Initiating PassPort registration...', color: 'info' })
+    toast.add({
+      id: 'passport-registration',
+      title: 'Initiating PassPort registration...',
+      color: 'info'
+    })
     const res = await registerPassPort(props.tool.id)
     state.passportRegistrationStatus = 'PENDING'
     state.passportRegistrationError = null
-    toast.add({ title: 'PassPort registration initiated', color: 'success' })
+    toast.add({
+      id: 'passport-registration',
+      title: 'PassPort registration initiated',
+      color: 'success'
+    })
     if (res.data) {
       emit('saved', props.tool.id, res.data)
     }
@@ -381,6 +390,7 @@ async function onRegisterPassPort() {
       'Failed to initiate registration'
     state.passportRegistrationError = errorMsg
     toast.add({
+      id: 'passport-registration',
       title: 'PassPort registration failed',
       description: errorMsg,
       color: 'error'

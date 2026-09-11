@@ -61,7 +61,7 @@ const globalStubs = {
   },
   UButton: {
     props: ['label', 'loading'],
-    template: '<button :disabled="loading" @click="$emit(\'click\')">{{ label }}</button>'
+    template: '<button :disabled="loading">{{ label }}</button>'
   },
   UAlert: {
     props: ['color', 'title', 'description'],
@@ -230,7 +230,18 @@ describe('ToolEditPanel', () => {
       { ...mockTool, passportRegistrationStatus: 'PENDING' }
     ])
     expect(mockToastAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'PassPort registration initiated' })
+      expect.objectContaining({
+        id: 'passport-registration',
+        title: 'Initiating PassPort registration...',
+        color: 'info'
+      })
+    )
+    expect(mockToastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'passport-registration',
+        title: 'PassPort registration initiated',
+        color: 'success'
+      })
     )
   })
 })
