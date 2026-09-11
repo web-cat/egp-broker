@@ -189,14 +189,8 @@ const toolColumns: TableColumn<ToolRow>[] = [
 async function handleRegisterPassPort(tool: ToolRow) {
   const toast = useToast()
   try {
-    toast.add({
-      id: 'passport-registration',
-      title: 'Initiating PassPort registration...',
-      color: 'info'
-    })
     await registerPassPort(tool.id)
     toast.add({
-      id: 'passport-registration',
       title: 'PassPort registration initiated',
       color: 'success'
     })

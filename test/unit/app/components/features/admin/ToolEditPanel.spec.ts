@@ -229,16 +229,9 @@ describe('ToolEditPanel', () => {
       'tool-3',
       { ...mockTool, passportRegistrationStatus: 'PENDING' }
     ])
+    expect(mockToastAdd).toHaveBeenCalledTimes(1)
     expect(mockToastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 'passport-registration',
-        title: 'Initiating PassPort registration...',
-        color: 'info'
-      })
-    )
-    expect(mockToastAdd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'passport-registration',
         title: 'PassPort registration initiated',
         color: 'success'
       })

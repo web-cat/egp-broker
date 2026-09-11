@@ -365,16 +365,10 @@ async function onRegisterPassPort() {
   registering.value = true
   const toast = useToast()
   try {
-    toast.add({
-      id: 'passport-registration',
-      title: 'Initiating PassPort registration...',
-      color: 'info'
-    })
     const res = await registerPassPort(props.tool.id)
     state.passportRegistrationStatus = 'PENDING'
     state.passportRegistrationError = null
     toast.add({
-      id: 'passport-registration',
       title: 'PassPort registration initiated',
       color: 'success'
     })
