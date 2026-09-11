@@ -6,9 +6,20 @@ Thumbs.db
 *.log
 temp/**
 
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+build
+.pnpm-store
+
 # Environment and Secrets (handled by --env-file or compose)
 .env
 .env.*
+*.pem
 
 # Persistence
 volumes/
@@ -28,3 +39,7 @@ coverage
 .nyc_output
 playwright-report
 test-results
+
+# Misc local files
+*.pdf
+notes.txt
