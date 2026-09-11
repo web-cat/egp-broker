@@ -39,6 +39,7 @@ export default defineEventHandler(async (event: H3Event) => {
     { pathPrefix: '/api/lti13', methods: ['GET', 'POST'] }, // LTI endpoints
     { pathPrefix: '/api/lti', methods: ['GET', 'POST'] }, // LTI 1.1 endpoints
     { pathPrefix: '/api/cas', methods: ['GET'] }, // CAS authentication endpoints
+    { pathPrefix: '/api/passport', methods: ['POST'] }, // PassPort callbacks
     ...(import.meta.dev ? [{ pathPrefix: '/api/dev', methods: ['POST'] }] : []) // Mock endpoints
   ]
 
