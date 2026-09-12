@@ -1,45 +1,43 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 4 — Verification & Milestone Completion
-> **Milestone**: v3.0 — LTI 1.3 NRPS Roster & Section Sync
-> **Goal**: Implement automated course roster and section synchronization using LTI 1.3 Names and Role Provisioning Services (NRPS v2.0) with atomic concurrency gating, in-progress sync modal popup, and Teacher dashboard controls.
+> **Current Phase**: Milestone Complete
+> **Milestone**: v4.0 — Proctor Training Mode
+> **Goal**: Implement an in-memory, zero-database-write training environment at `/proctor/training` that uses the standard Proctor Console UI with dynamic fictional scenarios, physical ID card scanner support, mismatch toggle pill, and arrival queue advancement.
 
 ## Completed Milestones
 
 - ✅ **v1.0 — CBTF Scheduler** (Completed 2026-09-03) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v1.0-cbtf-scheduler-SUMMARY.md)
 - ✅ **v2.0 — PassPort Integration** (Completed 2026-09-06) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v2.0-passport-integration-SUMMARY.md)
 - ✅ **v3.0 — LTI 1.3 NRPS Roster & Section Sync** (Completed 2026-09-08) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v3.0-nrps-roster-sync-SUMMARY.md)
+- ✅ **v4.0 — Proctor Training Mode** (Completed 2026-09-11) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v4.0-proctor-training-mode-SUMMARY.md)
 
 ---
 
-## Must-Haves (Milestone v3.0)
+## Must-Haves (Milestone v4.0)
 
-- [x] Schema fields on `Course` (`lastRosterSyncAt`, `isRosterSyncing`, `nrpsContextMembershipsUrl`)
-- [x] Core NRPS client service with OAuth2 client credentials token exchange & pagination
-- [x] Atomic concurrency gating for sync operations
-- [x] LTI launch triggers (Teacher > 24h cooldown, Student missing section)
-- [x] Dashboard in-progress sync modal popup with auto-close and data refresh
-- [x] Teacher dashboard last sync timestamp & manual "Sync Roster Now" button
-- [x] 100% unit test coverage for new services, endpoints, and components
+- [x] In-memory reactive training engine composable (`useCbtfProctorTraining.ts`) with zero database writes
+- [x] Realistic dynamic fictional scenarios generated relative to current time (standard arrival, early arrival, late arrival, and seated students)
+- [x] Physical scanner support: allow any scanned ID to match the active training scenario
+- [x] "Next Scan: Mismatch" toggle pill to simulate unmatched/unregistered student turn-away workflow
+- [x] "Next Scheduled Arrival ⏭️" pill to advance through simulated arriving student queue
+- [x] Reusable Proctor Console presenter (`ProctorConsole.vue`) shared by production and training views
+- [x] Dedicated route at `/proctor/training` guarded by `proctor-only` middleware with clear training mode banner and controls
+- [x] "Enter Training Mode" entry point button on `/proctor/index.vue`
+- [x] 100% unit test coverage for training composables and components
 
 ## Phases
 
-### Phase 1: Data Model & NRPS Core Service
+### Phase 1: In-Memory Training Engine & Scenario Generator
 
 **Status**: ✅ Complete
-**Objective**: Add course schema fields with Prisma migration, and implement the NRPS client service with OAuth2 token negotiation and atomic locking.
+**Objective**: Build `useCbtfProctorTraining.ts` providing realistic dynamic timestamps, card scanner mapping, next arrival queue pointer, mismatch toggle pill, check-in, check-out, and incident note handlers with 100% unit tests.
 
-### Phase 2: LTI Launch Integration & Concurrency Gating
-
-**Status**: ✅ Complete
-**Objective**: Integrate launch hooks in `handleLtiLaunch` with atomic concurrency gating, variable substitution, and redirect flagging.
-
-### Phase 3: APIs & Dashboard Sync Modal
+### Phase 2: Reusable Console Presenter & Training Sandbox View
 
 **Status**: ✅ Complete
-**Objective**: Build sync status & trigger API endpoints, `RosterSyncModal.vue`, and integrate into Student and Teacher dashboards with manual sync button.
+**Objective**: Extract `ProctorConsole.vue`, create `/proctor/training` page with distinctive training banner and control bar, and link from `/proctor/index.vue`.
 
-### Phase 4: Verification & Milestone Completion
+### Phase 3: Verification, Edge Cases & Milestone Completion
 
 **Status**: ✅ Complete
-**Objective**: Run full lint and unit test suites, confirm behavioral coverage, and finalize milestone documentation.
+**Objective**: Run complete test suite, verify linting, conduct browser validation, and finalize documentation.
