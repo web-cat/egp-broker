@@ -155,7 +155,10 @@ export default defineNuxtConfig({
       '0 3 * * *': 'cleanup:unverified-users',
 
       // Clean up login attempts every hour
-      '0 * * * *': 'cleanup:login-attempts'
+      '0 * * * *': 'cleanup:login-attempts',
+
+      // Synchronize Canvas roster and assignments daily (default 11:00 UTC / 7:00 AM EDT, configurable via CANVAS_SYNC_CRON)
+      [process.env.CANVAS_SYNC_CRON || '0 11 * * *']: 'sync:canvas'
     },
     imports: {
       dirs: [

@@ -5,6 +5,9 @@ import { fetchCanvasAssignments, fetchCanvasSections } from '@@/server/utils/can
 
 vi.mock('@@/server/utils/db', () => ({
   default: {
+    course: {
+      findUnique: vi.fn()
+    },
     user: {
       findUnique: vi.fn()
     },
@@ -61,11 +64,18 @@ vi.mock('@@/server/utils/assignments', async () => {
   const actual = await vi.importActual('@@/server/utils/assignments')
   return {
     ...actual,
-    syncAssignmentEligibility: vi.fn()
+    syncAssignmentEligibility: vi.fn(),
+    getCourseAssignments: vi.fn().mockImplementation(async () => [
+      {
+        id: 'asgn-1',
+        title: 'Project 1 (External Tool)',
+        published: false
+      }
+    ])
   }
 })
 
-describe('API: Me Assignments Sync (POST) with External Tool matching', () => {
+describe('API: Me Assignments Sync (POST) with External Tool matching and Published Status', () => {
   const mockSession = {
     user: {
       id: 'teacher-1',
@@ -78,25 +88,29 @@ describe('API: Me Assignments Sync (POST) with External Tool matching', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
+    const mockCourseData = {
+      id: 'course-1',
+      canvasCourseId: '12345',
+      deployment: {
+        id: 'deploy-1',
+        deploymentHost: 'canvas.example.edu',
+        platform: {
+          id: 'platform-1',
+          issuer: 'https://canvas.example.edu',
+          authEndpoint: '',
+          tokenEndpoint: '',
+          jwksEndpoint: ''
+        }
+      }
+    }
+
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'teacher-1',
       currentCourseId: 'course-1',
-      currentCourse: {
-        id: 'course-1',
-        canvasCourseId: '12345',
-        deployment: {
-          id: 'deploy-1',
-          deploymentHost: 'canvas.example.edu',
-          platform: {
-            id: 'platform-1',
-            issuer: 'https://canvas.example.edu',
-            authEndpoint: '',
-            tokenEndpoint: '',
-            jwksEndpoint: ''
-          }
-        }
-      }
+      currentCourse: mockCourseData
     } as any)
+
+    vi.mocked(prisma.course.findUnique).mockResolvedValue(mockCourseData as any)
 
     vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
       role: 'TEACHER'
@@ -111,7 +125,7 @@ describe('API: Me Assignments Sync (POST) with External Tool matching', () => {
     vi.mocked(prisma.assignment.findMany).mockResolvedValue([])
   })
 
-  it('matches external tool and sets toolId and resourceLinkId on new assignment', async () => {
+  it('matches external tool and sets toolId, resourceLinkId, and published status on new assignment', async () => {
     vi.mocked(prisma.ltiTool.findMany).mockResolvedValue([
       { id: 'tool-cw', baseUrl: 'https://codeworkout.org' },
       { id: 'tool-webcat', baseUrl: 'https://web-cat.cs.vt.edu/Web-CAT' }
@@ -124,7 +138,7 @@ describe('API: Me Assignments Sync (POST) with External Tool matching', () => {
         due_at: '2026-09-01T23:59:00Z',
         unlock_at: null,
         lock_at: null,
-        published: true,
+        published: false,
         submission_types: ['external_tool'],
         external_tool_tag_attributes: {
           url: 'https://codeworkout.org/lti/launch',
@@ -141,19 +155,28 @@ describe('API: Me Assignments Sync (POST) with External Tool matching', () => {
     } as any)
 
     const event = { context: {} } as any
-    await syncPost(event)
+    const res = await syncPost(event)
 
     expect(prisma.assignment.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         canvasAssignmentId: '101',
         title: 'Project 1 (External Tool)',
         toolId: 'tool-cw',
-        resourceLinkId: 'link-guid-101'
+        resourceLinkId: 'link-guid-101',
+        published: false
       })
     })
+
+    expect(res.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          published: false
+        })
+      ])
+    )
   })
 
-  it('updates existing assignment with matched toolId if previously null', async () => {
+  it('updates existing assignment with matched toolId and updated published status', async () => {
     vi.mocked(prisma.ltiTool.findMany).mockResolvedValue([
       { id: 'tool-webcat', baseUrl: 'https://web-cat.cs.vt.edu/Web-CAT' }
     ] as any)
@@ -193,7 +216,8 @@ describe('API: Me Assignments Sync (POST) with External Tool matching', () => {
       where: { id: 'asgn-existing-1' },
       data: expect.objectContaining({
         toolId: 'tool-webcat',
-        resourceLinkId: 'link-webcat-102'
+        resourceLinkId: 'link-webcat-102',
+        published: true
       })
     })
   })
