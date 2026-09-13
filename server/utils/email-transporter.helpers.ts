@@ -18,7 +18,7 @@ function validateEmailConfig(config: any): void {
     throw new Error('Email configuration is missing')
   }
 
-  const required = ['host', 'port', 'user', 'pass']
+  const required = ['host', 'port']
   const missing = required.filter((key) => !config.email[key])
 
   if (missing.length > 0) {
@@ -38,15 +38,21 @@ export function getEmailTransporter(): Transporter<SMTPTransport.SentMessageInfo
         validateEmailConfig(cachedConfig)
       }
 
-      transporter = nodemailer.createTransport({
+      const transportOptions: SMTPTransport.Options = {
         host: cachedConfig.email.host,
         port: cachedConfig.email.port,
-        secure: cachedConfig.email.secure,
-        auth: {
+        secure: cachedConfig.email.secure
+      }
+
+      // Only attach authentication credentials if both user and pass are provided
+      if (cachedConfig.email.user && cachedConfig.email.pass) {
+        transportOptions.auth = {
           user: cachedConfig.email.user,
           pass: cachedConfig.email.pass
         }
-      })
+      }
+
+      transporter = nodemailer.createTransport(transportOptions)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       throw new Error(`Failed to create email transporter: ${message}`)
@@ -54,4 +60,12 @@ export function getEmailTransporter(): Transporter<SMTPTransport.SentMessageInfo
   }
 
   return transporter
+}
+
+/**
+ * Reset email transporter singleton (useful for testing or config reloads)
+ */
+export function resetEmailTransporter(): void {
+  transporter = null
+  cachedConfig = null
 }

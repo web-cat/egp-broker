@@ -9,7 +9,8 @@ export default function startupChecksPlugin(_nitro: any) {
   if (process.env.NODE_ENV !== 'production') return
 
   const config = useRuntimeConfig()
-  const required: Array<keyof typeof config.email> = ['host', 'user', 'pass', 'from']
+  // Host and From address are required. User and Pass are optional for whitelisted SMTP relays.
+  const required: Array<keyof typeof config.email> = ['host', 'from']
   const missing = required.filter((key) => !config.email[key])
 
   if (missing.length > 0) {
