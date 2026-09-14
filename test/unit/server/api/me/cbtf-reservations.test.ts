@@ -131,6 +131,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
       expect(response.data.assignmentTitle).toBe('Midterm 1')
       expect(response.data.activeReservation).toBeNull()
       expect(Array.isArray(response.data.recommendedDays)).toBe(true)
+      expect(Array.isArray(response.data.blocks)).toBe(true)
     })
   })
 

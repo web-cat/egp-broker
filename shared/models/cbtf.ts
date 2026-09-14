@@ -101,6 +101,21 @@ export interface CbtfRecommendedDay {
   utilizationPercentage: number
 }
 
+export interface CbtfHalfDayBlock {
+  id: string // e.g. "2026-09-15-morning"
+  date: string // YYYY-MM-DD
+  dayOfWeek: number
+  blockType: 'morning' | 'afternoon'
+  label: string // e.g. "Tuesday Morning"
+  dateLabel: string // e.g. "Sep 15"
+  timeRangeLabel: string // e.g. "8:00 AM – 1:00 PM"
+  isCurrentBlock: boolean
+  openSlotsCount: number
+  totalSlotsCount: number
+  utilizationPercentage: number
+  isHighDemand: boolean // true if utilizationPercentage > 60
+}
+
 export interface CbtfHourlySlotChoice {
   hour: number // e.g. 9 for 09:00
   startTime: string // ISO string

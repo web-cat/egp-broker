@@ -78,7 +78,7 @@
           class="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800"
         >
           <div class="flex items-center gap-2">
-            <div v-for="s in [1, 2, 3, 4]" :key="s" class="flex items-center gap-2">
+            <div v-for="s in [1, 2, 3]" :key="s" class="flex items-center gap-2">
               <div
                 class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
                 :class="[
@@ -92,11 +92,11 @@
                 <UIcon v-if="currentStep > s" name="i-lucide-check" class="w-4 h-4" />
                 <span v-else>{{ s }}</span>
               </div>
-              <div v-if="s < 4" class="w-6 h-0.5 bg-neutral-200 dark:bg-neutral-800" />
+              <div v-if="s < 3" class="w-8 h-0.5 bg-neutral-200 dark:bg-neutral-800" />
             </div>
           </div>
           <span class="text-xs font-medium text-neutral-500">
-            Step {{ currentStep }} of 4: {{ stepTitle }}
+            Step {{ currentStep }} of 3: {{ stepTitle }}
           </span>
         </div>
 
@@ -143,102 +143,88 @@
           <UButton color="primary" label="Done" class="mt-4" @click="open = false" />
         </div>
 
-        <!-- Wizard Step 1: Morning vs Afternoon -->
+        <!-- Wizard Step 1: Select Half-Day Block -->
         <div v-else-if="currentStep === 1" class="space-y-4">
           <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            What time of day do you prefer to take this test?
-          </p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button
-              type="button"
-              class="p-5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between"
-              :class="[
-                selectedPreference === 'morning'
-                  ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-950/30 ring-2 ring-primary-500'
-                  : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-              ]"
-              @click="choosePreference('morning')"
-            >
-              <div class="flex items-center justify-between">
-                <UIcon name="i-lucide-sun" class="w-8 h-8 text-amber-500" />
-                <UIcon
-                  v-if="selectedPreference === 'morning'"
-                  name="i-lucide-check-circle"
-                  class="w-5 h-5 text-primary-600"
-                />
-              </div>
-              <div class="mt-4">
-                <p class="font-bold text-base text-neutral-900 dark:text-neutral-100">Morning</p>
-                <p class="text-xs text-neutral-500 mt-0.5">Slots starting before 12:00 PM</p>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="p-5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between"
-              :class="[
-                selectedPreference === 'afternoon'
-                  ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-950/30 ring-2 ring-primary-500'
-                  : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-              ]"
-              @click="choosePreference('afternoon')"
-            >
-              <div class="flex items-center justify-between">
-                <UIcon name="i-lucide-sunset" class="w-8 h-8 text-indigo-500" />
-                <UIcon
-                  v-if="selectedPreference === 'afternoon'"
-                  name="i-lucide-check-circle"
-                  class="w-5 h-5 text-primary-600"
-                />
-              </div>
-              <div class="mt-4">
-                <p class="font-bold text-base text-neutral-900 dark:text-neutral-100">Afternoon</p>
-                <p class="text-xs text-neutral-500 mt-0.5">Slots starting 12:00 PM onwards</p>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Wizard Step 2: Recommended Days -->
-        <div v-else-if="currentStep === 2" class="space-y-4">
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            We recommend the following days based on testing center capacity and availability:
+            Select an upcoming half-day block within your exam window:
           </p>
 
           <div
-            v-if="availabilityData?.recommendedDays.length === 0"
+            v-if="!availabilityData?.blocks || availabilityData.blocks.length === 0"
             class="p-6 text-center text-neutral-500 text-sm"
           >
-            No open slots found for {{ selectedPreference }} within your test window. Try switching
-            to the other time of day.
+            No open test center blocks found within your assignment window.
           </div>
 
           <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
-              v-for="day in availabilityData?.recommendedDays"
-              :key="day.date"
+              v-for="block in availabilityData.blocks"
+              :key="block.id"
               type="button"
-              class="p-4 rounded-xl border text-left transition-all cursor-pointer space-y-2"
+              class="p-4 rounded-xl border text-left transition-all cursor-pointer space-y-3 relative overflow-hidden"
               :class="[
-                selectedDate === day.date
+                selectedBlockId === block.id
                   ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-950/30 ring-2 ring-primary-500'
-                  : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                  : block.isHighDemand
+                    ? 'border-amber-300 dark:border-amber-800/80 bg-amber-50/20 dark:bg-amber-950/10 hover:border-amber-400 dark:hover:border-amber-700'
+                    : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
               ]"
-              @click="chooseDate(day.date)"
+              @click="chooseBlock(block)"
             >
-              <div class="flex items-center justify-between">
-                <p class="font-bold text-sm text-neutral-900 dark:text-neutral-100">
-                  {{ day.label }}
-                </p>
-                <UBadge color="primary" variant="subtle" size="xs">
-                  {{ day.openSlotsCount }} slots
+              <!-- Top Row: Block Title & Date -->
+              <div class="flex items-start justify-between gap-2">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <p class="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+                      {{ block.label }}
+                    </p>
+                    <UBadge
+                      v-if="block.isCurrentBlock"
+                      color="success"
+                      variant="subtle"
+                      size="xs"
+                      class="animate-pulse"
+                    >
+                      In Progress
+                    </UBadge>
+                  </div>
+                  <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                    {{ block.dateLabel }} • {{ block.timeRangeLabel }}
+                  </p>
+                </div>
+
+                <!-- High Demand / Capacity Badge -->
+                <UBadge
+                  v-if="block.isHighDemand"
+                  color="warning"
+                  variant="subtle"
+                  size="xs"
+                  class="shrink-0 flex items-center gap-1 font-semibold"
+                >
+                  <UIcon name="i-lucide-flame" class="w-3.5 h-3.5 text-amber-500" />
+                  <span>High Demand</span>
+                </UBadge>
+                <UBadge v-else color="neutral" variant="subtle" size="xs" class="shrink-0">
+                  {{ block.openSlotsCount }} slots open
                 </UBadge>
               </div>
 
-              <div>
-                <div class="flex justify-between text-xs text-neutral-500 mb-1">
-                  <span>Room utilization</span>
-                  <span>{{ day.utilizationPercentage }}%</span>
+              <!-- Utilization Progress & Metric -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs">
+                  <span
+                    :class="[
+                      block.isHighDemand
+                        ? 'font-semibold text-amber-600 dark:text-amber-400'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    ]"
+                  >
+                    {{ block.utilizationPercentage }}% full
+                  </span>
+                  <span class="text-neutral-400 text-[11px]">
+                    {{ block.totalSlotsCount - block.openSlotsCount }} /
+                    {{ block.totalSlotsCount }} booked
+                  </span>
                 </div>
                 <div
                   class="w-full h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden"
@@ -246,13 +232,15 @@
                   <div
                     class="h-full rounded-full transition-all"
                     :class="[
-                      day.utilizationPercentage < 50
+                      block.utilizationPercentage < 50
                         ? 'bg-green-500'
-                        : day.utilizationPercentage < 80
-                          ? 'bg-amber-500'
-                          : 'bg-red-500'
+                        : block.utilizationPercentage <= 60
+                          ? 'bg-emerald-500'
+                          : block.utilizationPercentage <= 75
+                            ? 'bg-amber-500'
+                            : 'bg-red-500'
                     ]"
-                    :style="{ width: `${day.utilizationPercentage}%` }"
+                    :style="{ width: `${block.utilizationPercentage}%` }"
                   />
                 </div>
               </div>
@@ -260,23 +248,25 @@
           </div>
         </div>
 
-        <!-- Wizard Step 3: Hourly Slot Selection -->
-        <div v-else-if="currentStep === 3" class="space-y-4">
+        <!-- Wizard Step 2: Hourly Slot Selection -->
+        <div v-else-if="currentStep === 2" class="space-y-4">
           <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            Pick a time slot for <strong>{{ selectedDayLabel }}</strong
-            >:
+            Pick an arrival time for
+            <strong>{{ selectedBlock?.label }}, {{ selectedBlock?.dateLabel }}</strong> ({{
+              selectedBlock?.timeRangeLabel
+            }}):
           </p>
 
           <div
-            v-if="availabilityData?.hourlySlots.length === 0"
+            v-if="!availabilityData?.hourlySlots || availabilityData.hourlySlots.length === 0"
             class="p-6 text-center text-neutral-500 text-sm"
           >
-            No open hourly slots found for this date.
+            No open hourly slots found for this block.
           </div>
 
           <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <button
-              v-for="slot in availabilityData?.hourlySlots"
+              v-for="slot in availabilityData.hourlySlots"
               :key="slot.startTime"
               type="button"
               class="p-3 rounded-lg border text-center transition-all cursor-pointer font-medium text-sm flex flex-col items-center justify-center gap-1"
@@ -293,8 +283,8 @@
           </div>
         </div>
 
-        <!-- Wizard Step 4: Review & Confirm -->
-        <div v-else-if="currentStep === 4" class="space-y-4">
+        <!-- Wizard Step 3: Review & Confirm -->
+        <div v-else-if="currentStep === 3" class="space-y-4">
           <div
             class="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 space-y-3"
           >
@@ -316,9 +306,9 @@
 
             <div class="grid grid-cols-2 gap-4 pt-1">
               <div>
-                <p class="text-xs text-neutral-500 uppercase">Date</p>
+                <p class="text-xs text-neutral-500 uppercase">Block & Date</p>
                 <p class="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">
-                  {{ selectedDayLabel }}
+                  {{ selectedBlock?.label }}, {{ selectedBlock?.dateLabel }}
                 </p>
               </div>
               <div>
@@ -356,7 +346,7 @@
           <div class="flex gap-2">
             <UButton color="neutral" variant="outline" label="Cancel" @click="open = false" />
             <UButton
-              v-if="currentStep < 4"
+              v-if="currentStep < 3"
               color="primary"
               label="Next"
               trailing-icon="i-lucide-arrow-right"
@@ -380,7 +370,11 @@
 
 <script setup lang="ts">
 import type { AssignmentRow } from '@@/shared/models/assignment'
-import type { CbtfReservationDto, CbtfHourlySlotChoice } from '@@/shared/models/cbtf'
+import type {
+  CbtfReservationDto,
+  CbtfHalfDayBlock,
+  CbtfHourlySlotChoice
+} from '@@/shared/models/cbtf'
 import { useCbtfStudent, type CbtfAvailabilityData } from '~/composables/features/useCbtfStudent'
 
 const props = defineProps<{
@@ -405,8 +399,7 @@ const loadingAvailability = ref(false)
 const booking = ref(false)
 const cancelling = ref(false)
 
-const selectedPreference = ref<'morning' | 'afternoon'>('morning')
-const selectedDate = ref<string>('')
+const selectedBlockId = ref<string>('')
 const selectedSlot = ref<CbtfHourlySlotChoice | null>(null)
 const availabilityData = ref<CbtfAvailabilityData | null>(null)
 const confirmedReservation = ref<CbtfReservationDto | null>(null)
@@ -415,12 +408,10 @@ const confirmedReservation = ref<CbtfReservationDto | null>(null)
 const stepTitle = computed(() => {
   switch (currentStep.value) {
     case 1:
-      return 'Time of Day'
+      return 'Select Half-Day Block'
     case 2:
-      return 'Select Day'
-    case 3:
       return 'Pick Time Slot'
-    case 4:
+    case 3:
       return 'Confirm'
     default:
       return ''
@@ -438,31 +429,28 @@ const modalDescription = computed(() => {
   return props.assignment?.title || 'Testing Center Reservation'
 })
 
-const selectedDayLabel = computed(() => {
-  const day = availabilityData.value?.recommendedDays.find((d) => d.date === selectedDate.value)
-  return day?.label || selectedDate.value
+const selectedBlock = computed<CbtfHalfDayBlock | undefined>(() => {
+  return availabilityData.value?.blocks?.find((b) => b.id === selectedBlockId.value)
 })
 
 const isNextDisabled = computed(() => {
-  if (currentStep.value === 1) return !selectedPreference.value
-  if (currentStep.value === 2) return !selectedDate.value
-  if (currentStep.value === 3) return !selectedSlot.value
+  if (currentStep.value === 1) return !selectedBlockId.value
+  if (currentStep.value === 2) return !selectedSlot.value
   return false
 })
 
-// Load availability when opening or changing parameters
-const loadAvailability = async () => {
+// Load availability when opening or changing block
+const loadAvailability = async (blockId?: string) => {
   if (!props.assignment?.id) return
   loadingAvailability.value = true
   try {
     const data = await fetchAvailability(
       props.assignment.id,
-      selectedPreference.value,
-      selectedDate.value || undefined
+      blockId || selectedBlockId.value || undefined
     )
     availabilityData.value = data
-    if (!selectedDate.value && data.recommendedDays.length > 0) {
-      selectedDate.value = data.recommendedDays[0].date
+    if (!selectedBlockId.value && data.blocks && data.blocks.length > 0) {
+      selectedBlockId.value = data.blocks[0].id
     }
   } catch (err) {
     console.error(err)
@@ -471,29 +459,23 @@ const loadAvailability = async () => {
   }
 }
 
-const choosePreference = async (pref: 'morning' | 'afternoon') => {
-  selectedPreference.value = pref
+const chooseBlock = async (block: CbtfHalfDayBlock) => {
+  selectedBlockId.value = block.id
   selectedSlot.value = null
-  selectedDate.value = ''
   currentStep.value = 2
-  await loadAvailability()
-}
-
-const chooseDate = async (dateStr: string) => {
-  selectedDate.value = dateStr
-  selectedSlot.value = null
-  currentStep.value = 3
-  await loadAvailability()
+  await loadAvailability(block.id)
 }
 
 const chooseSlot = (slot: CbtfHourlySlotChoice) => {
   selectedSlot.value = slot
-  currentStep.value = 4
+  currentStep.value = 3
 }
 
 const startRescheduling = () => {
   isRescheduling.value = true
   currentStep.value = 1
+  selectedBlockId.value = ''
+  selectedSlot.value = null
   confirmedReservation.value = null
   loadAvailability()
 }
@@ -562,7 +544,7 @@ watch(open, (isOpen) => {
     isRescheduling.value = false
     currentStep.value = 1
     selectedSlot.value = null
-    selectedDate.value = ''
+    selectedBlockId.value = ''
     if (!props.existingReservation) {
       loadAvailability()
     }

@@ -277,29 +277,28 @@ describe('CBTF Server Utilities', () => {
   })
 
   describe('getRecommendedDaysAndSlots', () => {
-    it('filters by morning preference and groups random slots by hour', async () => {
-      // Future window: 2026-10-05 (Monday) to 2026-10-09 (Friday)
-      const facility: any = {
-        id: 'fac-1',
-        totalSeats: 48,
-        seatAllocationOrder: Array.from({ length: 48 }, (_, i) => i + 1),
-        operatingHours: [
-          { dayOfWeek: 1, openTime: '08:00', closeTime: '17:00' },
-          { dayOfWeek: 2, openTime: '08:00', closeTime: '17:00' },
-          { dayOfWeek: 3, openTime: '08:00', closeTime: '17:00' },
-          { dayOfWeek: 4, openTime: '08:00', closeTime: '17:00' },
-          { dayOfWeek: 5, openTime: '08:00', closeTime: '17:00' }
-        ],
-        scheduleExceptions: []
-      }
+    const facility: any = {
+      id: 'fac-1',
+      totalSeats: 48,
+      seatAllocationOrder: Array.from({ length: 48 }, (_, i) => i + 1),
+      operatingHours: [
+        { dayOfWeek: 1, openTime: '08:00', closeTime: '17:00' },
+        { dayOfWeek: 2, openTime: '08:00', closeTime: '17:00' },
+        { dayOfWeek: 3, openTime: '08:00', closeTime: '17:00' },
+        { dayOfWeek: 4, openTime: '08:00', closeTime: '17:00' },
+        { dayOfWeek: 5, openTime: '08:00', closeTime: '17:00' }
+      ],
+      scheduleExceptions: []
+    }
 
-      const studentWindow = {
-        start: new Date('2026-10-05T00:00:00.000Z'),
-        end: new Date('2026-10-09T23:59:59.000Z'),
-        isPassWindow: false,
-        redemptionId: null
-      }
+    const studentWindow = {
+      start: new Date('2026-10-05T00:00:00.000Z'),
+      end: new Date('2026-10-09T23:59:59.000Z'),
+      isPassWindow: false,
+      redemptionId: null
+    }
 
+    it('returns half-day blocks divided at 1:00 PM (13:00)', async () => {
       const mockTx: any = {
         cbtfReservation: { findMany: vi.fn().mockResolvedValue([]) },
         cbtfScheduleException: { findFirst: vi.fn().mockResolvedValue(null) },
@@ -316,24 +315,77 @@ describe('CBTF Server Utilities', () => {
       const result = await getRecommendedDaysAndSlots(
         facility,
         studentWindow,
-        'morning',
-        '2026-10-05',
+        '2026-10-05-morning',
+        undefined,
         mockTx
       )
 
-      expect(result.recommendedDays.length).toBeGreaterThan(0)
-      expect(result.recommendedDays.length).toBeLessThanOrEqual(4)
+      expect(result.blocks.length).toBe(4) // 4 future blocks by default
+      expect(result.blocks[0].id).toBe('2026-10-05-morning')
+      expect(result.blocks[0].timeRangeLabel).toBe('8:00 AM – 1:00 PM')
+      expect(result.blocks[1].id).toBe('2026-10-05-afternoon')
+      expect(result.blocks[1].timeRangeLabel).toBe('1:00 PM – 5:00 PM')
 
-      // All hourly slots should be morning (hour < 12)
+      // Morning hourly slots should start before 1:00 PM (hour < 13)
       for (const slot of result.hourlySlots) {
-        expect(slot.hour).toBeLessThan(12)
+        expect(slot.hour).toBeLessThan(13)
         expect(slot.hour).toBeGreaterThanOrEqual(8)
       }
+    })
 
-      // Should have distinct hours
-      const hours = result.hourlySlots.map((s) => s.hour)
-      const uniqueHours = new Set(hours)
-      expect(hours.length).toBe(uniqueHours.size)
+    it('returns 5 blocks instead of 4 when all evaluated blocks have utilization > 75%', async () => {
+      // Create reservations filling > 75% of slots across all blocks
+      const mockReservations: any[] = []
+      // 48 seats in facility, max arrivals = 4.
+      // If we create enough reservations overlapping the hours:
+      const days = ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09']
+      for (const day of days) {
+        // Morning: 08:00 - 13:00 (5 hours, 60 5-min slots).
+        // Populate reservations so <= 20% slots are open (>80% utilization)
+        for (let h = 8; h < 17; h++) {
+          for (let m = 0; m < 60; m += 5) {
+            // Fill 4 seats at each 5-min slot
+            if (m % 20 !== 0) {
+              const startStr = `${day}T${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00.000Z`
+              for (let seat = 1; seat <= 4; seat++) {
+                mockReservations.push({
+                  startTime: new Date(startStr),
+                  endTime: new Date(new Date(startStr).getTime() + 3600000),
+                  seatNumber: seat
+                })
+              }
+            }
+          }
+        }
+      }
+
+      const mockTx: any = {
+        cbtfReservation: { findMany: vi.fn().mockResolvedValue(mockReservations) },
+        cbtfScheduleException: { findFirst: vi.fn().mockResolvedValue(null) },
+        cbtfOperatingHours: {
+          findUnique: vi.fn().mockImplementation(({ where }) => {
+            const h = facility.operatingHours.find(
+              (o: any) => o.dayOfWeek === where.facilityId_dayOfWeek.dayOfWeek
+            )
+            return Promise.resolve(h || null)
+          })
+        }
+      }
+
+      const result = await getRecommendedDaysAndSlots(
+        facility,
+        studentWindow,
+        undefined,
+        undefined,
+        mockTx
+      )
+
+      // All initial blocks should have utilization > 75% and trigger the 5-block view
+      for (const b of result.blocks.slice(0, 4)) {
+        expect(b.utilizationPercentage).toBeGreaterThan(75)
+        expect(b.isHighDemand).toBe(true) // > 60%
+      }
+      expect(result.blocks.length).toBe(5)
     })
   })
 

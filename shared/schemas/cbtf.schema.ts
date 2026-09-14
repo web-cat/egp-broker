@@ -88,7 +88,8 @@ export const cbtfAvailabilityQuerySchema = z.object({
   selectedDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be formatted as YYYY-MM-DD')
-    .optional()
+    .optional(),
+  blockId: z.string().optional()
 })
 
 export const cbtfReservationRowSchema = z.object({

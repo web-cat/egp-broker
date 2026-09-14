@@ -85,6 +85,29 @@ describe('useCbtfStudent Composable', () => {
     expect(result).toEqual(mockAvailability)
   })
 
+  it('fetches availability with blockId', async () => {
+    const mockAvailability = {
+      assignmentTitle: 'Midterm 1',
+      studentWindow: { start: '2026-10-01', end: '2026-10-15', isPassWindow: false },
+      activeReservation: null,
+      blocks: [],
+      recommendedDays: [],
+      hourlySlots: []
+    }
+    mockFetch.mockResolvedValueOnce({ data: mockAvailability })
+
+    const { fetchAvailability } = useCbtfStudent()
+    const result = await fetchAvailability('asg-1', '2026-10-05-morning')
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/me/cbtf/availability', {
+      params: {
+        assignmentId: 'asg-1',
+        blockId: '2026-10-05-morning'
+      }
+    })
+    expect(result).toEqual(mockAvailability)
+  })
+
   it('creates reservation and refreshes list', async () => {
     const newRes = {
       id: 'res-3',

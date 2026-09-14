@@ -13,6 +13,7 @@ import type {
   CbtfFacility,
   CbtfReservation,
   CbtfRecommendedDay,
+  CbtfHalfDayBlock,
   CbtfHourlySlotChoice,
   CbtfReservationDto
 } from '@@/shared/models/cbtf'
@@ -357,19 +358,31 @@ export async function getStudentSchedulingWindow(
   }
 }
 
+export const CBTF_AFTERNOON_DIVIDING_HOUR = 13 // 1:00 PM
+
+function formatTimeStr12h(timeStr: string): string {
+  const [h, m] = timeStr.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const displayH = h % 12 === 0 ? 12 : h % 12
+  return `${displayH}:${m.toString().padStart(2, '0')} ${ampm}`
+}
+
 /**
- * Progressive Narrowing Algorithm:
- * Step 1: Filters slots by morning (< 12:00) or afternoon (>= 12:00) preference.
- * Step 2: Recommends 3-4 days with highest open slot count / lowest utilization.
- * Step 3: For selectedDate, groups open slots by hour and randomly picks 1 slot per hour.
+ * Half-Day Block Scheduling Algorithm:
+ * - Divides days at 1:00 PM (13:00) into Morning and Afternoon blocks.
+ * - Offers the next 4 half-day blocks when slots are open.
+ * - If a half-day block is currently in progress, includes it plus the next 4.
+ * - If all evaluated blocks have utilization > 75%, offers the next 5 blocks instead of 4.
+ * - Highlights blocks with utilization > 60%.
  */
 export async function getRecommendedDaysAndSlots(
   facility: CbtfFacility & { operatingHours: any[]; scheduleExceptions: any[] },
   studentWindow: StudentSchedulingWindow,
-  preference?: 'morning' | 'afternoon',
+  preferenceOrBlockId?: string,
   selectedDateStr?: string,
   tx: PrismaClient | typeof prisma = prisma
 ): Promise<{
+  blocks: CbtfHalfDayBlock[]
   recommendedDays: CbtfRecommendedDay[]
   hourlySlots: CbtfHourlySlotChoice[]
 }> {
@@ -391,71 +404,6 @@ export async function getRecommendedDaysAndSlots(
     }
   })
 
-  const dayBuckets: {
-    dateStr: string
-    date: Date
-    dayOfWeek: number
-    slots: SlotAvailability[]
-    filteredSlots: SlotAvailability[]
-  }[] = []
-
-  // Iterate calendar days within the student window (max 30 days lookahead)
-  const currentDay = new Date(searchStart)
-  currentDay.setUTCHours(0, 0, 0, 0)
-  const maxDays = 30
-  let daysScanned = 0
-
-  while (currentDay <= searchEnd && daysScanned < maxDays) {
-    daysScanned++
-    const targetDate = new Date(currentDay)
-    const dateStr = targetDate.toISOString().split('T')[0]
-
-    const hours = await getFacilityOperatingHoursForDate(facility.id, targetDate, tx)
-
-    if (hours.isOpen && hours.openTime && hours.closeTime) {
-      // Find reservations for this day
-      const dayStart = new Date(targetDate)
-      dayStart.setUTCHours(0, 0, 0, 0)
-      const dayEnd = new Date(targetDate)
-      dayEnd.setUTCHours(23, 59, 59, 999)
-
-      const dayReservations = allReservations.filter(
-        (r) => r.startTime >= dayStart && r.startTime <= dayEnd
-      )
-
-      const allSlots = generateAvailableSlotsForDate(facility, targetDate, hours, dayReservations)
-
-      // Filter slots by preference if requested
-      const filteredSlots = allSlots.filter((slot) => {
-        // Exclude slots in the past (must be at least 15 min from now)
-        if (slot.startTime.getTime() < Date.now() + 15 * 60 * 1000) {
-          return false
-        }
-        if (!preference) return true
-        const hour = slot.startTime.getUTCHours()
-        if (preference === 'morning') return hour < 12
-        if (preference === 'afternoon') return hour >= 12
-        return true
-      })
-
-      if (filteredSlots.length > 0) {
-        dayBuckets.push({
-          dateStr,
-          date: targetDate,
-          dayOfWeek: targetDate.getUTCDay(),
-          slots: allSlots,
-          filteredSlots
-        })
-      }
-    }
-
-    currentDay.setUTCDate(currentDay.getUTCDate() + 1)
-  }
-
-  // Sort days by open slot count (descending) and take top 3-4 days
-  dayBuckets.sort((a, b) => b.filteredSlots.length - a.filteredSlots.length)
-  const topDayBuckets = dayBuckets.slice(0, 4)
-
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   const monthNames = [
     'Jan',
@@ -472,66 +420,247 @@ export async function getRecommendedDaysAndSlots(
     'Dec'
   ]
 
-  const recommendedDays: CbtfRecommendedDay[] = topDayBuckets.map((bucket) => {
-    const d = bucket.date
-    const label = `${dayNames[d.getUTCDay()]}, ${monthNames[d.getUTCMonth()]} ${d.getUTCDate()}`
-    const totalSlots = bucket.slots.length || 1
-    const openSlots = bucket.filteredSlots.length
-    const utilization = Math.round(((totalSlots - openSlots) / totalSlots) * 100)
+  const candidateBlockItems: {
+    block: CbtfHalfDayBlock
+    openSlots: SlotAvailability[]
+  }[] = []
 
+  // Iterate calendar days within the student window (max 30 days lookahead)
+  const currentDay = new Date(searchStart)
+  currentDay.setUTCHours(0, 0, 0, 0)
+  const maxDays = 30
+  let daysScanned = 0
+
+  while (currentDay <= searchEnd && daysScanned < maxDays) {
+    daysScanned++
+    const targetDate = new Date(currentDay)
+    const dateStr = targetDate.toISOString().split('T')[0]
+
+    const hours = await getFacilityOperatingHoursForDate(facility.id, targetDate, tx)
+
+    if (hours.isOpen && hours.openTime && hours.closeTime) {
+      const dayStart = new Date(targetDate)
+      dayStart.setUTCHours(0, 0, 0, 0)
+      const dayEnd = new Date(targetDate)
+      dayEnd.setUTCHours(23, 59, 59, 999)
+
+      const dayReservations = allReservations.filter(
+        (r) => r.startTime >= dayStart && r.startTime <= dayEnd
+      )
+
+      const theoreticalSlots = generateAvailableSlotsForDate(facility, targetDate, hours, [])
+      const allSlots = generateAvailableSlotsForDate(facility, targetDate, hours, dayReservations)
+      const d = targetDate
+      const dayOfWeek = d.getUTCDay()
+      const dayName = dayNames[dayOfWeek]
+      const monthName = monthNames[d.getUTCMonth()]
+      const dateLabel = `${monthName} ${d.getUTCDate()}`
+
+      // Morning block: openTime until 13:00
+      if (hours.openTime < '13:00') {
+        const blockStart = combineDateAndTime(targetDate, hours.openTime)
+        const blockEnd = combineDateAndTime(targetDate, '13:00')
+        const theoreticalBlockSlots = theoreticalSlots.filter(
+          (s) => s.startTime.getUTCHours() < CBTF_AFTERNOON_DIVIDING_HOUR
+        )
+        const openSlots = allSlots.filter(
+          (s) =>
+            s.startTime.getUTCHours() < CBTF_AFTERNOON_DIVIDING_HOUR &&
+            s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000
+        )
+
+        if (openSlots.length > 0) {
+          const isCurrentBlock = now >= blockStart && now < blockEnd
+          const totalSlotsCount = theoreticalBlockSlots.length
+          const openSlotsCount = openSlots.length
+          const utilizationPercentage =
+            totalSlotsCount > 0
+              ? Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    Math.round(((totalSlotsCount - openSlotsCount) / totalSlotsCount) * 100)
+                  )
+                )
+              : 100
+
+          candidateBlockItems.push({
+            block: {
+              id: `${dateStr}-morning`,
+              date: dateStr,
+              dayOfWeek,
+              blockType: 'morning',
+              label: `${dayName} Morning`,
+              dateLabel,
+              timeRangeLabel: `${formatTimeStr12h(hours.openTime)} – 1:00 PM`,
+              isCurrentBlock,
+              openSlotsCount,
+              totalSlotsCount,
+              utilizationPercentage,
+              isHighDemand: utilizationPercentage > 60
+            },
+            openSlots
+          })
+        }
+      }
+
+      // Afternoon block: 13:00 until closeTime
+      if (hours.closeTime > '13:00') {
+        const blockStart = combineDateAndTime(targetDate, '13:00')
+        const blockEnd = combineDateAndTime(targetDate, hours.closeTime)
+        const theoreticalBlockSlots = theoreticalSlots.filter(
+          (s) => s.startTime.getUTCHours() >= CBTF_AFTERNOON_DIVIDING_HOUR
+        )
+        const openSlots = allSlots.filter(
+          (s) =>
+            s.startTime.getUTCHours() >= CBTF_AFTERNOON_DIVIDING_HOUR &&
+            s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000
+        )
+
+        if (openSlots.length > 0) {
+          const isCurrentBlock = now >= blockStart && now < blockEnd
+          const totalSlotsCount = theoreticalBlockSlots.length
+          const openSlotsCount = openSlots.length
+          const utilizationPercentage =
+            totalSlotsCount > 0
+              ? Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    Math.round(((totalSlotsCount - openSlotsCount) / totalSlotsCount) * 100)
+                  )
+                )
+              : 100
+
+          candidateBlockItems.push({
+            block: {
+              id: `${dateStr}-afternoon`,
+              date: dateStr,
+              dayOfWeek,
+              blockType: 'afternoon',
+              label: `${dayName} Afternoon`,
+              dateLabel,
+              timeRangeLabel: `1:00 PM – ${formatTimeStr12h(hours.closeTime)}`,
+              isCurrentBlock,
+              openSlotsCount,
+              totalSlotsCount,
+              utilizationPercentage,
+              isHighDemand: utilizationPercentage > 60
+            },
+            openSlots
+          })
+        }
+      }
+    }
+
+    currentDay.setUTCDate(currentDay.getUTCDate() + 1)
+  }
+
+  // Identify current in-progress block vs future blocks
+  const currentBlockItem = candidateBlockItems.find((i) => i.block.isCurrentBlock)
+  const futureBlockItems = candidateBlockItems.filter((i) => !i.block.isCurrentBlock)
+
+  // Evaluate initial lookahead blocks: current (if active) + next 4
+  const initialLookaheadBlocks = currentBlockItem
+    ? [currentBlockItem.block, ...futureBlockItems.slice(0, 4).map((i) => i.block)]
+    : futureBlockItems.slice(0, 4).map((i) => i.block)
+
+  // If all evaluated blocks have utilization > 75%, show next 5 blocks instead of 4
+  const allAbove75 =
+    initialLookaheadBlocks.length > 0 &&
+    initialLookaheadBlocks.every((b) => b.utilizationPercentage > 75)
+
+  const futureCount = allAbove75 ? 5 : 4
+  const selectedBlockItems = currentBlockItem
+    ? [currentBlockItem, ...futureBlockItems.slice(0, futureCount)]
+    : futureBlockItems.slice(0, futureCount)
+
+  const blocks: CbtfHalfDayBlock[] = selectedBlockItems.map((i) => i.block)
+
+  // Backwards compatibility: recommendedDays derived from candidate days
+  const uniqueDates = Array.from(new Set(blocks.map((b) => b.date)))
+  const recommendedDays: CbtfRecommendedDay[] = uniqueDates.map((dateStr) => {
+    const dayBlocks = blocks.filter((b) => b.date === dateStr)
+    const firstBlock = dayBlocks[0]
+    const totalOpenSlots = dayBlocks.reduce((acc, b) => acc + b.openSlotsCount, 0)
+    const avgUtilization = Math.round(
+      dayBlocks.reduce((acc, b) => acc + b.utilizationPercentage, 0) / dayBlocks.length
+    )
     return {
-      date: bucket.dateStr,
-      dayOfWeek: bucket.dayOfWeek,
-      label,
-      openSlotsCount: openSlots,
-      utilizationPercentage: Math.max(0, Math.min(100, utilization))
+      date: dateStr,
+      dayOfWeek: firstBlock.dayOfWeek,
+      label: `${firstBlock.label.split(' ')[0]}, ${firstBlock.dateLabel}`,
+      openSlotsCount: totalOpenSlots,
+      utilizationPercentage: avgUtilization
     }
   })
 
-  // Determine which day to pick slots for
-  const chosenDateStr = selectedDateStr || recommendedDays[0]?.date
-  let hourlySlots: CbtfHourlySlotChoice[] = []
+  // Determine which block to pick hourly slots for
+  let chosenBlockItem = selectedBlockItems[0]
 
-  if (chosenDateStr) {
-    const chosenBucket = dayBuckets.find((b) => b.dateStr === chosenDateStr)
-    if (chosenBucket) {
-      // Group available slots by hour (UTC hour)
-      const slotsByHour = new Map<number, SlotAvailability[]>()
-      for (const slot of chosenBucket.filteredSlots) {
-        const hour = slot.startTime.getUTCHours()
-        if (!slotsByHour.has(hour)) {
-          slotsByHour.set(hour, [])
-        }
-        slotsByHour.get(hour)!.push(slot)
+  if (preferenceOrBlockId) {
+    const matchById = selectedBlockItems.find((i) => i.block.id === preferenceOrBlockId)
+    if (matchById) {
+      chosenBlockItem = matchById
+    } else if (selectedDateStr) {
+      const matchByDatePref = selectedBlockItems.find(
+        (i) =>
+          i.block.date === selectedDateStr &&
+          (!preferenceOrBlockId || i.block.blockType === preferenceOrBlockId)
+      )
+      if (matchByDatePref) {
+        chosenBlockItem = matchByDatePref
       }
-
-      // Randomly select 1 open slot per available hour
-      const sortedHours = Array.from(slotsByHour.keys()).sort((a, b) => a - b)
-      hourlySlots = sortedHours.map((hour) => {
-        const candidates = slotsByHour.get(hour)!
-        const randomIndex = Math.floor(Math.random() * candidates.length)
-        const chosenSlot = candidates[randomIndex]
-
-        const start = chosenSlot.startTime
-        const end = chosenSlot.endTime
-
-        const h = start.getUTCHours()
-        const m = start.getUTCMinutes().toString().padStart(2, '0')
-        const ampm = h >= 12 ? 'PM' : 'AM'
-        const displayH = h % 12 === 0 ? 12 : h % 12
-        const formattedTime = `${displayH}:${m} ${ampm}`
-
-        return {
-          hour,
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-          formattedTime
-        }
-      })
+    } else if (preferenceOrBlockId === 'morning' || preferenceOrBlockId === 'afternoon') {
+      const matchByPref = selectedBlockItems.find((i) => i.block.blockType === preferenceOrBlockId)
+      if (matchByPref) {
+        chosenBlockItem = matchByPref
+      }
+    }
+  } else if (selectedDateStr) {
+    const matchByDate = selectedBlockItems.find((i) => i.block.date === selectedDateStr)
+    if (matchByDate) {
+      chosenBlockItem = matchByDate
     }
   }
 
+  let hourlySlots: CbtfHourlySlotChoice[] = []
+  if (chosenBlockItem) {
+    const slotsByHour = new Map<number, SlotAvailability[]>()
+    for (const slot of chosenBlockItem.openSlots) {
+      const hour = slot.startTime.getUTCHours()
+      if (!slotsByHour.has(hour)) {
+        slotsByHour.set(hour, [])
+      }
+      slotsByHour.get(hour)!.push(slot)
+    }
+
+    const sortedHours = Array.from(slotsByHour.keys()).sort((a, b) => a - b)
+    hourlySlots = sortedHours.map((hour) => {
+      const candidates = slotsByHour.get(hour)!
+      const randomIndex = Math.floor(Math.random() * candidates.length)
+      const chosenSlot = candidates[randomIndex]
+
+      const start = chosenSlot.startTime
+      const end = chosenSlot.endTime
+
+      const h = start.getUTCHours()
+      const m = start.getUTCMinutes().toString().padStart(2, '0')
+      const ampm = h >= 12 ? 'PM' : 'AM'
+      const displayH = h % 12 === 0 ? 12 : h % 12
+      const formattedTime = `${displayH}:${m} ${ampm}`
+
+      return {
+        hour,
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+        formattedTime
+      }
+    })
+  }
+
   return {
+    blocks,
     recommendedDays,
     hourlySlots
   }

@@ -2,6 +2,7 @@ import type { ApiResponse } from '@@/shared/types/api'
 import type {
   CbtfReservationDto,
   CbtfRecommendedDay,
+  CbtfHalfDayBlock,
   CbtfHourlySlotChoice
 } from '@@/shared/models/cbtf'
 
@@ -13,6 +14,7 @@ export interface CbtfAvailabilityData {
     isPassWindow: boolean
   }
   activeReservation: CbtfReservationDto | null
+  blocks: CbtfHalfDayBlock[]
   recommendedDays: CbtfRecommendedDay[]
   hourlySlots: CbtfHourlySlotChoice[]
 }
@@ -51,11 +53,19 @@ export function useCbtfStudent() {
 
   const fetchAvailability = async (
     assignmentId: string,
-    timeOfDayPreference?: 'morning' | 'afternoon',
+    blockIdOrPreference?: string,
     selectedDate?: string
   ): Promise<CbtfAvailabilityData> => {
     const params: Record<string, string> = { assignmentId }
-    if (timeOfDayPreference) params.timeOfDayPreference = timeOfDayPreference
+    if (blockIdOrPreference) {
+      if (blockIdOrPreference.includes('-')) {
+        params.blockId = blockIdOrPreference
+      } else if (blockIdOrPreference === 'morning' || blockIdOrPreference === 'afternoon') {
+        params.timeOfDayPreference = blockIdOrPreference
+      } else {
+        params.blockId = blockIdOrPreference
+      }
+    }
     if (selectedDate) params.selectedDate = selectedDate
 
     const res = await $fetch<ApiResponse<CbtfAvailabilityData>>('/api/me/cbtf/availability', {

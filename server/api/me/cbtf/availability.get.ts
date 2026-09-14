@@ -9,6 +9,7 @@ import {
 } from '@@/server/utils/cbtf'
 import type { ApiResponse } from '@@/shared/types/api'
 import type {
+  CbtfHalfDayBlock,
   CbtfRecommendedDay,
   CbtfHourlySlotChoice,
   CbtfReservationDto
@@ -22,6 +23,7 @@ export interface CbtfAvailabilityResponse {
     isPassWindow: boolean
   }
   activeReservation: CbtfReservationDto | null
+  blocks: CbtfHalfDayBlock[]
   recommendedDays: CbtfRecommendedDay[]
   hourlySlots: CbtfHourlySlotChoice[]
 }
@@ -94,10 +96,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfAvailab
   const facility = await getPrimaryCbtfFacility()
   const studentWindow = await getStudentSchedulingWindow(session.user.id, assignment)
 
-  const { recommendedDays, hourlySlots } = await getRecommendedDaysAndSlots(
+  const { blocks, recommendedDays, hourlySlots } = await getRecommendedDaysAndSlots(
     facility,
     studentWindow,
-    query.timeOfDayPreference,
+    query.blockId || query.timeOfDayPreference,
     query.selectedDate
   )
 
@@ -111,6 +113,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfAvailab
         isPassWindow: studentWindow.isPassWindow
       },
       activeReservation: activeReservation ? toCbtfReservationDto(activeReservation) : null,
+      blocks,
       recommendedDays,
       hourlySlots
     }
