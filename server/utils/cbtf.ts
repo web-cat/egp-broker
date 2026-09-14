@@ -695,6 +695,7 @@ export function toCbtfReservationDto(res: any): CbtfReservationDto {
       : null,
     checkedInByUserId: res.checkedInByUserId ?? null,
     checkedOutByUserId: res.checkedOutByUserId ?? null,
+    canvasOverrideId: res.canvasOverrideId ?? null,
     noteCount: res.notes ? res.notes.length : undefined,
     notes: res.notes
       ? res.notes.map((n: any) => ({

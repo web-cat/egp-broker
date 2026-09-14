@@ -10,6 +10,7 @@ import {
   getStudentSchedulingWindow,
   toCbtfReservationDto
 } from '@@/server/utils/cbtf'
+import { syncCbtfReservationCanvasOverride } from '@@/server/utils/cbtf-canvas'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 
@@ -188,6 +189,12 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
 
     return updated
   })
+
+  // Synchronize individual Canvas assignment override (Option A: non-blocking)
+  const syncResult = await syncCbtfReservationCanvasOverride(updatedReservation.id)
+  if (syncResult.overrideId) {
+    updatedReservation.canvasOverrideId = syncResult.overrideId
+  }
 
   return {
     statusCode: 200,

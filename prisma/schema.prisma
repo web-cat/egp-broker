@@ -707,6 +707,9 @@ model CbtfReservation {
   checkedInByUserId  String?
   checkedOutByUserId String?
 
+  /// Canvas assignment override ID if synced to Canvas
+  canvasOverrideId   String?
+
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
@@ -717,6 +720,7 @@ model CbtfReservation {
   @@index([userId, status])
   @@index([status, startTime])
   @@index([seatNumber, startTime])
+  @@index([canvasOverrideId])
 }
 
 /// Proctor observation notes and incident logs for a reservation.

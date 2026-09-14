@@ -140,3 +140,35 @@ export async function notifyPassPortSyncFailure(
     tags: ['warning', 'passport', 'rotating_light']
   })
 }
+
+export interface CbtfCanvasOverrideFailureAlertData {
+  assignmentTitle: string
+  courseLabel?: string | null
+  studentName?: string | null
+  studentEmail?: string | null
+  timeSlot: string
+  error: string
+}
+
+/**
+ * Notify administrator about a CBTF Canvas override sync failure.
+ */
+export async function notifyCbtfCanvasOverrideFailure(
+  data: CbtfCanvasOverrideFailureAlertData
+): Promise<boolean> {
+  const identity =
+    data.studentName && data.studentEmail
+      ? `${data.studentName} (${data.studentEmail})`
+      : data.studentName || data.studentEmail || 'A student'
+
+  const courseInfo = data.courseLabel ? ` in ${data.courseLabel}` : ''
+
+  const message = `CBTF Canvas override sync failed for ${identity}${courseInfo} on assignment "${data.assignmentTitle}" for slot ${data.timeSlot}.\nError: ${data.error}`
+
+  return await sendAdminAlert({
+    title: `CBTF Canvas Override Failure: ${data.assignmentTitle}`,
+    message,
+    priority: 'high',
+    tags: ['warning', 'cbtf', 'canvas', 'rotating_light']
+  })
+}

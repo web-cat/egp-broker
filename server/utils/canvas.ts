@@ -441,3 +441,85 @@ export async function fetchCanvasSectionEnrollments(
 
   return enrollments
 }
+
+export interface CreateCanvasAssignmentOverrideInput {
+  student_ids?: number[]
+  title?: string
+  unlock_at?: string | null
+  due_at?: string | null
+  lock_at?: string | null
+  course_section_id?: number | null
+  group_id?: number | null
+}
+
+/**
+ * Creates an assignment override directly via Canvas REST API.
+ */
+export async function createCanvasAssignmentOverride(
+  domain: string,
+  courseId: number | string,
+  assignmentId: number | string,
+  overrideData: CreateCanvasAssignmentOverrideInput,
+  accessToken: string
+): Promise<CanvasAssignmentOverride> {
+  const url = `https://${domain}/api/v1/courses/${courseId}/assignments/${assignmentId}/overrides`
+  console.info(`[Canvas API] POST ${url}`)
+  return await $fetch<CanvasAssignmentOverride>(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: {
+      assignment_override: overrideData
+    }
+  })
+}
+
+/**
+ * Updates an existing assignment override directly via Canvas REST API.
+ */
+export async function updateCanvasAssignmentOverride(
+  domain: string,
+  courseId: number | string,
+  assignmentId: number | string,
+  overrideId: number | string,
+  overrideData: Partial<CreateCanvasAssignmentOverrideInput>,
+  accessToken: string
+): Promise<CanvasAssignmentOverride> {
+  const url = `https://${domain}/api/v1/courses/${courseId}/assignments/${assignmentId}/overrides/${overrideId}`
+  console.info(`[Canvas API] PUT ${url}`)
+  return await $fetch<CanvasAssignmentOverride>(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: {
+      assignment_override: overrideData
+    }
+  })
+}
+
+/**
+ * Deletes an assignment override directly via Canvas REST API.
+ */
+export async function deleteCanvasAssignmentOverride(
+  domain: string,
+  courseId: number | string,
+  assignmentId: number | string,
+  overrideId: number | string,
+  accessToken: string
+): Promise<void> {
+  const url = `https://${domain}/api/v1/courses/${courseId}/assignments/${assignmentId}/overrides/${overrideId}`
+  console.info(`[Canvas API] DELETE ${url}`)
+  await $fetch(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/json'
+    }
+  })
+}

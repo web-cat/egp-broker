@@ -78,6 +78,7 @@ export interface CbtfReservationDto {
   checkedOutAt: string | null
   checkedInByUserId: string | null
   checkedOutByUserId: string | null
+  canvasOverrideId?: string | null
   noteCount?: number
   notes?: CbtfReservationNoteDto[]
 }

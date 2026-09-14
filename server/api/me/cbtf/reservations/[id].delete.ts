@@ -1,6 +1,7 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { toCbtfReservationDto } from '@@/server/utils/cbtf'
+import { deleteCbtfReservationCanvasOverride } from '@@/server/utils/cbtf-canvas'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 
@@ -33,6 +34,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       statusMessage: `Only scheduled reservations can be cancelled. Current status is ${existing.status}`
     })
   }
+
+  // Delete individual Canvas assignment override if present
+  await deleteCbtfReservationCanvasOverride(existing.id)
 
   const updated = await prisma.cbtfReservation.update({
     where: { id: existing.id },
