@@ -33,6 +33,29 @@ export function parseCourseRole(roles?: string[]): CourseRole {
 }
 
 /**
+ * Checks if the launch roles or custom parameters indicate a Tech Support course role.
+ */
+export function isTechSupportRole(roles?: string[], customClaims?: Record<string, any>): boolean {
+  const roleStrings: string[] = []
+  if (roles && Array.isArray(roles)) {
+    roleStrings.push(...roles)
+  }
+  if (customClaims) {
+    for (const key of ['canvas_role', 'canvas_membership_roles', 'roles']) {
+      if (typeof customClaims[key] === 'string') {
+        roleStrings.push(customClaims[key])
+      }
+    }
+  }
+  return roleStrings.some(
+    (r) =>
+      /tech[-_\s]?support/i.test(r) ||
+      /membership.*support/i.test(r) ||
+      /institution.*supportstaff/i.test(r)
+  )
+}
+
+/**
  * Shared logic to initiate the OIDC flow.
  * This handles the database lookup and session storage before redirecting to Canvas.
  */

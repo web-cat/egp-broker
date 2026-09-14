@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 import { getGravatarUrl } from './gravatar'
-import { parseCourseRole } from './lti'
+import { parseCourseRole, isTechSupportRole } from './lti'
 import { acquireRosterSyncLock, syncCourseRosterFromNrps } from './nrps'
 import type { LtiSessionUser } from '@@/shared/schemas/auth.schema'
 
@@ -57,6 +57,7 @@ export interface LtiLaunchResult {
   sourcedId: string | null
   needsConfiguration: boolean
   syncRequired: boolean
+  isTechSupport?: boolean
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -360,6 +361,7 @@ export async function handleLtiLaunch(
 
       // D. Identity and Enrollment
       const userRole = parseCourseRole(roles)
+      const isTechSupport = isTechSupportRole(roles, customClaims)
 
       // Check if section ID is provided in custom claim
       const rawSectionIds = customClaims.canvas_section_ids?.toString()
@@ -415,6 +417,7 @@ export async function handleLtiLaunch(
           course,
           enrollment,
           userRole,
+          isTechSupport,
           assignmentId: null,
           sourcedId: null,
           needsConfiguration: false,
@@ -468,6 +471,7 @@ export async function handleLtiLaunch(
         course,
         enrollment,
         userRole,
+        isTechSupport,
         assignmentId: assignment.id,
         sourcedId: ltiResult.id,
         needsConfiguration,
@@ -512,6 +516,7 @@ export async function handleLtiLaunch(
     userRole: launchData.userRole,
     sourcedId: launchData.sourcedId,
     needsConfiguration: launchData.needsConfiguration,
-    syncRequired
+    syncRequired,
+    isTechSupport: launchData.isTechSupport
   }
 }

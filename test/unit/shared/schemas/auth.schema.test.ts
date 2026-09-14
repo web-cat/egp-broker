@@ -57,5 +57,18 @@ describe('Auth Schemas', () => {
       }
       expect(LtiSessionUserSchema.parse(user)).toEqual(user)
     })
+
+    it('validates session user with PROCTOR globalRole', () => {
+      const user = {
+        id: 'c123456789012345678901234',
+        email: 'proctor@example.com',
+        firstName: 'Pat',
+        lastName: 'Proctor',
+        avatarUrl: null,
+        globalRole: 'PROCTOR' as const,
+        currentCourseId: null
+      }
+      expect(LtiSessionUserSchema.parse(user)).toEqual(user)
+    })
   })
 })

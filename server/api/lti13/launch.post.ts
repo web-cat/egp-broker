@@ -2,6 +2,7 @@ import { defineEventHandler, createError, readValidatedBody, sendRedirect } from
 import prisma from '@@/server/utils/db'
 import { LtiLaunchSchema } from '@@/shared/schemas/auth.schema'
 import { handleLtiLaunch } from '@@/server/utils/lti-launch'
+import { verifyLtiToken } from '@@/server/utils/lti'
 
 export default defineEventHandler(async (event) => {
   const { id_token: idToken, state } = await readValidatedBody(event, LtiLaunchSchema.parse)
@@ -21,8 +22,15 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 403, statusMessage: 'Invalid nonce' })
 
     // Execute launch logic
-    const { user, assignmentId, needsConfiguration, userRole, sourcedId, syncRequired } =
-      await handleLtiLaunch(prisma, { claims, platform })
+    const {
+      user,
+      assignmentId,
+      needsConfiguration,
+      userRole,
+      sourcedId,
+      syncRequired,
+      isTechSupport
+    } = await handleLtiLaunch(prisma, { claims, platform })
 
     // Set the session
     await setUserSession(event, {
@@ -32,7 +40,9 @@ export default defineEventHandler(async (event) => {
         firstName: user.firstName,
         lastName: user.lastName,
         currentCourseId: user.currentCourseId,
-        role: userRole
+        role: userRole,
+        globalRole: user.globalRole,
+        avatarUrl: user.avatarUrl
       },
       lti: { ...session.lti, sourcedId }
     })
@@ -41,6 +51,9 @@ export default defineEventHandler(async (event) => {
 
     // Routing
     if (!assignmentId) {
+      if (user.globalRole === 'PROCTOR' && isTechSupport) {
+        return sendRedirect(event, `/proctor${syncParam}`, 303)
+      }
       return sendRedirect(event, `/${syncParam}`, 303)
     }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 
 // Import after mocking
-import { parseCourseRole, initiateOidcRedirect } from '@@/server/utils/lti'
+import { parseCourseRole, initiateOidcRedirect, isTechSupportRole } from '@@/server/utils/lti'
 import prisma from '@@/server/utils/db'
 
 // Mock prisma
@@ -93,6 +93,32 @@ describe('LTI Utils', () => {
     it('should return STUDENT for unrecognized roles', () => {
       const roles = ['http://purl.imsglobal.org/vocab/lis/v2/membership#UnknownRole']
       expect(parseCourseRole(roles)).toBe('STUDENT')
+    })
+  })
+
+  describe('isTechSupportRole', () => {
+    it('returns true when role URI contains TechSupport', () => {
+      const roles = ['http://purl.imsglobal.org/vocab/lis/v2/membership/Mentor#TechSupport']
+      expect(isTechSupportRole(roles)).toBe(true)
+    })
+
+    it('returns true when role URI contains SupportStaff', () => {
+      const roles = ['http://purl.imsglobal.org/vocab/lis/v2/institution/person#SupportStaff']
+      expect(isTechSupportRole(roles)).toBe(true)
+    })
+
+    it('returns true when custom parameter canvas_role is Tech Support', () => {
+      const roles = ['http://purl.imsglobal.org/vocab/lis/v2/membership#Mentor']
+      const customClaims = { canvas_role: 'Tech Support' }
+      expect(isTechSupportRole(roles, customClaims)).toBe(true)
+    })
+
+    it('returns false for standard student or teacher roles', () => {
+      const roles = ['http://purl.imsglobal.org/vocab/lis/v2/membership#Learner']
+      expect(isTechSupportRole(roles)).toBe(false)
+      expect(
+        isTechSupportRole(['http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor'])
+      ).toBe(false)
     })
   })
 
