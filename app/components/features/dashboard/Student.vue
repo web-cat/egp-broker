@@ -70,7 +70,7 @@
           </p>
         </div>
         <div class="p-4 bg-indigo-100 dark:bg-indigo-900/50 rounded-full">
-          <UIcon name="i-lucide-building-2" class="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+          <UIcon name="i-lucide-landmark" class="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
         </div>
       </div>
     </BaseCard>

@@ -3,7 +3,7 @@
     <UPageHeader
       title="Testing Center Administration"
       description="Configure facility capacity, weekly operating hours, holiday exceptions, proctor shifts, and view global reservations."
-      icon="i-lucide-building-2"
+      icon="i-lucide-landmark"
     />
 
     <!-- Navigation Tabs -->

@@ -99,7 +99,7 @@ export function useCbtfProctorTraining() {
     arriving.value = [
       {
         id: 'train-res-std',
-        seatNumber: undefined,
+        seatNumber: 1,
         studentName: 'Jane Doe',
         studentId: '900000001',
         assignmentTitle: 'CS 101: Midterm Exam 1',
@@ -117,7 +117,7 @@ export function useCbtfProctorTraining() {
       },
       {
         id: 'train-res-early',
-        seatNumber: undefined,
+        seatNumber: 2,
         studentName: 'Marcus Vance',
         studentId: '900000002',
         assignmentTitle: 'PHYS 211: Quiz 3',
@@ -135,7 +135,7 @@ export function useCbtfProctorTraining() {
       },
       {
         id: 'train-res-late',
-        seatNumber: undefined,
+        seatNumber: 3,
         studentName: 'Elena Rostova',
         studentId: '900000003',
         assignmentTitle: 'MATH 241: Exam 2',
@@ -338,9 +338,9 @@ export function useCbtfProctorTraining() {
       const earliestAllowedMs = startMs - leadMinutes * 60000
       const latestAllowedMs = startMs + graceMinutes * 60000
 
-      // Allocate next free seat number (seats 1-48 not in seated)
+      // Use pre-assigned seat or allocate next free seat number (seats 1-48 not in seated)
       const occupiedSeatNums = new Set(seated.value.map((s) => s.seatNumber))
-      let allocatedSeat = 1
+      let allocatedSeat = target.seatNumber || 1
       while (occupiedSeatNums.has(allocatedSeat) && allocatedSeat <= 48) {
         allocatedSeat++
       }
@@ -405,9 +405,9 @@ export function useCbtfProctorTraining() {
       }
 
       const target = arriving.value[arrivingIdx]
-      // Allocate seat
+      // Allocate seat (respect pre-assigned seat if available and free)
       const occupiedSeatNums = new Set(seated.value.map((s) => s.seatNumber))
-      let allocatedSeat = 1
+      let allocatedSeat = target.seatNumber || 1
       while (occupiedSeatNums.has(allocatedSeat) && allocatedSeat <= 48) {
         allocatedSeat++
       }

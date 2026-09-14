@@ -503,7 +503,7 @@ const assignmentColumns: any[] = [
             },
             () => [
               h(resolveComponent('UIcon'), {
-                name: 'i-lucide-building-2',
+                name: 'i-lucide-landmark',
                 class: 'w-3 h-3 mr-1 text-primary-500'
               }),
               'CBTF'

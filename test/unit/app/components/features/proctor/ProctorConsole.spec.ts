@@ -85,7 +85,7 @@ describe('ProctorConsole Component', () => {
           UInput: true,
           BaseCard: { template: '<div><slot /></div>' },
           BaseDataTable: true,
-          FeaturesProctorProctorNoteModal: true,
+          FeaturesProctorNoteModal: true,
           NuxtLink: {
             template: '<a :href="$attrs.to"><slot /></a>'
           }
@@ -116,7 +116,7 @@ describe('ProctorConsole Component', () => {
           UInput: true,
           BaseCard: { template: '<div><slot /></div>' },
           BaseDataTable: true,
-          FeaturesProctorProctorNoteModal: true,
+          FeaturesProctorNoteModal: true,
           NuxtLink: {
             template: '<a :href="$attrs.to"><slot /></a>'
           }
@@ -170,7 +170,7 @@ describe('ProctorConsole Component', () => {
           },
           BaseCard: { template: '<div><slot /></div>' },
           BaseDataTable: true,
-          FeaturesProctorProctorNoteModal: true,
+          FeaturesProctorNoteModal: true,
           NuxtLink: { template: '<a :href="$attrs.to"><slot /></a>' }
         }
       }
@@ -208,7 +208,7 @@ describe('ProctorConsole Component', () => {
           UInput: true,
           BaseCard: { template: '<div><slot /></div>' },
           BaseDataTable: true,
-          FeaturesProctorProctorNoteModal: true,
+          FeaturesProctorNoteModal: true,
           NuxtLink: { template: '<a :href="$attrs.to"><slot /></a>' }
         }
       }
@@ -249,7 +249,7 @@ describe('ProctorConsole Component', () => {
           UInput: true,
           BaseCard: { template: '<div><slot /></div>' },
           BaseDataTable: true,
-          FeaturesProctorProctorNoteModal: true,
+          FeaturesProctorNoteModal: true,
           NuxtLink: { template: '<a :href="$attrs.to"><slot /></a>' }
         }
       }
@@ -263,5 +263,158 @@ describe('ProctorConsole Component', () => {
     await checkOutBtn!.trigger('click')
 
     expect(mockState.confirmCheckOut).toHaveBeenCalledWith('res-seat-1')
+  })
+
+  it('defaults to Expected Arrivals tab as the first and active feed tab', () => {
+    const wrapper = mount(ProctorConsole, {
+      props: {
+        isTraining: false,
+        proctorState: mockState
+      },
+      global: {
+        stubs: {
+          UIcon: true,
+          UBadge: true,
+          UButton: true,
+          USwitch: true,
+          UInput: true,
+          BaseCard: { template: '<div><slot /></div>' },
+          BaseDataTable: {
+            props: ['emptyText'],
+            template: '<div data-testid="data-table">{{ emptyText }}</div>'
+          },
+          FeaturesProctorNoteModal: true,
+          NuxtLink: { template: '<a :href="$attrs.to"><slot /></a>' }
+        }
+      }
+    })
+
+    const tabs = wrapper.findAll('button.cursor-pointer')
+    expect(tabs[0].text()).toContain('Expected Arrivals')
+    expect(tabs[1].text()).toContain('Currently Seated')
+    expect(tabs[0].classes()).toContain('border-primary-500')
+    expect(wrapper.find('[data-testid="data-table"]').text()).toContain(
+      'No arriving students scheduled in this window.'
+    )
+  })
+
+  it('passes open prop to FeaturesProctorNoteModal and calls handleNoteModalUpdate', async () => {
+    mockState.isNoteModalOpen.value = true
+    mockState.selectedNoteTarget.value = {
+      reservationId: 'res-1',
+      studentName: 'David Chen',
+      seatNumber: 4
+    }
+
+    const wrapper = mount(ProctorConsole, {
+      props: {
+        isTraining: false,
+        proctorState: mockState
+      },
+      global: {
+        stubs: {
+          UIcon: true,
+          UBadge: true,
+          UButton: true,
+          USwitch: true,
+          UInput: true,
+          BaseCard: { template: '<div><slot /></div>' },
+          BaseDataTable: true,
+          FeaturesProctorNoteModal: {
+            props: ['open', 'target'],
+            template: '<div data-testid="note-modal" :data-open="open" />'
+          },
+          NuxtLink: { template: '<a :href="$attrs.to"><slot /></a>' }
+        }
+      }
+    })
+
+    const noteModal = wrapper.find('[data-testid="note-modal"]')
+    expect(noteModal.attributes('data-open')).toBe('true')
+  })
+
+  it('displays updated facility name and totalSeats in header banner and seated counter without hardcoding 48', () => {
+    mockState.facility = ref({
+      id: 'fac-custom',
+      name: 'Custom Science CBTF',
+      totalSeats: 32,
+      occupiedSeats: 5,
+      availableSeats: 27
+    })
+    mockState.counts = ref({ seated: 5, arriving: 2, departures: 1 })
+
+    const wrapper = mount(ProctorConsole, {
+      props: {
+        isTraining: false,
+        proctorState: mockState
+      },
+      global: {
+        stubs: {
+          UIcon: true,
+          UBadge: true,
+          UButton: true,
+          USwitch: true,
+          UInput: true,
+          BaseCard: { template: '<div><slot /></div>' },
+          BaseDataTable: true,
+          FeaturesProctorNoteModal: true,
+          NuxtLink: { template: '<a :href="$attrs.to"><slot /></a>' }
+        }
+      }
+    })
+
+    expect(wrapper.text()).toContain('Custom Science CBTF')
+    expect(wrapper.text()).toContain('32 Total Workstations')
+    expect(wrapper.text()).toContain('5 / 32')
+    expect(wrapper.text()).not.toContain('48 Total Workstations')
+  })
+
+  it('handles unwrapped state properties seamlessly for facility, counts, and rosters', () => {
+    // Plain unwrapped objects (as produced when refs in reactive props are unwrapped by Vue)
+    const unwrappedState = {
+      facility: {
+        id: 'fac-unwrapped',
+        name: 'Unwrapped CBTF Lab',
+        totalSeats: 64
+      },
+      counts: { seated: 10, arriving: 4, departures: 2 },
+      seated: [{ id: 's-1', seatNumber: 1, studentName: 'Alice' }],
+      arriving: [{ id: 'a-1', seatNumber: 2, studentName: 'Bob' }],
+      departures: [],
+      isOnDuty: true,
+      lastAction: null,
+      lookupResult: null,
+      lookupLoading: false,
+      lookupError: null,
+      isNoteModalOpen: false,
+      selectedNoteTarget: null,
+      clearLookup: vi.fn(),
+      openNoteModal: vi.fn(),
+      toggleDuty: vi.fn()
+    }
+
+    const wrapper = mount(ProctorConsole, {
+      props: {
+        isTraining: false,
+        proctorState: unwrappedState
+      },
+      global: {
+        stubs: {
+          UIcon: true,
+          UBadge: true,
+          UButton: true,
+          USwitch: true,
+          UInput: true,
+          BaseCard: { template: '<div><slot /></div>' },
+          BaseDataTable: true,
+          FeaturesProctorNoteModal: true,
+          NuxtLink: { template: '<a :href="$attrs.to"><slot /></a>' }
+        }
+      }
+    })
+
+    expect(wrapper.text()).toContain('Unwrapped CBTF Lab')
+    expect(wrapper.text()).toContain('64 Total Workstations')
+    expect(wrapper.text()).toContain('10 / 64')
   })
 })

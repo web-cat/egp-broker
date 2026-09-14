@@ -43,7 +43,10 @@ describe('API: Proctor Operations Endpoints', () => {
           ? { id: 'proctor-1', firstName: 'Proctor', lastName: 'User', globalRole: userRole }
           : null
       },
-      node: { req: { method: 'GET' } },
+      node: {
+        req: { method: 'GET' },
+        res: { setHeader: vi.fn(), getHeader: vi.fn() }
+      },
       _query: query,
       _body: body
     }) as any

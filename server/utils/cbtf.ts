@@ -48,6 +48,7 @@ export async function getPrimaryCbtfFacility(
   tx: PrismaClient | typeof prisma = prisma
 ): Promise<CbtfFacility & { operatingHours: any[]; scheduleExceptions: any[] }> {
   let facility = await (tx as any).cbtfFacility.findFirst({
+    orderBy: { createdAt: 'asc' },
     include: {
       operatingHours: true,
       scheduleExceptions: true
@@ -803,7 +804,7 @@ export async function getProctorLiveFeed(prisma: PrismaClient, facilityId?: stri
     .map(toCbtfReservationDto)
     .sort((a, b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime())
 
-  const totalSeats = facility.totalSeats || 48
+  const totalSeats = facility.totalSeats ?? 48
   const occupiedSeats = seated.length
   const availableSeats = Math.max(0, totalSeats - occupiedSeats)
 

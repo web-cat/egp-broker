@@ -12,7 +12,10 @@ export function useCbtfProctor() {
     data: feedData,
     status: feedStatus,
     refresh: refreshFeed
-  } = useFetch<ApiResponse<any>>('/api/proctor/feed')
+  } = useFetch<ApiResponse<any>>('/api/proctor/feed', {
+    key: 'cbtf-proctor-feed',
+    getCachedData: () => undefined
+  })
 
   const isOnDuty = computed(() => Boolean(statusData.value?.data?.isOnDuty))
   const facility = computed(() => feedData.value?.data?.facility)

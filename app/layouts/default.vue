@@ -39,7 +39,7 @@
           v-if="user?.globalRole === 'PROCTOR' || user?.globalRole === 'ADMIN'"
           variant="ghost"
           color="neutral"
-          icon="i-lucide-building-2"
+          icon="i-lucide-landmark"
           :to="localePath('/proctor')"
           title="Testing Center Console"
         />

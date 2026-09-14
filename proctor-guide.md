@@ -138,7 +138,7 @@ Arrive **10 minutes before** your scheduled shift begins.
 
 1. **Log in and Launch the Console**:
    - Open your browser and navigate to the application.
-   - In the top navigation bar, click the **Testing Center Console** icon (`i-lucide-building-2`) or go directly to `/proctor`.
+   - In the top navigation bar, click the **Testing Center Console** icon (`i-lucide-landmark`) or go directly to `/proctor`.
 2. **Toggle Your Proctor Status**:
    - In the top-right header, locate the **Proctor Duty** toggle switch.
    - Click it to turn **ON DUTY**. The badge changes from gray `OFF DUTY` to green `ON DUTY`.
