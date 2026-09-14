@@ -337,9 +337,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
         scheduleWindowEnd: new Date('2026-10-15T00:00:00.000Z')
       } as any)
       vi.mocked(prisma.enrollment.findFirst).mockResolvedValue({ id: 'enr-1' } as any)
-      vi.mocked(prisma.cbtfReservation.findFirst)
-        .mockResolvedValueOnce(null) // no active for student
-        .mockResolvedValueOnce(null) // no last reservation for seat order
+      vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValue(null)
 
       vi.mocked(prisma.cbtfFacility.findFirst).mockResolvedValue({
         id: 'fac-1',
@@ -361,7 +359,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
         facilityId: 'fac-1',
         assignmentId: 'clh1234567890123456789012',
         userId: 'usr-1',
-        seatNumber: 1,
+        seatNumber: 2,
         startTime: new Date(startTime),
         endTime: new Date('2026-10-05T10:15:00.000Z'),
         status: 'SCHEDULED',
@@ -376,8 +374,13 @@ describe('API: CBTF Student Reservation Endpoints', () => {
       const response = await reservationsPost(event)
       expect(response.statusCode).toBe(201)
       expect(response.data.id).toBe('res-new')
-      expect(response.data.seatNumber).toBe(1)
+      expect(response.data.seatNumber).toBe(2)
       expect(response.data.status).toBe('SCHEDULED')
+      expect(prisma.cbtfReservation.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ seatNumber: 2 })
+        })
+      )
     })
   })
 

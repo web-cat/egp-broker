@@ -170,19 +170,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       ? (facility.seatAllocationOrder as number[])
       : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
 
-    const lastReservation = await tx.cbtfReservation.findFirst({
-      where: { facilityId: facility.id },
-      orderBy: { createdAt: 'desc' },
-      select: { seatNumber: true }
-    })
-
-    const assignedSeat = assignNextSeat(
-      seatOrder,
-      newStartTime,
-      newEndTime,
-      activeReservations,
-      lastReservation?.seatNumber
-    )
+    const assignedSeat = assignNextSeat(seatOrder, newStartTime, newEndTime, activeReservations)
 
     const updated = await tx.cbtfReservation.update({
       where: { id: existing.id },

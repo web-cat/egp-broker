@@ -232,16 +232,37 @@ export function generateAvailableSlotsForDate(
 }
 
 /**
- * Assigns the next available seat number following the facility's definable sequence order.
- * Ensures consecutive bookings in the same or consecutive slots follow this sequence,
- * continuing through the order and skipping occupied seats.
+ * Calculates the slice of seat indices in seatAllocationOrder for a 5-minute arrival offset (0..11).
+ * Partitions totalSeats into 12 contiguous blocks, distributing remainder seats to the earliest offsets.
+ */
+export function getOffsetSeatIndices(
+  totalSeats: number,
+  offset: number
+): { startIndex: number; count: number } {
+  if (totalSeats <= 0) {
+    return { startIndex: 0, count: 0 }
+  }
+  const baseCount = Math.floor(totalSeats / 12)
+  const remainder = totalSeats % 12
+  const normalizedOffset = Math.max(0, Math.min(11, offset))
+
+  const startIndex = normalizedOffset * baseCount + Math.min(normalizedOffset, remainder)
+  const count = baseCount + (normalizedOffset < remainder ? 1 : 0)
+
+  return { startIndex, count }
+}
+
+/**
+ * Assigns the next available seat number based on the student's 5-minute arrival time offset.
+ * Maps the 5-minute offset (:00, :05, ..., :55) to contiguous slices of seatAllocationOrder.
+ * If all primary seats for the offset are occupied, gracefully overflows in circular order.
  */
 export function assignNextSeat(
   seatAllocationOrder: number[],
   slotStart: Date,
   slotEnd: Date,
   activeReservationsInWindow: { seatNumber: number }[],
-  lastAssignedSeat?: number | null
+  _lastAssignedSeat?: number | null
 ): number {
   if (!seatAllocationOrder || seatAllocationOrder.length === 0) {
     throw createError({
@@ -251,19 +272,25 @@ export function assignNextSeat(
   }
 
   const occupiedSeats = new Set(activeReservationsInWindow.map((r) => r.seatNumber))
+  const totalSeats = seatAllocationOrder.length
 
-  // Find start index in seatAllocationOrder
-  let startIndex = 0
-  if (lastAssignedSeat !== undefined && lastAssignedSeat !== null) {
-    const lastIdx = seatAllocationOrder.indexOf(lastAssignedSeat)
-    if (lastIdx !== -1) {
-      startIndex = (lastIdx + 1) % seatAllocationOrder.length
+  // Calculate 5-minute arrival offset (0 for :00, 1 for :05, ..., 11 for :55)
+  const minute = slotStart.getUTCMinutes()
+  const offset = Math.floor(minute / 5)
+
+  const { startIndex, count } = getOffsetSeatIndices(totalSeats, offset)
+
+  // 1. First priority: Check primary candidate seats assigned to this 5-minute offset
+  for (let i = 0; i < count; i++) {
+    const candidateSeat = seatAllocationOrder[startIndex + i]
+    if (!occupiedSeats.has(candidateSeat)) {
+      return candidateSeat
     }
   }
 
-  // Iterate in circular order through the sequence
-  for (let i = 0; i < seatAllocationOrder.length; i++) {
-    const candidateSeat = seatAllocationOrder[(startIndex + i) % seatAllocationOrder.length]
+  // 2. Fallback: If all primary seats for this offset are occupied, check remaining seats in circular order
+  for (let i = 0; i < totalSeats; i++) {
+    const candidateSeat = seatAllocationOrder[(startIndex + count + i) % totalSeats]
     if (!occupiedSeats.has(candidateSeat)) {
       return candidateSeat
     }

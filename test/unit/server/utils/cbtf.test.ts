@@ -3,6 +3,7 @@ import {
   calculateMaxArrivalsPerSlot,
   combineDateAndTime,
   generateAvailableSlotsForDate,
+  getOffsetSeatIndices,
   assignNextSeat,
   getFacilityOperatingHoursForDate,
   getStudentSchedulingWindow,
@@ -151,45 +152,78 @@ describe('CBTF Server Utilities', () => {
     })
   })
 
+  describe('getOffsetSeatIndices', () => {
+    it('partitions 24 seats evenly into 2 seats per 5-minute offset', () => {
+      expect(getOffsetSeatIndices(24, 0)).toEqual({ startIndex: 0, count: 2 })
+      expect(getOffsetSeatIndices(24, 1)).toEqual({ startIndex: 2, count: 2 })
+      expect(getOffsetSeatIndices(24, 11)).toEqual({ startIndex: 22, count: 2 })
+    })
+
+    it('partitions 50 seats distributing remainder to first offsets', () => {
+      // 50 = 12 * 4 + 2 remainder => offsets 0 and 1 get 5 seats, rest get 4 seats
+      expect(getOffsetSeatIndices(50, 0)).toEqual({ startIndex: 0, count: 5 })
+      expect(getOffsetSeatIndices(50, 1)).toEqual({ startIndex: 5, count: 5 })
+      expect(getOffsetSeatIndices(50, 2)).toEqual({ startIndex: 10, count: 4 })
+      expect(getOffsetSeatIndices(50, 11)).toEqual({ startIndex: 46, count: 4 })
+    })
+  })
+
   describe('assignNextSeat', () => {
-    const seatOrder = [1, 15, 29, 2, 16, 30]
-    const slotStart = new Date('2026-09-14T09:00:00.000Z')
-    const slotEnd = new Date('2026-09-14T10:00:00.000Z')
+    // 24 seats: each 5-min offset gets 2 contiguous seats
+    // :00 -> indices 0, 1 (seats 1, 15)
+    // :05 -> indices 2, 3 (seats 29, 2)
+    // :10 -> indices 4, 5 (seats 16, 30)
+    const seatOrder = [
+      1, 15, 29, 2, 16, 30, 3, 17, 31, 4, 18, 32, 5, 19, 33, 6, 20, 34, 7, 21, 35, 8, 22, 36
+    ]
 
-    it('allocates the first seat in order when no prior reservation exists', () => {
-      const seat = assignNextSeat(seatOrder, slotStart, slotEnd, [], null)
-      expect(seat).toBe(1)
+    it('assigns first seat for arrival at :00 (index 0)', () => {
+      const slotStart = new Date('2026-09-14T09:00:00.000Z')
+      const slotEnd = new Date('2026-09-14T10:00:00.000Z')
+      const seat = assignNextSeat(seatOrder, slotStart, slotEnd, [])
+      expect(seat).toBe(1) // seatOrder[0]
     })
 
-    it('allocates the next seat in sequence after lastAssignedSeat', () => {
-      const seat1 = assignNextSeat(seatOrder, slotStart, slotEnd, [{ seatNumber: 1 }], 1)
-      expect(seat1).toBe(15)
-
-      const seat2 = assignNextSeat(
-        seatOrder,
-        slotStart,
-        slotEnd,
-        [{ seatNumber: 1 }, { seatNumber: 15 }],
-        15
-      )
-      expect(seat2).toBe(29)
+    it('assigns first seat for arrival at :05 (index 2)', () => {
+      const slotStart = new Date('2026-09-14T09:05:00.000Z')
+      const slotEnd = new Date('2026-09-14T10:05:00.000Z')
+      const seat = assignNextSeat(seatOrder, slotStart, slotEnd, [])
+      expect(seat).toBe(29) // seatOrder[2]
     })
 
-    it('skips occupied seats and continues through the sequence', () => {
-      // Seat 15 is occupied by an earlier ongoing exam
-      const seat = assignNextSeat(seatOrder, slotStart, slotEnd, [{ seatNumber: 15 }], 1)
-      expect(seat).toBe(29)
+    it('assigns second seat for second arrival at :05 (index 3)', () => {
+      const slotStart = new Date('2026-09-14T09:05:00.000Z')
+      const slotEnd = new Date('2026-09-14T10:05:00.000Z')
+      // Seat 29 is occupied by first arrival
+      const seat = assignNextSeat(seatOrder, slotStart, slotEnd, [{ seatNumber: 29 }])
+      expect(seat).toBe(2) // seatOrder[3]
     })
 
-    it('wraps around the sequence order', () => {
-      // Last assigned was 30 (the last element)
-      const seat = assignNextSeat(seatOrder, slotStart, slotEnd, [], 30)
-      expect(seat).toBe(1)
+    it('reassigns seat 29 at 10:05 once the 9:05 reservation has ended', () => {
+      const slotStart = new Date('2026-09-14T10:05:00.000Z')
+      const slotEnd = new Date('2026-09-14T11:05:00.000Z')
+      // No active reservations overlapping 10:05-11:05
+      const seat = assignNextSeat(seatOrder, slotStart, slotEnd, [])
+      expect(seat).toBe(29) // Reclaimed cleanly at turnover
     })
 
-    it('throws 409 if all seats in the sequence are occupied', () => {
+    it('overflows to next available seat if all primary offset seats are occupied', () => {
+      const slotStart = new Date('2026-09-14T09:05:00.000Z')
+      const slotEnd = new Date('2026-09-14T10:05:00.000Z')
+      // Both seats for :05 (29 and 2) are occupied
+      const seat = assignNextSeat(seatOrder, slotStart, slotEnd, [
+        { seatNumber: 29 },
+        { seatNumber: 2 }
+      ])
+      // Falls back to next seat in sequence (index 4 -> seat 16)
+      expect(seat).toBe(16)
+    })
+
+    it('throws 409 if all seats in the facility are occupied', () => {
+      const slotStart = new Date('2026-09-14T09:00:00.000Z')
+      const slotEnd = new Date('2026-09-14T10:00:00.000Z')
       const allOccupied = seatOrder.map((s) => ({ seatNumber: s }))
-      expect(() => assignNextSeat(seatOrder, slotStart, slotEnd, allOccupied, 1)).toThrow(
+      expect(() => assignNextSeat(seatOrder, slotStart, slotEnd, allOccupied)).toThrow(
         'No unallocated seats available at this time slot'
       )
     })

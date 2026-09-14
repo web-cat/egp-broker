@@ -197,24 +197,12 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       })
     }
 
-    // D. Fetch last assigned reservation to continue seat allocation sequence
-    const lastReservation = await tx.cbtfReservation.findFirst({
-      where: { facilityId: facility.id },
-      orderBy: { createdAt: 'desc' },
-      select: { seatNumber: true }
-    })
-
+    // D. Allocate seat based on 5-minute arrival offset
     const seatOrder: number[] = Array.isArray(facility.seatAllocationOrder)
       ? (facility.seatAllocationOrder as number[])
       : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
 
-    const assignedSeat = assignNextSeat(
-      seatOrder,
-      startTime,
-      endTime,
-      activeReservations,
-      lastReservation?.seatNumber
-    )
+    const assignedSeat = assignNextSeat(seatOrder, startTime, endTime, activeReservations)
 
     // E. Create reservation
     const created = await tx.cbtfReservation.create({
