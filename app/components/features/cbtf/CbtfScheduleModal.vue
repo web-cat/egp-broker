@@ -151,9 +151,39 @@
 
           <div
             v-if="!availabilityData?.blocks || availabilityData.blocks.length === 0"
-            class="p-6 text-center text-neutral-500 text-sm"
+            class="p-6 text-center space-y-3"
           >
-            No open test center blocks found within your assignment window.
+            <div
+              v-if="isRescheduling && existingReservation"
+              class="p-4 rounded-xl border border-primary-500/30 bg-primary-50/50 dark:bg-primary-950/30 text-left space-y-2"
+            >
+              <div
+                class="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold text-sm"
+              >
+                <UIcon name="i-lucide-shield-check" class="w-5 h-5 text-primary-500 shrink-0" />
+                <span>Current Reservation Protected</span>
+              </div>
+              <p class="text-xs text-neutral-600 dark:text-neutral-400">
+                No alternative open slots were found within your exam window. Your existing
+                reservation for
+                <strong class="text-neutral-800 dark:text-neutral-200">
+                  {{
+                    formatReservationTime(
+                      existingReservation.startTime,
+                      existingReservation.endTime
+                    )
+                  }}
+                </strong>
+                at
+                <strong class="text-neutral-800 dark:text-neutral-200">
+                  Workstation Seat #{{ existingReservation.seatNumber }}
+                </strong>
+                remains active.
+              </p>
+            </div>
+            <p v-else class="text-neutral-500 text-sm">
+              No open test center blocks found within your assignment window.
+            </p>
           </div>
 
           <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -341,10 +371,23 @@
             icon="i-lucide-arrow-left"
             @click="currentStep--"
           />
+          <UButton
+            v-else-if="isRescheduling && existingReservation"
+            color="neutral"
+            variant="ghost"
+            label="Back to Reservation"
+            icon="i-lucide-arrow-left"
+            @click="handleCancelRescheduling"
+          />
           <div v-else />
 
           <div class="flex gap-2">
-            <UButton color="neutral" variant="outline" label="Cancel" @click="open = false" />
+            <UButton
+              color="neutral"
+              variant="outline"
+              :label="isRescheduling && existingReservation ? 'Keep Current Reservation' : 'Cancel'"
+              @click="handleCancelRescheduling"
+            />
             <UButton
               v-if="currentStep < 3"
               color="primary"
@@ -478,6 +521,17 @@ const startRescheduling = () => {
   selectedSlot.value = null
   confirmedReservation.value = null
   loadAvailability()
+}
+
+const handleCancelRescheduling = () => {
+  if (isRescheduling.value && props.existingReservation) {
+    isRescheduling.value = false
+    currentStep.value = 1
+    selectedBlockId.value = ''
+    selectedSlot.value = null
+  } else {
+    open.value = false
+  }
 }
 
 const handleConfirmBooking = async () => {
