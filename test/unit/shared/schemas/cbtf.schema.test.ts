@@ -10,7 +10,9 @@ import {
   proctorCheckOutInputSchema,
   cbtfAvailabilityQuerySchema,
   cbtfReservationRowSchema,
-  createReservationNoteInputSchema
+  createReservationNoteInputSchema,
+  searchUserByEmailSchema,
+  grantProctorRoleInputSchema
 } from '../../../../shared/schemas/cbtf.schema'
 import { userRowSchema } from '../../../../shared/models/user'
 import {
@@ -302,6 +304,33 @@ describe('CBTF Shared Schemas', () => {
       }
       const result = createReservationNoteInputSchema.safeParse(invalid)
       expect(result.success).toBe(false)
+    })
+  })
+
+  describe('searchUserByEmailSchema', () => {
+    it('validates a valid email address and normalizes it', () => {
+      const valid = { email: ' PROCTOR@EXAMPLE.COM ' }
+      const result = searchUserByEmailSchema.safeParse(valid)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.email).toBe('proctor@example.com')
+      }
+    })
+
+    it('rejects invalid email addresses', () => {
+      expect(searchUserByEmailSchema.safeParse({ email: 'not-an-email' }).success).toBe(false)
+      expect(searchUserByEmailSchema.safeParse({ email: '' }).success).toBe(false)
+    })
+  })
+
+  describe('grantProctorRoleInputSchema', () => {
+    it('validates valid userId', () => {
+      const valid = { userId: 'clh123456789' }
+      expect(grantProctorRoleInputSchema.safeParse(valid).success).toBe(true)
+    })
+
+    it('rejects empty userId', () => {
+      expect(grantProctorRoleInputSchema.safeParse({ userId: '' }).success).toBe(false)
     })
   })
 })

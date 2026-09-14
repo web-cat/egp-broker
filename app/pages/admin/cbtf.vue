@@ -163,12 +163,7 @@
         <p class="text-sm text-neutral-600 dark:text-neutral-400">
           Staff coverage and proctor shift scheduling.
         </p>
-        <UButton
-          color="primary"
-          icon="i-lucide-plus"
-          label="Add Shift"
-          @click="showShiftModal = true"
-        />
+        <UButton color="primary" icon="i-lucide-plus" label="Add Shift" @click="openShiftModal" />
       </div>
 
       <BaseDataTable
@@ -293,12 +288,103 @@
     <UModal v-model:open="showShiftModal" title="Schedule Proctor Shift">
       <template #body>
         <div class="space-y-4">
-          <BaseFormInput
-            v-model="shiftForm.userId"
-            name="userId"
-            label="Proctor User ID"
-            placeholder="Enter user cuid..."
-          />
+          <UFormField label="Proctor" required>
+            <USelect
+              v-model="selectedProctorId"
+              :items="proctorOptions"
+              placeholder="Select a proctor..."
+              class="w-full"
+            />
+          </UFormField>
+
+          <!-- Add Proctor Section when '+ Add New Proctor...' selected -->
+          <div
+            v-if="selectedProctorId === ADD_PROCTOR_VALUE"
+            class="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 p-3 space-y-3"
+          >
+            <div class="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+              Add New Proctor
+            </div>
+            <div class="flex gap-2">
+              <UInput
+                v-model="proctorSearchEmail"
+                type="email"
+                placeholder="Enter user email..."
+                class="flex-1"
+                @keydown.enter.prevent="handleSearchProctor"
+              />
+              <UButton
+                label="Search"
+                icon="i-lucide-search"
+                color="primary"
+                variant="subtle"
+                :loading="isSearchingProctor"
+                @click="handleSearchProctor"
+              />
+            </div>
+
+            <p v-if="proctorSearchError" class="text-xs text-error-500">
+              {{ proctorSearchError }}
+            </p>
+
+            <div
+              v-if="foundUser"
+              class="rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-3 space-y-2"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium">
+                    {{ foundUser.firstName }} {{ foundUser.lastName }}
+                  </p>
+                  <p class="text-xs text-neutral-500">
+                    {{ foundUser.email }} • Current Role:
+                    <span class="font-semibold">{{ foundUser.globalRole }}</span>
+                  </p>
+                </div>
+                <UBadge v-if="foundUser.globalRole === 'PROCTOR'" color="success" size="xs">
+                  Already Proctor
+                </UBadge>
+              </div>
+
+              <!-- Already a proctor -->
+              <div v-if="foundUser.globalRole === 'PROCTOR'" class="pt-2 flex justify-end">
+                <UButton
+                  size="xs"
+                  color="primary"
+                  label="Select This Proctor"
+                  @click="handleSelectFoundProctor"
+                />
+              </div>
+
+              <!-- Confirmation to grant proctor role -->
+              <div
+                v-else
+                class="pt-2 border-t border-neutral-200 dark:border-neutral-700 space-y-2"
+              >
+                <p class="text-xs text-neutral-600 dark:text-neutral-300">
+                  Grant <strong>{{ foundUser.firstName }} {{ foundUser.lastName }}</strong> the
+                  <strong>PROCTOR</strong> role?
+                </p>
+                <div class="flex justify-end gap-2">
+                  <UButton
+                    label="Cancel"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    @click="resetProctorSearch"
+                  />
+                  <UButton
+                    label="Grant Proctor Role"
+                    color="primary"
+                    size="xs"
+                    :loading="isGrantingRole"
+                    @click="handleConfirmGrantProctor"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <BaseFormInput
             v-model="shiftForm.startTime"
             name="startTime"
@@ -321,7 +407,12 @@
             label="Cancel"
             @click="showShiftModal = false"
           />
-          <UButton color="primary" label="Create Shift" @click="handleSaveShift" />
+          <UButton
+            color="primary"
+            label="Create Shift"
+            :disabled="!shiftForm.userId || !shiftForm.startTime || !shiftForm.endTime"
+            @click="handleSaveShift"
+          />
         </div>
       </template>
     </UModal>
@@ -340,6 +431,9 @@ const {
   shifts,
   reservations,
   refreshReservations,
+  proctors,
+  searchUserByEmail,
+  grantProctorRole,
   saveFacility,
   upsertOperatingHours,
   deleteOperatingHours,
@@ -558,6 +652,96 @@ const shiftForm = reactive({
   endTime: ''
 })
 
+const ADD_PROCTOR_VALUE = '__ADD_PROCTOR__'
+
+const proctorOptions = computed(() => {
+  const options = proctors.value.map((p: any) => ({
+    label: `${p.firstName || ''} ${p.lastName || ''} (${p.email})`.trim(),
+    value: p.id
+  }))
+  options.push({
+    label: '+ Add New Proctor...',
+    value: ADD_PROCTOR_VALUE
+  })
+  return options
+})
+
+const selectedProctorId = ref('')
+const proctorSearchEmail = ref('')
+const isSearchingProctor = ref(false)
+const isGrantingRole = ref(false)
+const proctorSearchError = ref('')
+const foundUser = ref<any | null>(null)
+
+watch(selectedProctorId, (val) => {
+  if (val && val !== ADD_PROCTOR_VALUE) {
+    shiftForm.userId = val
+  } else if (val === ADD_PROCTOR_VALUE) {
+    shiftForm.userId = ''
+  }
+})
+
+const resetProctorSearch = () => {
+  proctorSearchEmail.value = ''
+  proctorSearchError.value = ''
+  foundUser.value = null
+  isSearchingProctor.value = false
+  isGrantingRole.value = false
+}
+
+const openShiftModal = () => {
+  selectedProctorId.value = ''
+  shiftForm.userId = ''
+  shiftForm.startTime = ''
+  shiftForm.endTime = ''
+  resetProctorSearch()
+  showShiftModal.value = true
+}
+
+watch(showShiftModal, (open) => {
+  if (!open) {
+    resetProctorSearch()
+  }
+})
+
+const handleSearchProctor = async () => {
+  if (!proctorSearchEmail.value.trim()) return
+  proctorSearchError.value = ''
+  foundUser.value = null
+  isSearchingProctor.value = true
+  try {
+    const user = await searchUserByEmail(proctorSearchEmail.value.trim())
+    foundUser.value = user
+  } catch (err: any) {
+    proctorSearchError.value =
+      err.data?.statusMessage || err.data?.message || 'No user found with that email address.'
+  } finally {
+    isSearchingProctor.value = false
+  }
+}
+
+const handleSelectFoundProctor = () => {
+  if (!foundUser.value) return
+  selectedProctorId.value = foundUser.value.id
+  shiftForm.userId = foundUser.value.id
+  resetProctorSearch()
+}
+
+const handleConfirmGrantProctor = async () => {
+  if (!foundUser.value) return
+  isGrantingRole.value = true
+  try {
+    const updated = await grantProctorRole(foundUser.value.id)
+    selectedProctorId.value = updated.id
+    shiftForm.userId = updated.id
+    resetProctorSearch()
+  } catch {
+    // Error handled in composable toast
+  } finally {
+    isGrantingRole.value = false
+  }
+}
+
 const shiftColumns: any[] = [
   {
     accessorKey: 'proctor',
@@ -601,9 +785,11 @@ const handleSaveShift = async () => {
     endTime: new Date(shiftForm.endTime).toISOString()
   })
   showShiftModal.value = false
+  selectedProctorId.value = ''
   shiftForm.userId = ''
   shiftForm.startTime = ''
   shiftForm.endTime = ''
+  resetProctorSearch()
 }
 
 // --- Reservations Table ---

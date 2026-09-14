@@ -22,9 +22,16 @@ export function useCbtfAdmin() {
     refresh: refreshReservations
   } = useFetch<ApiResponse<CbtfReservationDto[]>>('/api/admin/cbtf/reservations')
 
+  const {
+    data: proctorsData,
+    status: proctorsStatus,
+    refresh: refreshProctors
+  } = useFetch<ApiResponse<any[]>>('/api/admin/cbtf/proctors')
+
   const facility = computed(() => facilityData.value?.data)
   const shifts = computed(() => shiftsData.value?.data || [])
   const reservations = computed(() => reservationsData.value?.data || [])
+  const proctors = computed(() => proctorsData.value?.data || [])
 
   const saveFacility = async (payload: {
     name?: string
@@ -218,6 +225,48 @@ export function useCbtfAdmin() {
     }
   }
 
+  const searchUserByEmail = async (email: string) => {
+    try {
+      const res = await $fetch<ApiResponse<any>>(
+        `/api/admin/cbtf/proctors/search?email=${encodeURIComponent(email.trim().toLowerCase())}`
+      )
+      return res.data
+    } catch (err: any) {
+      const msg =
+        err.data?.message || err.data?.statusMessage || err.message || 'Failed to search user'
+      toast.add({
+        title: 'User Search Failed',
+        description: msg,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
+  const grantProctorRole = async (userId: string) => {
+    try {
+      const res = await $fetch<ApiResponse<any>>('/api/admin/cbtf/proctors', {
+        method: 'POST',
+        body: { userId }
+      })
+      toast.add({
+        title: 'Proctor Role Granted',
+        description:
+          `Successfully granted proctor role to ${res.data?.firstName || ''} ${res.data?.lastName || ''}`.trim(),
+        color: 'success'
+      })
+      await refreshProctors()
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Grant Proctor Role',
+        description: err.data?.message || err.data?.statusMessage || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
   return {
     facility,
     facilityStatus,
@@ -228,6 +277,11 @@ export function useCbtfAdmin() {
     reservations,
     reservationsStatus,
     refreshReservations,
+    proctors,
+    proctorsStatus,
+    refreshProctors,
+    searchUserByEmail,
+    grantProctorRole,
     saveFacility,
     upsertOperatingHours,
     deleteOperatingHours,

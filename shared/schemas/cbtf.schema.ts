@@ -169,3 +169,15 @@ export const createReservationNoteInputSchema = z
   })
 
 export type CreateReservationNoteInput = z.infer<typeof createReservationNoteInputSchema>
+
+export const searchUserByEmailSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Please enter a valid email address')
+})
+
+export type SearchUserByEmailInput = z.infer<typeof searchUserByEmailSchema>
+
+export const grantProctorRoleInputSchema = z.object({
+  userId: z.string().min(1, 'User ID is required')
+})
+
+export type GrantProctorRoleInput = z.infer<typeof grantProctorRoleInputSchema>
