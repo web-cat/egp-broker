@@ -599,6 +599,7 @@ model AssignmentOverrideStudent {
 enum CbtfReservationStatus {
   SCHEDULED
   CHECKED_IN
+  CHECKED_OUT
   COMPLETED
   MISSED
   CANCELLED

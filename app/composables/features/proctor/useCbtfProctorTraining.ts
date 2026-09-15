@@ -65,9 +65,10 @@ export function useCbtfProctorTraining() {
 
   const seated = ref<FictionalReservation[]>([])
   const arriving = ref<FictionalReservation[]>([])
-  const departures = ref<FictionalReservation[]>([])
+  const checkedOutList = ref<FictionalReservation[]>([])
 
   const feedStatus = ref('success')
+  const feedError = ref<any>(null)
   const refreshFeed = async () => {
     // In-memory noop to satisfy interface
   }
@@ -205,7 +206,7 @@ export function useCbtfProctorTraining() {
       }
     ]
 
-    departures.value = []
+    checkedOutList.value = []
     activeArrivalIndex.value = 0
     isMismatchNext.value = false
     lookupResult.value = null
@@ -214,6 +215,14 @@ export function useCbtfProctorTraining() {
 
   // Initialize initial scenario
   buildInitialScenario()
+
+  // Departures: Seated students with <= 10 min remaining (Ending Soon) or checked out
+  const departures = computed<FictionalReservation[]>(() => {
+    const endingSoon = seated.value.filter(
+      (r) => typeof r.remainingMinutes === 'number' && r.remainingMinutes <= 10
+    )
+    return [...checkedOutList.value, ...endingSoon]
+  })
 
   // Computed KPIs
   const counts = computed(() => ({
@@ -464,9 +473,9 @@ export function useCbtfProctorTraining() {
         status: 'CHECKED_OUT'
       }
 
-      // Remove from seated, add to departures
+      // Remove from seated, add to checked-out list
       seated.value.splice(seatedIdx, 1)
-      departures.value.unshift(departedReservation)
+      checkedOutList.value.unshift(departedReservation)
 
       lastAction.value = {
         message: `Checked out ${target.studentName}. RETURN student ID to student.`,
@@ -570,6 +579,7 @@ export function useCbtfProctorTraining() {
     arriving,
     departures,
     feedStatus,
+    feedError,
     refreshFeed,
     lookupResult,
     lookupLoading,

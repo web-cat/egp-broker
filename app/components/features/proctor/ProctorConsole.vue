@@ -192,6 +192,21 @@
       </div>
     </div>
 
+    <!-- Live Feed Connection Error Banner -->
+    <UAlert
+      v-if="feedError"
+      icon="i-lucide-alert-circle"
+      color="error"
+      variant="subtle"
+      title="Live Feed Connection Error"
+      :description="
+        feedError.data?.message ||
+        feedError.message ||
+        'Unable to retrieve live testing facility data from server.'
+      "
+      class="mb-2"
+    />
+
     <!-- Last Action Feedback Banner -->
     <div
       v-if="lastAction"
@@ -599,6 +614,7 @@ const activeTargetStudent = computed(() => unwrapState<any>(props.proctorState.a
 const activeArrivalIndex = computed(() =>
   unwrapState<number>(props.proctorState.activeArrivalIndex)
 )
+const feedError = computed(() => unwrapState<any>(props.proctorState.feedError))
 
 const activeFeedTab = ref('arriving')
 const rawSwipeInput = ref('')

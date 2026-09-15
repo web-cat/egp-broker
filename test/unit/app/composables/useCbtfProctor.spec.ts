@@ -27,11 +27,18 @@ const mockFeedData = ref({
 const mockRefreshStatus = vi.fn()
 const mockRefreshFeed = vi.fn()
 
+const mockFeedError = ref<any>(null)
+
 vi.stubGlobal('useFetch', (url: string) => {
   if (url === '/api/proctor/status') {
-    return { data: mockStatusData, status: ref('idle'), refresh: mockRefreshStatus }
+    return {
+      data: mockStatusData,
+      status: ref('idle'),
+      error: ref(null),
+      refresh: mockRefreshStatus
+    }
   }
-  return { data: mockFeedData, status: ref('idle'), refresh: mockRefreshFeed }
+  return { data: mockFeedData, status: ref('idle'), error: mockFeedError, refresh: mockRefreshFeed }
 })
 
 const mockFetch = vi.fn()
@@ -41,16 +48,18 @@ describe('useCbtfProctor Composable', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockStatusData.value = { data: { isOnDuty: false } }
+    mockFeedError.value = null
   })
 
-  it('computes feed rosters and counts', () => {
-    const { seated, arriving, counts, facility, isOnDuty } = useCbtfProctor()
+  it('computes feed rosters and counts and exposes feedError', () => {
+    const { seated, arriving, counts, facility, isOnDuty, feedError } = useCbtfProctor()
 
     expect(isOnDuty.value).toBe(false)
     expect(facility.value?.name).toBe('Main CBTF')
     expect(counts.value.seated).toBe(1)
     expect(seated.value.length).toBe(1)
     expect(arriving.value.length).toBe(1)
+    expect(feedError.value).toBeNull()
   })
 
   it('toggles duty status', async () => {

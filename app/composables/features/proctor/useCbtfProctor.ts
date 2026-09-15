@@ -11,6 +11,7 @@ export function useCbtfProctor() {
   const {
     data: feedData,
     status: feedStatus,
+    error: feedError,
     refresh: refreshFeed
   } = useFetch<ApiResponse<any>>('/api/proctor/feed', {
     key: 'cbtf-proctor-feed',
@@ -255,6 +256,7 @@ export function useCbtfProctor() {
     arriving,
     departures,
     feedStatus,
+    feedError,
     refreshFeed,
     lookupResult,
     lookupLoading,

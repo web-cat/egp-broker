@@ -11,6 +11,7 @@ export const cbtfTimeRegex = /^([01]\d|2[0-3]):[0-5]\d$/
 export const cbtfReservationStatusEnum = z.enum([
   'SCHEDULED',
   'CHECKED_IN',
+  'CHECKED_OUT',
   'COMPLETED',
   'MISSED',
   'CANCELLED'

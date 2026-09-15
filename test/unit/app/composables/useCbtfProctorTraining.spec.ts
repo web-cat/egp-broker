@@ -18,11 +18,12 @@ describe('useCbtfProctorTraining Composable', () => {
     expect(training.facility.value.totalSeats).toBe(48)
     expect(training.seated.value.length).toBe(2)
     expect(training.arriving.value.length).toBe(3)
-    expect(training.departures.value.length).toBe(0)
+    expect(training.departures.value.length).toBe(1)
+    expect(training.departures.value[0].studentName).toBe('Aaliyah Patel')
     expect(training.counts.value).toEqual({
       seated: 2,
       arriving: 3,
-      departures: 0
+      departures: 1
     })
     expect(training.isOnDuty.value).toBe(true)
     expect(training.isMismatchNext.value).toBe(false)
@@ -137,9 +138,12 @@ describe('useCbtfProctorTraining Composable', () => {
     await training.confirmCheckOut(seatedStudent.id)
 
     expect(training.seated.value.length).toBe(1)
-    expect(training.departures.value.length).toBe(1)
+    // departures has checkedOut (David Chen) + endingSoon (Aaliyah Patel)
+    expect(training.departures.value.length).toBe(2)
     expect(training.counts.value.seated).toBe(1)
-    expect(training.counts.value.departures).toBe(1)
+    expect(training.counts.value.departures).toBe(2)
+    expect(training.departures.value[0].status).toBe('CHECKED_OUT')
+    expect(training.departures.value[1].status).toBe('CHECKED_IN')
     expect(training.lastAction.value?.type).toBe('checkout')
     expect(training.lastAction.value?.message).toContain('RETURN student ID')
     expect(mockToast.add).toHaveBeenCalledWith(
@@ -191,15 +195,15 @@ describe('useCbtfProctorTraining Composable', () => {
 
     expect(training.seated.value.length).toBe(2)
     expect(training.arriving.value.length).toBe(2)
-    expect(training.departures.value.length).toBe(1)
+    expect(training.departures.value.length).toBe(2) // 1 checked out + 1 ending soon
 
     // Now reset
     training.resetScenario()
 
     expect(training.seated.value.length).toBe(2)
     expect(training.arriving.value.length).toBe(3)
-    expect(training.departures.value.length).toBe(0)
-    expect(training.counts.value).toEqual({ seated: 2, arriving: 3, departures: 0 })
+    expect(training.departures.value.length).toBe(1)
+    expect(training.counts.value).toEqual({ seated: 2, arriving: 3, departures: 1 })
     expect(training.activeArrivalIndex.value).toBe(0)
     expect(training.isMismatchNext.value).toBe(false)
     expect(training.lastAction.value).toBeNull()

@@ -14,7 +14,8 @@ import {
   searchUserByEmailSchema,
   grantProctorRoleInputSchema,
   cbtfBatchGenerateShiftsSchema,
-  cbtfUpdateProctorShiftInputSchema
+  cbtfUpdateProctorShiftInputSchema,
+  cbtfReservationStatusEnum
 } from '../../../../shared/schemas/cbtf.schema'
 import { userRowSchema } from '../../../../shared/models/user'
 import {
@@ -201,6 +202,48 @@ describe('CBTF Shared Schemas', () => {
         checkedOutByUserId: null
       }
       expect(cbtfReservationRowSchema.safeParse(row).success).toBe(true)
+    })
+
+    it('validates reservation row with CHECKED_OUT status', () => {
+      const row = {
+        id: 'res-2',
+        facilityId: 'fac-1',
+        assignmentId: 'asg-1',
+        assignmentTitle: 'Midterm 1',
+        userId: 'usr-2',
+        studentName: 'Checked Out Student',
+        studentId: '906000002',
+        studentAvatarUrl: null,
+        seatNumber: 14,
+        startTime: '2026-09-15T09:00:00.000Z',
+        endTime: '2026-09-15T10:00:00.000Z',
+        status: 'CHECKED_OUT' as const,
+        checkedInAt: '2026-09-15T08:58:00.000Z',
+        checkedOutAt: '2026-09-15T09:55:00.000Z',
+        checkedInByUserId: 'usr-p1',
+        checkedOutByUserId: 'usr-p1'
+      }
+      expect(cbtfReservationRowSchema.safeParse(row).success).toBe(true)
+    })
+  })
+
+  describe('cbtfReservationStatusEnum', () => {
+    it('accepts all expected statuses including CHECKED_OUT', () => {
+      const statuses = [
+        'SCHEDULED',
+        'CHECKED_IN',
+        'CHECKED_OUT',
+        'COMPLETED',
+        'MISSED',
+        'CANCELLED'
+      ]
+      for (const s of statuses) {
+        expect(cbtfReservationStatusEnum.safeParse(s).success).toBe(true)
+      }
+    })
+
+    it('rejects invalid status', () => {
+      expect(cbtfReservationStatusEnum.safeParse('UNKNOWN_STATUS').success).toBe(false)
     })
   })
 
