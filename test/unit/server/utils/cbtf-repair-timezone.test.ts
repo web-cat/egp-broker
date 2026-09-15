@@ -89,9 +89,11 @@ describe('CBTF Timezone Repair & Reseat (cbtf-repair-timezone)', () => {
         canvasAssignmentId: 'canvas-asg-1',
         course: {
           canvasCourseId: 'canvas-course-1',
-          platform: {
-            id: 'plat-1',
-            apiUrl: 'https://canvas.example.com/api/v1'
+          deployment: {
+            platform: {
+              id: 'plat-1',
+              apiUrl: 'https://canvas.example.com/api/v1'
+            }
           }
         }
       }

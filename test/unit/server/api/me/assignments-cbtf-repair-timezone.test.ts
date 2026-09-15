@@ -42,14 +42,23 @@ describe('POST /api/me/assignments/:id/cbtf-repair-timezone', () => {
     })
   })
 
-  it('throws 403 when user is not an administrator', async () => {
+  it('throws 403 when user is neither an administrator nor enrolled as course teacher', async () => {
     vi.stubGlobal('getUserSession', () =>
-      Promise.resolve({ user: { id: 'teacher-1', globalRole: 'USER' } })
+      Promise.resolve({ user: { id: 'user-1', globalRole: 'USER' } })
     )
+    vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+      id: 'asg-1',
+      courseId: 'course-1',
+      isSchedulable: true
+    } as any)
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'user-1',
+      enrollments: []
+    } as any)
 
     await expect(handler({} as any)).rejects.toMatchObject({
       statusCode: 403,
-      statusMessage: 'Forbidden: Administrator privileges required'
+      statusMessage: 'Forbidden: Administrator or course teacher privileges required'
     })
   })
 

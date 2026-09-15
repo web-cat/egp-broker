@@ -15,13 +15,6 @@ export default defineEventHandler(
       })
     }
 
-    if (session.user.globalRole !== 'ADMIN') {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Forbidden: Administrator privileges required'
-      })
-    }
-
     const id = getRouterParam(event, 'id')
     if (!id) {
       throw createError({
@@ -46,6 +39,24 @@ export default defineEventHandler(
       throw createError({
         statusCode: 400,
         statusMessage: 'Assignment is not configured for CBTF scheduling'
+      })
+    }
+
+    // Check if caller is teacher/admin in the course or global admin
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: {
+        enrollments: {
+          where: { courseId: assignment.courseId, role: { in: ['TEACHER', 'ADMIN'] } }
+        }
+      }
+    })
+
+    const isAuthorized = (user?.enrollments.length ?? 0) > 0 || session.user.globalRole === 'ADMIN'
+    if (!isAuthorized) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden: Administrator or course teacher privileges required'
       })
     }
 

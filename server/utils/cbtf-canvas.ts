@@ -1004,7 +1004,11 @@ export async function repairAssignmentCbtfTimezones(
       tool: true,
       course: {
         include: {
-          platform: true
+          deployment: {
+            include: {
+              platform: true
+            }
+          }
         }
       }
     }
@@ -1025,8 +1029,8 @@ export async function repairAssignmentCbtfTimezones(
   }
 
   const course = assignment.course
-  const platform = course.platform
-  const canvasCourseId = course.canvasCourseId
+  const platform = course?.deployment?.platform
+  const canvasCourseId = course?.canvasCourseId
   const canvasAssignmentId = assignment.canvasAssignmentId
 
   const reservations = await prisma.cbtfReservation.findMany({
@@ -1058,10 +1062,22 @@ export async function repairAssignmentCbtfTimezones(
     }
   }
 
-  const instructorApiKey = await findInstructorCanvasApiKey(assignment.courseId, null, platform.id)
+  let instructorApiKey: string | null = null
+  if (platform?.id) {
+    try {
+      instructorApiKey = await findInstructorCanvasApiKey(
+        assignment.courseId,
+        null,
+        platform.id,
+        _adminUserId
+      )
+    } catch (keyErr) {
+      console.warn('Could not find instructor Canvas API key during repair:', keyErr)
+    }
+  }
 
   let existingOverrides: any[] = []
-  if (canvasCourseId && canvasAssignmentId && instructorApiKey) {
+  if (platform && canvasCourseId && canvasAssignmentId && instructorApiKey) {
     try {
       existingOverrides = await fetchCanvasAssignmentOverrides(
         platform,
