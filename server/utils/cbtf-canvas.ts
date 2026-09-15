@@ -550,7 +550,7 @@ export async function resyncAssignmentCbtfOverrides(
         }
       }
     },
-    orderBy: { startTime: 'asc' }
+    orderBy: [{ startTime: 'asc' }, { createdAt: 'asc' }]
   })
 
   if (reservations.length === 0) {
@@ -610,6 +610,7 @@ export async function resyncAssignmentCbtfOverrides(
           : new Date(reservation.createdAt)
         : null
 
+      let timesChanged = false
       if (reservationCreatedAt && reservationCreatedAt < PRE_TIMEZONE_FIX_CUTOFF) {
         const facilityTimezone = reservation.facility?.timezone || DEFAULT_CBTF_TIMEZONE
         const rawDateStr = `${reservation.startTime.getUTCFullYear()}-${String(reservation.startTime.getUTCMonth() + 1).padStart(2, '0')}-${String(reservation.startTime.getUTCDate()).padStart(2, '0')}`
@@ -642,65 +643,81 @@ export async function resyncAssignmentCbtfOverrides(
             continue
           }
 
-          // Check for seat availability at the intended time slot
-          const overlappingReservations = await prisma.cbtfReservation.findMany({
-            where: {
-              facilityId: reservation.facilityId,
-              status: { not: 'CANCELLED' },
-              id: { not: reservation.id },
-              startTime: { lt: intendedEnd },
-              endTime: { gt: intendedStart }
-            },
-            select: {
-              seatNumber: true
-            }
-          })
-
-          const isCurrentSeatOccupied = overlappingReservations.some(
-            (r) => r.seatNumber === reservation.seatNumber
-          )
-
-          let targetSeatNumber = reservation.seatNumber
-          if (isCurrentSeatOccupied) {
-            const seatOrder: number[] = Array.isArray(reservation.facility?.seatAllocationOrder)
-              ? (reservation.facility.seatAllocationOrder as number[])
-              : []
-
-            try {
-              targetSeatNumber = assignNextSeat(
-                seatOrder,
-                intendedStart,
-                intendedEnd,
-                overlappingReservations
-              )
-              seatsReassigned++
-            } catch {
-              conflicts++
-              details.push({
-                reservationId: reservation.id,
-                studentName,
-                status: 'conflict',
-                message:
-                  'Facility is at maximum capacity at intended slot; reservation could not be shifted'
-              })
-              continue
-            }
-          }
-
-          // Update reservation with shifted times and resolved seat
-          await prisma.cbtfReservation.update({
-            where: { id: reservation.id },
-            data: {
-              startTime: intendedStart,
-              endTime: intendedEnd,
-              seatNumber: targetSeatNumber
-            }
-          })
-
           reservation.startTime = intendedStart
           reservation.endTime = intendedEnd
-          reservation.seatNumber = targetSeatNumber
+          timesChanged = true
         }
+      }
+
+      // 1. Adjust seat assignments based on current seating order where feasible (without collisions)
+      const seatOrder: number[] = Array.isArray(reservation.facility?.seatAllocationOrder)
+        ? (reservation.facility.seatAllocationOrder as number[])
+        : []
+
+      let targetSeatNumber = reservation.seatNumber
+      let seatChanged = false
+
+      if (seatOrder.length > 0) {
+        const overlappingReservations = await prisma.cbtfReservation.findMany({
+          where: {
+            facilityId: reservation.facilityId,
+            status: { not: 'CANCELLED' },
+            id: { not: reservation.id },
+            startTime: { lt: reservation.endTime },
+            endTime: { gt: reservation.startTime }
+          },
+          select: {
+            seatNumber: true
+          }
+        })
+
+        const isCurrentSeatOccupied = overlappingReservations.some(
+          (r) => r.seatNumber === reservation.seatNumber
+        )
+
+        try {
+          const optimalSeat = assignNextSeat(
+            seatOrder,
+            reservation.startTime,
+            reservation.endTime,
+            overlappingReservations
+          )
+
+          // If current seat is occupied (collision) or suboptimal under current seating order,
+          // adopt optimalSeat if it is free and does not cause a collision
+          if (isCurrentSeatOccupied || optimalSeat !== reservation.seatNumber) {
+            targetSeatNumber = optimalSeat
+            seatChanged = targetSeatNumber !== reservation.seatNumber
+          }
+        } catch {
+          if (isCurrentSeatOccupied) {
+            conflicts++
+            details.push({
+              reservationId: reservation.id,
+              studentName,
+              status: 'conflict',
+              message:
+                'Facility is at maximum capacity at intended slot; reservation could not be shifted'
+            })
+            continue
+          }
+        }
+      }
+
+      if (timesChanged || seatChanged) {
+        await prisma.cbtfReservation.update({
+          where: { id: reservation.id },
+          data: {
+            startTime: reservation.startTime,
+            endTime: reservation.endTime,
+            seatNumber: targetSeatNumber
+          }
+        })
+
+        if (seatChanged) {
+          seatsReassigned++
+        }
+        reservation.seatNumber = targetSeatNumber
       }
 
       // Resolve student's Canvas user ID
