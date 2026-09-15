@@ -4,7 +4,16 @@ import reservationsGet from '../../../../../server/api/me/cbtf/reservations.get'
 import reservationsPost from '../../../../../server/api/me/cbtf/reservations.post'
 import reservationPatch from '../../../../../server/api/me/cbtf/reservations/[id].patch'
 import reservationDelete from '../../../../../server/api/me/cbtf/reservations/[id].delete'
+import {
+  notifyCbtfScheduleSuccess,
+  notifyCbtfScheduleFailure
+} from '@@/server/services/alert.service'
 import prisma from '@@/server/utils/db'
+
+vi.mock('@@/server/services/alert.service', () => ({
+  notifyCbtfScheduleSuccess: vi.fn().mockResolvedValue(true),
+  notifyCbtfScheduleFailure: vi.fn().mockResolvedValue(true)
+}))
 
 vi.mock('@@/server/utils/db', () => ({
   default: {
@@ -317,6 +326,15 @@ describe('API: CBTF Student Reservation Endpoints', () => {
           statusMessage: expect.stringContaining('Arrival capacity reached')
         })
       )
+
+      expect(notifyCbtfScheduleFailure).toHaveBeenCalledWith(
+        expect.objectContaining({
+          errorType: expect.stringContaining('409'),
+          errorMessage: expect.stringContaining('Arrival capacity reached'),
+          errorLocation: expect.stringContaining('reservations.post.ts'),
+          isReschedule: false
+        })
+      )
     })
 
     it('successfully books reservation and returns DTO with assigned seat', async () => {
@@ -333,15 +351,18 @@ describe('API: CBTF Student Reservation Endpoints', () => {
       vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
         id: 'clh1234567890123456789012',
         courseId: 'course-1',
+        title: 'Midterm 1',
         isSchedulable: true,
         scheduleWindowStart: new Date('2026-10-01T00:00:00.000Z'),
-        scheduleWindowEnd: new Date('2026-10-15T00:00:00.000Z')
+        scheduleWindowEnd: new Date('2026-10-15T00:00:00.000Z'),
+        course: { label: 'CS 1114', title: 'Intro to Programming' }
       } as any)
       vi.mocked(prisma.enrollment.findFirst).mockResolvedValue({ id: 'enr-1' } as any)
       vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValue(null)
 
       vi.mocked(prisma.cbtfFacility.findFirst).mockResolvedValue({
         id: 'fac-1',
+        name: 'Main CBTF',
         totalSeats: 48,
         seatAllocationOrder: [1, 15, 29, 2]
       } as any)
@@ -382,6 +403,13 @@ describe('API: CBTF Student Reservation Endpoints', () => {
           data: expect.objectContaining({ seatNumber: 2 })
         })
       )
+      expect(notifyCbtfScheduleSuccess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assignmentTitle: 'Midterm 1',
+          seatNumber: 2,
+          isReschedule: false
+        })
+      )
     })
   })
 
@@ -401,6 +429,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
         status: 'MISSED',
         assignment: {
           id: 'asg-1',
+          title: 'Midterm 1',
           scheduleWindowStart: new Date('2026-10-01T00:00:00.000Z'),
           scheduleWindowEnd: new Date('2026-10-15T00:00:00.000Z')
         }
@@ -408,6 +437,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
 
       vi.mocked(prisma.cbtfFacility.findFirst).mockResolvedValue({
         id: 'fac-1',
+        name: 'Main CBTF',
         totalSeats: 48,
         seatAllocationOrder: [1, 2, 3]
       } as any)
@@ -443,6 +473,13 @@ describe('API: CBTF Student Reservation Endpoints', () => {
       expect(response.statusCode).toBe(200)
       expect(response.data.status).toBe('SCHEDULED')
       expect(response.data.startTime).toBe(newStartTime)
+      expect(notifyCbtfScheduleSuccess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assignmentTitle: 'Midterm 1',
+          seatNumber: 1,
+          isReschedule: true
+        })
+      )
     })
 
     it('rejects rescheduling when new start time is in the past', async () => {
@@ -461,6 +498,15 @@ describe('API: CBTF Student Reservation Endpoints', () => {
         expect.objectContaining({
           statusCode: 400,
           statusMessage: 'Cannot reschedule to a time slot in the past'
+        })
+      )
+
+      expect(notifyCbtfScheduleFailure).toHaveBeenCalledWith(
+        expect.objectContaining({
+          errorType: expect.stringContaining('400'),
+          errorMessage: 'Cannot reschedule to a time slot in the past',
+          errorLocation: expect.stringContaining('reservations/[id].patch.ts'),
+          isReschedule: true
         })
       )
     })

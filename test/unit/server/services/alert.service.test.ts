@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { sendAdminAlert, notifyPassRedemption } from '../../../../server/services/alert.service'
+import {
+  sendAdminAlert,
+  notifyPassRedemption,
+  notifyCbtfScheduleSuccess,
+  notifyCbtfScheduleFailure
+} from '../../../../server/services/alert.service'
 
 describe('Alert Service (ntfy)', () => {
   const mockFetch = vi.fn()
@@ -204,6 +209,124 @@ describe('Alert Service (ntfy)', () => {
 
       expect(result).toBe(true)
       expect(mockFetch).toHaveBeenCalled()
+    })
+  })
+
+  describe('notifyCbtfScheduleSuccess', () => {
+    it('formats and sends alert when student schedules CBTF exam slot', async () => {
+      vi.stubGlobal('useRuntimeConfig', () => ({
+        ntfy: {
+          serverUrl: 'https://ntfy.sh',
+          topic: 'egp-broker-admin',
+          token: ''
+        }
+      }))
+
+      mockFetch.mockResolvedValueOnce({ id: 'cbtf-1' })
+
+      const result = await notifyCbtfScheduleSuccess({
+        studentName: 'Alice Student',
+        studentEmail: 'alice@vt.edu',
+        studentId: '906000001',
+        assignmentTitle: 'Midterm 1',
+        courseLabel: 'CS 1114',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T11:00:00.000Z',
+        seatNumber: 12,
+        facilityName: 'Main CBTF'
+      })
+
+      expect(result).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-admin', {
+        method: 'POST',
+        body: expect.stringContaining(
+          'Alice Student <alice@vt.edu> [ID: 906000001] scheduled a CBTF exam slot for "Midterm 1" in CS 1114.'
+        ),
+        headers: expect.objectContaining({
+          Title: 'CBTF Slot Scheduled: Midterm 1',
+          Priority: 'default',
+          Tags: 'calendar,cbtf,white_check_mark'
+        })
+      })
+    })
+
+    it('formats reschedule action when isReschedule is true', async () => {
+      vi.stubGlobal('useRuntimeConfig', () => ({
+        ntfy: {
+          serverUrl: 'https://ntfy.sh',
+          topic: 'egp-broker-admin',
+          token: ''
+        }
+      }))
+
+      mockFetch.mockResolvedValueOnce({ id: 'cbtf-2' })
+
+      const result = await notifyCbtfScheduleSuccess({
+        studentEmail: 'bob@vt.edu',
+        assignmentTitle: 'Final Exam',
+        startTime: '2026-10-06T14:00:00.000Z',
+        isReschedule: true
+      })
+
+      expect(result).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-admin', {
+        method: 'POST',
+        body: expect.stringContaining(
+          '<bob@vt.edu> rescheduled a CBTF exam slot for "Final Exam".'
+        ),
+        headers: expect.objectContaining({
+          Title: 'CBTF Slot Rescheduled: Final Exam',
+          Priority: 'default'
+        })
+      })
+    })
+  })
+
+  describe('notifyCbtfScheduleFailure', () => {
+    it('formats and sends high-priority alert with error type, message, and location', async () => {
+      vi.stubGlobal('useRuntimeConfig', () => ({
+        ntfy: {
+          serverUrl: 'https://ntfy.sh',
+          topic: 'egp-broker-admin',
+          token: ''
+        }
+      }))
+
+      mockFetch.mockResolvedValueOnce({ id: 'err-1' })
+
+      const result = await notifyCbtfScheduleFailure({
+        studentName: 'Charlie Brown',
+        studentEmail: 'charlie@vt.edu',
+        studentId: '906000002',
+        assignmentTitle: 'Quiz 3',
+        courseLabel: 'CS 2114',
+        timeSlot: '2026-10-05T10:00:00.000Z',
+        errorType: 'HTTP 409 (ConflictError)',
+        errorMessage: 'Arrival capacity reached for this 5-minute time slot (maximum 4 arrivals)',
+        errorLocation: 'server/api/me/cbtf/reservations.post.ts (Arrival Throttle Limit Check)',
+        isReschedule: false
+      })
+
+      expect(result).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-admin', {
+        method: 'POST',
+        body: expect.stringContaining(
+          'Failed CBTF schedule attempt by Charlie Brown <charlie@vt.edu> [ID: 906000002]\nAssignment: "Quiz 3" in CS 2114.'
+        ),
+        headers: expect.objectContaining({
+          Title: 'CBTF Scheduling Error: Quiz 3',
+          Priority: 'high',
+          Tags: 'warning,cbtf,x,rotating_light'
+        })
+      })
+
+      // Check details in message body
+      const callBody = mockFetch.mock.calls[0][1].body
+      expect(callBody).toContain('Error Type: HTTP 409 (ConflictError)')
+      expect(callBody).toContain('Message: Arrival capacity reached for this 5-minute time slot')
+      expect(callBody).toContain(
+        'Location: server/api/me/cbtf/reservations.post.ts (Arrival Throttle Limit Check)'
+      )
     })
   })
 })

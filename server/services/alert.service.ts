@@ -172,3 +172,99 @@ export async function notifyCbtfCanvasOverrideFailure(
     tags: ['warning', 'cbtf', 'canvas', 'rotating_light']
   })
 }
+
+export interface CbtfScheduleSuccessAlertData {
+  studentName?: string | null
+  studentEmail?: string | null
+  studentId?: string | null
+  assignmentTitle?: string | null
+  courseLabel?: string | null
+  startTime: string | Date
+  endTime?: string | Date | null
+  seatNumber?: number | null
+  facilityName?: string | null
+  isReschedule?: boolean
+}
+
+export interface CbtfScheduleFailureAlertData {
+  studentName?: string | null
+  studentEmail?: string | null
+  studentId?: string | null
+  assignmentTitle?: string | null
+  courseLabel?: string | null
+  timeSlot?: string | Date | null
+  errorType: string
+  errorMessage: string
+  errorLocation: string
+  isReschedule?: boolean
+}
+
+function formatStudentIdentity(data: {
+  studentName?: string | null
+  studentEmail?: string | null
+  studentId?: string | null
+}): string {
+  const parts: string[] = []
+  if (data.studentName) parts.push(data.studentName)
+  if (data.studentEmail) parts.push(`<${data.studentEmail}>`)
+  if (data.studentId) parts.push(`[ID: ${data.studentId}]`)
+
+  if (parts.length > 0) {
+    return parts.join(' ')
+  }
+  return 'A student'
+}
+
+function formatTimeSlot(start: string | Date, end?: string | Date | null): string {
+  const startStr = start instanceof Date ? start.toISOString() : String(start)
+  if (!end) return startStr
+  const endStr = end instanceof Date ? end.toISOString() : String(end)
+  return `${startStr} to ${endStr}`
+}
+
+/**
+ * Notify administrator about a successful CBTF reservation booking or reschedule.
+ */
+export async function notifyCbtfScheduleSuccess(
+  data: CbtfScheduleSuccessAlertData
+): Promise<boolean> {
+  const identity = formatStudentIdentity(data)
+  const slotStr = formatTimeSlot(data.startTime, data.endTime)
+  const action = data.isReschedule ? 'rescheduled' : 'scheduled'
+  const actionCapitalized = data.isReschedule ? 'Rescheduled' : 'Scheduled'
+  const assignment = data.assignmentTitle ? ` for "${data.assignmentTitle}"` : ''
+  const course = data.courseLabel ? ` in ${data.courseLabel}` : ''
+  const seat = data.seatNumber ? `\nSeat: #${data.seatNumber}` : ''
+  const facility = data.facilityName ? `\nFacility: ${data.facilityName}` : ''
+
+  const message = `${identity} ${action} a CBTF exam slot${assignment}${course}.\nTime: ${slotStr}${seat}${facility}`
+
+  return await sendAdminAlert({
+    title: `CBTF Slot ${actionCapitalized}: ${data.assignmentTitle || 'Exam'}`,
+    message,
+    priority: 'default',
+    tags: ['calendar', 'cbtf', 'white_check_mark']
+  })
+}
+
+/**
+ * Notify administrator about a failed CBTF reservation booking or reschedule attempt.
+ */
+export async function notifyCbtfScheduleFailure(
+  data: CbtfScheduleFailureAlertData
+): Promise<boolean> {
+  const identity = formatStudentIdentity(data)
+  const action = data.isReschedule ? 'reschedule' : 'schedule'
+  const slotInfo = data.timeSlot ? `\nRequested Slot: ${formatTimeSlot(data.timeSlot)}` : ''
+  const assignmentInfo = data.assignmentTitle ? `\nAssignment: "${data.assignmentTitle}"` : ''
+  const courseInfo = data.courseLabel ? ` in ${data.courseLabel}` : ''
+
+  const message = `Failed CBTF ${action} attempt by ${identity}${assignmentInfo}${courseInfo}.${slotInfo}\n\nError Type: ${data.errorType}\nMessage: ${data.errorMessage}\nLocation: ${data.errorLocation}`
+
+  return await sendAdminAlert({
+    title: `CBTF Scheduling Error: ${data.assignmentTitle || 'Reservation Failed'}`,
+    message,
+    priority: 'high',
+    tags: ['warning', 'cbtf', 'x', 'rotating_light']
+  })
+}
