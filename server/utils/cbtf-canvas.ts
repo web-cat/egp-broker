@@ -10,14 +10,7 @@ import {
 } from '@@/server/utils/canvas'
 import { notifyCbtfCanvasOverrideFailure } from '@@/server/services/alert.service'
 import type { ResyncCbtfOverridesResponse } from '@@/shared/schemas/cbtf.schema'
-import { assignNextSeat, combineDateAndTime, DEFAULT_CBTF_TIMEZONE } from '@@/server/utils/cbtf'
-
-/**
- * Cutoff timestamp for the timezone fix commit (2026-09-15 04:10 UTC).
- * Reservations created prior to this timestamp used naive UTC timestamps
- * which must be converted to the facility's local timezone.
- */
-export const PRE_TIMEZONE_FIX_CUTOFF = new Date('2026-09-15T04:10:00.000Z')
+import { assignNextSeat } from '@@/server/utils/cbtf'
 
 /**
  * Determines whether an assignment is a native Canvas assignment/quiz or uses
@@ -603,53 +596,7 @@ export async function resyncAssignmentCbtfOverrides(
         : reservation.user.firstName || reservation.user.email || 'Student'
 
     try {
-      // 0. Detect and repair pre-timezone-fix naive UTC reservation times
-      const reservationCreatedAt = reservation.createdAt
-        ? reservation.createdAt instanceof Date
-          ? reservation.createdAt
-          : new Date(reservation.createdAt)
-        : null
-
-      let timesChanged = false
-      if (reservationCreatedAt && reservationCreatedAt < PRE_TIMEZONE_FIX_CUTOFF) {
-        const facilityTimezone = reservation.facility?.timezone || DEFAULT_CBTF_TIMEZONE
-        const rawDateStr = `${reservation.startTime.getUTCFullYear()}-${String(reservation.startTime.getUTCMonth() + 1).padStart(2, '0')}-${String(reservation.startTime.getUTCDate()).padStart(2, '0')}`
-        const rawStartStr = `${String(reservation.startTime.getUTCHours()).padStart(2, '0')}:${String(reservation.startTime.getUTCMinutes()).padStart(2, '0')}`
-        const rawEndStr = `${String(reservation.endTime.getUTCHours()).padStart(2, '0')}:${String(reservation.endTime.getUTCMinutes()).padStart(2, '0')}`
-
-        const intendedStart = combineDateAndTime(rawDateStr, rawStartStr, facilityTimezone)
-        const intendedEnd = combineDateAndTime(rawDateStr, rawEndStr, facilityTimezone)
-
-        // Only shift if the timezone-adjusted time differs from the naive UTC time
-        if (intendedStart.getTime() !== reservation.startTime.getTime()) {
-          // Check if student already has a newer active reservation booked after the fix
-          const newerReservation = await prisma.cbtfReservation.findFirst({
-            where: {
-              assignmentId,
-              userId: reservation.userId,
-              status: { not: 'CANCELLED' },
-              id: { not: reservation.id },
-              createdAt: { gte: PRE_TIMEZONE_FIX_CUTOFF }
-            }
-          })
-
-          if (newerReservation) {
-            details.push({
-              reservationId: reservation.id,
-              studentName,
-              status: 'duplicate',
-              message: 'Student already rebooked a newer reservation after the timezone fix'
-            })
-            continue
-          }
-
-          reservation.startTime = intendedStart
-          reservation.endTime = intendedEnd
-          timesChanged = true
-        }
-      }
-
-      // 1. Adjust seat assignments based on current seating order where feasible (without collisions)
+      // 0. Adjust seat assignments based on current seating order where feasible (without collisions)
       const seatOrder: number[] = Array.isArray(reservation.facility?.seatAllocationOrder)
         ? (reservation.facility.seatAllocationOrder as number[])
         : []
@@ -696,27 +643,22 @@ export async function resyncAssignmentCbtfOverrides(
               reservationId: reservation.id,
               studentName,
               status: 'conflict',
-              message:
-                'Facility is at maximum capacity at intended slot; reservation could not be shifted'
+              message: 'Facility is at maximum capacity; seat collision could not be resolved'
             })
             continue
           }
         }
       }
 
-      if (timesChanged || seatChanged) {
+      if (seatChanged) {
         await prisma.cbtfReservation.update({
           where: { id: reservation.id },
           data: {
-            startTime: reservation.startTime,
-            endTime: reservation.endTime,
             seatNumber: targetSeatNumber
           }
         })
 
-        if (seatChanged) {
-          seatsReassigned++
-        }
+        seatsReassigned++
         reservation.seatNumber = targetSeatNumber
       }
 
