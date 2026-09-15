@@ -309,7 +309,7 @@ describe('CBTF Server Utilities', () => {
       redemptionId: null
     }
 
-    it('returns half-day blocks divided at 1:00 PM (13:00)', async () => {
+    it('returns half-day blocks divided at 12:30 PM (12:30)', async () => {
       const mockTx: any = {
         cbtfReservation: { findMany: vi.fn().mockResolvedValue([]) },
         cbtfScheduleException: { findFirst: vi.fn().mockResolvedValue(null) },
@@ -333,25 +333,25 @@ describe('CBTF Server Utilities', () => {
 
       expect(result.blocks.length).toBe(4) // 4 future blocks by default
       expect(result.blocks[0].id).toBe('2026-10-05-morning')
-      expect(result.blocks[0].timeRangeLabel).toBe('8:00 AM – 1:00 PM')
+      expect(result.blocks[0].timeRangeLabel).toBe('8:00 AM – 12:30 PM')
       expect(result.blocks[1].id).toBe('2026-10-05-afternoon')
-      expect(result.blocks[1].timeRangeLabel).toBe('1:00 PM – 5:00 PM')
+      expect(result.blocks[1].timeRangeLabel).toBe('12:30 PM – 5:00 PM')
 
-      // Morning slots: 8:00 AM – 1:00 PM (5 hours = 10 half-hour periods)
-      expect(result.hourlySlots.length).toBe(10)
+      // Morning slots: 8:00 AM – 12:30 PM (4.5 hours = 9 half-hour periods: 8:00..12:00)
+      expect(result.hourlySlots.length).toBe(9)
       for (const slot of result.hourlySlots) {
-        expect(slot.hour).toBeLessThan(13)
+        expect(slot.hour).toBeLessThanOrEqual(12)
         expect(slot.hour).toBeGreaterThanOrEqual(8)
       }
     })
 
-    it('returns one slot per half-hour (8 slots for a 4-hour block)', async () => {
+    it('returns one slot per half-hour (7 slots for 3.5 hours of morning arrivals in a 9-5 schedule)', async () => {
       const fourHourFacility: any = {
         id: 'fac-4h',
         totalSeats: 48,
         seatAllocationOrder: Array.from({ length: 48 }, (_, i) => i + 1),
         operatingHours: [
-          { dayOfWeek: 1, openTime: '09:00', closeTime: '17:00' } // 9am-1pm morning (4 hrs), 1pm-5pm afternoon (4 hrs)
+          { dayOfWeek: 1, openTime: '09:00', closeTime: '17:00' } // 9:00-12:30 morning (3.5 hrs arrivals), 12:30-17:00 afternoon (3.5 hrs arrivals)
         ],
         scheduleExceptions: []
       }
@@ -371,7 +371,7 @@ describe('CBTF Server Utilities', () => {
         redemptionId: null
       }
 
-      const result = await getRecommendedDaysAndSlots(
+      const morningResult = await getRecommendedDaysAndSlots(
         fourHourFacility,
         win,
         '2026-10-05-morning',
@@ -379,10 +379,26 @@ describe('CBTF Server Utilities', () => {
         mockTx
       )
 
-      // 9:00 AM to 1:00 PM is 4 hours -> exactly 8 half-hour slots
-      expect(result.hourlySlots.length).toBe(8)
-      const formattedTimes = result.hourlySlots.map((s) => s.formattedTime)
-      expect(formattedTimes.length).toBe(8)
+      // 9:00 AM to 12:30 PM is 3.5 hours of arrivals -> exactly 7 half-hour slots (9:00 to 12:00 start)
+      expect(morningResult.blocks[0].timeRangeLabel).toBe('9:00 AM – 12:30 PM')
+      expect(morningResult.hourlySlots.length).toBe(7)
+      expect(morningResult.hourlySlots[0].hour).toBe(9)
+      expect(morningResult.hourlySlots[morningResult.hourlySlots.length - 1].hour).toBe(12)
+
+      // Afternoon block: 12:30 PM to 5:00 PM (arrivals 12:30 PM up to 4:00 PM = 3.5 hours of arrivals)
+      const afternoonResult = await getRecommendedDaysAndSlots(
+        fourHourFacility,
+        win,
+        '2026-10-05-afternoon',
+        undefined,
+        mockTx
+      )
+      expect(afternoonResult.blocks[1].timeRangeLabel).toBe('12:30 PM – 5:00 PM')
+      expect(afternoonResult.hourlySlots.length).toBe(8) // 12:30, 13:00, 13:30, 14:00, 14:30, 15:00, 15:30, 16:00
+      expect(afternoonResult.hourlySlots[0].hour).toBe(12)
+      expect(
+        afternoonResult.hourlySlots[afternoonResult.hourlySlots.length - 1].formattedTime
+      ).toBe('4:00 PM')
     })
 
     it('chooses candidate slot with maximum openings (fewest arrivals) in each half-hour', async () => {

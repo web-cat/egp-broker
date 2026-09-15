@@ -469,7 +469,8 @@ export async function getStudentSchedulingWindow(
   }
 }
 
-export const CBTF_AFTERNOON_DIVIDING_HOUR = 13 // 1:00 PM
+export const CBTF_AFTERNOON_DIVIDING_TIME = '12:30'
+export const CBTF_AFTERNOON_DIVIDING_HOUR = 12.5 // 12:30 PM
 
 function formatTimeStr12h(timeStr: string): string {
   const [h, m] = timeStr.split(':').map(Number)
@@ -480,7 +481,7 @@ function formatTimeStr12h(timeStr: string): string {
 
 /**
  * Half-Day Block Scheduling Algorithm:
- * - Divides days at 1:00 PM (13:00) into Morning and Afternoon blocks.
+ * - Divides days at 12:30 PM (12:30) into Morning and Afternoon blocks.
  * - Offers the next 4 half-day blocks when slots are open.
  * - If a half-day block is currently in progress, includes it plus the next 4.
  * - If all evaluated blocks have utilization > 75%, offers the next 5 blocks instead of 4.
@@ -584,10 +585,14 @@ export async function getRecommendedDaysAndSlots(
       const monthName = monthNames[localMonth]
       const dateLabel = `${monthName} ${localDayNum}`
 
-      const afternoonDividingUtc = combineDateAndTime(dateStr, '13:00', timeZone)
+      const afternoonDividingUtc = combineDateAndTime(
+        dateStr,
+        CBTF_AFTERNOON_DIVIDING_TIME,
+        timeZone
+      )
 
-      // Morning block: openTime until 13:00
-      if (hours.openTime < '13:00') {
+      // Morning block: openTime until 12:30
+      if (hours.openTime < CBTF_AFTERNOON_DIVIDING_TIME) {
         const blockStart = combineDateAndTime(dateStr, hours.openTime, timeZone)
         const blockEnd = afternoonDividingUtc
         const theoreticalBlockSlots = theoreticalSlots.filter(
@@ -622,7 +627,7 @@ export async function getRecommendedDaysAndSlots(
               blockType: 'morning',
               label: `${dayName} Morning`,
               dateLabel,
-              timeRangeLabel: `${formatTimeStr12h(hours.openTime)} – 1:00 PM`,
+              timeRangeLabel: `${formatTimeStr12h(hours.openTime)} – ${formatTimeStr12h(CBTF_AFTERNOON_DIVIDING_TIME)}`,
               isCurrentBlock,
               openSlotsCount,
               totalSlotsCount,
@@ -634,8 +639,8 @@ export async function getRecommendedDaysAndSlots(
         }
       }
 
-      // Afternoon block: 13:00 until closeTime
-      if (hours.closeTime > '13:00') {
+      // Afternoon block: 12:30 until closeTime
+      if (hours.closeTime > CBTF_AFTERNOON_DIVIDING_TIME) {
         const blockStart = afternoonDividingUtc
         const blockEnd = combineDateAndTime(dateStr, hours.closeTime, timeZone)
         const theoreticalBlockSlots = theoreticalSlots.filter(
@@ -670,7 +675,7 @@ export async function getRecommendedDaysAndSlots(
               blockType: 'afternoon',
               label: `${dayName} Afternoon`,
               dateLabel,
-              timeRangeLabel: `1:00 PM – ${formatTimeStr12h(hours.closeTime)}`,
+              timeRangeLabel: `${formatTimeStr12h(CBTF_AFTERNOON_DIVIDING_TIME)} – ${formatTimeStr12h(hours.closeTime)}`,
               isCurrentBlock,
               openSlotsCount,
               totalSlotsCount,
