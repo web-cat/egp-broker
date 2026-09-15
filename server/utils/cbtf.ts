@@ -627,20 +627,38 @@ export async function getRecommendedDaysAndSlots(
 
   let hourlySlots: CbtfHourlySlotChoice[] = []
   if (chosenBlockItem) {
-    const slotsByHour = new Map<number, SlotAvailability[]>()
+    // Group slots by half-hour period (e.g. 09:00, 09:30, 10:00, ...)
+    const slotsByHalfHour = new Map<number, SlotAvailability[]>()
     for (const slot of chosenBlockItem.openSlots) {
-      const hour = slot.startTime.getUTCHours()
-      if (!slotsByHour.has(hour)) {
-        slotsByHour.set(hour, [])
+      const h = slot.startTime.getUTCHours()
+      const m = slot.startTime.getUTCMinutes()
+      const halfHourBucket = m < 30 ? 0 : 30
+      const periodKey = h * 60 + halfHourBucket
+
+      if (!slotsByHalfHour.has(periodKey)) {
+        slotsByHalfHour.set(periodKey, [])
       }
-      slotsByHour.get(hour)!.push(slot)
+      slotsByHalfHour.get(periodKey)!.push(slot)
     }
 
-    const sortedHours = Array.from(slotsByHour.keys()).sort((a, b) => a - b)
-    hourlySlots = sortedHours.map((hour) => {
-      const candidates = slotsByHour.get(hour)!
-      const randomIndex = Math.floor(Math.random() * candidates.length)
-      const chosenSlot = candidates[randomIndex]
+    const sortedPeriodKeys = Array.from(slotsByHalfHour.keys()).sort((a, b) => a - b)
+    hourlySlots = sortedPeriodKeys.map((periodKey) => {
+      const candidates = slotsByHalfHour.get(periodKey)!
+
+      // Maximum available openings priority:
+      // Find the minimum arrivalsCount across all candidate slots in this half-hour
+      const minArrivals = Math.min(...candidates.map((s) => s.arrivalsCount))
+      const minArrivalCandidates = candidates.filter((s) => s.arrivalsCount === minArrivals)
+
+      // Secondary tie-breaker: minimum occupied seats across facility
+      const minOccupiedSeats = Math.min(...minArrivalCandidates.map((s) => s.occupiedSeatsCount))
+      const bestCandidates = minArrivalCandidates.filter(
+        (s) => s.occupiedSeatsCount === minOccupiedSeats
+      )
+
+      // Randomly choose among the candidate slots with the same maximum openings
+      const randomIndex = Math.floor(Math.random() * bestCandidates.length)
+      const chosenSlot = bestCandidates[randomIndex]
 
       const start = chosenSlot.startTime
       const end = chosenSlot.endTime
@@ -652,7 +670,7 @@ export async function getRecommendedDaysAndSlots(
       const formattedTime = `${displayH}:${m} ${ampm}`
 
       return {
-        hour,
+        hour: h,
         startTime: start.toISOString(),
         endTime: end.toISOString(),
         formattedTime

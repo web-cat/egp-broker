@@ -291,10 +291,10 @@
             v-if="!availabilityData?.hourlySlots || availabilityData.hourlySlots.length === 0"
             class="p-6 text-center text-neutral-500 text-sm"
           >
-            No open hourly slots found for this block.
+            No open time slots found for this block.
           </div>
 
-          <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
               v-for="slot in availabilityData.hourlySlots"
               :key="slot.startTime"

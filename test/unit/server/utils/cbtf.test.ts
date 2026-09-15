@@ -326,10 +326,113 @@ describe('CBTF Server Utilities', () => {
       expect(result.blocks[1].id).toBe('2026-10-05-afternoon')
       expect(result.blocks[1].timeRangeLabel).toBe('1:00 PM – 5:00 PM')
 
-      // Morning hourly slots should start before 1:00 PM (hour < 13)
+      // Morning slots: 8:00 AM – 1:00 PM (5 hours = 10 half-hour periods)
+      expect(result.hourlySlots.length).toBe(10)
       for (const slot of result.hourlySlots) {
         expect(slot.hour).toBeLessThan(13)
         expect(slot.hour).toBeGreaterThanOrEqual(8)
+      }
+    })
+
+    it('returns one slot per half-hour (8 slots for a 4-hour block)', async () => {
+      const fourHourFacility: any = {
+        id: 'fac-4h',
+        totalSeats: 48,
+        seatAllocationOrder: Array.from({ length: 48 }, (_, i) => i + 1),
+        operatingHours: [
+          { dayOfWeek: 1, openTime: '09:00', closeTime: '17:00' } // 9am-1pm morning (4 hrs), 1pm-5pm afternoon (4 hrs)
+        ],
+        scheduleExceptions: []
+      }
+
+      const mockTx: any = {
+        cbtfReservation: { findMany: vi.fn().mockResolvedValue([]) },
+        cbtfScheduleException: { findFirst: vi.fn().mockResolvedValue(null) },
+        cbtfOperatingHours: {
+          findUnique: vi.fn().mockResolvedValue({ openTime: '09:00', closeTime: '17:00' })
+        }
+      }
+
+      const win = {
+        start: new Date('2026-10-05T00:00:00.000Z'),
+        end: new Date('2026-10-05T23:59:59.000Z'),
+        isPassWindow: false,
+        redemptionId: null
+      }
+
+      const result = await getRecommendedDaysAndSlots(
+        fourHourFacility,
+        win,
+        '2026-10-05-morning',
+        undefined,
+        mockTx
+      )
+
+      // 9:00 AM to 1:00 PM is 4 hours -> exactly 8 half-hour slots
+      expect(result.hourlySlots.length).toBe(8)
+      const formattedTimes = result.hourlySlots.map((s) => s.formattedTime)
+      expect(formattedTimes.length).toBe(8)
+    })
+
+    it('chooses candidate slot with maximum openings (fewest arrivals) in each half-hour', async () => {
+      // 48 seats -> maxArrivals = 4.
+      // In the 9:00-9:30 half-hour on 2026-10-05:
+      // Put 2 reservations at 9:00, 1 reservation at 9:05, and 0 at 9:10, 9:15, 9:20, 9:25.
+      // The algorithm should choose among 9:10, 9:15, 9:20, 9:25 (which have 0 reservations = 4 openings).
+      const mockReservations: any[] = [
+        {
+          startTime: new Date('2026-10-05T09:00:00.000Z'),
+          endTime: new Date('2026-10-05T10:00:00.000Z'),
+          seatNumber: 1
+        },
+        {
+          startTime: new Date('2026-10-05T09:00:00.000Z'),
+          endTime: new Date('2026-10-05T10:00:00.000Z'),
+          seatNumber: 2
+        },
+        {
+          startTime: new Date('2026-10-05T09:05:00.000Z'),
+          endTime: new Date('2026-10-05T10:05:00.000Z'),
+          seatNumber: 3
+        }
+      ]
+
+      const testFacility: any = {
+        id: 'fac-prioritized',
+        totalSeats: 48,
+        seatAllocationOrder: Array.from({ length: 48 }, (_, i) => i + 1),
+        operatingHours: [{ dayOfWeek: 1, openTime: '09:00', closeTime: '13:00' }],
+        scheduleExceptions: []
+      }
+
+      const mockTx: any = {
+        cbtfReservation: { findMany: vi.fn().mockResolvedValue(mockReservations) },
+        cbtfScheduleException: { findFirst: vi.fn().mockResolvedValue(null) },
+        cbtfOperatingHours: {
+          findUnique: vi.fn().mockResolvedValue({ openTime: '09:00', closeTime: '13:00' })
+        }
+      }
+
+      const win = {
+        start: new Date('2026-10-05T00:00:00.000Z'),
+        end: new Date('2026-10-05T23:59:59.000Z'),
+        isPassWindow: false,
+        redemptionId: null
+      }
+
+      // Run multiple times to verify randomness stays within the zero-reservation slots
+      for (let i = 0; i < 10; i++) {
+        const result = await getRecommendedDaysAndSlots(
+          testFacility,
+          win,
+          '2026-10-05-morning',
+          undefined,
+          mockTx
+        )
+        const firstHalfHourSlot = result.hourlySlots[0]
+        const chosenMinute = new Date(firstHalfHourSlot.startTime).getUTCMinutes()
+        // Must NOT be 00 or 05, because 00 has 2 reservations and 05 has 1 reservation
+        expect([10, 15, 20, 25]).toContain(chosenMinute)
       }
     })
 
