@@ -109,6 +109,23 @@ Before creating new assets, check `shared/` schemas, `app/components/base/` atom
 - **Data Fetching:** Prefer `useFetch` or `useAsyncData` to prevent double-fetching.
 - **Hybrid Rendering:** Use `routeRules` for SWR or `ssr: false` where appropriate.
 
+### 5. Git & Commit Workflow
+
+- **Conventional Commit Format:** `<type>(<scope>): <subject>`
+  - **Allowed Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+  - **Scope:** Optional, lowercase, noun describing the module/component (e.g., `auth`, `api`, `ui`). No spaces.
+  - **Subject Rules:**
+    - Imperative mood, lowercase start (e.g., `add user session timeout`, NOT `Added...` or `Adds...`).
+    - **NO trailing period** at the end.
+    - **NO markdown backticks** or formatting anywhere in the subject.
+  - **Length Constraint:**
+    - The entire summary line (type + scope + subject) **MUST NOT exceed 72 characters**.
+    - Aim for **50 characters or fewer** to prevent overflow. If your draft exceeds 72 characters, aggressively summarize it before executing `git commit`.
+
+- **Linting & Tool Execution:**
+  - Husky runs `lint-staged` automatically inside Docker on `git commit`.
+  - **NEVER execute a manual, project-wide lint or format pass** (`pnpm run lint`, `eslint .`, `prettier`, etc.) prior to committing. Only run targeted checks if you are actively debugging a specific failure.
+
 ---
 
 ## 🛠️ VI. Prisma Schema Best Practices

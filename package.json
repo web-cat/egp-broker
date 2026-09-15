@@ -23,6 +23,7 @@
     "lint": "pnpm run lint:prettier && pnpm run lint:eslint",
     "lint:eslint": "eslint . --fix",
     "lint:prettier": "prettier --write --list-different .",
+    "lint:staged": "lint-staged",
     "test": "pnpm run test:unit && pnpm run test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest --watch",
@@ -39,6 +40,14 @@
     "release:minor": "pnpm version minor && git push --follow-tags",
     "release:major": "pnpm version major && git push --follow-tags",
     "restart": "pkill -f /node_modules/"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix"
+    ],
+    "*.{ts,tsx,js,jsx,json,css,md,yaml,yml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@casl/ability": "^6.8.0",

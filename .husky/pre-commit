@@ -1,1 +1,1 @@
-docker compose exec -T app-dev pnpm run lint
+docker compose exec -T app-dev pnpm run lint:staged
