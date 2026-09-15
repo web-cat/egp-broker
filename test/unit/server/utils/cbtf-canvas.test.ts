@@ -343,6 +343,8 @@ describe('CBTF Canvas Override Coordinator (cbtf-canvas)', () => {
         updated: 0,
         created: 0,
         changedOrCreated: 0,
+        seatsReassigned: 0,
+        conflicts: 0,
         errors: 0,
         details: []
       })
@@ -587,6 +589,290 @@ describe('CBTF Canvas Override Coordinator (cbtf-canvas)', () => {
       expect(result.totalChecked).toBe(1)
       expect(result.matched).toBe(1)
       expect(result.changedOrCreated).toBe(0)
+    })
+
+    it('shifts pre-timezone-fix reservation with naive UTC time to local facility timezone and updates Canvas', async () => {
+      const naiveStartTime = new Date('2026-09-17T15:50:00.000Z')
+      const naiveEndTime = new Date('2026-09-17T16:40:00.000Z')
+      const mockReservation: any = {
+        id: 'res-pre-1',
+        assignmentId: 'asg-200',
+        userId: 'user-std-1',
+        facilityId: 'fac-1',
+        seatNumber: 5,
+        startTime: naiveStartTime,
+        endTime: naiveEndTime,
+        createdAt: new Date('2026-09-14T20:00:00.000Z'),
+        status: 'SCHEDULED',
+        canvasOverrideId: '9005',
+        facility: {
+          id: 'fac-1',
+          timezone: 'America/New_York',
+          seatAllocationOrder: [5, 12, 20]
+        },
+        user: {
+          id: 'user-std-1',
+          firstName: 'Alice',
+          lastName: 'Smith',
+          email: 'alice@vt.edu',
+          ltiIdentities: [{ platformId: 'plat-200', platformUserId: '5001' }],
+          enrollments: [{ courseId: 'course-200' }]
+        }
+      }
+
+      vi.spyOn(prisma.assignment, 'findUnique').mockResolvedValue(mockAssignment as any)
+      vi.spyOn(prisma.cbtfReservation, 'findMany')
+        .mockResolvedValueOnce([mockReservation] as any) // initial query for reservations on assignment
+        .mockResolvedValueOnce([] as any) // query for overlapping reservations (seat 5 is free)
+      vi.spyOn(prisma.cbtfReservation, 'findFirst').mockResolvedValue(null) // no newer reservation
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key' }] }
+      } as any)
+
+      vi.spyOn(canvasModule, 'fetchCanvasAssignmentOverrides').mockResolvedValue([
+        {
+          id: 9005,
+          assignment_id: 789,
+          title: 'CBTF Exam Slot',
+          student_ids: [5001],
+          unlock_at: '2026-09-17T15:50:00.000Z',
+          due_at: '2026-09-17T16:40:00.000Z',
+          lock_at: '2026-09-17T16:40:00.000Z'
+        }
+      ])
+
+      const updateCanvasSpy = vi
+        .spyOn(canvasModule, 'updateCanvasAssignmentOverride')
+        .mockResolvedValue({
+          id: 9005,
+          assignment_id: 789,
+          title: 'CBTF Exam Slot',
+          student_ids: [5001],
+          unlock_at: '2026-09-17T19:50:00.000Z',
+          due_at: '2026-09-17T20:40:00.000Z',
+          lock_at: '2026-09-17T20:40:00.000Z'
+        })
+      const updateReservationSpy = vi
+        .spyOn(prisma.cbtfReservation, 'update')
+        .mockResolvedValue({} as any)
+      vi.spyOn(prisma.assignmentOverride, 'upsert').mockResolvedValue({ id: 'local-ov-5' } as any)
+      vi.spyOn(prisma.assignmentOverrideStudent, 'upsert').mockResolvedValue({} as any)
+
+      const result = await resyncAssignmentCbtfOverrides('asg-200')
+
+      expect(result.totalChecked).toBe(1)
+      expect(result.updated).toBe(1)
+      expect(result.seatsReassigned).toBe(0)
+      expect(result.conflicts).toBe(0)
+      expect(result.errors).toBe(0)
+
+      // Verify DB reservation updated to EDT shifted time (19:50 UTC)
+      expect(updateReservationSpy).toHaveBeenCalledWith({
+        where: { id: 'res-pre-1' },
+        data: {
+          startTime: new Date('2026-09-17T19:50:00.000Z'),
+          endTime: new Date('2026-09-17T20:40:00.000Z'),
+          seatNumber: 5
+        }
+      })
+
+      // Verify Canvas override updated to shifted time
+      expect(updateCanvasSpy).toHaveBeenCalledWith(
+        'canvas.vt.edu',
+        '321',
+        '789',
+        9005,
+        {
+          unlock_at: '2026-09-17T19:50:00.000Z',
+          due_at: '2026-09-17T20:40:00.000Z',
+          lock_at: '2026-09-17T20:40:00.000Z'
+        },
+        'teacher-key'
+      )
+    })
+
+    it('reassigns seat when original seat is occupied at shifted time during pre-timezone-fix resync', async () => {
+      const naiveStartTime = new Date('2026-09-17T15:50:00.000Z')
+      const naiveEndTime = new Date('2026-09-17T16:40:00.000Z')
+      const mockReservation: any = {
+        id: 'res-pre-2',
+        assignmentId: 'asg-200',
+        userId: 'user-std-1',
+        facilityId: 'fac-1',
+        seatNumber: 5,
+        startTime: naiveStartTime,
+        endTime: naiveEndTime,
+        createdAt: new Date('2026-09-14T20:00:00.000Z'),
+        status: 'SCHEDULED',
+        canvasOverrideId: '9006',
+        facility: {
+          id: 'fac-1',
+          timezone: 'America/New_York',
+          seatAllocationOrder: [5, 12, 20]
+        },
+        user: {
+          id: 'user-std-1',
+          firstName: 'Alice',
+          lastName: 'Smith',
+          email: 'alice@vt.edu',
+          ltiIdentities: [{ platformId: 'plat-200', platformUserId: '5001' }],
+          enrollments: [{ courseId: 'course-200' }]
+        }
+      }
+
+      vi.spyOn(prisma.assignment, 'findUnique').mockResolvedValue(mockAssignment as any)
+      vi.spyOn(prisma.cbtfReservation, 'findMany')
+        .mockResolvedValueOnce([mockReservation] as any)
+        .mockResolvedValueOnce([{ seatNumber: 5 }] as any) // seat 5 is occupied by another reservation!
+      vi.spyOn(prisma.cbtfReservation, 'findFirst').mockResolvedValue(null)
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key' }] }
+      } as any)
+
+      vi.spyOn(canvasModule, 'fetchCanvasAssignmentOverrides').mockResolvedValue([
+        {
+          id: 9006,
+          assignment_id: 789,
+          title: 'CBTF Exam Slot',
+          student_ids: [5001],
+          unlock_at: '2026-09-17T15:50:00.000Z',
+          due_at: '2026-09-17T16:40:00.000Z',
+          lock_at: '2026-09-17T16:40:00.000Z'
+        }
+      ])
+      vi.spyOn(canvasModule, 'updateCanvasAssignmentOverride').mockResolvedValue({
+        id: 9006,
+        assignment_id: 789,
+        title: 'CBTF Exam Slot',
+        student_ids: [5001],
+        unlock_at: '2026-09-17T19:50:00.000Z',
+        due_at: '2026-09-17T20:40:00.000Z',
+        lock_at: '2026-09-17T20:40:00.000Z'
+      })
+
+      const updateReservationSpy = vi
+        .spyOn(prisma.cbtfReservation, 'update')
+        .mockResolvedValue({} as any)
+      vi.spyOn(prisma.assignmentOverride, 'upsert').mockResolvedValue({ id: 'local-ov-6' } as any)
+      vi.spyOn(prisma.assignmentOverrideStudent, 'upsert').mockResolvedValue({} as any)
+
+      const result = await resyncAssignmentCbtfOverrides('asg-200')
+
+      expect(result.totalChecked).toBe(1)
+      expect(result.updated).toBe(1)
+      expect(result.seatsReassigned).toBe(1)
+      expect(result.conflicts).toBe(0)
+
+      // Seat 5 was taken, so it reallocated to seat 12 (the next in seatAllocationOrder)
+      expect(updateReservationSpy).toHaveBeenCalledWith({
+        where: { id: 'res-pre-2' },
+        data: {
+          startTime: new Date('2026-09-17T19:50:00.000Z'),
+          endTime: new Date('2026-09-17T20:40:00.000Z'),
+          seatNumber: 12
+        }
+      })
+    })
+
+    it('marks conflict and leaves reservation unshifted when facility is full at shifted time slot', async () => {
+      const naiveStartTime = new Date('2026-09-17T15:50:00.000Z')
+      const naiveEndTime = new Date('2026-09-17T16:40:00.000Z')
+      const mockReservation: any = {
+        id: 'res-pre-3',
+        assignmentId: 'asg-200',
+        userId: 'user-std-1',
+        facilityId: 'fac-1',
+        seatNumber: 5,
+        startTime: naiveStartTime,
+        endTime: naiveEndTime,
+        createdAt: new Date('2026-09-14T20:00:00.000Z'),
+        status: 'SCHEDULED',
+        canvasOverrideId: '9007',
+        facility: {
+          id: 'fac-1',
+          timezone: 'America/New_York',
+          seatAllocationOrder: [5, 12]
+        },
+        user: {
+          id: 'user-std-1',
+          firstName: 'Alice',
+          lastName: 'Smith',
+          email: 'alice@vt.edu',
+          ltiIdentities: [{ platformId: 'plat-200', platformUserId: '5001' }],
+          enrollments: [{ courseId: 'course-200' }]
+        }
+      }
+
+      vi.spyOn(prisma.assignment, 'findUnique').mockResolvedValue(mockAssignment as any)
+      vi.spyOn(prisma.cbtfReservation, 'findMany')
+        .mockResolvedValueOnce([mockReservation] as any)
+        .mockResolvedValueOnce([{ seatNumber: 5 }, { seatNumber: 12 }] as any) // all seats full!
+      vi.spyOn(prisma.cbtfReservation, 'findFirst').mockResolvedValue(null)
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key' }] }
+      } as any)
+      vi.spyOn(canvasModule, 'fetchCanvasAssignmentOverrides').mockResolvedValue([])
+
+      const updateReservationSpy = vi
+        .spyOn(prisma.cbtfReservation, 'update')
+        .mockResolvedValue({} as any)
+
+      const result = await resyncAssignmentCbtfOverrides('asg-200')
+
+      expect(result.totalChecked).toBe(1)
+      expect(result.conflicts).toBe(1)
+      expect(result.details[0].status).toBe('conflict')
+      expect(updateReservationSpy).not.toHaveBeenCalled()
+    })
+
+    it('marks duplicate and skips shift when student already booked a newer reservation after timezone fix cutoff', async () => {
+      const naiveStartTime = new Date('2026-09-17T15:50:00.000Z')
+      const naiveEndTime = new Date('2026-09-17T16:40:00.000Z')
+      const mockReservation: any = {
+        id: 'res-pre-4',
+        assignmentId: 'asg-200',
+        userId: 'user-std-1',
+        facilityId: 'fac-1',
+        seatNumber: 5,
+        startTime: naiveStartTime,
+        endTime: naiveEndTime,
+        createdAt: new Date('2026-09-14T20:00:00.000Z'),
+        status: 'SCHEDULED',
+        canvasOverrideId: '9008',
+        facility: {
+          id: 'fac-1',
+          timezone: 'America/New_York',
+          seatAllocationOrder: [5, 12]
+        },
+        user: {
+          id: 'user-std-1',
+          firstName: 'Alice',
+          lastName: 'Smith',
+          email: 'alice@vt.edu',
+          ltiIdentities: [{ platformId: 'plat-200', platformUserId: '5001' }],
+          enrollments: [{ courseId: 'course-200' }]
+        }
+      }
+
+      vi.spyOn(prisma.assignment, 'findUnique').mockResolvedValue(mockAssignment as any)
+      vi.spyOn(prisma.cbtfReservation, 'findMany').mockResolvedValueOnce([mockReservation] as any)
+      vi.spyOn(prisma.cbtfReservation, 'findFirst').mockResolvedValue({
+        id: 'res-newer-99'
+      } as any) // Student has newer reservation
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key' }] }
+      } as any)
+      vi.spyOn(canvasModule, 'fetchCanvasAssignmentOverrides').mockResolvedValue([])
+
+      const updateReservationSpy = vi
+        .spyOn(prisma.cbtfReservation, 'update')
+        .mockResolvedValue({} as any)
+
+      const result = await resyncAssignmentCbtfOverrides('asg-200')
+
+      expect(result.totalChecked).toBe(1)
+      expect(result.details[0].status).toBe('duplicate')
+      expect(updateReservationSpy).not.toHaveBeenCalled()
     })
   })
 })

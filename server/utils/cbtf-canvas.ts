@@ -10,6 +10,14 @@ import {
 } from '@@/server/utils/canvas'
 import { notifyCbtfCanvasOverrideFailure } from '@@/server/services/alert.service'
 import type { ResyncCbtfOverridesResponse } from '@@/shared/schemas/cbtf.schema'
+import { assignNextSeat, combineDateAndTime, DEFAULT_CBTF_TIMEZONE } from '@@/server/utils/cbtf'
+
+/**
+ * Cutoff timestamp for the timezone fix commit (2026-09-15 04:10 UTC).
+ * Reservations created prior to this timestamp used naive UTC timestamps
+ * which must be converted to the facility's local timezone.
+ */
+export const PRE_TIMEZONE_FIX_CUTOFF = new Date('2026-09-15T04:10:00.000Z')
 
 /**
  * Determines whether an assignment is a native Canvas assignment/quiz or uses
@@ -534,6 +542,7 @@ export async function resyncAssignmentCbtfOverrides(
       status: { not: 'CANCELLED' }
     },
     include: {
+      facility: true,
       user: {
         include: {
           ltiIdentities: true,
@@ -551,6 +560,8 @@ export async function resyncAssignmentCbtfOverrides(
       updated: 0,
       created: 0,
       changedOrCreated: 0,
+      seatsReassigned: 0,
+      conflicts: 0,
       errors: 0,
       details: []
     }
@@ -578,6 +589,8 @@ export async function resyncAssignmentCbtfOverrides(
   let matched = 0
   let updated = 0
   let created = 0
+  let seatsReassigned = 0
+  let conflicts = 0
   let errors = 0
   const details: ResyncCbtfOverridesResponse['details'] = []
 
@@ -590,6 +603,106 @@ export async function resyncAssignmentCbtfOverrides(
         : reservation.user.firstName || reservation.user.email || 'Student'
 
     try {
+      // 0. Detect and repair pre-timezone-fix naive UTC reservation times
+      const reservationCreatedAt = reservation.createdAt
+        ? reservation.createdAt instanceof Date
+          ? reservation.createdAt
+          : new Date(reservation.createdAt)
+        : null
+
+      if (reservationCreatedAt && reservationCreatedAt < PRE_TIMEZONE_FIX_CUTOFF) {
+        const facilityTimezone = reservation.facility?.timezone || DEFAULT_CBTF_TIMEZONE
+        const rawDateStr = `${reservation.startTime.getUTCFullYear()}-${String(reservation.startTime.getUTCMonth() + 1).padStart(2, '0')}-${String(reservation.startTime.getUTCDate()).padStart(2, '0')}`
+        const rawStartStr = `${String(reservation.startTime.getUTCHours()).padStart(2, '0')}:${String(reservation.startTime.getUTCMinutes()).padStart(2, '0')}`
+        const rawEndStr = `${String(reservation.endTime.getUTCHours()).padStart(2, '0')}:${String(reservation.endTime.getUTCMinutes()).padStart(2, '0')}`
+
+        const intendedStart = combineDateAndTime(rawDateStr, rawStartStr, facilityTimezone)
+        const intendedEnd = combineDateAndTime(rawDateStr, rawEndStr, facilityTimezone)
+
+        // Only shift if the timezone-adjusted time differs from the naive UTC time
+        if (intendedStart.getTime() !== reservation.startTime.getTime()) {
+          // Check if student already has a newer active reservation booked after the fix
+          const newerReservation = await prisma.cbtfReservation.findFirst({
+            where: {
+              assignmentId,
+              userId: reservation.userId,
+              status: { not: 'CANCELLED' },
+              id: { not: reservation.id },
+              createdAt: { gte: PRE_TIMEZONE_FIX_CUTOFF }
+            }
+          })
+
+          if (newerReservation) {
+            details.push({
+              reservationId: reservation.id,
+              studentName,
+              status: 'duplicate',
+              message: 'Student already rebooked a newer reservation after the timezone fix'
+            })
+            continue
+          }
+
+          // Check for seat availability at the intended time slot
+          const overlappingReservations = await prisma.cbtfReservation.findMany({
+            where: {
+              facilityId: reservation.facilityId,
+              status: { not: 'CANCELLED' },
+              id: { not: reservation.id },
+              startTime: { lt: intendedEnd },
+              endTime: { gt: intendedStart }
+            },
+            select: {
+              seatNumber: true
+            }
+          })
+
+          const isCurrentSeatOccupied = overlappingReservations.some(
+            (r) => r.seatNumber === reservation.seatNumber
+          )
+
+          let targetSeatNumber = reservation.seatNumber
+          if (isCurrentSeatOccupied) {
+            const seatOrder: number[] = Array.isArray(reservation.facility?.seatAllocationOrder)
+              ? (reservation.facility.seatAllocationOrder as number[])
+              : []
+
+            try {
+              targetSeatNumber = assignNextSeat(
+                seatOrder,
+                intendedStart,
+                intendedEnd,
+                overlappingReservations
+              )
+              seatsReassigned++
+            } catch {
+              conflicts++
+              details.push({
+                reservationId: reservation.id,
+                studentName,
+                status: 'conflict',
+                message:
+                  'Facility is at maximum capacity at intended slot; reservation could not be shifted'
+              })
+              continue
+            }
+          }
+
+          // Update reservation with shifted times and resolved seat
+          await prisma.cbtfReservation.update({
+            where: { id: reservation.id },
+            data: {
+              startTime: intendedStart,
+              endTime: intendedEnd,
+              seatNumber: targetSeatNumber
+            }
+          })
+
+          reservation.startTime = intendedStart
+          reservation.endTime = intendedEnd
+          reservation.seatNumber = targetSeatNumber
+        }
+      }
+
       // Resolve student's Canvas user ID
       const studentIdentity =
         reservation.user.ltiIdentities.find((i) => i.platformId === platform.id) ||
@@ -821,6 +934,8 @@ export async function resyncAssignmentCbtfOverrides(
     updated,
     created,
     changedOrCreated: updated + created,
+    seatsReassigned,
+    conflicts,
     errors,
     details
   }

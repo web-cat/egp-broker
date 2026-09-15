@@ -245,14 +245,29 @@ export const useTeacherDashboard = () => {
       const ovWord = changedOrCreated === 1 ? 'override' : 'overrides'
 
       let description = `Checked ${totalChecked} ${resWord}; ${changedOrCreated} ${ovWord} changed/created.`
-      if (data?.errors && data.errors > 0) {
-        description += ` (${data.errors} failed)`
+      const notes: string[] = []
+      if (data?.seatsReassigned && data.seatsReassigned > 0) {
+        notes.push(
+          `${data.seatsReassigned} ${data.seatsReassigned === 1 ? 'seat' : 'seats'} reassigned`
+        )
       }
+      if (data?.conflicts && data.conflicts > 0) {
+        notes.push(`${data.conflicts} ${data.conflicts === 1 ? 'conflict' : 'conflicts'}`)
+      }
+      if (data?.errors && data.errors > 0) {
+        notes.push(`${data.errors} failed`)
+      }
+      if (notes.length > 0) {
+        description += ` (${notes.join(', ')})`
+      }
+
+      const hasWarning =
+        (data?.errors && data.errors > 0) || (data?.conflicts && data.conflicts > 0)
 
       toast.add({
         title: 'Canvas Overrides Synced',
         description,
-        color: data?.errors && data.errors > 0 ? 'warning' : 'success'
+        color: hasWarning ? 'warning' : 'success'
       })
     } catch (err: any) {
       console.error(err)

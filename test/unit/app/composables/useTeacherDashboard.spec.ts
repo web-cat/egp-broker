@@ -192,4 +192,35 @@ describe('useTeacherDashboard', () => {
       })
     )
   })
+
+  it('displays warning toast with seats reassigned and conflicts notes when present', async () => {
+    const dashboard = useTeacherDashboard()
+    const mockAssignment: any = { id: 'asg-4', title: 'Quiz 4', isSchedulable: true }
+
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: {
+        totalChecked: 2,
+        matched: 0,
+        updated: 1,
+        created: 0,
+        changedOrCreated: 1,
+        seatsReassigned: 1,
+        conflicts: 1,
+        errors: 0,
+        details: []
+      }
+    })
+
+    await dashboard.resyncAssignmentCbtfOverrides(mockAssignment)
+
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Canvas Overrides Synced',
+        description:
+          'Checked 2 reservations; 1 override changed/created. (1 seat reassigned, 1 conflict)',
+        color: 'warning'
+      })
+    )
+  })
 })

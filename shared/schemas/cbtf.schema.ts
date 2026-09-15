@@ -229,12 +229,14 @@ export const resyncCbtfOverridesResponseSchema = z.object({
   updated: z.number().int(),
   created: z.number().int(),
   changedOrCreated: z.number().int(),
+  seatsReassigned: z.number().int().default(0),
+  conflicts: z.number().int().default(0),
   errors: z.number().int(),
   details: z.array(
     z.object({
       reservationId: z.string(),
       studentName: z.string(),
-      status: z.enum(['matched', 'updated', 'created', 'error']),
+      status: z.enum(['matched', 'updated', 'created', 'conflict', 'duplicate', 'error']),
       message: z.string().optional()
     })
   )
