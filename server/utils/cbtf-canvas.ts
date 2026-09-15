@@ -1,11 +1,15 @@
+import { createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import {
   getPlatformCanvasDomain,
   createCanvasAssignmentOverride,
   updateCanvasAssignmentOverride,
-  deleteCanvasAssignmentOverride
+  deleteCanvasAssignmentOverride,
+  fetchCanvasAssignmentOverrides,
+  withCanvasRetry
 } from '@@/server/utils/canvas'
 import { notifyCbtfCanvasOverrideFailure } from '@@/server/services/alert.service'
+import type { ResyncCbtfOverridesResponse } from '@@/shared/schemas/cbtf.schema'
 
 /**
  * Determines whether an assignment is a native Canvas assignment/quiz or uses
@@ -36,8 +40,27 @@ export function isPlainCanvasOrNewQuizzes(assignment: {
 export async function findInstructorCanvasApiKey(
   courseId: string,
   courseSectionId: string | null | undefined,
-  platformId: string
+  platformId: string,
+  preferredUserId?: string | null
 ): Promise<string | null> {
+  // 0. Try preferred user if provided
+  if (preferredUserId) {
+    const preferredUser = await prisma.user.findUnique({
+      where: { id: preferredUserId },
+      include: {
+        ltiIdentities: {
+          where: {
+            platformId,
+            platformApiKey: { not: null }
+          }
+        }
+      }
+    })
+    const preferredKey = preferredUser?.ltiIdentities?.[0]?.platformApiKey
+    if (preferredKey) {
+      return preferredKey
+    }
+  }
   // 1. Try finding an instructor with an API key enrolled in the student's specific section
   if (courseSectionId) {
     const sectionTeacher = await prisma.enrollment.findFirst({
@@ -422,4 +445,383 @@ export async function deleteCbtfReservationCanvasOverride(reservationId: string)
   })
 
   return true
+}
+
+/**
+ * Helper to compare an override ISO timestamp with a target Date.
+ * Allows a small tolerance (1 second) for ISO string formatting differences.
+ */
+function overrideTimeMatches(
+  overrideTimeStr: string | null | undefined,
+  targetDate: Date
+): boolean {
+  if (!overrideTimeStr) return false
+  const overrideMs = new Date(overrideTimeStr).getTime()
+  const targetMs = targetDate.getTime()
+  return Math.abs(overrideMs - targetMs) < 1000
+}
+
+/**
+ * Resyncs all Canvas assignment overrides for active CBTF reservations on a given assignment.
+ * Checks each reservation's scheduled times against the Canvas override, updating or creating
+ * the override in Canvas as needed.
+ */
+export async function resyncAssignmentCbtfOverrides(
+  assignmentId: string,
+  preferredInstructorUserId?: string | null
+): Promise<ResyncCbtfOverridesResponse> {
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    include: {
+      tool: true,
+      course: {
+        include: {
+          deployment: {
+            include: {
+              platform: true
+            }
+          }
+        }
+      }
+    }
+  })
+
+  if (!assignment) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Assignment not found'
+    })
+  }
+
+  const course = assignment.course
+  if (!isPlainCanvasOrNewQuizzes(assignment)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage:
+        'Assignment is hosted on an external tool; overrides cannot be synced to Canvas'
+    })
+  }
+
+  const canvasCourseId = course?.canvasCourseId
+  const canvasAssignmentId = assignment.canvasAssignmentId
+
+  if (
+    !canvasCourseId ||
+    canvasCourseId.startsWith('$') ||
+    !canvasAssignmentId ||
+    canvasAssignmentId.startsWith('$')
+  ) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Assignment or course is missing required Canvas IDs'
+    })
+  }
+
+  const platform = course.deployment?.platform
+  if (!platform) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Course deployment platform not configured'
+    })
+  }
+
+  const domain = getPlatformCanvasDomain(platform, course.deployment?.deploymentHost)
+
+  // Find all active (non-cancelled) reservations for this assignment
+  const reservations = await prisma.cbtfReservation.findMany({
+    where: {
+      assignmentId,
+      status: { not: 'CANCELLED' }
+    },
+    include: {
+      user: {
+        include: {
+          ltiIdentities: true,
+          enrollments: true
+        }
+      }
+    },
+    orderBy: { startTime: 'asc' }
+  })
+
+  if (reservations.length === 0) {
+    return {
+      totalChecked: 0,
+      matched: 0,
+      updated: 0,
+      created: 0,
+      changedOrCreated: 0,
+      errors: 0,
+      details: []
+    }
+  }
+
+  const apiKey = await findInstructorCanvasApiKey(
+    course.id,
+    null,
+    platform.id,
+    preferredInstructorUserId
+  )
+
+  if (!apiKey) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'No instructor Canvas API key available to sync overrides'
+    })
+  }
+
+  // Fetch all current Canvas overrides for this assignment in one request (with retry on throttling)
+  const existingOverrides = await withCanvasRetry(() =>
+    fetchCanvasAssignmentOverrides(domain, canvasCourseId, canvasAssignmentId, apiKey)
+  )
+
+  let matched = 0
+  let updated = 0
+  let created = 0
+  let errors = 0
+  const details: ResyncCbtfOverridesResponse['details'] = []
+
+  const title = 'CBTF Exam Slot'
+
+  for (const reservation of reservations) {
+    const studentName =
+      reservation.user.firstName && reservation.user.lastName
+        ? `${reservation.user.firstName} ${reservation.user.lastName}`
+        : reservation.user.firstName || reservation.user.email || 'Student'
+
+    try {
+      // Resolve student's Canvas user ID
+      const studentIdentity =
+        reservation.user.ltiIdentities.find((i) => i.platformId === platform.id) ||
+        reservation.user.ltiIdentities.find((i) => Boolean(i.platformUserId))
+
+      const platformUserId = studentIdentity?.platformUserId
+      const studentCanvasId = platformUserId ? parseInt(platformUserId, 10) : NaN
+
+      if (isNaN(studentCanvasId)) {
+        errors++
+        details.push({
+          reservationId: reservation.id,
+          studentName,
+          status: 'error',
+          message: 'Student has no valid Canvas User ID'
+        })
+        continue
+      }
+
+      const targetUnlockAt =
+        reservation.startTime instanceof Date
+          ? reservation.startTime.toISOString()
+          : new Date(reservation.startTime).toISOString()
+      const targetDueAt =
+        reservation.endTime instanceof Date
+          ? reservation.endTime.toISOString()
+          : new Date(reservation.endTime).toISOString()
+      const targetLockAt = targetDueAt
+
+      // Locate matching override in Canvas
+      let override = reservation.canvasOverrideId
+        ? existingOverrides.find((o) => o.id.toString() === reservation.canvasOverrideId)
+        : null
+
+      if (!override) {
+        override =
+          existingOverrides.find(
+            (o) =>
+              !o.course_section_id &&
+              !o.group_id &&
+              Array.isArray(o.student_ids) &&
+              o.student_ids.includes(studentCanvasId)
+          ) || null
+      }
+
+      if (override) {
+        const unlockMatches = overrideTimeMatches(override.unlock_at, reservation.startTime)
+        const dueMatches = overrideTimeMatches(override.due_at, reservation.endTime)
+        const lockMatches = overrideTimeMatches(override.lock_at, reservation.endTime)
+
+        if (unlockMatches && dueMatches && lockMatches) {
+          // Times already match!
+          const overrideIdStr = override.id.toString()
+
+          // Ensure local linking
+          if (reservation.canvasOverrideId !== overrideIdStr) {
+            await prisma.cbtfReservation.update({
+              where: { id: reservation.id },
+              data: { canvasOverrideId: overrideIdStr }
+            })
+          }
+
+          matched++
+          details.push({
+            reservationId: reservation.id,
+            studentName,
+            status: 'matched'
+          })
+          continue
+        }
+
+        // Times do not match - update Canvas override (with retry on throttling)
+        const updatedOverride = await withCanvasRetry(() =>
+          updateCanvasAssignmentOverride(
+            domain,
+            canvasCourseId,
+            canvasAssignmentId,
+            override.id,
+            {
+              unlock_at: targetUnlockAt,
+              due_at: targetDueAt,
+              lock_at: targetLockAt
+            },
+            apiKey
+          )
+        )
+
+        const overrideIdStr = updatedOverride.id.toString()
+
+        if (reservation.canvasOverrideId !== overrideIdStr) {
+          await prisma.cbtfReservation.update({
+            where: { id: reservation.id },
+            data: { canvasOverrideId: overrideIdStr }
+          })
+        }
+
+        // Upsert local AssignmentOverride
+        const localOverride = await prisma.assignmentOverride.upsert({
+          where: {
+            assignmentId_canvasOverrideId: {
+              assignmentId: assignment.id,
+              canvasOverrideId: overrideIdStr
+            }
+          },
+          update: {
+            title,
+            availableFrom: reservation.startTime,
+            dueDate: reservation.endTime,
+            acceptUntil: reservation.endTime
+          },
+          create: {
+            assignmentId: assignment.id,
+            canvasOverrideId: overrideIdStr,
+            title,
+            availableFrom: reservation.startTime,
+            dueDate: reservation.endTime,
+            acceptUntil: reservation.endTime
+          }
+        })
+
+        await prisma.assignmentOverrideStudent.upsert({
+          where: {
+            overrideId_userId: {
+              overrideId: localOverride.id,
+              userId: reservation.userId
+            }
+          },
+          update: {},
+          create: {
+            overrideId: localOverride.id,
+            userId: reservation.userId
+          }
+        })
+
+        updated++
+        details.push({
+          reservationId: reservation.id,
+          studentName,
+          status: 'updated'
+        })
+      } else {
+        // No override exists - create a new one (with retry on throttling)
+        const createdOverride = await withCanvasRetry(() =>
+          createCanvasAssignmentOverride(
+            domain,
+            canvasCourseId,
+            canvasAssignmentId,
+            {
+              student_ids: [studentCanvasId],
+              title,
+              unlock_at: targetUnlockAt,
+              due_at: targetDueAt,
+              lock_at: targetLockAt
+            },
+            apiKey
+          )
+        )
+
+        const overrideIdStr = createdOverride.id.toString()
+
+        await prisma.cbtfReservation.update({
+          where: { id: reservation.id },
+          data: { canvasOverrideId: overrideIdStr }
+        })
+
+        const localOverride = await prisma.assignmentOverride.upsert({
+          where: {
+            assignmentId_canvasOverrideId: {
+              assignmentId: assignment.id,
+              canvasOverrideId: overrideIdStr
+            }
+          },
+          update: {
+            title,
+            availableFrom: reservation.startTime,
+            dueDate: reservation.endTime,
+            acceptUntil: reservation.endTime
+          },
+          create: {
+            assignmentId: assignment.id,
+            canvasOverrideId: overrideIdStr,
+            title,
+            availableFrom: reservation.startTime,
+            dueDate: reservation.endTime,
+            acceptUntil: reservation.endTime
+          }
+        })
+
+        await prisma.assignmentOverrideStudent.upsert({
+          where: {
+            overrideId_userId: {
+              overrideId: localOverride.id,
+              userId: reservation.userId
+            }
+          },
+          update: {},
+          create: {
+            overrideId: localOverride.id,
+            userId: reservation.userId
+          }
+        })
+
+        created++
+        details.push({
+          reservationId: reservation.id,
+          studentName,
+          status: 'created'
+        })
+      }
+
+      // Gentle pacing delay between successive reservation operations to prevent rate limit spikes
+      if (reservations.length > 1) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+    } catch (err: any) {
+      errors++
+      details.push({
+        reservationId: reservation.id,
+        studentName,
+        status: 'error',
+        message: err?.message || String(err)
+      })
+    }
+  }
+
+  return {
+    totalChecked: reservations.length,
+    matched,
+    updated,
+    created,
+    changedOrCreated: updated + created,
+    errors,
+    details
+  }
 }

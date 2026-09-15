@@ -116,4 +116,80 @@ describe('useTeacherDashboard', () => {
       })
     )
   })
+
+  it('resyncs CBTF Canvas overrides successfully with summary toast', async () => {
+    const dashboard = useTeacherDashboard()
+    const mockAssignment: any = { id: 'asg-1', title: 'Quiz 1', isSchedulable: true }
+
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: {
+        totalChecked: 3,
+        matched: 1,
+        updated: 2,
+        created: 0,
+        errors: 0,
+        details: []
+      }
+    })
+
+    await dashboard.resyncAssignmentCbtfOverrides(mockAssignment)
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/me/assignments/asg-1/cbtf-sync-overrides', {
+      method: 'POST'
+    })
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Canvas Overrides Synced',
+        description: 'Checked 3 reservations; 2 overrides changed/created.',
+        color: 'success'
+      })
+    )
+  })
+
+  it('displays neutral toast when no active CBTF reservations are found', async () => {
+    const dashboard = useTeacherDashboard()
+    const mockAssignment: any = { id: 'asg-2', title: 'Quiz 2', isSchedulable: true }
+
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: {
+        totalChecked: 0,
+        matched: 0,
+        updated: 0,
+        created: 0,
+        changedOrCreated: 0,
+        errors: 0,
+        details: []
+      }
+    })
+
+    await dashboard.resyncAssignmentCbtfOverrides(mockAssignment)
+
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Canvas Overrides Synced',
+        description: 'Checked 0 reservations; 0 overrides changed/created.',
+        color: 'success'
+      })
+    )
+  })
+
+  it('handles error when resyncing CBTF Canvas overrides fails', async () => {
+    const dashboard = useTeacherDashboard()
+    const mockAssignment: any = { id: 'asg-3', title: 'Quiz 3', isSchedulable: true }
+
+    mockFetch.mockRejectedValueOnce({
+      data: { message: 'Failed to communicate with Canvas' }
+    })
+
+    await dashboard.resyncAssignmentCbtfOverrides(mockAssignment)
+
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Failed to Sync Canvas Overrides',
+        color: 'error'
+      })
+    )
+  })
 })

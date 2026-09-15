@@ -5,6 +5,7 @@ import type { StudentRosterRow } from '@@/shared/models/teacher'
 import type { CourseSectionRow } from '@@/shared/models/section'
 import type { RosterSyncStatusData } from '@@/shared/models/course'
 import type { ApiResponse } from '@@/shared/types/api'
+import type { ResyncCbtfOverridesResponse } from '@@/shared/schemas/cbtf.schema'
 import { useAdminCrud } from '~/composables/features/admin/useAdminCrud'
 
 export const useTeacherDashboard = () => {
@@ -223,6 +224,50 @@ export const useTeacherDashboard = () => {
     }
   }
 
+  // --- Resync CBTF Overrides ---
+  const resyncAssignmentCbtfOverrides = async (assignment: AssignmentRow) => {
+    try {
+      toast.add({
+        title: 'Syncing Canvas Overrides',
+        description: `Checking reservations for "${assignment.title || 'Assignment'}"...`,
+        color: 'neutral'
+      })
+
+      const res = await $fetch<ApiResponse<ResyncCbtfOverridesResponse>>(
+        `/api/me/assignments/${assignment.id}/cbtf-sync-overrides`,
+        { method: 'POST' }
+      )
+
+      const data = res.data
+      const totalChecked = data?.totalChecked ?? 0
+      const changedOrCreated = data?.changedOrCreated ?? (data?.updated ?? 0) + (data?.created ?? 0)
+      const resWord = totalChecked === 1 ? 'reservation' : 'reservations'
+      const ovWord = changedOrCreated === 1 ? 'override' : 'overrides'
+
+      let description = `Checked ${totalChecked} ${resWord}; ${changedOrCreated} ${ovWord} changed/created.`
+      if (data?.errors && data.errors > 0) {
+        description += ` (${data.errors} failed)`
+      }
+
+      toast.add({
+        title: 'Canvas Overrides Synced',
+        description,
+        color: data?.errors && data.errors > 0 ? 'warning' : 'success'
+      })
+    } catch (err: any) {
+      console.error(err)
+      toast.add({
+        title: 'Failed to Sync Canvas Overrides',
+        description:
+          err.data?.statusMessage ||
+          err.data?.message ||
+          err.message ||
+          'An unexpected error occurred while syncing overrides.',
+        color: 'error'
+      })
+    }
+  }
+
   return {
     // Pass Types
     passTypesData,
@@ -281,6 +326,9 @@ export const useTeacherDashboard = () => {
     openApiKeyModal,
     closeApiKeyModal,
     saveApiKey,
-    syncAssignments
+    syncAssignments,
+
+    // CBTF Actions
+    resyncAssignmentCbtfOverrides
   }
 }

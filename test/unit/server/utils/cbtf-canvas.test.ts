@@ -4,7 +4,8 @@ import {
   isPlainCanvasOrNewQuizzes,
   findInstructorCanvasApiKey,
   syncCbtfReservationCanvasOverride,
-  deleteCbtfReservationCanvasOverride
+  deleteCbtfReservationCanvasOverride,
+  resyncAssignmentCbtfOverrides
 } from '@@/server/utils/cbtf-canvas'
 import * as canvasModule from '@@/server/utils/canvas'
 import * as alertService from '@@/server/services/alert.service'
@@ -307,6 +308,285 @@ describe('CBTF Canvas Override Coordinator (cbtf-canvas)', () => {
       const deleted = await deleteCbtfReservationCanvasOverride('res-100')
       expect(deleted).toBe(true)
       expect(deleteSpy).toHaveBeenCalledWith('canvas.vt.edu', '123', '456', '5555', 'teacher-key-1')
+    })
+  })
+
+  describe('resyncAssignmentCbtfOverrides', () => {
+    const mockAssignment: any = {
+      id: 'asg-200',
+      title: 'Final Exam',
+      isSchedulable: true,
+      canvasAssignmentId: '789',
+      toolId: null,
+      tool: null,
+      courseId: 'course-200',
+      course: {
+        id: 'course-200',
+        title: 'CS 2114',
+        canvasCourseId: '321',
+        deployment: {
+          deploymentHost: 'canvas.vt.edu',
+          platformId: 'plat-200',
+          platform: { issuer: 'https://canvas.instructure.com' }
+        }
+      }
+    }
+
+    it('returns empty result when no active reservations exist', async () => {
+      vi.spyOn(prisma.assignment, 'findUnique').mockResolvedValue(mockAssignment as any)
+      vi.spyOn(prisma.cbtfReservation, 'findMany').mockResolvedValue([])
+
+      const result = await resyncAssignmentCbtfOverrides('asg-200')
+      expect(result).toEqual({
+        totalChecked: 0,
+        matched: 0,
+        updated: 0,
+        created: 0,
+        changedOrCreated: 0,
+        errors: 0,
+        details: []
+      })
+    })
+
+    it('identifies matching override and does not call update API', async () => {
+      const startTime = new Date('2026-09-17T19:50:00.000Z')
+      const endTime = new Date('2026-09-17T20:40:00.000Z')
+      const mockReservation: any = {
+        id: 'res-201',
+        assignmentId: 'asg-200',
+        userId: 'user-std-1',
+        startTime,
+        endTime,
+        status: 'SCHEDULED',
+        canvasOverrideId: '9001',
+        user: {
+          id: 'user-std-1',
+          firstName: 'Bob',
+          lastName: 'Jones',
+          email: 'bob@vt.edu',
+          ltiIdentities: [{ platformId: 'plat-200', platformUserId: '5001' }],
+          enrollments: [{ courseId: 'course-200' }]
+        }
+      }
+
+      vi.spyOn(prisma.assignment, 'findUnique').mockResolvedValue(mockAssignment as any)
+      vi.spyOn(prisma.cbtfReservation, 'findMany').mockResolvedValue([mockReservation] as any)
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key' }] }
+      } as any)
+
+      // Canvas already has override matching exact times
+      vi.spyOn(canvasModule, 'fetchCanvasAssignmentOverrides').mockResolvedValue([
+        {
+          id: 9001,
+          assignment_id: 789,
+          title: 'CBTF Exam Slot',
+          student_ids: [5001],
+          unlock_at: '2026-09-17T19:50:00.000Z',
+          due_at: '2026-09-17T20:40:00.000Z',
+          lock_at: '2026-09-17T20:40:00.000Z'
+        }
+      ])
+      const updateSpy = vi.spyOn(canvasModule, 'updateCanvasAssignmentOverride')
+      const createSpy = vi.spyOn(canvasModule, 'createCanvasAssignmentOverride')
+
+      const result = await resyncAssignmentCbtfOverrides('asg-200')
+      expect(result.totalChecked).toBe(1)
+      expect(result.matched).toBe(1)
+      expect(result.updated).toBe(0)
+      expect(result.created).toBe(0)
+      expect(result.changedOrCreated).toBe(0)
+      expect(result.errors).toBe(0)
+      expect(updateSpy).not.toHaveBeenCalled()
+      expect(createSpy).not.toHaveBeenCalled()
+    })
+
+    it('updates override in Canvas when times do not match (e.g. from timezone error before fix)', async () => {
+      const startTime = new Date('2026-09-17T19:50:00.000Z') // 3:50 PM EDT
+      const endTime = new Date('2026-09-17T20:40:00.000Z')
+      const mockReservation: any = {
+        id: 'res-202',
+        assignmentId: 'asg-200',
+        userId: 'user-std-1',
+        startTime,
+        endTime,
+        status: 'SCHEDULED',
+        canvasOverrideId: '9002',
+        user: {
+          id: 'user-std-1',
+          firstName: 'Bob',
+          lastName: 'Jones',
+          email: 'bob@vt.edu',
+          ltiIdentities: [{ platformId: 'plat-200', platformUserId: '5001' }],
+          enrollments: [{ courseId: 'course-200' }]
+        }
+      }
+
+      vi.spyOn(prisma.assignment, 'findUnique').mockResolvedValue(mockAssignment as any)
+      vi.spyOn(prisma.cbtfReservation, 'findMany').mockResolvedValue([mockReservation] as any)
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key' }] }
+      } as any)
+
+      // Canvas override has old incorrect time: 15:50 UTC (which was 11:50 AM EDT)
+      vi.spyOn(canvasModule, 'fetchCanvasAssignmentOverrides').mockResolvedValue([
+        {
+          id: 9002,
+          assignment_id: 789,
+          title: 'CBTF Exam Slot',
+          student_ids: [5001],
+          unlock_at: '2026-09-17T15:50:00.000Z',
+          due_at: '2026-09-17T16:40:00.000Z',
+          lock_at: '2026-09-17T16:40:00.000Z'
+        }
+      ])
+
+      const updateSpy = vi.spyOn(canvasModule, 'updateCanvasAssignmentOverride').mockResolvedValue({
+        id: 9002,
+        assignment_id: 789,
+        title: 'CBTF Exam Slot',
+        student_ids: [5001],
+        unlock_at: '2026-09-17T19:50:00.000Z',
+        due_at: '2026-09-17T20:40:00.000Z',
+        lock_at: '2026-09-17T20:40:00.000Z'
+      })
+      vi.spyOn(prisma.assignmentOverride, 'upsert').mockResolvedValue({ id: 'local-ov-2' } as any)
+      vi.spyOn(prisma.assignmentOverrideStudent, 'upsert').mockResolvedValue({} as any)
+      vi.spyOn(prisma.cbtfReservation, 'update').mockResolvedValue({} as any)
+
+      const result = await resyncAssignmentCbtfOverrides('asg-200')
+      expect(result.totalChecked).toBe(1)
+      expect(result.matched).toBe(0)
+      expect(result.updated).toBe(1)
+      expect(result.created).toBe(0)
+      expect(result.changedOrCreated).toBe(1)
+      expect(result.errors).toBe(0)
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        'canvas.vt.edu',
+        '321',
+        '789',
+        9002,
+        {
+          unlock_at: '2026-09-17T19:50:00.000Z',
+          due_at: '2026-09-17T20:40:00.000Z',
+          lock_at: '2026-09-17T20:40:00.000Z'
+        },
+        'teacher-key'
+      )
+    })
+
+    it('creates a new Canvas override when no override exists in Canvas for a reservation', async () => {
+      const startTime = new Date('2026-09-17T19:50:00.000Z')
+      const endTime = new Date('2026-09-17T20:40:00.000Z')
+      const mockReservation: any = {
+        id: 'res-203',
+        assignmentId: 'asg-200',
+        userId: 'user-std-2',
+        startTime,
+        endTime,
+        status: 'SCHEDULED',
+        canvasOverrideId: null,
+        user: {
+          id: 'user-std-2',
+          firstName: 'Carol',
+          lastName: 'Danvers',
+          email: 'carol@vt.edu',
+          ltiIdentities: [{ platformId: 'plat-200', platformUserId: '5002' }],
+          enrollments: [{ courseId: 'course-200' }]
+        }
+      }
+
+      vi.spyOn(prisma.assignment, 'findUnique').mockResolvedValue(mockAssignment as any)
+      vi.spyOn(prisma.cbtfReservation, 'findMany').mockResolvedValue([mockReservation] as any)
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key' }] }
+      } as any)
+
+      vi.spyOn(canvasModule, 'fetchCanvasAssignmentOverrides').mockResolvedValue([])
+
+      const createSpy = vi.spyOn(canvasModule, 'createCanvasAssignmentOverride').mockResolvedValue({
+        id: 9003,
+        assignment_id: 789,
+        title: 'CBTF Exam Slot',
+        student_ids: [5002],
+        unlock_at: '2026-09-17T19:50:00.000Z',
+        due_at: '2026-09-17T20:40:00.000Z',
+        lock_at: '2026-09-17T20:40:00.000Z'
+      })
+      vi.spyOn(prisma.cbtfReservation, 'update').mockResolvedValue({} as any)
+      vi.spyOn(prisma.assignmentOverride, 'upsert').mockResolvedValue({ id: 'local-ov-3' } as any)
+      vi.spyOn(prisma.assignmentOverrideStudent, 'upsert').mockResolvedValue({} as any)
+
+      const result = await resyncAssignmentCbtfOverrides('asg-200')
+      expect(result.totalChecked).toBe(1)
+      expect(result.matched).toBe(0)
+      expect(result.updated).toBe(0)
+      expect(result.created).toBe(1)
+      expect(result.changedOrCreated).toBe(1)
+      expect(result.errors).toBe(0)
+
+      expect(createSpy).toHaveBeenCalledWith(
+        'canvas.vt.edu',
+        '321',
+        '789',
+        {
+          student_ids: [5002],
+          title: 'CBTF Exam Slot',
+          unlock_at: '2026-09-17T19:50:00.000Z',
+          due_at: '2026-09-17T20:40:00.000Z',
+          lock_at: '2026-09-17T20:40:00.000Z'
+        },
+        'teacher-key'
+      )
+    })
+
+    it('handles Canvas API throttling with retry when fetching or updating overrides', async () => {
+      const startTime = new Date('2026-09-17T19:50:00.000Z')
+      const endTime = new Date('2026-09-17T20:40:00.000Z')
+      const mockReservation: any = {
+        id: 'res-204',
+        assignmentId: 'asg-200',
+        userId: 'user-std-1',
+        startTime,
+        endTime,
+        status: 'SCHEDULED',
+        canvasOverrideId: '9004',
+        user: {
+          id: 'user-std-1',
+          firstName: 'Bob',
+          lastName: 'Jones',
+          email: 'bob@vt.edu',
+          ltiIdentities: [{ platformId: 'plat-200', platformUserId: '5001' }],
+          enrollments: [{ courseId: 'course-200' }]
+        }
+      }
+
+      vi.spyOn(prisma.assignment, 'findUnique').mockResolvedValue(mockAssignment as any)
+      vi.spyOn(prisma.cbtfReservation, 'findMany').mockResolvedValue([mockReservation] as any)
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key' }] }
+      } as any)
+
+      // First call throws 429 rate limit, second call succeeds
+      vi.spyOn(canvasModule, 'fetchCanvasAssignmentOverrides')
+        .mockRejectedValueOnce({ statusCode: 429, message: 'Too Many Requests' })
+        .mockResolvedValueOnce([
+          {
+            id: 9004,
+            assignment_id: 789,
+            title: 'CBTF Exam Slot',
+            student_ids: [5001],
+            unlock_at: '2026-09-17T19:50:00.000Z',
+            due_at: '2026-09-17T20:40:00.000Z',
+            lock_at: '2026-09-17T20:40:00.000Z'
+          }
+        ])
+
+      const result = await resyncAssignmentCbtfOverrides('asg-200')
+      expect(result.totalChecked).toBe(1)
+      expect(result.matched).toBe(1)
+      expect(result.changedOrCreated).toBe(0)
     })
   })
 })

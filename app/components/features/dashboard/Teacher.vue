@@ -327,7 +327,8 @@ const {
   isSavingApiKey,
   openApiKeyModal,
   saveApiKey,
-  syncAssignments
+  syncAssignments,
+  resyncAssignmentCbtfOverrides
 } = useTeacherDashboard()
 
 // Toggle assignment published state
@@ -568,8 +569,8 @@ const assignmentColumns: any[] = [
       return h('span', { class: isEligible ? '' : 'text-gray-400 dark:text-gray-500' }, content)
     }
   },
-  actionsColumn<AssignmentRow>((row) => [
-    [
+  actionsColumn<AssignmentRow>((row) => {
+    const actions: any[] = [
       {
         label: 'View Redemptions',
         icon: 'i-lucide-history',
@@ -586,7 +587,17 @@ const assignmentColumns: any[] = [
         onSelect: () => openAssignmentEdit(row.original)
       }
     ]
-  ])
+
+    if (row.original.isSchedulable) {
+      actions.push({
+        label: 'Resync Canvas Overrides',
+        icon: 'i-lucide-refresh-cw',
+        onSelect: () => resyncAssignmentCbtfOverrides(row.original)
+      })
+    }
+
+    return [actions]
+  })
 ]
 
 const sectionColumns: any[] = [

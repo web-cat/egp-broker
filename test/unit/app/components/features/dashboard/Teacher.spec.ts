@@ -6,6 +6,7 @@ import type { StudentRosterRow } from '@@/shared/models/teacher'
 import { actionsColumn } from '~/utils/tableHelpers'
 
 const mockOpenStudentRedemptions = vi.fn()
+const mockResyncAssignmentCbtfOverrides = vi.fn()
 
 vi.stubGlobal('useState', (_key: string, init?: () => any) => ref(init ? init() : null))
 vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
@@ -72,7 +73,8 @@ vi.mock('~/composables/features/useTeacherDashboard', () => ({
     isSavingApiKey: ref(false),
     openApiKeyModal: vi.fn(),
     saveApiKey: vi.fn(),
-    syncAssignments: vi.fn()
+    syncAssignments: vi.fn(),
+    resyncAssignmentCbtfOverrides: mockResyncAssignmentCbtfOverrides
   })
 }))
 
@@ -152,5 +154,72 @@ describe('TeacherDashboard Student Columns', () => {
     // Trigger click
     buttonVNode.props.onClick()
     expect(mockOpenStudentRedemptions).toHaveBeenCalledWith(capturedData[0])
+  })
+})
+
+describe('TeacherDashboard Assignment Actions', () => {
+  it('includes "Resync Canvas Overrides" in three-dot menu for CBTF scheduled assignments', () => {
+    let capturedAssignmentColumns: any[] = []
+
+    mount(TeacherDashboard, {
+      global: {
+        stubs: {
+          BaseDataTable: {
+            props: ['columns', 'data'],
+            setup(props) {
+              if (props.columns && props.columns.some((c: any) => c.accessorKey === 'title')) {
+                capturedAssignmentColumns = props.columns
+              }
+              return () => null
+            }
+          },
+          UCard: true,
+          UTabs: true,
+          UButton: true,
+          UIcon: true,
+          UBadge: true,
+          UTooltip: true,
+          BasePageHeader: true,
+          BaseStatusBadge: true,
+          FeaturesAdminAssignmentEditPanel: true,
+          FeaturesAdminPassTypeEditPanel: true,
+          FeaturesDashboardAssignmentRedemptionsModal: true,
+          FeaturesDashboardStudentRedemptionsModal: true,
+          FeaturesDashboardPlatformApiKeyModal: true,
+          FeaturesDashboardRosterSyncModal: true
+        }
+      }
+    })
+
+    const actionsCol = capturedAssignmentColumns.find((c) => c.id === 'actions')
+    expect(actionsCol).toBeDefined()
+
+    // Test with CBTF schedulable assignment
+    const schedulableRow = {
+      original: { id: 'asg-1', title: 'CBTF Quiz', isSchedulable: true, published: true },
+      getValue: vi.fn()
+    }
+    const cellVNode = actionsCol.cell({ row: schedulableRow })
+    expect(cellVNode).toBeDefined()
+    const items = cellVNode.props?.items?.[0] || []
+    const resyncAction = items.find((item: any) => item.label === 'Resync Canvas Overrides')
+    expect(resyncAction).toBeDefined()
+    expect(resyncAction.icon).toBe('i-lucide-refresh-cw')
+
+    // Click it
+    resyncAction.onSelect()
+    expect(mockResyncAssignmentCbtfOverrides).toHaveBeenCalledWith(schedulableRow.original)
+
+    // Test with non-schedulable assignment
+    const nonSchedulableRow = {
+      original: { id: 'asg-2', title: 'Regular Homework', isSchedulable: false, published: true },
+      getValue: vi.fn()
+    }
+    const nonSchedulableVNode = actionsCol.cell({ row: nonSchedulableRow })
+    const nonSchedulableItems = nonSchedulableVNode.props?.items?.[0] || []
+    const missingAction = nonSchedulableItems.find(
+      (item: any) => item.label === 'Resync Canvas Overrides'
+    )
+    expect(missingAction).toBeUndefined()
   })
 })

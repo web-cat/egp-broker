@@ -222,3 +222,22 @@ export const cbtfUpdateProctorShiftInputSchema = z
   })
 
 export type CbtfUpdateProctorShiftInput = z.infer<typeof cbtfUpdateProctorShiftInputSchema>
+
+export const resyncCbtfOverridesResponseSchema = z.object({
+  totalChecked: z.number().int(),
+  matched: z.number().int(),
+  updated: z.number().int(),
+  created: z.number().int(),
+  changedOrCreated: z.number().int(),
+  errors: z.number().int(),
+  details: z.array(
+    z.object({
+      reservationId: z.string(),
+      studentName: z.string(),
+      status: z.enum(['matched', 'updated', 'created', 'error']),
+      message: z.string().optional()
+    })
+  )
+})
+
+export type ResyncCbtfOverridesResponse = z.infer<typeof resyncCbtfOverridesResponseSchema>
