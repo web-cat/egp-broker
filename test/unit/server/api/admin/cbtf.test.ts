@@ -8,12 +8,15 @@ import exceptionsDelete from '../../../../../server/api/admin/cbtf/exceptions/[i
 import shiftsGet from '../../../../../server/api/admin/cbtf/shifts.get'
 import shiftsPost from '../../../../../server/api/admin/cbtf/shifts.post'
 import shiftsDelete from '../../../../../server/api/admin/cbtf/shifts/[id].delete'
+import shiftsBatchPost from '../../../../../server/api/admin/cbtf/shifts/batch.post'
+import shiftPatch from '../../../../../server/api/admin/cbtf/shifts/[id].patch'
 import reservationsGet from '../../../../../server/api/admin/cbtf/reservations.get'
 import reservationPatch from '../../../../../server/api/admin/cbtf/reservations/[id].patch'
 import prisma from '@@/server/utils/db'
 
 vi.mock('@@/server/utils/db', () => ({
   default: {
+    $transaction: vi.fn((promises: any[]) => Promise.all(promises)),
     cbtfFacility: {
       findFirst: vi.fn(),
       update: vi.fn(),
@@ -29,7 +32,9 @@ vi.mock('@@/server/utils/db', () => ({
     },
     cbtfProctorShift: {
       findMany: vi.fn(),
+      findUnique: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
       delete: vi.fn()
     },
     cbtfReservation: {
@@ -240,6 +245,65 @@ describe('API: Admin CBTF Endpoints', () => {
       const res = await shiftsDelete(event)
       expect(res.statusCode).toBe(200)
       expect(prisma.cbtfProctorShift.delete).toHaveBeenCalledWith({ where: { id: 'shift-1' } })
+    })
+
+    it('batch generates proctor shifts across date range', async () => {
+      const event = mockEvent('ADMIN', {
+        facilityId: 'fac-1',
+        userId: 'usr-p1',
+        startDate: '2026-09-14', // Monday
+        endDate: '2026-09-20', // Sunday
+        shifts: [
+          { dayOfWeek: 1, startTime: '14:00', endTime: '17:00' }, // Monday
+          { dayOfWeek: 3, startTime: '09:00', endTime: '11:30' } // Wednesday
+        ]
+      })
+
+      vi.mocked(prisma.cbtfProctorShift.create).mockResolvedValue({
+        id: 'shift-generated',
+        facilityId: 'fac-1',
+        userId: 'usr-p1',
+        startTime: new Date('2026-09-14T14:00:00.000Z'),
+        endTime: new Date('2026-09-14T17:00:00.000Z')
+      } as any)
+
+      const res = await shiftsBatchPost(event)
+      expect(res.statusCode).toBe(201)
+      expect(res.data.count).toBe(2)
+      expect(prisma.cbtfProctorShift.create).toHaveBeenCalledTimes(2)
+    })
+
+    it('updates a specific proctor shift (single timeslot adjustment or reassignment)', async () => {
+      const event = mockEvent(
+        'ADMIN',
+        {
+          userId: 'usr-substitute',
+          startTime: '2026-09-14T14:30:00.000Z',
+          endTime: '2026-09-14T17:00:00.000Z'
+        },
+        { id: 'shift-1' }
+      )
+
+      vi.mocked(prisma.cbtfProctorShift.findUnique).mockResolvedValue({
+        id: 'shift-1',
+        userId: 'usr-p1'
+      } as any)
+
+      vi.mocked(prisma.cbtfProctorShift.update).mockResolvedValue({
+        id: 'shift-1',
+        userId: 'usr-substitute',
+        startTime: new Date('2026-09-14T14:30:00.000Z'),
+        endTime: new Date('2026-09-14T17:00:00.000Z')
+      } as any)
+
+      const res = await shiftPatch(event)
+      expect(res.statusCode).toBe(200)
+      expect(res.data.userId).toBe('usr-substitute')
+      expect(prisma.cbtfProctorShift.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'shift-1' }
+        })
+      )
     })
   })
 

@@ -201,6 +201,67 @@ export function useCbtfAdmin() {
     }
   }
 
+  const batchGenerateShifts = async (payload: {
+    userId: string
+    startDate: string
+    endDate: string
+    shifts: Array<{ dayOfWeek: number; startTime: string; endTime: string }>
+  }) => {
+    if (!facility.value?.id) return
+    try {
+      const res = await $fetch<ApiResponse<{ count: number; shifts: any[] }>>(
+        '/api/admin/cbtf/shifts/batch',
+        {
+          method: 'POST',
+          body: {
+            facilityId: facility.value.id,
+            ...payload
+          }
+        }
+      )
+      toast.add({
+        title: 'Weekly Shifts Generated',
+        description: `Successfully scheduled ${res.data?.count || 0} shift instances.`,
+        color: 'success'
+      })
+      await refreshShifts()
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Generate Weekly Shifts',
+        description: err.data?.statusMessage || err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
+  const updateShift = async (
+    id: string,
+    payload: { userId?: string; startTime: string; endTime: string }
+  ) => {
+    try {
+      const res = await $fetch<ApiResponse<any>>(`/api/admin/cbtf/shifts/${id}`, {
+        method: 'PATCH',
+        body: payload
+      })
+      toast.add({
+        title: 'Shift Updated',
+        description: 'Successfully updated shift details.',
+        color: 'success'
+      })
+      await refreshShifts()
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Update Shift',
+        description: err.data?.statusMessage || err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
   const updateReservation = async (
     id: string,
     updates: { status?: string; seatNumber?: number }
@@ -289,6 +350,8 @@ export function useCbtfAdmin() {
     deleteException,
     createShift,
     deleteShift,
+    batchGenerateShifts,
+    updateShift,
     updateReservation
   }
 }

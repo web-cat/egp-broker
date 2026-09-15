@@ -159,11 +159,25 @@
 
     <!-- Tab 4: Proctor Shifts -->
     <div v-else-if="activeTab === 'shifts'" class="space-y-4">
-      <div class="flex justify-between items-center">
-        <p class="text-sm text-neutral-600 dark:text-neutral-400">
-          Staff coverage and proctor shift scheduling.
-        </p>
-        <UButton color="primary" icon="i-lucide-plus" label="Add Shift" @click="openShiftModal" />
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+            Proctor Coverage & Shift Roster
+          </h3>
+          <p class="text-xs text-neutral-500">
+            Schedule recurring weekly staff hours or manage individual proctor shifts.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <UButton
+            color="primary"
+            variant="subtle"
+            icon="i-lucide-calendar-days"
+            label="Weekly Schedule Builder"
+            @click="openWeeklyScheduleModal"
+          />
+          <UButton color="primary" icon="i-lucide-plus" label="Add Shift" @click="openShiftModal" />
+        </div>
       </div>
 
       <BaseDataTable
@@ -416,11 +430,248 @@
         </div>
       </template>
     </UModal>
+
+    <!-- Modal: Weekly Schedule Builder -->
+    <UModal
+      v-model:open="showWeeklyModal"
+      title="Weekly Proctor Schedule Builder"
+      :ui="{ content: 'sm:max-w-2xl' }"
+    >
+      <template #body>
+        <div class="space-y-4">
+          <p class="text-xs text-neutral-500">
+            Enter a proctor's recurring weekly shift pattern using natural text (or the slot
+            builder) and generate concrete shift records across any date range.
+          </p>
+
+          <!-- Proctor Selector -->
+          <UFormField label="Select Proctor" required>
+            <USelect
+              v-model="weeklyProctorId"
+              :items="proctorOptions.filter((o) => o.value !== ADD_PROCTOR_VALUE)"
+              placeholder="Choose a proctor..."
+              class="w-full"
+            />
+          </UFormField>
+
+          <!-- Smart Text / Fast Entry -->
+          <div
+            class="space-y-1.5 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50"
+          >
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                Paste / Fast Text Entry
+              </label>
+              <span class="text-[11px] text-neutral-400">
+                Parses days &amp; times automatically
+              </span>
+            </div>
+            <UTextarea
+              v-model="weeklyRawText"
+              rows="2"
+              class="font-mono text-xs w-full"
+              placeholder="Mon 2:00–5:00 PM (3.0h), Wed 9:00–11:30 AM (2.5h), Fri 9:00–11:30 AM (2.5h)"
+              @input="handleWeeklyTextChange"
+            />
+            <div class="flex justify-end">
+              <UButton
+                size="xs"
+                variant="subtle"
+                color="neutral"
+                icon="i-lucide-sparkles"
+                label="Parse Text into Slots"
+                @click="handleWeeklyTextChange"
+              />
+            </div>
+          </div>
+
+          <!-- Parsed / Configured Slots List -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                Weekly Shift Slots ({{ weeklySlots.length }})
+              </span>
+              <div class="flex items-center gap-2">
+                <UBadge color="primary" variant="subtle" size="sm">
+                  Total: {{ weeklyTotalHours }} hrs / week
+                </UBadge>
+                <UButton
+                  size="xs"
+                  variant="outline"
+                  color="primary"
+                  icon="i-lucide-plus"
+                  label="Add Slot"
+                  @click="addWeeklySlot"
+                />
+              </div>
+            </div>
+
+            <div
+              v-if="weeklySlots.length === 0"
+              class="p-4 text-center border border-dashed border-neutral-200 dark:border-neutral-800 rounded-lg"
+            >
+              <p class="text-xs text-neutral-500">
+                No slots configured yet. Paste shift text above or click "+ Add Slot" to build
+                manually.
+              </p>
+            </div>
+
+            <div v-else class="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <div
+                v-for="(slot, idx) in weeklySlots"
+                :key="idx"
+                class="flex flex-wrap items-center gap-2 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+              >
+                <div class="w-36">
+                  <USelect
+                    v-model="slot.dayOfWeek"
+                    :items="dayOfWeekOptions"
+                    class="w-full text-xs"
+                  />
+                </div>
+                <div class="flex items-center gap-1.5 flex-1 min-w-[210px]">
+                  <UInput v-model="slot.startTime" type="time" class="w-28 text-xs font-mono" />
+                  <span class="text-xs text-neutral-400">to</span>
+                  <UInput v-model="slot.endTime" type="time" class="w-28 text-xs font-mono" />
+                </div>
+                <div class="flex items-center gap-2">
+                  <UBadge color="neutral" variant="subtle" size="xs">
+                    {{ calculateSlotDuration(slot.startTime, slot.endTime) }}h
+                  </UBadge>
+                  <UButton
+                    color="error"
+                    variant="ghost"
+                    size="xs"
+                    icon="i-lucide-trash-2"
+                    @click="removeWeeklySlot(idx)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Date Range Target -->
+          <div class="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                Target Date Range
+              </label>
+              <div class="flex items-center gap-1">
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  color="neutral"
+                  label="Next 4 Weeks"
+                  @click="setPresetWeeks(4)"
+                />
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  color="neutral"
+                  label="Full Term (15 Wks)"
+                  @click="setPresetWeeks(15)"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <BaseFormInput
+                v-model="weeklyStartDate"
+                name="weeklyStartDate"
+                label="Start Date"
+                type="date"
+              />
+              <BaseFormInput
+                v-model="weeklyEndDate"
+                name="weeklyEndDate"
+                label="End Date"
+                type="date"
+              />
+            </div>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            label="Cancel"
+            @click="showWeeklyModal = false"
+          />
+          <UButton
+            color="primary"
+            icon="i-lucide-calendar-plus"
+            label="Generate &amp; Publish Shifts"
+            :loading="isGeneratingShifts"
+            :disabled="
+              !weeklyProctorId || !weeklyStartDate || !weeklyEndDate || weeklySlots.length === 0
+            "
+            @click="handleBatchGenerate"
+          />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Modal: Edit Single Shift -->
+    <UModal v-model:open="showEditShiftModal" title="Edit Proctor Shift">
+      <template #body>
+        <div class="space-y-4">
+          <p class="text-xs text-neutral-500">
+            Adjust times or reassign proctor for this specific shift slot.
+          </p>
+
+          <UFormField label="Proctor" required>
+            <USelect
+              v-model="editShiftForm.userId"
+              :items="proctorOptions.filter((o) => o.value !== ADD_PROCTOR_VALUE)"
+              placeholder="Select proctor..."
+              class="w-full"
+            />
+          </UFormField>
+
+          <BaseFormInput
+            v-model="editShiftForm.startTime"
+            name="editStartTime"
+            label="Shift Start Time"
+            type="datetime-local"
+          />
+          <BaseFormInput
+            v-model="editShiftForm.endTime"
+            name="editEndTime"
+            label="Shift End Time"
+            type="datetime-local"
+          />
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            label="Cancel"
+            @click="showEditShiftModal = false"
+          />
+          <UButton
+            color="primary"
+            label="Save Changes"
+            :loading="isUpdatingShift"
+            :disabled="!editShiftForm.userId || !editShiftForm.startTime || !editShiftForm.endTime"
+            @click="handleUpdateShift"
+          />
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useCbtfAdmin } from '~/composables/features/admin/useCbtfAdmin'
+import {
+  parseProctorShiftString,
+  calculateWeeklyShiftHours,
+  type ParsedShiftSlot
+} from '@@/shared/utils/proctor-schedule-parser'
 
 definePageMeta({
   middleware: ['admin-only']
@@ -441,6 +692,8 @@ const {
   deleteException,
   createShift,
   deleteShift,
+  batchGenerateShifts,
+  updateShift,
   updateReservation
 } = useCbtfAdmin()
 
@@ -763,17 +1016,28 @@ const shiftColumns: any[] = [
     id: 'actions',
     header: 'Actions',
     cell: ({ row }: { row: any }) =>
-      h(resolveComponent('UButton'), {
-        color: 'error',
-        variant: 'ghost',
-        size: 'xs',
-        icon: 'i-lucide-trash-2',
-        onClick: () => {
-          if (confirm('Delete this proctor shift?')) {
-            deleteShift(row.original.id)
+      h('div', { class: 'flex items-center gap-1' }, [
+        h(resolveComponent('UButton'), {
+          color: 'neutral',
+          variant: 'ghost',
+          size: 'xs',
+          icon: 'i-lucide-pencil',
+          title: 'Edit Shift',
+          onClick: () => openEditShiftModal(row.original)
+        }),
+        h(resolveComponent('UButton'), {
+          color: 'error',
+          variant: 'ghost',
+          size: 'xs',
+          icon: 'i-lucide-trash-2',
+          title: 'Delete Shift',
+          onClick: () => {
+            if (confirm('Delete this proctor shift?')) {
+              deleteShift(row.original.id)
+            }
           }
-        }
-      })
+        })
+      ])
   }
 ]
 
@@ -790,6 +1054,141 @@ const handleSaveShift = async () => {
   shiftForm.startTime = ''
   shiftForm.endTime = ''
   resetProctorSearch()
+}
+
+// --- Weekly Schedule Builder State ---
+const showWeeklyModal = ref(false)
+const weeklyProctorId = ref('')
+const weeklyRawText = ref('')
+const weeklySlots = ref<ParsedShiftSlot[]>([])
+const weeklyStartDate = ref('')
+const weeklyEndDate = ref('')
+const isGeneratingShifts = ref(false)
+
+const weeklyTotalHours = computed(() => calculateWeeklyShiftHours(weeklySlots.value))
+
+const calculateSlotDuration = (start: string, end: string) => {
+  if (!start || !end) return 0
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  const dur = (eh * 60 + em - (sh * 60 + sm)) / 60
+  return Math.round((dur > 0 ? dur : 0) * 10) / 10
+}
+
+const handleWeeklyTextChange = () => {
+  if (!weeklyRawText.value.trim()) return
+  const parsed = parseProctorShiftString(weeklyRawText.value)
+  if (parsed.length > 0) {
+    weeklySlots.value = parsed
+  }
+}
+
+const addWeeklySlot = () => {
+  weeklySlots.value.push({
+    dayOfWeek: 1,
+    dayName: 'Monday',
+    startTime: '09:00',
+    endTime: '12:00',
+    durationHours: 3.0
+  })
+}
+
+const removeWeeklySlot = (index: number) => {
+  weeklySlots.value.splice(index, 1)
+}
+
+const setPresetWeeks = (weeks: number) => {
+  const today = new Date()
+  const day = today.getDay()
+  const diffToMon = day === 1 ? 0 : (8 - day) % 7
+  const start = new Date(today)
+  start.setDate(today.getDate() + diffToMon)
+
+  const end = new Date(start)
+  end.setDate(start.getDate() + weeks * 7 - 3) // Friday of that week
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  weeklyStartDate.value = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`
+  weeklyEndDate.value = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`
+}
+
+const openWeeklyScheduleModal = () => {
+  weeklyProctorId.value = ''
+  weeklyRawText.value = ''
+  weeklySlots.value = []
+  setPresetWeeks(4)
+  showWeeklyModal.value = true
+}
+
+const handleBatchGenerate = async () => {
+  if (
+    !weeklyProctorId.value ||
+    !weeklyStartDate.value ||
+    !weeklyEndDate.value ||
+    weeklySlots.value.length === 0
+  )
+    return
+  isGeneratingShifts.value = true
+  try {
+    await batchGenerateShifts({
+      userId: weeklyProctorId.value,
+      startDate: weeklyStartDate.value,
+      endDate: weeklyEndDate.value,
+      shifts: weeklySlots.value.map((s) => ({
+        dayOfWeek: s.dayOfWeek,
+        startTime: s.startTime,
+        endTime: s.endTime
+      }))
+    })
+    showWeeklyModal.value = false
+  } finally {
+    isGeneratingShifts.value = false
+  }
+}
+
+// --- Edit Single Shift State ---
+const showEditShiftModal = ref(false)
+const editingShiftId = ref('')
+const editShiftForm = reactive({
+  userId: '',
+  startTime: '',
+  endTime: ''
+})
+const isUpdatingShift = ref(false)
+
+const toDateTimeLocalValue = (dateStr: string) => {
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const Y = d.getFullYear()
+  const M = pad(d.getMonth() + 1)
+  const D = pad(d.getDate())
+  const h = pad(d.getHours())
+  const m = pad(d.getMinutes())
+  return `${Y}-${M}-${D}T${h}:${m}`
+}
+
+const openEditShiftModal = (shift: any) => {
+  editingShiftId.value = shift.id
+  editShiftForm.userId = shift.userId || shift.user?.id || ''
+  editShiftForm.startTime = toDateTimeLocalValue(shift.startTime)
+  editShiftForm.endTime = toDateTimeLocalValue(shift.endTime)
+  showEditShiftModal.value = true
+}
+
+const handleUpdateShift = async () => {
+  if (!editingShiftId.value || !editShiftForm.startTime || !editShiftForm.endTime) return
+  isUpdatingShift.value = true
+  try {
+    await updateShift(editingShiftId.value, {
+      userId: editShiftForm.userId || undefined,
+      startTime: new Date(editShiftForm.startTime).toISOString(),
+      endTime: new Date(editShiftForm.endTime).toISOString()
+    })
+    showEditShiftModal.value = false
+  } finally {
+    isUpdatingShift.value = false
+  }
 }
 
 // --- Reservations Table ---

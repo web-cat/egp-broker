@@ -12,7 +12,9 @@ import {
   cbtfReservationRowSchema,
   createReservationNoteInputSchema,
   searchUserByEmailSchema,
-  grantProctorRoleInputSchema
+  grantProctorRoleInputSchema,
+  cbtfBatchGenerateShiftsSchema,
+  cbtfUpdateProctorShiftInputSchema
 } from '../../../../shared/schemas/cbtf.schema'
 import { userRowSchema } from '../../../../shared/models/user'
 import {
@@ -331,6 +333,74 @@ describe('CBTF Shared Schemas', () => {
 
     it('rejects empty userId', () => {
       expect(grantProctorRoleInputSchema.safeParse({ userId: '' }).success).toBe(false)
+    })
+  })
+
+  describe('cbtfBatchGenerateShiftsSchema', () => {
+    it('validates a valid batch shift generation input', () => {
+      const valid = {
+        facilityId: 'fac-1',
+        userId: 'usr-p1',
+        startDate: '2026-09-15',
+        endDate: '2026-12-11',
+        shifts: [
+          { dayOfWeek: 1, startTime: '14:00', endTime: '17:00' },
+          { dayOfWeek: 3, startTime: '09:00', endTime: '11:30' }
+        ]
+      }
+      expect(cbtfBatchGenerateShiftsSchema.safeParse(valid).success).toBe(true)
+    })
+
+    it('rejects endDate earlier than startDate', () => {
+      const invalid = {
+        facilityId: 'fac-1',
+        userId: 'usr-p1',
+        startDate: '2026-10-15',
+        endDate: '2026-09-15',
+        shifts: [{ dayOfWeek: 1, startTime: '14:00', endTime: '17:00' }]
+      }
+      expect(cbtfBatchGenerateShiftsSchema.safeParse(invalid).success).toBe(false)
+    })
+
+    it('rejects empty shift list or invalid shift times', () => {
+      expect(
+        cbtfBatchGenerateShiftsSchema.safeParse({
+          facilityId: 'fac-1',
+          userId: 'usr-p1',
+          startDate: '2026-09-15',
+          endDate: '2026-12-11',
+          shifts: []
+        }).success
+      ).toBe(false)
+
+      expect(
+        cbtfBatchGenerateShiftsSchema.safeParse({
+          facilityId: 'fac-1',
+          userId: 'usr-p1',
+          startDate: '2026-09-15',
+          endDate: '2026-12-11',
+          shifts: [{ dayOfWeek: 1, startTime: '17:00', endTime: '14:00' }]
+        }).success
+      ).toBe(false)
+    })
+  })
+
+  describe('cbtfUpdateProctorShiftInputSchema', () => {
+    it('validates valid shift update input', () => {
+      const valid = {
+        userId: 'usr-p2',
+        startTime: '2026-09-15T14:00:00.000Z',
+        endTime: '2026-09-15T17:00:00.000Z'
+      }
+      expect(cbtfUpdateProctorShiftInputSchema.safeParse(valid).success).toBe(true)
+    })
+
+    it('rejects endTime before or equal to startTime', () => {
+      const invalid = {
+        startTime: '2026-09-15T17:00:00.000Z',
+        endTime: '2026-09-15T14:00:00.000Z'
+      }
+      expect(cbtfUpdateProctorShiftInputSchema.safeParse(invalid).success).toBe(false)
     })
   })
 })

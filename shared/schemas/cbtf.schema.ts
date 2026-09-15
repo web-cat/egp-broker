@@ -181,3 +181,42 @@ export const grantProctorRoleInputSchema = z.object({
 })
 
 export type GrantProctorRoleInput = z.infer<typeof grantProctorRoleInputSchema>
+
+export const cbtfBatchShiftSlotSchema = z
+  .object({
+    dayOfWeek: z.number().int().min(0).max(6),
+    startTime: z.string().regex(cbtfTimeRegex, 'Invalid startTime format (HH:mm)'),
+    endTime: z.string().regex(cbtfTimeRegex, 'Invalid endTime format (HH:mm)')
+  })
+  .refine((data) => data.endTime > data.startTime, {
+    message: 'endTime must be after startTime',
+    path: ['endTime']
+  })
+
+export const cbtfBatchGenerateShiftsSchema = z
+  .object({
+    facilityId: z.string().min(1, 'Facility ID is required'),
+    userId: z.string().min(1, 'Proctor user ID is required'),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be formatted as YYYY-MM-DD'),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate must be formatted as YYYY-MM-DD'),
+    shifts: z.array(cbtfBatchShiftSlotSchema).min(1, 'At least one shift slot is required')
+  })
+  .refine((data) => data.endDate >= data.startDate, {
+    message: 'endDate must be on or after startDate',
+    path: ['endDate']
+  })
+
+export type CbtfBatchGenerateShiftsInput = z.infer<typeof cbtfBatchGenerateShiftsSchema>
+
+export const cbtfUpdateProctorShiftInputSchema = z
+  .object({
+    userId: z.string().min(1, 'Proctor user ID is required').optional(),
+    startTime: z.string().datetime(),
+    endTime: z.string().datetime()
+  })
+  .refine((data) => new Date(data.endTime) > new Date(data.startTime), {
+    message: 'Shift end time must be after start time',
+    path: ['endTime']
+  })
+
+export type CbtfUpdateProctorShiftInput = z.infer<typeof cbtfUpdateProctorShiftInputSchema>
