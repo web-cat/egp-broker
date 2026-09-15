@@ -243,3 +243,26 @@ export const resyncCbtfOverridesResponseSchema = z.object({
 })
 
 export type ResyncCbtfOverridesResponse = z.infer<typeof resyncCbtfOverridesResponseSchema>
+
+export const repairCbtfTimezonesResponseSchema = z.object({
+  totalChecked: z.number().int(),
+  totalRepaired: z.number().int(),
+  seatsReassigned: z.number().int().default(0),
+  alreadyCorrect: z.number().int().default(0),
+  conflicts: z.number().int().default(0),
+  errors: z.number().int(),
+  details: z.array(
+    z.object({
+      reservationId: z.string(),
+      studentName: z.string(),
+      previousStartUtc: z.string(),
+      repairedStartUtc: z.string(),
+      repairedStartEdt: z.string(),
+      seatNumber: z.number().int(),
+      status: z.enum(['repaired', 'already_correct', 'reassigned', 'conflict', 'error']),
+      message: z.string().optional()
+    })
+  )
+})
+
+export type RepairCbtfTimezonesResponse = z.infer<typeof repairCbtfTimezonesResponseSchema>

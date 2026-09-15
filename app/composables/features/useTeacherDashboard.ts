@@ -5,7 +5,10 @@ import type { StudentRosterRow } from '@@/shared/models/teacher'
 import type { CourseSectionRow } from '@@/shared/models/section'
 import type { RosterSyncStatusData } from '@@/shared/models/course'
 import type { ApiResponse } from '@@/shared/types/api'
-import type { ResyncCbtfOverridesResponse } from '@@/shared/schemas/cbtf.schema'
+import type {
+  ResyncCbtfOverridesResponse,
+  RepairCbtfTimezonesResponse
+} from '@@/shared/schemas/cbtf.schema'
 import { useAdminCrud } from '~/composables/features/admin/useAdminCrud'
 
 export const useTeacherDashboard = () => {
@@ -283,6 +286,67 @@ export const useTeacherDashboard = () => {
     }
   }
 
+  // --- Admin-only CBTF Timezone Repair ---
+  const repairAssignmentCbtfTimezones = async (assignment: AssignmentRow) => {
+    try {
+      toast.add({
+        title: 'Repairing CBTF Timezones & Seats',
+        description: `Analyzing and repairing pre-fix reservations for "${assignment.title || 'Assignment'}"...`,
+        color: 'neutral'
+      })
+
+      const res = await $fetch<ApiResponse<RepairCbtfTimezonesResponse>>(
+        `/api/me/assignments/${assignment.id}/cbtf-repair-timezone`,
+        { method: 'POST' }
+      )
+
+      const data = res.data
+      const totalChecked = data?.totalChecked ?? 0
+      const totalRepaired = data?.totalRepaired ?? 0
+      const resWord = totalChecked === 1 ? 'reservation' : 'reservations'
+
+      let description = `Checked ${totalChecked} ${resWord}; ${totalRepaired} repaired.`
+      const notes: string[] = []
+      if (data?.seatsReassigned && data.seatsReassigned > 0) {
+        notes.push(
+          `${data.seatsReassigned} ${data.seatsReassigned === 1 ? 'seat' : 'seats'} reassigned`
+        )
+      }
+      if (data?.alreadyCorrect && data.alreadyCorrect > 0) {
+        notes.push(`${data.alreadyCorrect} already correct`)
+      }
+      if (data?.conflicts && data.conflicts > 0) {
+        notes.push(`${data.conflicts} ${data.conflicts === 1 ? 'conflict' : 'conflicts'}`)
+      }
+      if (data?.errors && data.errors > 0) {
+        notes.push(`${data.errors} failed`)
+      }
+      if (notes.length > 0) {
+        description += ` (${notes.join(', ')})`
+      }
+
+      const hasWarning =
+        (data?.errors && data.errors > 0) || (data?.conflicts && data.conflicts > 0)
+
+      toast.add({
+        title: 'CBTF Timezones Repaired',
+        description,
+        color: hasWarning ? 'warning' : 'success'
+      })
+    } catch (err: any) {
+      console.error(err)
+      toast.add({
+        title: 'Failed to Repair CBTF Timezones',
+        description:
+          err.data?.statusMessage ||
+          err.data?.message ||
+          err.message ||
+          'An unexpected error occurred while repairing timezones.',
+        color: 'error'
+      })
+    }
+  }
+
   return {
     // Pass Types
     passTypesData,
@@ -344,6 +408,7 @@ export const useTeacherDashboard = () => {
     syncAssignments,
 
     // CBTF Actions
-    resyncAssignmentCbtfOverrides
+    resyncAssignmentCbtfOverrides,
+    repairAssignmentCbtfTimezones
   }
 }

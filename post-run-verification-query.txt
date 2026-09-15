@@ -1,0 +1,22 @@
+SELECT 
+    u.email, 
+    r.id,
+    r."seatNumber", 
+    r."startTime" AT TIME ZONE 'UTC' AS repaired_start_utc,
+    r."endTime" AT TIME ZONE 'UTC' AS repaired_end_utc,
+    r."startTime" AT TIME ZONE 'America/New_York' AS repaired_start_edt,
+    r."endTime" AT TIME ZONE 'America/New_York' AS repaired_end_edt,
+    CASE 
+      WHEN EXTRACT(HOUR FROM r."startTime" AT TIME ZONE 'America/New_York') >= 9 
+       AND (EXTRACT(HOUR FROM r."startTime" AT TIME ZONE 'America/New_York') < 16 
+            OR (EXTRACT(HOUR FROM r."startTime" AT TIME ZONE 'America/New_York') = 16 
+                AND EXTRACT(MINUTE FROM r."startTime" AT TIME ZONE 'America/New_York') <= 30))
+      THEN 'VALID OPERATING HOURS' 
+      ELSE 'OUTSIDE OPERATING HOURS' 
+    END AS operating_hours_check,
+    r."endTime" - r."startTime" AS duration
+FROM "CbtfReservation" r
+JOIN "User" u ON r."userId" = u.id
+WHERE r."createdAt" < '2026-09-15 04:10:00Z'
+  AND r.status = 'SCHEDULED'
+ORDER BY r."startTime";

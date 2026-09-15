@@ -223,4 +223,36 @@ describe('useTeacherDashboard', () => {
       })
     )
   })
+
+  it('handles repairAssignmentCbtfTimezones success and shows toast with reassigned seats', async () => {
+    const dashboard = useTeacherDashboard()
+    const mockAssignment: any = { id: 'asg-5', title: 'Midterm', isSchedulable: true }
+
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: {
+        totalChecked: 52,
+        totalRepaired: 44,
+        seatsReassigned: 5,
+        alreadyCorrect: 8,
+        conflicts: 0,
+        errors: 0,
+        details: []
+      }
+    })
+
+    await dashboard.repairAssignmentCbtfTimezones(mockAssignment)
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/me/assignments/asg-5/cbtf-repair-timezone', {
+      method: 'POST'
+    })
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'CBTF Timezones Repaired',
+        description:
+          'Checked 52 reservations; 44 repaired. (5 seats reassigned, 8 already correct)',
+        color: 'success'
+      })
+    )
+  })
 })

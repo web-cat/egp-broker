@@ -265,7 +265,7 @@ const { t } = useI18n()
 const { enterStudentView } = useStudentView()
 const toast = useToast()
 
-defineProps<{
+const props = defineProps<{
   courseTitle?: string | null
   courseCode?: string | null
   isAdmin: boolean
@@ -328,7 +328,8 @@ const {
   openApiKeyModal,
   saveApiKey,
   syncAssignments,
-  resyncAssignmentCbtfOverrides
+  resyncAssignmentCbtfOverrides,
+  repairAssignmentCbtfTimezones
 } = useTeacherDashboard()
 
 // Toggle assignment published state
@@ -594,6 +595,14 @@ const assignmentColumns: any[] = [
         icon: 'i-lucide-refresh-cw',
         onSelect: () => resyncAssignmentCbtfOverrides(row.original)
       })
+
+      if (props.isAdmin) {
+        actions.push({
+          label: 'Repair Timezones & Reseat (Admin)',
+          icon: 'i-lucide-wrench',
+          onSelect: () => repairAssignmentCbtfTimezones(row.original)
+        })
+      }
     }
 
     return [actions]
