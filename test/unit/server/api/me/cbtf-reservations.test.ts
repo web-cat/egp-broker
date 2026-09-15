@@ -285,7 +285,8 @@ describe('API: CBTF Student Reservation Endpoints', () => {
     })
 
     it('rejects booking when arrival throttle limit is reached', async () => {
-      const startTime = '2026-10-05T09:15:00.000Z'
+      // 09:15 EDT is 13:15 UTC (within 08:00 - 17:00 EDT facility hours)
+      const startTime = '2026-10-05T13:15:00.000Z'
       const event = mockEvent(
         { id: 'usr-1', globalRole: 'USER' },
         {},
@@ -338,7 +339,8 @@ describe('API: CBTF Student Reservation Endpoints', () => {
     })
 
     it('successfully books reservation and returns DTO with assigned seat', async () => {
-      const startTime = '2026-10-05T09:15:00.000Z'
+      // 09:15 EDT is 13:15 UTC
+      const startTime = '2026-10-05T13:15:00.000Z'
       const event = mockEvent(
         { id: 'usr-1', globalRole: 'USER' },
         {},
@@ -383,7 +385,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
         userId: 'usr-1',
         seatNumber: 2,
         startTime: new Date(startTime),
-        endTime: new Date('2026-10-05T10:15:00.000Z'),
+        endTime: new Date('2026-10-05T14:15:00.000Z'),
         status: 'SCHEDULED',
         assignment: { title: 'Midterm 1' },
         user: { firstName: 'Demo', lastName: 'User', studentId: '906000001', avatarUrl: null },
@@ -415,7 +417,8 @@ describe('API: CBTF Student Reservation Endpoints', () => {
 
   describe('PATCH /api/me/cbtf/reservations/[id]', () => {
     it('reschedules a missed reservation to a new slot', async () => {
-      const newStartTime = '2026-10-06T11:00:00.000Z'
+      // 11:00 EDT is 15:00 UTC (within 08:00 - 17:00 EDT facility hours)
+      const newStartTime = '2026-10-06T15:00:00.000Z'
       const event = mockEvent(
         { id: 'usr-1', globalRole: 'USER' },
         {},
@@ -459,7 +462,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
         userId: 'usr-1',
         seatNumber: 1,
         startTime: new Date(newStartTime),
-        endTime: new Date('2026-10-06T12:00:00.000Z'),
+        endTime: new Date('2026-10-06T16:00:00.000Z'),
         status: 'SCHEDULED',
         assignment: { title: 'Midterm 1' },
         user: { firstName: 'Demo', lastName: 'User', studentId: '906000001', avatarUrl: null },

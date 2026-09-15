@@ -49,6 +49,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     data.checkInGraceMinutes = validation.data.checkInGraceMinutes
   }
 
+  if (validation.data.timezone !== undefined) {
+    data.timezone = validation.data.timezone
+  }
+
   const updated = await prisma.cbtfFacility.update({
     where: { id: facility.id },
     data,

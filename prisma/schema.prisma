@@ -618,6 +618,9 @@ model CbtfFacility {
   /// Maximum minutes after scheduled start time a student is permitted to check in before marked late/missed (default: 15)
   checkInGraceMinutes Int      @default(15)
 
+  /// IANA Timezone for facility operating hours and local scheduling (default: America/New_York)
+  timezone            String   @default("America/New_York")
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

@@ -29,6 +29,9 @@ export interface CbtfFacilitySummary {
   name: string
   totalSeats: number
   seatAllocationOrder: number[]
+  checkInLeadMinutes?: number
+  checkInGraceMinutes?: number
+  timezone?: string
   createdAt: string
   updatedAt: string
 }

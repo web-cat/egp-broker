@@ -83,18 +83,93 @@ export async function getPrimaryCbtfFacility(
   return facility
 }
 
+export const DEFAULT_CBTF_TIMEZONE = 'America/New_York'
+
+export function getFacilityTimezone(facility?: { timezone?: string | null }): string {
+  return facility?.timezone || DEFAULT_CBTF_TIMEZONE
+}
+
+export function getLocalDateString(date: Date, timeZone: string = DEFAULT_CBTF_TIMEZONE): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+  return formatter.format(date)
+}
+
+export function extractCalendarDate(
+  date: Date | string,
+  timeZone: string = DEFAULT_CBTF_TIMEZONE
+): string {
+  if (typeof date === 'string') return date.split('T')[0]
+  if (
+    date.getUTCHours() === 0 &&
+    date.getUTCMinutes() === 0 &&
+    date.getUTCSeconds() === 0 &&
+    date.getUTCMilliseconds() === 0
+  ) {
+    return date.toISOString().split('T')[0]
+  }
+  return getLocalDateString(date, timeZone)
+}
+
+export function getLocalDayOfWeek(date: Date, timeZone: string = DEFAULT_CBTF_TIMEZONE): number {
+  const formatter = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' })
+  const day = formatter.format(date)
+  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+  return map[day] ?? 0
+}
+
+export function getLocalTimeParts(
+  date: Date,
+  timeZone: string = DEFAULT_CBTF_TIMEZONE
+): {
+  hour24: number
+  minute: number
+  dayOfWeek: number
+  formattedTime: string
+} {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: false
+  })
+  const parts = Object.fromEntries(formatter.formatToParts(date).map((p) => [p.type, p.value]))
+  const hour24 = parts.hour === '24' ? 0 : Number(parts.hour)
+  const minute = Number(parts.minute)
+
+  const displayFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  })
+  const formattedTime = displayFormatter.format(date)
+
+  return {
+    hour24,
+    minute,
+    dayOfWeek: getLocalDayOfWeek(date, timeZone),
+    formattedTime
+  }
+}
+
 /**
  * Resolves facility operating hours for a specific calendar date, checking exceptions first.
+ * Evaluates day of week and date boundaries in the facility's local timezone.
  */
 export async function getFacilityOperatingHoursForDate(
   facilityId: string,
   targetDate: Date,
-  tx: PrismaClient | typeof prisma = prisma
+  tx: PrismaClient | typeof prisma = prisma,
+  timeZone: string = DEFAULT_CBTF_TIMEZONE
 ): Promise<FacilityOperatingHoursResult> {
-  const startOfDay = new Date(targetDate)
-  startOfDay.setUTCHours(0, 0, 0, 0)
-  const endOfDay = new Date(targetDate)
-  endOfDay.setUTCHours(23, 59, 59, 999)
+  const localDateStr = extractCalendarDate(targetDate, timeZone)
+  const startOfDay = combineDateAndTime(localDateStr, '00:00', timeZone)
+  const endOfDay = combineDateAndTime(localDateStr, '23:59', timeZone)
 
   // 1. Check schedule exception
   const exception = await (tx as any).cbtfScheduleException.findFirst({
@@ -126,8 +201,8 @@ export async function getFacilityOperatingHoursForDate(
     }
   }
 
-  // 2. Query weekly recurring operating hours (targetDate.getUTCDay(): 0 = Sun, 1 = Mon, ..., 6 = Sat)
-  const dayOfWeek = targetDate.getUTCDay()
+  // 2. Query weekly recurring operating hours (dayOfWeek in facility's timezone)
+  const dayOfWeek = getLocalDayOfWeek(targetDate, timeZone)
   const weeklyHours = await (tx as any).cbtfOperatingHours.findUnique({
     where: {
       facilityId_dayOfWeek: {
@@ -155,13 +230,46 @@ export async function getFacilityOperatingHoursForDate(
 }
 
 /**
- * Helper to build Date object from date and "HH:mm" time string (in UTC).
+ * Helper to build Date object (in UTC) from date and "HH:mm" time string in the facility's timezone.
  */
-export function combineDateAndTime(date: Date, timeStr: string): Date {
+export function combineDateAndTime(
+  date: Date | string,
+  timeStr: string,
+  timeZone: string = DEFAULT_CBTF_TIMEZONE
+): Date {
+  const dateStr = extractCalendarDate(date, timeZone)
+  const [year, month, day] = dateStr.split('-').map(Number)
   const [hours, minutes] = timeStr.split(':').map(Number)
-  const result = new Date(date)
-  result.setUTCHours(hours, minutes, 0, 0)
-  return result
+
+  if (timeZone === 'UTC') {
+    return new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0))
+  }
+
+  const naiveUtc = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0))
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+  const parts = Object.fromEntries(formatter.formatToParts(naiveUtc).map((p) => [p.type, p.value]))
+  const parsedHour = parts.hour === '24' ? 0 : Number(parts.hour)
+  const inTz = new Date(
+    Date.UTC(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      parsedHour,
+      Number(parts.minute),
+      Number(parts.second)
+    )
+  )
+  const offsetMs = inTz.getTime() - naiveUtc.getTime()
+  return new Date(naiveUtc.getTime() - offsetMs)
 }
 
 /**
@@ -174,19 +282,21 @@ export function calculateMaxArrivalsPerSlot(totalSeats: number): number {
 /**
  * Generates available 5-minute boundary slots for a given date,
  * filtering out throttled slots and capacity-exceeded slots.
+ * Open and close times are interpreted in the facility's local timezone.
  */
 export function generateAvailableSlotsForDate(
-  facility: { totalSeats: number },
+  facility: { totalSeats: number; timezone?: string },
   targetDate: Date,
   hours: FacilityOperatingHoursResult,
-  existingReservations: { startTime: Date; endTime: Date; seatNumber: number }[]
+  existingReservations: { startTime: Date; endTime: Date; seatNumber: number }[],
+  timeZone: string = facility.timezone || DEFAULT_CBTF_TIMEZONE
 ): SlotAvailability[] {
   if (!hours.isOpen || !hours.openTime || !hours.closeTime) {
     return []
   }
 
-  const openDateTime = combineDateAndTime(targetDate, hours.openTime)
-  const closeDateTime = combineDateAndTime(targetDate, hours.closeTime)
+  const openDateTime = combineDateAndTime(targetDate, hours.openTime, timeZone)
+  const closeDateTime = combineDateAndTime(targetDate, hours.closeTime, timeZone)
 
   const maxArrivals = calculateMaxArrivalsPerSlot(facility.totalSeats)
   const availableSlots: SlotAvailability[] = []
@@ -377,7 +487,7 @@ function formatTimeStr12h(timeStr: string): string {
  * - Highlights blocks with utilization > 60%.
  */
 export async function getRecommendedDaysAndSlots(
-  facility: CbtfFacility & { operatingHours: any[]; scheduleExceptions: any[] },
+  facility: CbtfFacility & { operatingHours: any[]; scheduleExceptions: any[]; timezone?: string },
   studentWindow: StudentSchedulingWindow,
   preferenceOrBlockId?: string,
   selectedDateStr?: string,
@@ -387,6 +497,7 @@ export async function getRecommendedDaysAndSlots(
   recommendedDays: CbtfRecommendedDay[]
   hourlySlots: CbtfHourlySlotChoice[]
 }> {
+  const timeZone = facility.timezone || DEFAULT_CBTF_TIMEZONE
   const now = new Date()
   const searchStart = new Date(Math.max(studentWindow.start.getTime(), now.getTime()))
   const searchEnd = new Date(studentWindow.end)
@@ -426,47 +537,65 @@ export async function getRecommendedDaysAndSlots(
     openSlots: SlotAvailability[]
   }[] = []
 
-  // Iterate calendar days within the student window (max 30 days lookahead)
-  const currentDay = new Date(searchStart)
-  currentDay.setUTCHours(0, 0, 0, 0)
+  // Iterate calendar days within the student window (max 30 days lookahead) in facility timezone
+  const localStartDateStr = getLocalDateString(searchStart, timeZone)
+  const localEndDateStr = getLocalDateString(searchEnd, timeZone)
+  const startParts = localStartDateStr.split('-').map(Number)
+  const cursorDate = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2]))
   const maxDays = 30
   let daysScanned = 0
 
-  while (currentDay <= searchEnd && daysScanned < maxDays) {
+  while (daysScanned < maxDays) {
     daysScanned++
-    const targetDate = new Date(currentDay)
-    const dateStr = targetDate.toISOString().split('T')[0]
+    const dateStr = cursorDate.toISOString().split('T')[0]
+    if (dateStr > localEndDateStr) {
+      break
+    }
 
-    const hours = await getFacilityOperatingHoursForDate(facility.id, targetDate, tx)
+    const dayStartUtc = combineDateAndTime(dateStr, '00:00', timeZone)
+    const dayEndUtc = combineDateAndTime(dateStr, '23:59', timeZone)
+
+    const hours = await getFacilityOperatingHoursForDate(facility.id, dayStartUtc, tx, timeZone)
 
     if (hours.isOpen && hours.openTime && hours.closeTime) {
-      const dayStart = new Date(targetDate)
-      dayStart.setUTCHours(0, 0, 0, 0)
-      const dayEnd = new Date(targetDate)
-      dayEnd.setUTCHours(23, 59, 59, 999)
-
       const dayReservations = allReservations.filter(
-        (r) => r.startTime >= dayStart && r.startTime <= dayEnd
+        (r) => r.startTime >= dayStartUtc && r.startTime <= dayEndUtc
       )
 
-      const theoreticalSlots = generateAvailableSlotsForDate(facility, targetDate, hours, [])
-      const allSlots = generateAvailableSlotsForDate(facility, targetDate, hours, dayReservations)
-      const d = targetDate
-      const dayOfWeek = d.getUTCDay()
+      const theoreticalSlots = generateAvailableSlotsForDate(
+        facility,
+        dayStartUtc,
+        hours,
+        [],
+        timeZone
+      )
+      const allSlots = generateAvailableSlotsForDate(
+        facility,
+        dayStartUtc,
+        hours,
+        dayReservations,
+        timeZone
+      )
+
+      const dayOfWeek = getLocalDayOfWeek(dayStartUtc, timeZone)
       const dayName = dayNames[dayOfWeek]
-      const monthName = monthNames[d.getUTCMonth()]
-      const dateLabel = `${monthName} ${d.getUTCDate()}`
+      const localMonth = cursorDate.getUTCMonth()
+      const localDayNum = cursorDate.getUTCDate()
+      const monthName = monthNames[localMonth]
+      const dateLabel = `${monthName} ${localDayNum}`
+
+      const afternoonDividingUtc = combineDateAndTime(dateStr, '13:00', timeZone)
 
       // Morning block: openTime until 13:00
       if (hours.openTime < '13:00') {
-        const blockStart = combineDateAndTime(targetDate, hours.openTime)
-        const blockEnd = combineDateAndTime(targetDate, '13:00')
+        const blockStart = combineDateAndTime(dateStr, hours.openTime, timeZone)
+        const blockEnd = afternoonDividingUtc
         const theoreticalBlockSlots = theoreticalSlots.filter(
-          (s) => s.startTime.getUTCHours() < CBTF_AFTERNOON_DIVIDING_HOUR
+          (s) => s.startTime < afternoonDividingUtc
         )
         const openSlots = allSlots.filter(
           (s) =>
-            s.startTime.getUTCHours() < CBTF_AFTERNOON_DIVIDING_HOUR &&
+            s.startTime < afternoonDividingUtc &&
             s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000
         )
 
@@ -507,14 +636,14 @@ export async function getRecommendedDaysAndSlots(
 
       // Afternoon block: 13:00 until closeTime
       if (hours.closeTime > '13:00') {
-        const blockStart = combineDateAndTime(targetDate, '13:00')
-        const blockEnd = combineDateAndTime(targetDate, hours.closeTime)
+        const blockStart = afternoonDividingUtc
+        const blockEnd = combineDateAndTime(dateStr, hours.closeTime, timeZone)
         const theoreticalBlockSlots = theoreticalSlots.filter(
-          (s) => s.startTime.getUTCHours() >= CBTF_AFTERNOON_DIVIDING_HOUR
+          (s) => s.startTime >= afternoonDividingUtc
         )
         const openSlots = allSlots.filter(
           (s) =>
-            s.startTime.getUTCHours() >= CBTF_AFTERNOON_DIVIDING_HOUR &&
+            s.startTime >= afternoonDividingUtc &&
             s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000
         )
 
@@ -554,7 +683,7 @@ export async function getRecommendedDaysAndSlots(
       }
     }
 
-    currentDay.setUTCDate(currentDay.getUTCDate() + 1)
+    cursorDate.setUTCDate(cursorDate.getUTCDate() + 1)
   }
 
   // Identify current in-progress block vs future blocks
@@ -627,13 +756,12 @@ export async function getRecommendedDaysAndSlots(
 
   let hourlySlots: CbtfHourlySlotChoice[] = []
   if (chosenBlockItem) {
-    // Group slots by half-hour period (e.g. 09:00, 09:30, 10:00, ...)
+    // Group slots by half-hour period (e.g. 09:00, 09:30, 10:00, ...) in facility timezone
     const slotsByHalfHour = new Map<number, SlotAvailability[]>()
     for (const slot of chosenBlockItem.openSlots) {
-      const h = slot.startTime.getUTCHours()
-      const m = slot.startTime.getUTCMinutes()
-      const halfHourBucket = m < 30 ? 0 : 30
-      const periodKey = h * 60 + halfHourBucket
+      const parts = getLocalTimeParts(slot.startTime, timeZone)
+      const halfHourBucket = parts.minute < 30 ? 0 : 30
+      const periodKey = parts.hour24 * 60 + halfHourBucket
 
       if (!slotsByHalfHour.has(periodKey)) {
         slotsByHalfHour.set(periodKey, [])
@@ -663,17 +791,13 @@ export async function getRecommendedDaysAndSlots(
       const start = chosenSlot.startTime
       const end = chosenSlot.endTime
 
-      const h = start.getUTCHours()
-      const m = start.getUTCMinutes().toString().padStart(2, '0')
-      const ampm = h >= 12 ? 'PM' : 'AM'
-      const displayH = h % 12 === 0 ? 12 : h % 12
-      const formattedTime = `${displayH}:${m} ${ampm}`
+      const parts = getLocalTimeParts(start, timeZone)
 
       return {
-        hour: h,
+        hour: parts.hour24,
         startTime: start.toISOString(),
         endTime: end.toISOString(),
-        formattedTime
+        formattedTime: parts.formattedTime
       }
     })
   }

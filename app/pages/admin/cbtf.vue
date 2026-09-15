@@ -72,6 +72,14 @@
             />
           </div>
 
+          <BaseFormInput
+            v-model="facilityForm.timezone"
+            name="timezone"
+            label="Facility Timezone (IANA)"
+            description="Local timezone used for operating hours and exam scheduling (e.g. America/New_York)."
+            type="text"
+          />
+
           <div class="space-y-1">
             <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
               Sequential Seat Allocation Order
@@ -714,7 +722,8 @@ const facilityForm = reactive({
   totalSeats: 48,
   seatAllocationOrderStr: '',
   checkInLeadMinutes: 5,
-  checkInGraceMinutes: 15
+  checkInGraceMinutes: 15,
+  timezone: 'America/New_York'
 })
 
 const parsedSeatsCount = computed(() => {
@@ -737,6 +746,7 @@ watch(
       facilityForm.totalSeats = fac.totalSeats || 48
       facilityForm.checkInLeadMinutes = fac.checkInLeadMinutes ?? 5
       facilityForm.checkInGraceMinutes = fac.checkInGraceMinutes ?? 15
+      facilityForm.timezone = fac.timezone || 'America/New_York'
       const order = Array.isArray(fac.seatAllocationOrder) ? fac.seatAllocationOrder : []
       facilityForm.seatAllocationOrderStr = order.join(', ')
     }
@@ -757,6 +767,7 @@ const handleSaveFacility = async () => {
       totalSeats: facilityForm.totalSeats,
       checkInLeadMinutes: facilityForm.checkInLeadMinutes,
       checkInGraceMinutes: facilityForm.checkInGraceMinutes,
+      timezone: facilityForm.timezone,
       seatAllocationOrder: order.length > 0 ? order : undefined
     })
   } finally {

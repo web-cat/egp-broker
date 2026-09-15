@@ -23,10 +23,20 @@ describe('CBTF Server Utilities', () => {
   })
 
   describe('combineDateAndTime', () => {
-    it('sets UTC hours and minutes from time string', () => {
+    it('converts calendar date and time to UTC in facility timezone', () => {
       const base = new Date('2026-09-10T00:00:00.000Z')
-      const combined = combineDateAndTime(base, '08:35')
-      expect(combined.toISOString()).toBe('2026-09-10T08:35:00.000Z')
+      // In EDT (UTC-4 in Sep), 08:35 EDT = 12:35 UTC
+      const combined = combineDateAndTime(base, '08:35', 'America/New_York')
+      expect(combined.toISOString()).toBe('2026-09-10T12:35:00.000Z')
+
+      // In EST (UTC-5 in Jan), 08:35 EST = 13:35 UTC
+      const winter = new Date('2026-01-15T00:00:00.000Z')
+      const winterCombined = combineDateAndTime(winter, '08:35', 'America/New_York')
+      expect(winterCombined.toISOString()).toBe('2026-01-15T13:35:00.000Z')
+
+      // UTC explicitly
+      const utcCombined = combineDateAndTime(base, '08:35', 'UTC')
+      expect(utcCombined.toISOString()).toBe('2026-09-10T08:35:00.000Z')
     })
   })
 
@@ -92,7 +102,7 @@ describe('CBTF Server Utilities', () => {
   })
 
   describe('generateAvailableSlotsForDate', () => {
-    const facility = { totalSeats: 48 } // max arrivals per slot = 4
+    const facility = { totalSeats: 48, timezone: 'America/New_York' } // max arrivals per slot = 4
     const targetDate = new Date('2026-09-14T00:00:00.000Z')
     const hours = {
       isOpen: true,
@@ -101,53 +111,54 @@ describe('CBTF Server Utilities', () => {
       reason: null
     }
 
-    it('generates 5-minute slots that end before or at facility closeTime', () => {
-      // 08:00 to 10:00 with 1-hr duration:
-      // Slots can start from 08:00 up to 09:00 (since 09:00 + 1h = 10:00)
+    it('generates 5-minute slots that end before or at facility closeTime in facility timezone', () => {
+      // 08:00 to 10:00 with 1-hr duration in America/New_York (EDT = UTC-4):
+      // 08:00 EDT = 12:00 UTC, 09:00 EDT = 13:00 UTC, 10:00 EDT = 14:00 UTC
       // 08:00, 08:05, ..., 09:00 = 13 slots
       const slots = generateAvailableSlotsForDate(facility, targetDate, hours, [])
 
       expect(slots.length).toBe(13)
-      expect(slots[0].startTime.toISOString()).toBe('2026-09-14T08:00:00.000Z')
-      expect(slots[0].endTime.toISOString()).toBe('2026-09-14T09:00:00.000Z')
-      expect(slots[slots.length - 1].startTime.toISOString()).toBe('2026-09-14T09:00:00.000Z')
-      expect(slots[slots.length - 1].endTime.toISOString()).toBe('2026-09-14T10:00:00.000Z')
+      expect(slots[0].startTime.toISOString()).toBe('2026-09-14T12:00:00.000Z')
+      expect(slots[0].endTime.toISOString()).toBe('2026-09-14T13:00:00.000Z')
+      expect(slots[slots.length - 1].startTime.toISOString()).toBe('2026-09-14T13:00:00.000Z')
+      expect(slots[slots.length - 1].endTime.toISOString()).toBe('2026-09-14T14:00:00.000Z')
     })
 
     it('enforces arrival throttle: excludes slot if arrivals reach maxArrivals', () => {
-      const slotTime = new Date('2026-09-14T08:15:00.000Z')
+      // 08:15 EDT is 12:15 UTC
+      const slotTime = new Date('2026-09-14T12:15:00.000Z')
       const existingReservations = [
-        { startTime: slotTime, endTime: new Date('2026-09-14T09:15:00.000Z'), seatNumber: 1 },
-        { startTime: slotTime, endTime: new Date('2026-09-14T09:15:00.000Z'), seatNumber: 2 },
-        { startTime: slotTime, endTime: new Date('2026-09-14T09:15:00.000Z'), seatNumber: 3 },
-        { startTime: slotTime, endTime: new Date('2026-09-14T09:15:00.000Z'), seatNumber: 4 }
+        { startTime: slotTime, endTime: new Date('2026-09-14T13:15:00.000Z'), seatNumber: 1 },
+        { startTime: slotTime, endTime: new Date('2026-09-14T13:15:00.000Z'), seatNumber: 2 },
+        { startTime: slotTime, endTime: new Date('2026-09-14T13:15:00.000Z'), seatNumber: 3 },
+        { startTime: slotTime, endTime: new Date('2026-09-14T13:15:00.000Z'), seatNumber: 4 }
       ] // 4 arrivals = max for 48 seats
 
       const slots = generateAvailableSlotsForDate(facility, targetDate, hours, existingReservations)
 
-      // Slot at 08:15 should be excluded
+      // Slot at 08:15 EDT (12:15 UTC) should be excluded
       const has815 = slots.some((s) => s.startTime.getTime() === slotTime.getTime())
       expect(has815).toBe(false)
-      // Neighboring slots should still be present
-      const has820 = slots.some((s) => s.startTime.toISOString() === '2026-09-14T08:20:00.000Z')
+      // Neighboring slots should still be present (08:20 EDT = 12:20 UTC)
+      const has820 = slots.some((s) => s.startTime.toISOString() === '2026-09-14T12:20:00.000Z')
       expect(has820).toBe(true)
     })
 
     it('enforces room capacity: excludes slot if total overlapping seats are full', () => {
-      // Create 48 existing reservations overlapping 08:30
+      // Create 48 existing reservations overlapping 08:30 EDT (12:30 UTC)
       const existingReservations = Array.from({ length: 48 }, (_, i) => ({
-        startTime: new Date('2026-09-14T08:00:00.000Z'),
-        endTime: new Date('2026-09-14T09:00:00.000Z'),
+        startTime: new Date('2026-09-14T12:00:00.000Z'),
+        endTime: new Date('2026-09-14T13:00:00.000Z'),
         seatNumber: i + 1
       }))
 
       const slots = generateAvailableSlotsForDate(facility, targetDate, hours, existingReservations)
 
-      // Any slot between 08:00 and 08:55 overlaps with these 48 reservations
-      const has830 = slots.some((s) => s.startTime.toISOString() === '2026-09-14T08:30:00.000Z')
+      // Any slot between 08:00 and 08:55 EDT overlaps with these 48 reservations
+      const has830 = slots.some((s) => s.startTime.toISOString() === '2026-09-14T12:30:00.000Z')
       expect(has830).toBe(false)
-      // Slot at 09:00 starts when earlier reservations end, so it should be available
-      const has900 = slots.some((s) => s.startTime.toISOString() === '2026-09-14T09:00:00.000Z')
+      // Slot at 09:00 EDT (13:00 UTC) starts when earlier reservations end, so it should be available
+      const has900 = slots.some((s) => s.startTime.toISOString() === '2026-09-14T13:00:00.000Z')
       expect(has900).toBe(true)
     })
   })
@@ -376,23 +387,23 @@ describe('CBTF Server Utilities', () => {
 
     it('chooses candidate slot with maximum openings (fewest arrivals) in each half-hour', async () => {
       // 48 seats -> maxArrivals = 4.
-      // In the 9:00-9:30 half-hour on 2026-10-05:
+      // In the 9:00-9:30 half-hour on 2026-10-05 (09:00 EDT = 13:00 UTC):
       // Put 2 reservations at 9:00, 1 reservation at 9:05, and 0 at 9:10, 9:15, 9:20, 9:25.
       // The algorithm should choose among 9:10, 9:15, 9:20, 9:25 (which have 0 reservations = 4 openings).
       const mockReservations: any[] = [
         {
-          startTime: new Date('2026-10-05T09:00:00.000Z'),
-          endTime: new Date('2026-10-05T10:00:00.000Z'),
+          startTime: new Date('2026-10-05T13:00:00.000Z'),
+          endTime: new Date('2026-10-05T14:00:00.000Z'),
           seatNumber: 1
         },
         {
-          startTime: new Date('2026-10-05T09:00:00.000Z'),
-          endTime: new Date('2026-10-05T10:00:00.000Z'),
+          startTime: new Date('2026-10-05T13:00:00.000Z'),
+          endTime: new Date('2026-10-05T14:00:00.000Z'),
           seatNumber: 2
         },
         {
-          startTime: new Date('2026-10-05T09:05:00.000Z'),
-          endTime: new Date('2026-10-05T10:05:00.000Z'),
+          startTime: new Date('2026-10-05T13:05:00.000Z'),
+          endTime: new Date('2026-10-05T14:05:00.000Z'),
           seatNumber: 3
         }
       ]
@@ -400,6 +411,7 @@ describe('CBTF Server Utilities', () => {
       const testFacility: any = {
         id: 'fac-prioritized',
         totalSeats: 48,
+        timezone: 'America/New_York',
         seatAllocationOrder: Array.from({ length: 48 }, (_, i) => i + 1),
         operatingHours: [{ dayOfWeek: 1, openTime: '09:00', closeTime: '13:00' }],
         scheduleExceptions: []
@@ -443,9 +455,9 @@ describe('CBTF Server Utilities', () => {
       // If we create enough reservations overlapping the hours:
       const days = ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09']
       for (const day of days) {
-        // Morning: 08:00 - 13:00 (5 hours, 60 5-min slots).
+        // Operating hours: 08:00 - 18:00 EDT = 12:00 - 22:00 UTC
         // Populate reservations so <= 20% slots are open (>80% utilization)
-        for (let h = 8; h < 17; h++) {
+        for (let h = 12; h < 22; h++) {
           for (let m = 0; m < 60; m += 5) {
             // Fill 4 seats at each 5-min slot
             if (m % 20 !== 0) {

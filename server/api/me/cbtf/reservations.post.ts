@@ -180,7 +180,13 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     currentStep = 'Booking Reservation & Allocating Seat'
     const newReservation = await prisma.$transaction(async (tx) => {
       // A. Verify facility operating hours for slot date
-      const hours = await getFacilityOperatingHoursForDate(facility.id, startTime, tx as any)
+      const timeZone = facility.timezone || 'America/New_York'
+      const hours = await getFacilityOperatingHoursForDate(
+        facility.id,
+        startTime,
+        tx as any,
+        timeZone
+      )
       if (!hours.isOpen || !hours.openTime || !hours.closeTime) {
         throw createError({
           statusCode: 400,
@@ -188,8 +194,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
         })
       }
 
-      const openDateTime = combineDateAndTime(startTime, hours.openTime)
-      const closeDateTime = combineDateAndTime(startTime, hours.closeTime)
+      const openDateTime = combineDateAndTime(startTime, hours.openTime, timeZone)
+      const closeDateTime = combineDateAndTime(startTime, hours.closeTime, timeZone)
 
       if (startTime < openDateTime || endTime > closeDateTime) {
         throw createError({
