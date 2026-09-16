@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { parseCardSwipe } from '~/utils/cardSwipe'
 
-export interface FictionalStudent {
+interface FictionalStudent {
   id: string
   firstName: string
   lastName: string
@@ -9,7 +9,7 @@ export interface FictionalStudent {
   avatarUrl: string | null
 }
 
-export interface FictionalReservation {
+interface FictionalReservation {
   id: string
   seatNumber?: number
   studentName: string

@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 
-export interface FictionalStudent {
+interface FictionalStudent {
   id: string
   firstName: string
   lastName: string
@@ -8,12 +8,12 @@ export interface FictionalStudent {
   avatarUrl?: string | null
 }
 
-export interface FictionalAssignment {
+interface FictionalAssignment {
   id: string
   title: string
 }
 
-export interface FictionalReservation {
+interface FictionalReservation {
   id: string
   courseId: string
   assignmentId: string
