@@ -1,8 +1,8 @@
 # ROADMAP.md
 
-> **Current Phase**: Milestone Complete
-> **Milestone**: v4.0 — Proctor Training Mode
-> **Goal**: Implement an in-memory, zero-database-write training environment at `/proctor/training` that uses the standard Proctor Console UI with dynamic fictional scenarios, physical ID card scanner support, mismatch toggle pill, and arrival queue advancement.
+> **Current Phase**: Phase 1: Database Models & GTA Shift Management Engine
+> **Milestone**: v5.0 — Graduate TA Grading Interviews
+> **Goal**: Build a course-integrated 1-on-1 interview scheduling system with Graduate Teaching Assistants for assignment grading, featuring recurring disconnected shift builder, overlapping slot capacity, automatic GTA assignment, pass redemption gating, and a dedicated GTA check-in/checkout & notes console.
 
 ## Completed Milestones
 
@@ -13,31 +13,45 @@
 
 ---
 
-## Must-Haves (Milestone v4.0)
+## Must-Haves (Milestone v5.0)
 
-- [x] In-memory reactive training engine composable (`useCbtfProctorTraining.ts`) with zero database writes
-- [x] Realistic dynamic fictional scenarios generated relative to current time (standard arrival, early arrival, late arrival, and seated students)
-- [x] Physical scanner support: allow any scanned ID to match the active training scenario
-- [x] "Next Scan: Mismatch" toggle pill to simulate unmatched/unregistered student turn-away workflow
-- [x] "Next Scheduled Arrival ⏭️" pill to advance through simulated arriving student queue
-- [x] Reusable Proctor Console presenter (`ProctorConsole.vue`) shared by production and training views
-- [x] Dedicated route at `/proctor/training` guarded by `proctor-only` middleware with clear training mode banner and controls
-- [x] "Enter Training Mode" entry point button on `/proctor/index.vue`
-- [x] 100% unit test coverage for training composables and components
+- [ ] Database models & migration: `Course.interviewLocation`, `Assignment.hasInterviews`, `Assignment.interviewWindowStart/End`, `GtaShift`, `GtaInterviewReservation`
+- [ ] Role check & authorization: only users with course role `TA` or instructor can be scheduled
+- [ ] Recurring disconnected shift parser & batch generator for GTAs (course instructors manage all, GTAs manage their own)
+- [ ] 10-minute slot availability engine (5m interview + 5m prep) with aggregated capacity across overlapping GTAs
+- [ ] Half-day block filtering matching slots within the assignment's interview window
+- [ ] Student booking API assigning an available GTA on duty and returning confirmation with assigned GTA & course location
+- [ ] Student appointment constraints: at most one active scheduled interview; rescheduling allowed if completed, cancelled, or missed/no-show
+- [ ] Resubmission pass redemption gating in `server/utils/redemptions.ts` (blocks non-extension passes if interview not completed)
+- [ ] GTA console (`/interviews`): expected arrivals for active shift, manual check-in, active interview panel with notes, checkout, and mark no-show
+- [ ] Course settings & assignment edit UI for configuring location and interview requirements
+- [ ] Student interview scheduling UI
+- [ ] 100% Vitest unit test coverage for new endpoints, utilities, and components
+
+---
 
 ## Phases
 
-### Phase 1: In-Memory Training Engine & Scenario Generator
+### Phase 1: Database Models & GTA Shift Management Engine
 
-**Status**: ✅ Complete
-**Objective**: Build `useCbtfProctorTraining.ts` providing realistic dynamic timestamps, card scanner mapping, next arrival queue pointer, mismatch toggle pill, check-in, check-out, and incident note handlers with 100% unit tests.
+**Status**: ⬜ Not Started  
+**Objective**: Update Prisma schema, create database migration for `Course.interviewLocation`, `Assignment.hasInterviews`, `interviewWindowStart/End`, `GtaShift`, and `GtaInterviewReservation`. Implement course-scoped GTA shift CRUD endpoints with role authorization (instructors can manage all, GTAs can manage their own) and weekly batch generation using the schedule parser.  
+**Requirements**: REQ-501, REQ-502, REQ-503
 
-### Phase 2: Reusable Console Presenter & Training Sandbox View
+### Phase 2: Slot Generation, Booking API & Pass Redemption Gating
 
-**Status**: ✅ Complete
-**Objective**: Extract `ProctorConsole.vue`, create `/proctor/training` page with distinctive training banner and control bar, and link from `/proctor/index.vue`.
+**Status**: ⬜ Not Started  
+**Objective**: Build server algorithm for 10-minute slots, calculate overlapping GTA capacity, filter half-day blocks, implement student reservation booking and cancellation with automatic GTA assignment, and hook into `redemptions.ts` to gate resubmission passes until interview completion.  
+**Requirements**: REQ-504, REQ-505, REQ-506, REQ-509
 
-### Phase 3: Verification, Edge Cases & Milestone Completion
+### Phase 3: Student Scheduling Experience & Course Settings UI
 
-**Status**: ✅ Complete
-**Objective**: Run complete test suite, verify linting, conduct browser validation, and finalize documentation.
+**Status**: ⬜ Not Started  
+**Objective**: Implement student scheduling UI (adapted from CBTF half-day selection), booking confirmation view, rescheduling flow, and course/assignment configuration panels in the teacher interface.  
+**Requirements**: REQ-510, REQ-511
+
+### Phase 4: GTA Interview Dashboard, Notes Console & Full Verification
+
+**Status**: ⬜ Not Started  
+**Objective**: Build the GTA interview dashboard showing expected arrivals for the GTA's active shift, manual check-in, active interview panel with observation/grading notes, checkout button, no-show marker, and conduct complete unit and integration verification.  
+**Requirements**: REQ-507, REQ-508, REQ-512

@@ -1,15 +1,15 @@
 ---
-updated: 2026-09-08T10:50:35-04:00
+updated: 2026-09-15T22:21:00-04:00
 ---
 
 # Project State
 
 ## Current Position
 
-**Milestone:** v4.0 — Proctor Training Mode
-**Phase:** Phase 3: Verification, Edge Cases & Milestone Completion
-**Status:** ✅ Milestone v4.0 Complete
-**Plan:** [implementation_plan.md](file:///Users/edwards/.gemini/antigravity-ide/brain/dbf8c3d0-4488-44ad-be4f-3500b7c2ee09/implementation_plan.md)
+**Milestone:** v5.0 — Graduate TA Grading Interviews  
+**Phase:** Phase 1: Database Models & GTA Shift Management Engine  
+**Status:** ⬜ Ready to Plan Phase 1  
+**Plan:** None
 
 ## Completed Milestones
 
@@ -20,12 +20,13 @@ updated: 2026-09-08T10:50:35-04:00
 
 ## Active Decisions
 
-| Decision                                                                    | Choice                                                                                    | Made       | Affects                   |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------- | ------------------------- |
-| [DECISION-006](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L112) | Registration token binding in callback URL (`?token=<cuid>`)                              | 2026-09-06 | Phase 1, Phase 2          |
-| [DECISION-007](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L131) | Fail-fast extension sync with admin ntfy & student advice notification                    | 2026-09-06 | Phase 4                   |
-| [DECISION-008](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L156) | Dual roles (`supportsProxy`, `supportsPassport`) & dedicated credential fields on LtiTool | 2026-09-06 | Phase 1, Phase 3          |
-| [DECISION-009](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md#L180) | Atomic gating for LTI launches with in-progress modal popup                               | 2026-09-08 | Phase 1, Phase 2, Phase 3 |
+| Decision                                                               | Choice                                                                                           | Made       | Affects                   |
+| :--------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- | :--------- | :------------------------ |
+| [DECISION-010](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Course-level meeting location (`Course.interviewLocation`) for all GTA interviews in course      | 2026-09-15 | Phase 1, Phase 3          |
+| [DECISION-011](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Timeslot-only student selection with automatic GTA assignment upon booking                       | 2026-09-15 | Phase 2, Phase 3, Phase 4 |
+| [DECISION-012](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | 10-minute slot intervals (5 min interview + 5 min GTA prep buffer) with overlapping GTA capacity | 2026-09-15 | Phase 2                   |
+| [DECISION-013](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Resubmission pass redemption gated on interview status (`COMPLETED` or `CHECKED_OUT`)            | 2026-09-15 | Phase 2                   |
+| [DECISION-014](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Dual shift management permissions (instructors manage all course GTAs; GTAs manage their own)    | 2026-09-15 | Phase 1, Phase 3          |
 
 ## Blockers
 

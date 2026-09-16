@@ -190,3 +190,83 @@ Extend the `LtiTool` model in `prisma/schema.prisma` with explicit boolean flags
 ### Rationale
 
 Provides clear separation of concerns between LTI proxying and PassPort webhook extension delivery, supports tools that only do one or both, and ensures strict typing across the stack.
+
+---
+
+## DECISION-010: Course-Level Meeting Location for GTA Interviews
+
+### Context
+
+Students need to know where to report to meet their assigned GTA for in-person or virtual grading interviews.
+
+### Decision
+
+Store `interviewLocation` as an optional string on the `Course` model (`Course.interviewLocation`), editable via Course Settings. All GTA interviews for assignments in that course share this meeting location unless individually overridden.
+
+### Rationale
+
+GTAs meet students in a single central lab/office space (e.g. McBryde 106) or central course link. Placing this at the Course level avoids repetitive configuration across assignments and shifts while remaining course-scoped.
+
+---
+
+## DECISION-011: Timeslot-Only Selection with Automatic GTA Assignment
+
+### Context
+
+Multiple GTAs may have overlapping schedules during peak hours. When booking, should students select a GTA or a timeslot?
+
+### Decision
+
+During scheduling, students select timeslots only. The system displays open timeslots based on net available GTA capacity (number of on-duty GTAs minus existing bookings). Upon confirming a slot, the system assigns an available GTA, creates the `GtaInterviewReservation`, and displays the assigned GTA's name on the confirmation screen.
+
+### Rationale
+
+Prevents student bias toward specific GTAs, balances interview workload across on-duty GTAs, and keeps the scheduling interface clean and consistent with the CBTF workflow.
+
+---
+
+## DECISION-012: 10-Minute Slot Cadence (5m Interview + 5m GTA Buffer)
+
+### Context
+
+Grading interviews are brief 5-minute interactions, but GTAs need prep time between students.
+
+### Decision
+
+Slots are anchored every 10 minutes (e.g. 10:00, 10:10, 10:20... 10:50). The interview duration is 5 minutes (e.g. 10:00–10:05), followed by a 5-minute buffer (10:05–10:10) for GTA notes and next student prep.
+
+### Rationale
+
+Maximizes student throughput while guaranteeing GTAs have dedicated turnaround time between consecutive interviews.
+
+---
+
+## DECISION-013: Gating Resubmission Passes on Completed Interviews
+
+### Context
+
+Assignments with grading interviews require students to complete their interview before they can submit revisions using a resubmission pass.
+
+### Decision
+
+In `server/utils/redemptions.ts`, check if `assignment.hasInterviews === true`. If true and the pass being redeemed is a resubmission pass (`passType.extensionOnly === false`), verify that the student has at least one interview reservation with status `COMPLETED` or `CHECKED_OUT`. Otherwise, reject the redemption with an informative error message.
+
+### Rationale
+
+Enforces academic workflow policy: students must receive verbal feedback and code review from their GTA before using course passes to resubmit.
+
+---
+
+## DECISION-014: Dual Shift Management Permissions
+
+### Context
+
+Both course instructors and GTAs need to manage weekly shift availability.
+
+### Decision
+
+Course instructors can view, create, edit, and delete shifts for any user enrolled with `CourseRole.TA` in their course. GTAs (`CourseRole.TA`) can view and manage their own shifts. Both roles can use the weekly schedule parser to batch-generate recurring disconnected shifts.
+
+### Rationale
+
+Empowers GTAs to manage their own availability while maintaining full administrative oversight for course instructors.
