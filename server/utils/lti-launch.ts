@@ -316,24 +316,79 @@ export async function handleLtiLaunch(
         `[LTI Launch] Course: ${course.id}, Context: ${context.id}, resourceLinkId: ${resourceLinkId || 'NONE'}, NRPS URL: ${nrpsContextMembershipsUrl || 'NONE'}`
       )
 
+      // Extract SIS User ID (university student ID)
+      const lisClaim = claims['https://purl.imsglobal.org/spec/lti/claim/lis']
+      const rawStudentId =
+        (
+          lisClaim?.person_sourcedid ??
+          customClaims.sis_user_id ??
+          customClaims.lis_person_sourcedid ??
+          customClaims.canvas_sis_user_id ??
+          claims['https://www.instructure.com/sis_user_id']
+        )
+          ?.toString()
+          ?.trim() || null
+
+      const studentId = rawStudentId && !rawStudentId.startsWith('$') ? rawStudentId : null
+
       // C. Find or Create User
       let user = await tx.user.findFirst({
         where: { ltiIdentities: { some: { platformId: platform.id, ltiSub: claims.sub } } }
       })
 
+      if (!user && studentId) {
+        user = await tx.user.findUnique({
+          where: { studentId }
+        })
+      }
+
       if (!user) {
         const effectiveEmail = claims.email || `${claims.sub}@synthetic.canvas.local`
-        user = await tx.user.upsert({
-          where: { email: effectiveEmail },
-          update: { currentCourseId: course.id },
-          create: {
-            email: effectiveEmail,
-            firstName: claims.given_name || claims.name?.split(' ')[0] || 'LTI',
-            lastName: claims.family_name || 'User',
-            avatarUrl: claims.email ? getGravatarUrl(claims.email) : null,
-            currentCourseId: course.id
+        try {
+          user = await tx.user.upsert({
+            where: { email: effectiveEmail },
+            update: {
+              currentCourseId: course.id,
+              ...(studentId ? { studentId } : {})
+            },
+            create: {
+              email: effectiveEmail,
+              firstName: claims.given_name || claims.name?.split(' ')[0] || 'LTI',
+              lastName: claims.family_name || 'User',
+              studentId: studentId ?? null,
+              avatarUrl: claims.email ? getGravatarUrl(claims.email) : null,
+              currentCourseId: course.id
+            }
+          })
+        } catch (err: any) {
+          if (err?.code === 'P2002') {
+            user = await tx.user.upsert({
+              where: { email: effectiveEmail },
+              update: { currentCourseId: course.id },
+              create: {
+                email: effectiveEmail,
+                firstName: claims.given_name || claims.name?.split(' ')[0] || 'LTI',
+                lastName: claims.family_name || 'User',
+                avatarUrl: claims.email ? getGravatarUrl(claims.email) : null,
+                currentCourseId: course.id
+              }
+            })
+          } else {
+            throw err
           }
-        })
+        }
+      } else if (studentId && user.studentId !== studentId) {
+        try {
+          user = await tx.user.update({
+            where: { id: user.id },
+            data: { studentId }
+          })
+        } catch (err: any) {
+          if (err?.code !== 'P2002') throw err
+          console.warn(
+            `[LTI Launch] Could not update studentId ${studentId} for user ${user.id} due to constraint conflict`
+          )
+        }
       }
 
       // Ensure LtiIdentity is created/linked

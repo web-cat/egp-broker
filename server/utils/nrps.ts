@@ -265,6 +265,10 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
             custom.canvas_section_ids =
               custom.canvas_section_ids ?? msg['https://www.instructure.com/canvas_section_ids']
           }
+          if (msg['https://www.instructure.com/sis_user_id']) {
+            custom.sis_user_id =
+              custom.sis_user_id ?? msg['https://www.instructure.com/sis_user_id']
+          }
         }
       }
 
@@ -285,8 +289,24 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
         custom.canvas_section_ids =
           custom.canvas_section_ids ?? member['https://www.instructure.com/canvas_section_ids']
       }
+      if (member['https://www.instructure.com/sis_user_id']) {
+        custom.sis_user_id = custom.sis_user_id ?? member['https://www.instructure.com/sis_user_id']
+      }
 
       const platformUserId = (custom.canvas_user_id ?? custom.user_id)?.toString() || null
+
+      const rawStudentId =
+        (
+          member.lis_person_sourcedid ??
+          member['https://purl.imsglobal.org/spec/lti/claim/lis']?.person_sourcedid ??
+          custom.sis_user_id ??
+          custom.lis_person_sourcedid ??
+          custom.canvas_sis_user_id
+        )
+          ?.toString()
+          ?.trim() || null
+
+      const studentId = rawStudentId && !rawStudentId.startsWith('$') ? rawStudentId : null
 
       const rawSectionIds =
         (
@@ -369,24 +389,65 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
         }
       })
 
+      if (!user && studentId) {
+        user = await prisma.user.findUnique({
+          where: { studentId }
+        })
+      }
+
       const syntheticEmail = `${ltiSub}@synthetic.canvas.local`
       const effectiveEmail = email || syntheticEmail
 
       if (!user) {
-        user = await prisma.user.upsert({
-          where: { email: effectiveEmail },
-          update: {
-            firstName: firstName || undefined,
-            lastName: lastName || undefined
-          },
-          create: {
-            email: effectiveEmail,
-            firstName,
-            lastName,
-            avatarUrl: email ? getGravatarUrl(email) : null,
-            globalRole: 'USER'
+        try {
+          user = await prisma.user.upsert({
+            where: { email: effectiveEmail },
+            update: {
+              firstName: firstName || undefined,
+              lastName: lastName || undefined,
+              ...(studentId ? { studentId } : {})
+            },
+            create: {
+              email: effectiveEmail,
+              firstName,
+              lastName,
+              studentId: studentId ?? null,
+              avatarUrl: email ? getGravatarUrl(email) : null,
+              globalRole: 'USER'
+            }
+          })
+        } catch (err: any) {
+          if (err?.code === 'P2002') {
+            user = await prisma.user.upsert({
+              where: { email: effectiveEmail },
+              update: {
+                firstName: firstName || undefined,
+                lastName: lastName || undefined
+              },
+              create: {
+                email: effectiveEmail,
+                firstName,
+                lastName,
+                avatarUrl: email ? getGravatarUrl(email) : null,
+                globalRole: 'USER'
+              }
+            })
+          } else {
+            throw err
           }
-        })
+        }
+      } else if (studentId && user.studentId !== studentId) {
+        try {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { studentId }
+          })
+        } catch (err: any) {
+          if (err?.code !== 'P2002') throw err
+          console.warn(
+            `[NRPS] Could not update studentId ${studentId} for user ${user.id} due to constraint conflict`
+          )
+        }
       }
 
       // Upsert LtiIdentity

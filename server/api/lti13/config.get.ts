@@ -51,7 +51,9 @@ export default defineEventHandler((event) => {
       canvas_course_id: '$Canvas.course.id',
       canvas_assignment_id: '$Canvas.assignment.id',
       canvas_section_ids: '$Canvas.course.sectionIds',
-      canvas_section_names: '$com.instructure.User.sectionNames'
+      canvas_section_names: '$com.instructure.User.sectionNames',
+      sis_user_id: '$Canvas.user.sisSourceId',
+      lis_person_sourcedid: '$Canvas.user.sisSourceId'
     },
     scopes: [
       'https://purl.imsglobal.org/spec/lti-ags/scope/lineitem',

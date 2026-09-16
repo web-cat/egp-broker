@@ -690,5 +690,75 @@ describe('NRPS Roster Synchronization Service', () => {
       expect(result.sectionCount).toBe(1)
       expect(result.studentsWithSection).toBe(1)
     })
+
+    it('extracts and persists studentId (SIS User ID) from lis_person_sourcedid and custom.sis_user_id', async () => {
+      vi.mocked(prisma.course.findUnique).mockResolvedValueOnce(mockCourse as any)
+
+      mockFetch
+        .mockResolvedValueOnce({ access_token: 'nrps-token', expires_in: 3600 })
+        .mockResolvedValueOnce({
+          id: 'https://canvas.example.edu/api/lti/courses/12345/names_and_roles',
+          members: [
+            {
+              status: 'Active',
+              user_id: 'lti-sub-sis-1',
+              name: 'Student One',
+              given_name: 'Student',
+              family_name: 'One',
+              email: 'student1@example.edu',
+              lis_person_sourcedid: '906111222',
+              roles: ['http://purl.imsglobal.org/vocab/lis/v2/membership#Learner']
+            },
+            {
+              status: 'Active',
+              user_id: 'lti-sub-sis-2',
+              name: 'Student Two',
+              given_name: 'Student',
+              family_name: 'Two',
+              email: 'student2@example.edu',
+              roles: ['http://purl.imsglobal.org/vocab/lis/v2/membership#Learner'],
+              message: [
+                {
+                  custom: {
+                    sis_user_id: '906333444'
+                  }
+                }
+              ]
+            }
+          ]
+        })
+
+      vi.mocked(prisma.user.findFirst).mockResolvedValue(null)
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.user.upsert)
+        .mockResolvedValueOnce({ id: 'u-sis-1', email: 'student1@example.edu' } as any)
+        .mockResolvedValueOnce({ id: 'u-sis-2', email: 'student2@example.edu' } as any)
+
+      const result = await syncCourseRosterFromNrps('course-1')
+
+      expect(result.success).toBe(true)
+      expect(prisma.user.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { email: 'student1@example.edu' },
+          create: expect.objectContaining({
+            studentId: '906111222'
+          }),
+          update: expect.objectContaining({
+            studentId: '906111222'
+          })
+        })
+      )
+      expect(prisma.user.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { email: 'student2@example.edu' },
+          create: expect.objectContaining({
+            studentId: '906333444'
+          }),
+          update: expect.objectContaining({
+            studentId: '906333444'
+          })
+        })
+      )
+    })
   })
 })

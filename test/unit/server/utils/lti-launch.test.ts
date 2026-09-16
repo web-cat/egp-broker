@@ -263,5 +263,37 @@ describe('lti-launch utils', () => {
         })
       )
     })
+
+    it('extracts and sets studentId from lis claim during user creation', async () => {
+      const tx = makeTx({
+        user: {
+          findFirst: vi.fn().mockResolvedValue(null),
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ id: 'user-new', studentId: '906999888' }),
+          update: vi.fn().mockResolvedValue({ id: 'user-new', currentCourseId: 'course-1' })
+        }
+      })
+      const prismaMock = { $transaction: vi.fn((cb) => cb(tx)) }
+
+      const claims = {
+        ...baseClaims,
+        'https://purl.imsglobal.org/spec/lti/claim/lis': {
+          person_sourcedid: '906999888'
+        }
+      }
+
+      await handleLtiLaunch(prismaMock as any, { claims, platform } as any)
+
+      expect(tx.user.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            studentId: '906999888'
+          }),
+          update: expect.objectContaining({
+            studentId: '906999888'
+          })
+        })
+      )
+    })
   })
 })
