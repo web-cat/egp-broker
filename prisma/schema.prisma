@@ -60,6 +60,9 @@ model User {
   cbtfReservations CbtfReservation[]
   proctorShifts    CbtfProctorShift[]
   cbtfNotesAuthored CbtfReservationNote[]
+  gtaShifts        GtaShift[]
+  gtaInterviewReservationsAsStudent GtaInterviewReservation[] @relation("StudentReservations")
+  gtaInterviewReservationsAsGta     GtaInterviewReservation[] @relation("GtaReservations")
 
   // Current context
   currentCourseId String?
@@ -303,6 +306,8 @@ model Course {
   passTypes        PassType[]
   sections         CourseSection[]
   usersWithCurrent User[]         @relation("UserCurrentCourse")
+  interviewLocation String?
+  gtaShifts        GtaShift[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -379,6 +384,12 @@ model Assignment {
   scheduleWindowStart DateTime?
   scheduleWindowEnd   DateTime?
   cbtfReservations    CbtfReservation[]
+
+  // GTA Interview Scheduling properties
+  hasInterviews       Boolean   @default(false)
+  interviewWindowStart DateTime?
+  interviewWindowEnd   DateTime?
+  gtaInterviewReservations GtaInterviewReservation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -745,4 +756,70 @@ model CbtfReservationNote {
   @@index([reservationId])
   @@index([authorId])
 }
+
+// ─────────────────────────────────────────────────────────
+// Graduate TA Grading Interview Models
+// ─────────────────────────────────────────────────────────
+
+enum GtaInterviewStatus {
+  SCHEDULED
+  CHECKED_IN
+  CHECKED_OUT
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+/// Scheduled work shifts for Graduate Teaching Assistants in a course.
+model GtaShift {
+  id         String   @id @default(cuid())
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date       DateTime
+  startTime  String
+  endTime    String
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([courseId, date])
+  @@index([userId])
+  @@index([courseId, userId])
+}
+
+/// An individual 1-on-1 grading interview reservation with a Graduate TA.
+model GtaInterviewReservation {
+  id           String             @id @default(cuid())
+
+  assignmentId String
+  assignment   Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  studentId    String
+  student      User               @relation("StudentReservations", fields: [studentId], references: [id], onDelete: Cascade)
+
+  gtaId        String
+  gta          User               @relation("GtaReservations", fields: [gtaId], references: [id], onDelete: Cascade)
+
+  startTime    DateTime
+  endTime      DateTime
+  status       GtaInterviewStatus @default(SCHEDULED)
+
+  checkedInAt  DateTime?
+  checkedOutAt DateTime?
+
+  notes        String?            @db.Text
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([assignmentId, studentId])
+  @@index([gtaId, startTime])
+  @@index([assignmentId, startTime])
+  @@index([status, startTime])
+}
+
 
