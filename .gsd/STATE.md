@@ -8,8 +8,8 @@ updated: 2026-09-15T22:21:00-04:00
 
 **Milestone:** v5.0 — Graduate TA Grading Interviews  
 **Phase:** Phase 1: Database Models & GTA Shift Management Engine  
-**Status:** ⬜ Ready to Plan Phase 1  
-**Plan:** None
+**Status:** 📋 Phase 1 Planned (2 Plans ready for execution)  
+**Plan:** [.gsd/phases/1/1-PLAN.md](file:///Users/edwards/git/egp-broker/.gsd/phases/1/1-PLAN.md)
 
 ## Completed Milestones
 
