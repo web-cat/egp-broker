@@ -1,4 +1,4 @@
-import { defineEventHandler, readValidatedBody } from 'h3'
+import { defineEventHandler, readValidatedBody, getRouterParam, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
 import { updateAssignmentSchema } from '@@/shared/models/assignment'
@@ -72,6 +72,17 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
       scheduleWindowEnd: body.scheduleWindowEnd
         ? new Date(body.scheduleWindowEnd)
         : body.scheduleWindowEnd === null
+          ? null
+          : undefined,
+      hasInterviews: body.hasInterviews !== undefined ? body.hasInterviews : undefined,
+      interviewWindowStart: body.interviewWindowStart
+        ? new Date(body.interviewWindowStart)
+        : body.interviewWindowStart === null
+          ? null
+          : undefined,
+      interviewWindowEnd: body.interviewWindowEnd
+        ? new Date(body.interviewWindowEnd)
+        : body.interviewWindowEnd === null
           ? null
           : undefined
     }

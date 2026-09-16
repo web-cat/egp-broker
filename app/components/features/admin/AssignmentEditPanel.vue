@@ -72,6 +72,39 @@
             </div>
           </div>
 
+          <!-- Graduate TA Grading Interview Options -->
+          <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                  Require Graduate TA Grading Interview
+                </p>
+                <p class="text-xs text-neutral-500">
+                  Students must schedule and complete a 1-on-1 interview with a Graduate TA before redeeming resubmission passes.
+                </p>
+              </div>
+              <USwitch v-model="state.hasInterviews" />
+            </div>
+
+            <div
+              v-if="state.hasInterviews"
+              class="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-4 border-l-2 border-primary-500/50"
+            >
+              <BaseFormInput
+                v-model="state.interviewWindowStart"
+                name="interviewWindowStart"
+                label="Interview Window Start"
+                type="datetime-local"
+              />
+              <BaseFormInput
+                v-model="state.interviewWindowEnd"
+                name="interviewWindowEnd"
+                label="Interview Window End"
+                type="datetime-local"
+              />
+            </div>
+          </div>
+
           <!-- Pass Type Eligibility Multi-Select (edit mode only) -->
           <UFormField v-if="isEdit" label="Eligible Pass Types" name="passTypes">
             <USelectMenu
@@ -128,6 +161,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive, computed, watch, useTemplateRef } from 'vue'
 const { success, error: showError } = useNotifications()
 
 interface AssignmentData {
@@ -140,6 +174,9 @@ interface AssignmentData {
   isSchedulable?: boolean | null
   scheduleWindowStart?: string | null
   scheduleWindowEnd?: string | null
+  hasInterviews?: boolean | null
+  interviewWindowStart?: string | null
+  interviewWindowEnd?: string | null
   eligibilities?: {
     passTypeId: string
     passTypeName: string
@@ -170,6 +207,9 @@ const emit = defineEmits<{
       isSchedulable?: boolean | null
       scheduleWindowStart?: string | null
       scheduleWindowEnd?: string | null
+      hasInterviews?: boolean | null
+      interviewWindowStart?: string | null
+      interviewWindowEnd?: string | null
     }
   ]
   created: []
@@ -194,7 +234,10 @@ const state = reactive({
   acceptUntil: '',
   isSchedulable: false,
   scheduleWindowStart: '',
-  scheduleWindowEnd: ''
+  scheduleWindowEnd: '',
+  hasInterviews: false,
+  interviewWindowStart: '',
+  interviewWindowEnd: ''
 })
 
 // --- Pass type eligibility state ---
@@ -240,6 +283,9 @@ watch(
       state.isSchedulable = !!assignment.isSchedulable
       state.scheduleWindowStart = toLocalDatetime(assignment.scheduleWindowStart ?? null)
       state.scheduleWindowEnd = toLocalDatetime(assignment.scheduleWindowEnd ?? null)
+      state.hasInterviews = !!assignment.hasInterviews
+      state.interviewWindowStart = toLocalDatetime(assignment.interviewWindowStart ?? null)
+      state.interviewWindowEnd = toLocalDatetime(assignment.interviewWindowEnd ?? null)
 
       // Pre-select all currently eligible pass types (auto + manual)
       if (assignment.eligibilities) {
@@ -256,6 +302,9 @@ watch(
       state.isSchedulable = false
       state.scheduleWindowStart = ''
       state.scheduleWindowEnd = ''
+      state.hasInterviews = false
+      state.interviewWindowStart = ''
+      state.interviewWindowEnd = ''
       selectedPassTypeIds.value = []
     }
   },
@@ -279,6 +328,15 @@ const handleSubmit = async () => {
       scheduleWindowEnd:
         state.isSchedulable && state.scheduleWindowEnd
           ? new Date(state.scheduleWindowEnd).toISOString()
+          : null,
+      hasInterviews: state.hasInterviews,
+      interviewWindowStart:
+        state.hasInterviews && state.interviewWindowStart
+          ? new Date(state.interviewWindowStart).toISOString()
+          : null,
+      interviewWindowEnd:
+        state.hasInterviews && state.interviewWindowEnd
+          ? new Date(state.interviewWindowEnd).toISOString()
           : null
     }
 

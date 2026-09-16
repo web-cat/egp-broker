@@ -5,3 +5,9 @@ export const CourseContextSchema = z.object({
 })
 
 export type CourseContextInput = z.infer<typeof CourseContextSchema>
+
+export const updateCourseSettingsSchema = z.object({
+  interviewLocation: z.string().trim().max(255).nullable().optional()
+})
+
+export type UpdateCourseSettingsInput = z.infer<typeof updateCourseSettingsSchema>

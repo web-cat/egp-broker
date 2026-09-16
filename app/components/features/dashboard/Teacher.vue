@@ -6,6 +6,17 @@
   >
     <template #links>
       <BaseButton
+        v-if="courseId"
+        icon="i-lucide-settings"
+        color="neutral"
+        variant="outline"
+        size="md"
+        class="cursor-pointer font-medium"
+        @click="courseSettingsOpen = true"
+      >
+        Course Settings
+      </BaseButton>
+      <BaseButton
         icon="i-lucide-eye"
         color="neutral"
         variant="outline"
@@ -17,6 +28,24 @@
       </BaseButton>
     </template>
   </UPageHeader>
+
+  <!-- GTA Interview Location Banner -->
+  <div
+    v-if="currentInterviewLocation"
+    class="mb-6 px-4 py-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400"
+  >
+    <div class="flex items-center gap-2">
+      <UIcon name="i-lucide-map-pin" class="w-4 h-4 text-primary-500 shrink-0" />
+      <span>GTA Interview Location: <strong class="text-neutral-800 dark:text-neutral-200">{{ currentInterviewLocation }}</strong></span>
+    </div>
+    <UButton
+      size="xs"
+      variant="ghost"
+      color="neutral"
+      label="Change"
+      @click="courseSettingsOpen = true"
+    />
+  </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <!-- Quick Stats -->
@@ -249,6 +278,14 @@
     :show-details="true"
     @synced="onRosterSynced"
   />
+
+  <FeaturesCourseCourseSettingsModal
+    v-if="courseId"
+    v-model:open="courseSettingsOpen"
+    :course-id="courseId"
+    :initial-location="currentInterviewLocation"
+    @saved="onCourseSettingsSaved"
+  />
 </template>
 
 <script setup lang="ts">
@@ -266,10 +303,26 @@ const { enterStudentView } = useStudentView()
 const toast = useToast()
 
 const props = defineProps<{
+  courseId?: string | null
   courseTitle?: string | null
   courseCode?: string | null
   isAdmin: boolean
+  interviewLocation?: string | null
 }>()
+
+const courseSettingsOpen = ref(false)
+const currentInterviewLocation = ref(props.interviewLocation ?? null)
+
+watch(
+  () => props.interviewLocation,
+  (loc) => {
+    currentInterviewLocation.value = loc ?? null
+  }
+)
+
+const onCourseSettingsSaved = (newLoc: string | null) => {
+  currentInterviewLocation.value = newLoc
+}
 
 const {
   // Pass Types

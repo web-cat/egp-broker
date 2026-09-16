@@ -321,6 +321,9 @@ export async function getCourseAssignments(
         isSchedulable: a.isSchedulable,
         scheduleWindowStart: a.scheduleWindowStart?.toISOString() ?? null,
         scheduleWindowEnd: a.scheduleWindowEnd?.toISOString() ?? null,
+        hasInterviews: a.hasInterviews,
+        interviewWindowStart: a.interviewWindowStart?.toISOString() ?? null,
+        interviewWindowEnd: a.interviewWindowEnd?.toISOString() ?? null,
         published: a.published,
         createdAt: a.createdAt.toISOString(),
         eligiblePassTypeNames: a.passEligibilities.map((pe) => pe.passType.name),
@@ -396,7 +399,13 @@ export async function createAssignment(data: CreateAssignmentData) {
       courseId: data.courseId,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       availableFrom: data.availableFrom ? new Date(data.availableFrom) : null,
-      acceptUntil: data.acceptUntil ? new Date(data.acceptUntil) : null
+      acceptUntil: data.acceptUntil ? new Date(data.acceptUntil) : null,
+      isSchedulable: data.isSchedulable ?? false,
+      scheduleWindowStart: data.scheduleWindowStart ? new Date(data.scheduleWindowStart) : null,
+      scheduleWindowEnd: data.scheduleWindowEnd ? new Date(data.scheduleWindowEnd) : null,
+      hasInterviews: data.hasInterviews ?? false,
+      interviewWindowStart: data.interviewWindowStart ? new Date(data.interviewWindowStart) : null,
+      interviewWindowEnd: data.interviewWindowEnd ? new Date(data.interviewWindowEnd) : null
     }
   })
 

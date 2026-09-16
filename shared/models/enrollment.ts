@@ -11,7 +11,7 @@
 /**
  * Enrollment entity - re-exported from Prisma
  */
-import type { Enrollment, CourseRole } from '@prisma/client'
+import type { Enrollment, CourseRole, Course } from '@prisma/client'
 export type { Enrollment } from '@prisma/client'
 
 /**
@@ -23,17 +23,21 @@ export interface SimpleEnrollment {
   courseTitle: string | null
   courseLabel: string | null
   role: CourseRole
+  interviewLocation?: string | null
 }
 
 /**
  * Helper function to convert Prisma Enrollment to SimpleEnrollment
  */
-export function toSimpleEnrollment(enrollment: Enrollment): SimpleEnrollment {
+export function toSimpleEnrollment(
+  enrollment: Enrollment & { course?: Course | null }
+): SimpleEnrollment {
   return {
     id: enrollment.id,
     courseId: enrollment.courseId,
-    courseTitle: enrollment.course.title,
-    courseLabel: enrollment.course.label,
-    role: enrollment.role
+    courseTitle: enrollment.course?.title ?? null,
+    courseLabel: enrollment.course?.label ?? null,
+    role: enrollment.role,
+    interviewLocation: enrollment.course?.interviewLocation ?? null
   }
 }

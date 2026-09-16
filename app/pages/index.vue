@@ -62,16 +62,20 @@
 
               <FeaturesDashboardTeacher
                 v-if="isTeacher && !isStudentView"
+                :course-id="enrollment.data.courseId"
                 :course-title="enrollment.data.courseTitle"
                 :course-code="enrollment.data.courseLabel"
                 :is-admin="user?.globalRole === 'ADMIN'"
+                :interview-location="enrollment.data.interviewLocation"
               />
               <FeaturesDashboardStudent
                 v-else
+                :course-id="enrollment.data.courseId"
                 :course-title="enrollment.data.courseTitle"
                 :course-code="enrollment.data.courseLabel"
                 :is-admin="user?.globalRole === 'ADMIN'"
                 :is-preview="isStudentView"
+                :interview-location="enrollment.data.interviewLocation"
               />
             </div>
 

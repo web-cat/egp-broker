@@ -27,6 +27,9 @@ export const assignmentRowSchema = z.object({
   isSchedulable: z.boolean().default(false),
   scheduleWindowStart: z.string().nullable().optional(),
   scheduleWindowEnd: z.string().nullable().optional(),
+  hasInterviews: z.boolean().default(false),
+  interviewWindowStart: z.string().nullable().optional(),
+  interviewWindowEnd: z.string().nullable().optional(),
   createdAt: z.string(),
   toolId: z.string().nullable().optional(),
   toolName: z.string().nullable().optional(),
@@ -72,7 +75,10 @@ export const createAssignmentSchema = z.object({
   published: z.boolean().optional(),
   isSchedulable: z.boolean().optional(),
   scheduleWindowStart: z.string().nullable().optional(),
-  scheduleWindowEnd: z.string().nullable().optional()
+  scheduleWindowEnd: z.string().nullable().optional(),
+  hasInterviews: z.boolean().optional(),
+  interviewWindowStart: z.string().nullable().optional(),
+  interviewWindowEnd: z.string().nullable().optional()
 })
 
 export const updateAssignmentSchema = z.object({
@@ -85,6 +91,9 @@ export const updateAssignmentSchema = z.object({
   isSchedulable: z.boolean().optional(),
   scheduleWindowStart: z.string().nullable().optional(),
   scheduleWindowEnd: z.string().nullable().optional(),
+  hasInterviews: z.boolean().optional(),
+  interviewWindowStart: z.string().nullable().optional(),
+  interviewWindowEnd: z.string().nullable().optional(),
   manualPassTypeIds: z.array(z.string()).optional()
 })
 
@@ -115,5 +124,8 @@ export const initialAssignmentState: Omit<CreateAssignmentData, 'courseId'> = {
   canvasAssignmentId: '',
   dueDate: '',
   availableFrom: '',
-  acceptUntil: ''
+  acceptUntil: '',
+  hasInterviews: false,
+  interviewWindowStart: null,
+  interviewWindowEnd: null
 }
