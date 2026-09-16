@@ -40,7 +40,7 @@
 
 ### Phase 2: Slot Generation, Booking API & Pass Redemption Gating
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Build server algorithm for 10-minute slots, calculate overlapping GTA capacity, filter half-day blocks, implement student reservation booking and cancellation with automatic GTA assignment, and hook into `redemptions.ts` to gate resubmission passes until interview completion.  
 **Requirements**: REQ-504, REQ-505, REQ-506, REQ-509
 

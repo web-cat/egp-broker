@@ -188,6 +188,26 @@ export async function redeemPass(
         })
       }
 
+      // 2b. If assignment requires interviews and pass is a resubmission pass (!pool.passType.extensionOnly),
+      // verify student has completed an interview
+      if (assignment.hasInterviews && !pool.passType.extensionOnly) {
+        const completedInterview = await tx.gtaInterviewReservation.findFirst({
+          where: {
+            assignmentId,
+            studentId: userId,
+            status: { in: ['COMPLETED', 'CHECKED_OUT'] }
+          }
+        })
+
+        if (!completedInterview) {
+          throw createError({
+            statusCode: 400,
+            statusMessage:
+              'This assignment requires a completed grading interview with a Graduate TA before redeeming a resubmission pass. Please schedule and complete your interview first.'
+          })
+        }
+      }
+
       // 3. Resolve effective baseline dates for student (taking individual/section overrides into account)
       const effectiveDates = await resolveStudentEffectiveDates(
         assignment,
