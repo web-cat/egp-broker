@@ -3,6 +3,7 @@ import prisma from '@@/server/utils/db'
 import reservationsPost from '@@/server/api/me/courses/[courseId]/assignments/[assignmentId]/interview-reservations/index.post'
 import reservationDelete from '@@/server/api/me/courses/[courseId]/assignments/[assignmentId]/interview-reservations/[id].delete'
 import myReservationGet from '@@/server/api/me/courses/[courseId]/assignments/[assignmentId]/interview-reservations/my.get'
+import courseReservationsGet from '@@/server/api/me/courses/[courseId]/interview-reservations.get'
 
 vi.mock('@@/server/utils/db', () => ({
   default: {
@@ -258,6 +259,39 @@ describe('API: Student GTA Interview Reservations', () => {
       expect(res.statusCode).toBe(200)
       expect(res.data.id).toBe('res-active')
       expect(res.data.status).toBe('SCHEDULED')
+    })
+  })
+
+  describe('GET /api/me/courses/:courseId/interview-reservations', () => {
+    it('returns all reservations for student in course', async () => {
+      const event = mockEvent({ id: 'student-1', globalRole: 'USER' }, {}, {
+        courseId: 'course-1'
+      } as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.findMany).mockResolvedValue([
+        {
+          id: 'res-1',
+          assignmentId: 'assign-1',
+          studentId: 'student-1',
+          status: 'SCHEDULED',
+          startTime: new Date('2099-10-05T10:00:00.000Z'),
+          assignment: { id: 'assign-1', title: 'Project 1' },
+          gta: { id: 'gta-1', firstName: 'Alice', lastName: 'GTA', email: 'alice@gta.edu' }
+        }
+      ] as any)
+
+      const res = await courseReservationsGet(event)
+      expect(res.statusCode).toBe(200)
+      expect(res.data).toHaveLength(1)
+      expect(res.data[0].id).toBe('res-1')
+      expect(prisma.gtaInterviewReservation.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            studentId: 'student-1',
+            assignment: { courseId: 'course-1' }
+          }
+        })
+      )
     })
   })
 })

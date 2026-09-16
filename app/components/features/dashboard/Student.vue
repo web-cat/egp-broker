@@ -74,6 +74,28 @@
         </div>
       </div>
     </BaseCard>
+
+    <!-- Upcoming GTA Grading Interview -->
+    <BaseCard v-if="nextUpcomingGtaReservation">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
+            GTA Interview
+          </p>
+          <div class="mt-1">
+            <p class="text-sm font-bold text-neutral-900 dark:text-neutral-100 truncate max-w-[180px]">
+              {{ nextUpcomingGtaReservation.assignment?.title || 'Grading Interview' }}
+            </p>
+            <p class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+              {{ formatUpcomingDate(nextUpcomingGtaReservation.startTime) }}
+            </p>
+          </div>
+        </div>
+        <div class="p-4 bg-emerald-100 dark:bg-emerald-900/50 rounded-full">
+          <UIcon name="i-lucide-user-check" class="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+        </div>
+      </div>
+    </BaseCard>
   </div>
 
   <!-- My Assignments -->
@@ -138,6 +160,17 @@
     @cancelled="refreshCbtfReservations"
   />
 
+  <FeaturesGtaInterviewScheduleModal
+    v-if="courseId"
+    v-model:open="showGtaModal"
+    :course-id="courseId"
+    :assignment="selectedGtaAssignment"
+    :existing-reservation="selectedGtaReservation"
+    :interview-location="interviewLocation"
+    @reserved="refreshGtaReservations"
+    @cancelled="refreshGtaReservations"
+  />
+
   <FeaturesDashboardRosterSyncModal
     v-model:open="rosterSyncModalOpen"
     @synced="handleRosterSynced"
@@ -155,16 +188,20 @@ const router = useRouter()
 
 const props = withDefaults(
   defineProps<{
+    courseId?: string | null
     courseTitle?: string | null
     courseCode?: string | null
     isAdmin?: boolean
     isPreview?: boolean
+    interviewLocation?: string | null
   }>(),
   {
+    courseId: null,
     courseTitle: null,
     courseCode: null,
     isAdmin: false,
-    isPreview: false
+    isPreview: false,
+    interviewLocation: null
   }
 )
 
@@ -192,7 +229,13 @@ const {
   selectedCbtfAssignment,
   selectedCbtfReservation,
   nextUpcomingReservation,
-  refreshCbtfReservations
+  refreshCbtfReservations,
+  // GTA State
+  showGtaModal,
+  selectedGtaAssignment,
+  selectedGtaReservation,
+  nextUpcomingGtaReservation,
+  refreshGtaReservations
 } = useStudentDashboard(props.isPreview)
 
 // --- Roster Sync (NRPS) ---
@@ -223,7 +266,12 @@ const handleRosterSynced = async () => {
     const { sync: _ignoredSync, ...remainingQuery } = route.query
     router.replace({ query: remainingQuery })
   }
-  await Promise.all([refreshAssignments(), refreshPassPools(), refreshRedemptions()])
+  await Promise.all([
+    refreshAssignments(),
+    refreshPassPools(),
+    refreshRedemptions(),
+    refreshGtaReservations()
+  ])
 }
 
 const formatUpcomingDate = (dateStr: string) => {

@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 1: Database Models & GTA Shift Management Engine
+> **Current Phase**: Phase 4: GTA Interview Dashboard, Notes Console & Full Verification
 > **Milestone**: v5.0 — Graduate TA Grading Interviews
 > **Goal**: Build a course-integrated 1-on-1 interview scheduling system with Graduate Teaching Assistants for assignment grading, featuring recurring disconnected shift builder, overlapping slot capacity, automatic GTA assignment, pass redemption gating, and a dedicated GTA check-in/checkout & notes console.
 
@@ -15,18 +15,18 @@
 
 ## Must-Haves (Milestone v5.0)
 
-- [ ] Database models & migration: `Course.interviewLocation`, `Assignment.hasInterviews`, `Assignment.interviewWindowStart/End`, `GtaShift`, `GtaInterviewReservation`
-- [ ] Role check & authorization: only users with course role `TA` or instructor can be scheduled
-- [ ] Recurring disconnected shift parser & batch generator for GTAs (course instructors manage all, GTAs manage their own)
-- [ ] 10-minute slot availability engine (5m interview + 5m prep) with aggregated capacity across overlapping GTAs
-- [ ] Half-day block filtering matching slots within the assignment's interview window
-- [ ] Student booking API assigning an available GTA on duty and returning confirmation with assigned GTA & course location
-- [ ] Student appointment constraints: at most one active scheduled interview; rescheduling allowed if completed, cancelled, or missed/no-show
-- [ ] Resubmission pass redemption gating in `server/utils/redemptions.ts` (blocks non-extension passes if interview not completed)
+- [x] Database models & migration: `Course.interviewLocation`, `Assignment.hasInterviews`, `Assignment.interviewWindowStart/End`, `GtaShift`, `GtaInterviewReservation`
+- [x] Role check & authorization: only users with course role `TA` or instructor can be scheduled
+- [x] Recurring disconnected shift parser & batch generator for GTAs (course instructors manage all, GTAs manage their own)
+- [x] 10-minute slot availability engine (5m interview + 5m prep) with aggregated capacity across overlapping GTAs
+- [x] Half-day block filtering matching slots within the assignment's interview window
+- [x] Student booking API assigning an available GTA on duty and returning confirmation with assigned GTA & course location
+- [x] Student appointment constraints: at most one active scheduled interview; rescheduling allowed if completed, cancelled, or missed/no-show
+- [x] Resubmission pass redemption gating in `server/utils/redemptions.ts` (blocks non-extension passes if interview not completed)
 - [ ] GTA console (`/interviews`): expected arrivals for active shift, manual check-in, active interview panel with notes, checkout, and mark no-show
-- [ ] Course settings & assignment edit UI for configuring location and interview requirements
-- [ ] Student interview scheduling UI
-- [ ] 100% Vitest unit test coverage for new endpoints, utilities, and components
+- [x] Course settings & assignment edit UI for configuring location and interview requirements
+- [x] Student interview scheduling UI
+- [x] 100% Vitest unit test coverage for new endpoints, utilities, and components
 
 ---
 
@@ -46,7 +46,7 @@
 
 ### Phase 3: Student Scheduling Experience & Course Settings UI
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Implement student scheduling UI (adapted from CBTF half-day selection), booking confirmation view, rescheduling flow, and course/assignment configuration panels in the teacher interface.  
 **Requirements**: REQ-510, REQ-511
 

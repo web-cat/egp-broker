@@ -3,6 +3,7 @@ import type { ApiResponse } from '@@/shared/types/api'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import { calculatePassExtension } from '@@/shared/utils/extension'
 import { useCbtfStudent } from '~/composables/features/useCbtfStudent'
+import { useCurrentEnrollment } from '~/composables/features/useEnrollmentsFeature'
 
 export const useStudentDashboard = (isPreview = false) => {
   const toast = useToast()
@@ -35,6 +36,46 @@ export const useStudentDashboard = (isPreview = false) => {
     status: redemptionsStatus,
     refresh: refreshRedemptions
   } = useFetch<ApiResponse<RedemptionRow[]>>('/api/me/redemptions')
+
+  // Fetch current enrollment for courseId
+  const { data: currentEnrollmentData } = useCurrentEnrollment({ immediate: true })
+  const courseId = computed(() => currentEnrollmentData.value?.data?.courseId || '')
+
+  // Fetch GTA interview reservations for the student in this course
+  const gtaReservationsUrl = computed(() =>
+    courseId.value ? `/api/me/courses/${courseId.value}/interview-reservations` : null
+  )
+
+  const { data: gtaReservationsData, refresh: refreshGtaReservations } = useFetch<
+    ApiResponse<any[]>
+  >(gtaReservationsUrl, {
+    lazy: true
+  })
+
+  const gtaReservations = computed<any[]>(() => gtaReservationsData.value?.data || [])
+
+  const nextUpcomingGtaReservation = computed<any | null>(() => {
+    const now = new Date()
+    const active = gtaReservations.value.filter(
+      (r) => (r.status === 'SCHEDULED' || r.status === 'CHECKED_IN') && new Date(r.endTime) >= now
+    )
+    if (!active.length) return null
+    return active.sort(
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    )[0]
+  })
+
+  const getGtaReservationForAssignment = (assignmentId: string): any | undefined => {
+    return gtaReservations.value.find(
+      (r) =>
+        r.assignmentId === assignmentId &&
+        (r.status === 'SCHEDULED' ||
+          r.status === 'CHECKED_IN' ||
+          r.status === 'COMPLETED' ||
+          r.status === 'CHECKED_OUT' ||
+          r.status === 'MISSED')
+    )
+  }
 
   // Effective pass pools: use student pass pools if available; otherwise use course pass types with initial balances in preview
   const effectivePassPools = computed<SimplePassPool[]>(() => {
@@ -164,6 +205,19 @@ export const useStudentDashboard = (isPreview = false) => {
   const openCbtfModal = (assignment: AssignmentRow) => {
     selectedCbtfAssignment.value = assignment
     showCbtfModal.value = true
+  }
+
+  // GTA Interview Modal & Selection State
+  const showGtaModal = ref(false)
+  const selectedGtaAssignment = ref<AssignmentRow | null>(null)
+  const selectedGtaReservation = computed(() => {
+    if (!selectedGtaAssignment.value) return null
+    return getGtaReservationForAssignment(selectedGtaAssignment.value.id) || null
+  })
+
+  const openGtaModal = (assignment: AssignmentRow) => {
+    selectedGtaAssignment.value = assignment
+    showGtaModal.value = true
   }
 
   const selectedLatestRedemption = computed(() => {
@@ -443,6 +497,115 @@ export const useStudentDashboard = (isPreview = false) => {
 
         return h('span', { class: 'text-xs text-neutral-500 font-medium' }, res.status)
       }
+    },
+    {
+      accessorKey: 'gtaInterviewSlot',
+      header: 'GTA Interview',
+      cell: ({ row }: { row: any }) => {
+        if (!row.original.hasInterviews) return '—'
+
+        const res = getGtaReservationForAssignment(row.original.id)
+
+        if (!res) {
+          return h(
+            'button',
+            {
+              type: 'button',
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-primary-50 text-primary-700 dark:bg-primary-950/50 dark:text-primary-300 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors cursor-pointer',
+              onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                openGtaModal(row.original)
+              }
+            },
+            [
+              h(resolveComponent('UIcon'), {
+                name: 'i-lucide-calendar-plus',
+                class: 'w-3.5 h-3.5'
+              }),
+              'Schedule Interview'
+            ]
+          )
+        }
+
+        if (res.status === 'SCHEDULED') {
+          const startTimeStr = new Date(res.startTime).toLocaleTimeString([], {
+            hour: 'numeric',
+            minute: '2-digit'
+          })
+          return h(
+            'button',
+            {
+              type: 'button',
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-100 transition-colors cursor-pointer',
+              onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                openGtaModal(row.original)
+              }
+            },
+            [
+              h(resolveComponent('UIcon'), {
+                name: 'i-lucide-calendar-check',
+                class: 'w-3.5 h-3.5'
+              }),
+              `Scheduled (${startTimeStr})`
+            ]
+          )
+        }
+
+        if (res.status === 'CHECKED_IN') {
+          return h(
+            'span',
+            {
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+            },
+            [
+              h(resolveComponent('UIcon'), { name: 'i-lucide-user-check', class: 'w-3.5 h-3.5' }),
+              'In Interview'
+            ]
+          )
+        }
+
+        if (res.status === 'COMPLETED' || res.status === 'CHECKED_OUT') {
+          return h(
+            'span',
+            {
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+            },
+            [
+              h(resolveComponent('UIcon'), {
+                name: 'i-lucide-check-circle-2',
+                class: 'w-3.5 h-3.5'
+              }),
+              'Completed'
+            ]
+          )
+        }
+
+        if (res.status === 'MISSED') {
+          return h(
+            'button',
+            {
+              type: 'button',
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-colors cursor-pointer',
+              onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                openGtaModal(row.original)
+              }
+            },
+            [
+              h(resolveComponent('UIcon'), { name: 'i-lucide-alert-circle', class: 'w-3.5 h-3.5' }),
+              'Missed (Reschedule)'
+            ]
+          )
+        }
+
+        return h('span', { class: 'text-xs text-neutral-500 font-medium' }, res.status)
+      }
     }
   ]
 
@@ -475,6 +638,15 @@ export const useStudentDashboard = (isPreview = false) => {
     selectedCbtfReservation,
     openCbtfModal,
     nextUpcomingReservation,
-    refreshCbtfReservations
+    refreshCbtfReservations,
+
+    // GTA Interview State
+    courseId,
+    showGtaModal,
+    selectedGtaAssignment,
+    selectedGtaReservation,
+    nextUpcomingGtaReservation,
+    openGtaModal,
+    refreshGtaReservations
   }
 }
