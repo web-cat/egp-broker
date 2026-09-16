@@ -1,5 +1,51 @@
 <template>
   <div class="space-y-6">
+    <!-- Training Sandbox Mode Banner -->
+    <div
+      v-if="isTraining"
+      data-testid="training-banner"
+      class="p-4 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/80 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm space-y-3"
+    >
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div
+            class="p-2 rounded-lg bg-amber-200/60 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300"
+          >
+            <UIcon name="i-lucide-graduation-cap" class="w-6 h-6" />
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-bold">GRADUATE TA TRAINING SANDBOX</h2>
+              <UBadge color="warning" variant="solid" size="xs"> In-Memory Mode </UBadge>
+            </div>
+            <p class="text-xs opacity-85">
+              Practice student check-ins, active interview observation notes, checkouts, and no-shows. Zero database writes.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <UButton
+            data-testid="reset-scenario-btn"
+            variant="outline"
+            color="warning"
+            size="xs"
+            icon="i-lucide-rotate-ccw"
+            label="Reset Scenario"
+            @click="handleResetScenario"
+          />
+          <UButton
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            icon="i-lucide-log-out"
+            label="Exit Training"
+            to="/interviews"
+          />
+        </div>
+      </div>
+    </div>
+
     <!-- Header / Context Bar -->
     <div
       class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
@@ -11,11 +57,14 @@
             color="neutral"
             size="xs"
             icon="i-lucide-arrow-left"
-            to="/"
+            :to="isTraining ? '/interviews' : '/'"
           />
           <h1 class="text-xl font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
             <UIcon name="i-lucide-user-check" class="w-6 h-6 text-primary-500" />
             Graduate TA Interview Console
+            <UBadge v-if="isTraining" color="warning" variant="subtle" size="xs">
+              TRAINING
+            </UBadge>
           </h1>
         </div>
         <p class="text-sm text-neutral-500 dark:text-neutral-400">
@@ -34,6 +83,16 @@
             Location: <strong>{{ effectiveLocation }}</strong>
           </span>
         </div>
+
+        <UButton
+          v-if="!isTraining"
+          icon="i-lucide-graduation-cap"
+          variant="outline"
+          color="warning"
+          size="sm"
+          label="Training Mode"
+          to="/interviews/training"
+        />
 
         <UButton
           icon="i-lucide-refresh-cw"
@@ -300,14 +359,30 @@
 import { ref, computed, watch } from 'vue'
 import { useGtaInterviewConsole } from '~/composables/features/useGtaInterviewConsole'
 
-const props = defineProps<{
-  courseId: string
-  courseTitle?: string | null
-  courseCode?: string | null
-  interviewLocation?: string | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    courseId: string
+    courseTitle?: string | null
+    courseCode?: string | null
+    interviewLocation?: string | null
+    isTraining?: boolean
+    trainingState?: any
+  }>(),
+  {
+    courseTitle: null,
+    courseCode: null,
+    interviewLocation: null,
+    isTraining: false,
+    trainingState: undefined
+  }
+)
 
 const effectiveLocation = computed(() => props.interviewLocation || '')
+
+const consoleState =
+  props.isTraining && props.trainingState
+    ? props.trainingState
+    : useGtaInterviewConsole(computed(() => props.courseId))
 
 const {
   activeInterview,
@@ -320,7 +395,13 @@ const {
   checkOut,
   saveNotes,
   markNoShow
-} = useGtaInterviewConsole(computed(() => props.courseId))
+} = consoleState
+
+const handleResetScenario = () => {
+  if (consoleState.resetScenario) {
+    consoleState.resetScenario()
+  }
+}
 
 const notesDraft = ref('')
 

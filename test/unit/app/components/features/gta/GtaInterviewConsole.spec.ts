@@ -207,4 +207,63 @@ describe('GtaInterviewConsole Component', () => {
     expect(wrapper.text()).toContain('Evan Wright')
     expect(wrapper.text()).toContain('MISSED')
   })
+
+  it('renders training mode banner and handles reset scenario', async () => {
+    const mockResetScenario = vi.fn()
+    const trainingState = {
+      activeInterview: ref(null),
+      expectedArrivals: ref([
+        {
+          id: 'train-1',
+          status: 'SCHEDULED',
+          startTime: '2026-10-05T10:00:00.000Z',
+          endTime: '2026-10-05T10:10:00.000Z',
+          student: { firstName: 'Maya', lastName: 'Lin', email: 'mlin@vt.edu' },
+          assignment: { id: 'asg-1', title: 'Project 1' }
+        }
+      ]),
+      completedList: ref([]),
+      feedStatus: ref('success'),
+      isUpdating: ref(false),
+      refreshFeed: vi.fn(),
+      checkIn: vi.fn(),
+      checkOut: vi.fn(),
+      saveNotes: vi.fn(),
+      markNoShow: vi.fn(),
+      resetScenario: mockResetScenario
+    }
+
+    const wrapper = mount(GtaInterviewConsole, {
+      props: {
+        courseId: 'training-sandbox',
+        courseTitle: 'Software Design (Training)',
+        isTraining: true,
+        trainingState
+      },
+      global: { stubs }
+    })
+
+    expect(wrapper.find('[data-testid="training-banner"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('GRADUATE TA TRAINING SANDBOX')
+    expect(wrapper.text()).toContain('In-Memory Mode')
+    expect(wrapper.text()).toContain('TRAINING')
+    expect(wrapper.text()).toContain('Maya Lin')
+
+    const resetBtn = wrapper.find('[data-testid="reset-scenario-btn"]')
+    expect(resetBtn.exists()).toBe(true)
+    await resetBtn.trigger('click')
+
+    expect(mockResetScenario).toHaveBeenCalled()
+  })
+
+  it('renders link to training mode when in live mode', () => {
+    const wrapper = mount(GtaInterviewConsole, {
+      props: { courseId: 'course-1', isTraining: false },
+      global: { stubs }
+    })
+
+    expect(wrapper.find('[data-testid="training-banner"]').exists()).toBe(false)
+    const trainingBtn = wrapper.findAll('button').find((b) => b.text().includes('Training Mode'))
+    expect(trainingBtn).toBeDefined()
+  })
 })
