@@ -7,6 +7,17 @@
     <template #links>
       <BaseButton
         v-if="courseId"
+        icon="i-lucide-user-check"
+        color="neutral"
+        variant="outline"
+        size="md"
+        class="cursor-pointer font-medium"
+        to="/interviews"
+      >
+        Interview Console
+      </BaseButton>
+      <BaseButton
+        v-if="courseId"
         icon="i-lucide-settings"
         color="neutral"
         variant="outline"

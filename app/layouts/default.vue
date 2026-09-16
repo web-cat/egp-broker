@@ -48,6 +48,15 @@
           v-if="user?.globalRole === 'ADMIN'"
           variant="ghost"
           color="neutral"
+          icon="i-lucide-user-check"
+          :to="localePath('/interviews')"
+          title="Graduate TA Interview Console"
+        />
+
+        <BaseButton
+          v-if="user?.globalRole === 'ADMIN'"
+          variant="ghost"
+          color="neutral"
           icon="i-lucide-wrench"
           :to="localePath('/admin')"
           :title="t('pages.admin.title')"

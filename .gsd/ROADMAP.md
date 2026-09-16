@@ -23,7 +23,7 @@
 - [x] Student booking API assigning an available GTA on duty and returning confirmation with assigned GTA & course location
 - [x] Student appointment constraints: at most one active scheduled interview; rescheduling allowed if completed, cancelled, or missed/no-show
 - [x] Resubmission pass redemption gating in `server/utils/redemptions.ts` (blocks non-extension passes if interview not completed)
-- [ ] GTA console (`/interviews`): expected arrivals for active shift, manual check-in, active interview panel with notes, checkout, and mark no-show
+- [x] GTA console (`/interviews`): expected arrivals for active shift, manual check-in, active interview panel with notes, checkout, and mark no-show
 - [x] Course settings & assignment edit UI for configuring location and interview requirements
 - [x] Student interview scheduling UI
 - [x] 100% Vitest unit test coverage for new endpoints, utilities, and components
@@ -52,6 +52,6 @@
 
 ### Phase 4: GTA Interview Dashboard, Notes Console & Full Verification
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Build the GTA interview dashboard showing expected arrivals for the GTA's active shift, manual check-in, active interview panel with observation/grading notes, checkout button, no-show marker, and conduct complete unit and integration verification.  
 **Requirements**: REQ-507, REQ-508, REQ-512
