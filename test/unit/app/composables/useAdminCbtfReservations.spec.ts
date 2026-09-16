@@ -152,4 +152,46 @@ describe('useAdminCbtfReservations', () => {
     expect(composable.page.value).toBe(1)
     expect(mockFetch).toHaveBeenCalled()
   })
+
+  it('supports custom API endpoint option', async () => {
+    const composable = useAdminCbtfReservations({ endpoint: '/api/proctor/reservations' })
+
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: [],
+      pagination: { total: 0, page: 1, pageSize: 50, totalPages: 1 }
+    })
+
+    await composable.fetchReservations()
+
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/proctor/reservations?'))
+  })
+
+  it('resyncs Canvas override via POST and triggers notification and refresh', async () => {
+    const composable = useAdminCbtfReservations()
+
+    mockFetch
+      .mockResolvedValueOnce({
+        statusCode: 200,
+        message: 'Canvas override synced successfully',
+        data: { id: 'res-1', canvasOverrideId: 'cov-123' }
+      }) // resync POST
+      .mockResolvedValueOnce({
+        statusCode: 200,
+        data: [],
+        pagination: { total: 0, page: 1, pageSize: 50, totalPages: 1 }
+      }) // fetchReservations
+
+    await composable.resyncCanvas('res-1')
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/proctor/reservations/res-1/resync-canvas', {
+      method: 'POST'
+    })
+    expect(mockToastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Canvas Override Synced',
+        color: 'success'
+      })
+    )
+  })
 })

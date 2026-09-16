@@ -407,6 +407,7 @@ describe('ProctorConsole Component', () => {
           UInput: true,
           BaseCard: { template: '<div><slot /></div>' },
           BaseDataTable: true,
+          FeaturesCbtfReservationsTable: true,
           FeaturesProctorNoteModal: true,
           NuxtLink: { template: '<a :href="$attrs.to"><slot /></a>' }
         }
@@ -416,5 +417,35 @@ describe('ProctorConsole Component', () => {
     expect(wrapper.text()).toContain('Unwrapped CBTF Lab')
     expect(wrapper.text()).toContain('64 Total Workstations')
     expect(wrapper.text()).toContain('10 / 64')
+  })
+
+  it('switches to All Reservations tab when clicked', async () => {
+    const wrapper = mount(ProctorConsole, {
+      props: {
+        isTraining: false,
+        proctorState: mockState
+      },
+      global: {
+        stubs: {
+          UIcon: true,
+          UBadge: true,
+          UButton: true,
+          USwitch: true,
+          UInput: true,
+          BaseCard: { template: '<div><slot /></div>' },
+          BaseDataTable: true,
+          FeaturesCbtfReservationsTable: { template: '<div class="reservations-table-stub" />' },
+          FeaturesProctorNoteModal: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    const buttons = wrapper.findAll('button')
+    const resTabButton = buttons.find((b) => b.text().includes('All Reservations'))
+    expect(resTabButton).toBeDefined()
+    await resTabButton!.trigger('click')
+
+    expect(wrapper.find('.reservations-table-stub').exists()).toBe(true)
   })
 })

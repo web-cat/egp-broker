@@ -3,8 +3,13 @@ import type { ApiResponse, ApiPagination } from '@@/shared/types/api'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 import type { CbtfAdminUpdateReservationInput } from '@@/shared/schemas/cbtf.schema'
 
-export function useAdminCbtfReservations() {
+export interface UseAdminCbtfReservationsOptions {
+  endpoint?: string
+}
+
+export function useAdminCbtfReservations(options: UseAdminCbtfReservationsOptions = {}) {
   const toast = useToast()
+  const endpoint = options.endpoint || '/api/admin/cbtf/reservations'
 
   const search = ref('')
   const status = ref('ALL')
@@ -51,7 +56,7 @@ export function useAdminCbtfReservations() {
       params.append('page', String(page.value))
       params.append('pageSize', String(pageSize.value))
 
-      const url = `/api/admin/cbtf/reservations?${params.toString()}`
+      const url = `${endpoint}?${params.toString()}`
       const res = await $fetch<ApiResponse<CbtfReservationDto[]>>(url)
 
       reservations.value = res.data || []
@@ -124,6 +129,47 @@ export function useAdminCbtfReservations() {
     }
   }
 
+  const resyncCanvas = async (id: string) => {
+    try {
+      const res = await $fetch<ApiResponse<any> & { warning?: boolean; error?: boolean }>(
+        `/api/proctor/reservations/${id}/resync-canvas`,
+        {
+          method: 'POST'
+        }
+      )
+
+      if (res.warning) {
+        toast.add({
+          title: 'Canvas Sync Skipped',
+          description: res.message || 'Canvas override could not be created for this reservation.',
+          color: 'warning'
+        })
+      } else if (res.error) {
+        toast.add({
+          title: 'Canvas Sync Error',
+          description: res.message || 'Failed to sync Canvas override.',
+          color: 'error'
+        })
+      } else {
+        toast.add({
+          title: 'Canvas Override Synced',
+          description: res.message || 'Canvas assignment override successfully updated.',
+          color: 'success'
+        })
+      }
+
+      await fetchReservations()
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Sync Failed',
+        description: err.data?.message || err.data?.statusMessage || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
   const resetFilters = () => {
     search.value = ''
     status.value = 'ALL'
@@ -154,6 +200,7 @@ export function useAdminCbtfReservations() {
     fetchReservations,
     updateReservation,
     deleteReservation,
+    resyncCanvas,
     resetFilters
   }
 }

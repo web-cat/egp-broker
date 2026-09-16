@@ -510,6 +510,20 @@
               {{ departuresCount }}
             </span>
           </button>
+
+          <button
+            type="button"
+            class="pb-3 text-sm font-semibold transition-colors border-b-2 cursor-pointer flex items-center gap-2"
+            :class="[
+              activeFeedTab === 'reservations'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+            ]"
+            @click="activeFeedTab = 'reservations'"
+          >
+            <UIcon name="i-lucide-calendar-clock" class="w-4 h-4" />
+            <span>All Reservations</span>
+          </button>
         </div>
 
         <!-- Tab 1: Expected Arrivals -->
@@ -539,6 +553,16 @@
             :columns="departureColumns"
             empty-icon="i-lucide-check-check"
             empty-text="No departures pending or recently completed."
+          />
+        </div>
+
+        <!-- Tab 4: All Reservations Roster (Read-only with Canvas resync) -->
+        <div v-else-if="activeFeedTab === 'reservations'">
+          <FeaturesCbtfReservationsTable
+            :read-only="true"
+            :show-resync-canvas="true"
+            endpoint="/api/proctor/reservations"
+            :is-training="isTraining"
           />
         </div>
       </div>
