@@ -202,13 +202,22 @@
         <p class="text-sm text-neutral-600 dark:text-neutral-400">
           Global audit log of all CBTF exam reservations across courses.
         </p>
-        <UButton
-          variant="ghost"
-          color="neutral"
-          icon="i-lucide-refresh-cw"
-          label="Refresh"
-          @click="refreshReservations"
-        />
+        <div class="flex items-center gap-2">
+          <UButton
+            to="/admin/cbtf-reservations"
+            color="primary"
+            variant="soft"
+            icon="i-lucide-external-link"
+            label="Open Reservations Manager"
+          />
+          <UButton
+            variant="ghost"
+            color="neutral"
+            icon="i-lucide-refresh-cw"
+            label="Refresh"
+            @click="refreshReservations"
+          />
+        </div>
       </div>
 
       <BaseDataTable

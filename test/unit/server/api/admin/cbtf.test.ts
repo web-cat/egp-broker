@@ -39,9 +39,16 @@ vi.mock('@@/server/utils/db', () => ({
     },
     cbtfReservation: {
       findMany: vi.fn(),
+      findUnique: vi.fn(),
+      count: vi.fn(),
       update: vi.fn()
     }
   }
+}))
+
+vi.mock('@@/server/utils/cbtf-canvas', () => ({
+  syncCbtfReservationCanvasOverride: vi.fn().mockResolvedValue({ status: 'updated' }),
+  deleteCbtfReservationCanvasOverride: vi.fn().mockResolvedValue(true)
 }))
 
 vi.stubGlobal('getUserSession', (event: any) =>
@@ -340,6 +347,7 @@ describe('API: Admin CBTF Endpoints', () => {
   describe('Reservations Audit & Management', () => {
     it('fetches reservations audit log', async () => {
       const event = mockEvent('ADMIN')
+      vi.mocked(prisma.cbtfReservation.count).mockResolvedValue(1)
       vi.mocked(prisma.cbtfReservation.findMany).mockResolvedValue([
         {
           id: 'res-1',
@@ -363,6 +371,10 @@ describe('API: Admin CBTF Endpoints', () => {
 
     it('updates reservation status', async () => {
       const event = mockEvent('ADMIN', { status: 'CANCELLED' }, { id: 'res-1' })
+      vi.mocked(prisma.cbtfReservation.findUnique).mockResolvedValue({
+        id: 'res-1',
+        status: 'SCHEDULED'
+      } as any)
       vi.mocked(prisma.cbtfReservation.update).mockResolvedValue({
         id: 'res-1',
         facilityId: 'fac-1',

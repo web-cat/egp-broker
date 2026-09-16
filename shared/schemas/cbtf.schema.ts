@@ -266,3 +266,50 @@ export const repairCbtfTimezonesResponseSchema = z.object({
 })
 
 export type RepairCbtfTimezonesResponse = z.infer<typeof repairCbtfTimezonesResponseSchema>
+
+export const cbtfReservationQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  status: z
+    .enum(['ALL', 'SCHEDULED', 'CHECKED_IN', 'CHECKED_OUT', 'MISSED', 'CANCELLED'])
+    .optional(),
+  from: z
+    .string()
+    .datetime()
+    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}/))
+    .optional(),
+  to: z
+    .string()
+    .datetime()
+    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}/))
+    .optional(),
+  upcomingOnly: z
+    .union([z.enum(['true', 'false']), z.boolean()])
+    .optional()
+    .transform((val) => (val === undefined ? true : val === true || val === 'true')),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(50)
+})
+
+export type CbtfReservationQuery = z.infer<typeof cbtfReservationQuerySchema>
+
+export const cbtfAdminUpdateReservationSchema = z
+  .object({
+    status: z.enum(['SCHEDULED', 'CHECKED_IN', 'CHECKED_OUT', 'MISSED', 'CANCELLED']).optional(),
+    seatNumber: z.number().int().min(1).optional(),
+    startTime: z.string().datetime().optional(),
+    endTime: z.string().datetime().optional()
+  })
+  .refine(
+    (data) => {
+      if (data.startTime && data.endTime) {
+        return new Date(data.endTime) > new Date(data.startTime)
+      }
+      return true
+    },
+    {
+      message: 'End time must be after start time',
+      path: ['endTime']
+    }
+  )
+
+export type CbtfAdminUpdateReservationInput = z.infer<typeof cbtfAdminUpdateReservationSchema>

@@ -71,6 +71,7 @@ export interface CbtfReservationDto {
   assignmentTitle?: string
   userId: string
   studentName?: string
+  studentEmail?: string | null
   studentId?: string | null
   studentAvatarUrl?: string | null
   seatNumber: number

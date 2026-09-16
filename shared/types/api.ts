@@ -1,9 +1,17 @@
+export interface ApiPagination {
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
 /**
  * Standard API response structure
  */
 export interface ApiResponse<T> {
   statusCode: number
   data?: T | null
+  pagination?: ApiPagination
   message?: string
   createdAt?: string
 }

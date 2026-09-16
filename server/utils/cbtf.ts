@@ -825,6 +825,7 @@ export function toCbtfReservationDto(res: any): CbtfReservationDto {
     assignmentTitle: res.assignment?.title,
     userId: res.userId,
     studentName: res.user ? `${res.user.firstName} ${res.user.lastName}` : undefined,
+    studentEmail: res.user?.email ?? null,
     studentId: res.user?.studentId ?? null,
     studentAvatarUrl: res.user?.avatarUrl ?? null,
     seatNumber: res.seatNumber,
