@@ -34,7 +34,7 @@
 
 ### Phase 1: Database Models & GTA Shift Management Engine
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Update Prisma schema, create database migration for `Course.interviewLocation`, `Assignment.hasInterviews`, `interviewWindowStart/End`, `GtaShift`, and `GtaInterviewReservation`. Implement course-scoped GTA shift CRUD endpoints with role authorization (instructors can manage all, GTAs can manage their own) and weekly batch generation using the schedule parser.  
 **Requirements**: REQ-501, REQ-502, REQ-503
 
