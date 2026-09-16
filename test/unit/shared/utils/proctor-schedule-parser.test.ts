@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest'
 import {
   parseProctorShiftString,
   calculateWeeklyShiftHours,
+  formatTimeStr12h,
+  formatShiftDuration,
+  formatShiftDate,
   type ParsedShiftSlot
 } from '../../../../shared/utils/proctor-schedule-parser'
 
@@ -143,6 +146,32 @@ Fri 2:00 PM - 5:00 PM`
         }
       ]
       expect(calculateWeeklyShiftHours(slots)).toBe(8.0)
+    })
+  })
+
+  describe('formatTimeStr12h', () => {
+    it('formats morning, afternoon, and noon/midnight times correctly', () => {
+      expect(formatTimeStr12h('09:00')).toBe('9:00 AM')
+      expect(formatTimeStr12h('11:30')).toBe('11:30 AM')
+      expect(formatTimeStr12h('12:00')).toBe('12:00 PM')
+      expect(formatTimeStr12h('14:00')).toBe('2:00 PM')
+      expect(formatTimeStr12h('17:00')).toBe('5:00 PM')
+      expect(formatTimeStr12h('00:00')).toBe('12:00 AM')
+    })
+  })
+
+  describe('formatShiftDuration', () => {
+    it('calculates and formats shift duration', () => {
+      expect(formatShiftDuration('14:00', '17:00')).toBe('3.0h')
+      expect(formatShiftDuration('09:00', '11:30')).toBe('2.5h')
+      expect(formatShiftDuration('09:00', '11:00')).toBe('2.0h')
+    })
+  })
+
+  describe('formatShiftDate', () => {
+    it('formats UTC ISO date string into human-readable date', () => {
+      expect(formatShiftDate('2026-09-16T00:00:00.000Z')).toBe('Wed, Sep 16, 2026')
+      expect(formatShiftDate('2026-12-09T00:00:00.000Z')).toBe('Wed, Dec 9, 2026')
     })
   })
 })

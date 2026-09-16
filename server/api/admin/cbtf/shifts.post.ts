@@ -31,12 +31,20 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 400, statusMessage: 'Shift start time must precede end time' })
   }
 
+  const [datePart, timePart] = startTime.includes('T') ? startTime.split('T') : [startTime, '']
+  const dateStr = datePart.split(' ')[0]
+  const date = new Date(`${dateStr}T00:00:00.000Z`)
+  const startTimeStr = timePart ? timePart.substring(0, 5) : start.toISOString().substring(11, 16)
+  const endTimePart = endTime.includes('T') ? endTime.split('T')[1] : ''
+  const endTimeStr = endTimePart ? endTimePart.substring(0, 5) : end.toISOString().substring(11, 16)
+
   const shift = await prisma.cbtfProctorShift.create({
     data: {
       facilityId,
       userId,
-      startTime: start,
-      endTime: end
+      date,
+      startTime: startTimeStr,
+      endTime: endTimeStr
     },
     include: {
       user: {

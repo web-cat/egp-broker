@@ -30,8 +30,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   const recordsToCreate: Array<{
     facilityId: string
     userId: string
-    startTime: Date
-    endTime: Date
+    date: Date
+    startTime: string
+    endTime: string
   }> = []
 
   const current = new Date(start)
@@ -41,16 +42,16 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     const month = String(current.getUTCMonth() + 1).padStart(2, '0')
     const day = String(current.getUTCDate()).padStart(2, '0')
     const dateStr = `${year}-${month}-${day}`
+    const shiftDate = new Date(`${dateStr}T00:00:00.000Z`)
 
     const matchingSlots = shifts.filter((s) => s.dayOfWeek === dayOfWeek)
     for (const slot of matchingSlots) {
-      const shiftStart = new Date(`${dateStr}T${slot.startTime}:00.000Z`)
-      const shiftEnd = new Date(`${dateStr}T${slot.endTime}:00.000Z`)
       recordsToCreate.push({
         facilityId,
         userId,
-        startTime: shiftStart,
-        endTime: shiftEnd
+        date: shiftDate,
+        startTime: slot.startTime,
+        endTime: slot.endTime
       })
     }
 

@@ -30,7 +30,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
         }
       }
     },
-    orderBy: { startTime: 'desc' }
+    orderBy: [{ date: 'asc' }, { startTime: 'asc' }]
   })
 
   return {

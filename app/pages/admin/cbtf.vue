@@ -678,6 +678,9 @@ import { useCbtfAdmin } from '~/composables/features/admin/useCbtfAdmin'
 import {
   parseProctorShiftString,
   calculateWeeklyShiftHours,
+  formatTimeStr12h,
+  formatShiftDuration,
+  formatShiftDate,
   type ParsedShiftSlot
 } from '@@/shared/utils/proctor-schedule-parser'
 
@@ -1014,14 +1017,17 @@ const shiftColumns: any[] = [
       `${row.original.user?.firstName || ''} ${row.original.user?.lastName || ''} (${row.original.user?.email || '—'})`
   },
   {
-    accessorKey: 'startTime',
-    header: 'Shift Start',
-    cell: ({ row }: { row: any }) => new Date(row.original.startTime).toLocaleString()
+    accessorKey: 'date',
+    header: 'Date',
+    cell: ({ row }: { row: any }) => formatShiftDate(row.original.date)
   },
   {
-    accessorKey: 'endTime',
-    header: 'Shift End',
-    cell: ({ row }: { row: any }) => new Date(row.original.endTime).toLocaleString()
+    accessorKey: 'hours',
+    header: 'Shift Hours',
+    cell: ({ row }: { row: any }) => {
+      const dur = formatShiftDuration(row.original.startTime, row.original.endTime)
+      return `${formatTimeStr12h(row.original.startTime)} – ${formatTimeStr12h(row.original.endTime)}${dur ? ` (${dur})` : ''}`
+    }
   },
   {
     id: 'actions',
@@ -1056,8 +1062,8 @@ const handleSaveShift = async () => {
   if (!shiftForm.userId || !shiftForm.startTime || !shiftForm.endTime) return
   await createShift({
     userId: shiftForm.userId,
-    startTime: new Date(shiftForm.startTime).toISOString(),
-    endTime: new Date(shiftForm.endTime).toISOString()
+    startTime: `${shiftForm.startTime}:00.000Z`,
+    endTime: `${shiftForm.endTime}:00.000Z`
   })
   showShiftModal.value = false
   selectedProctorId.value = ''
@@ -1167,23 +1173,21 @@ const editShiftForm = reactive({
 })
 const isUpdatingShift = ref(false)
 
-const toDateTimeLocalValue = (dateStr: string) => {
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const Y = d.getFullYear()
-  const M = pad(d.getMonth() + 1)
-  const D = pad(d.getDate())
-  const h = pad(d.getHours())
-  const m = pad(d.getMinutes())
-  return `${Y}-${M}-${D}T${h}:${m}`
+const toDateTimeLocalValue = (dateVal: string | Date, timeStr: string) => {
+  if (!dateVal || !timeStr) return ''
+  const dateStr =
+    typeof dateVal === 'string'
+      ? dateVal.split('T')[0]
+      : dateVal.toISOString().split('T')[0]
+  if (!dateStr) return ''
+  return `${dateStr}T${timeStr}`
 }
 
 const openEditShiftModal = (shift: any) => {
   editingShiftId.value = shift.id
   editShiftForm.userId = shift.userId || shift.user?.id || ''
-  editShiftForm.startTime = toDateTimeLocalValue(shift.startTime)
-  editShiftForm.endTime = toDateTimeLocalValue(shift.endTime)
+  editShiftForm.startTime = toDateTimeLocalValue(shift.date, shift.startTime)
+  editShiftForm.endTime = toDateTimeLocalValue(shift.date, shift.endTime)
   showEditShiftModal.value = true
 }
 
@@ -1193,8 +1197,8 @@ const handleUpdateShift = async () => {
   try {
     await updateShift(editingShiftId.value, {
       userId: editShiftForm.userId || undefined,
-      startTime: new Date(editShiftForm.startTime).toISOString(),
-      endTime: new Date(editShiftForm.endTime).toISOString()
+      startTime: `${editShiftForm.startTime}:00.000Z`,
+      endTime: `${editShiftForm.endTime}:00.000Z`
     })
     showEditShiftModal.value = false
   } finally {

@@ -179,3 +179,46 @@ export function calculateWeeklyShiftHours(
   }, 0)
   return Math.round(total * 10) / 10
 }
+
+/**
+ * Formats a 24-hour "HH:mm" time string into a 12-hour string (e.g. "14:00" -> "2:00 PM").
+ */
+export function formatTimeStr12h(timeStr: string): string {
+  if (!timeStr) return ''
+  const [hStr, mStr] = timeStr.split(':')
+  const h = parseInt(hStr, 10)
+  const m = parseInt(mStr || '0', 10)
+  if (isNaN(h) || isNaN(m)) return timeStr
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const displayH = h % 12 === 0 ? 12 : h % 12
+  return `${displayH}:${m.toString().padStart(2, '0')} ${ampm}`
+}
+
+/**
+ * Formats duration between two 24-hour times as string (e.g. "14:00", "17:00" -> "3.0h").
+ */
+export function formatShiftDuration(startTime: string, endTime: string): string {
+  if (!startTime || !endTime) return ''
+  const [sh, sm] = startTime.split(':').map(Number)
+  const [eh, em] = endTime.split(':').map(Number)
+  if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return ''
+  const dur = (eh * 60 + em - (sh * 60 + sm)) / 60
+  if (dur <= 0) return ''
+  return `${dur % 1 === 0 ? dur.toFixed(1) : (Math.round(dur * 10) / 10).toString()}h`
+}
+
+/**
+ * Formats a shift date into a human-friendly UTC string (e.g. "Wed, Sep 16, 2026").
+ */
+export function formatShiftDate(dateVal: string | Date): string {
+  if (!dateVal) return ''
+  const d = typeof dateVal === 'string' ? new Date(dateVal) : dateVal
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC'
+  })
+}

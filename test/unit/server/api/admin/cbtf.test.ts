@@ -229,13 +229,24 @@ describe('API: Admin CBTF Endpoints', () => {
         id: 'shift-1',
         facilityId: 'fac-1',
         userId: 'usr-p1',
-        startTime: new Date('2026-10-05T08:00:00.000Z'),
-        endTime: new Date('2026-10-05T12:00:00.000Z')
+        date: new Date('2026-10-05T00:00:00.000Z'),
+        startTime: '08:00',
+        endTime: '12:00'
       } as any)
 
       const res = await shiftsPost(event)
       expect(res.statusCode).toBe(201)
-      expect(prisma.cbtfProctorShift.create).toHaveBeenCalled()
+      expect(prisma.cbtfProctorShift.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            facilityId: 'fac-1',
+            userId: 'usr-p1',
+            date: new Date('2026-10-05T00:00:00.000Z'),
+            startTime: '08:00',
+            endTime: '12:00'
+          })
+        })
+      )
     })
 
     it('deletes proctor shift', async () => {
@@ -263,14 +274,26 @@ describe('API: Admin CBTF Endpoints', () => {
         id: 'shift-generated',
         facilityId: 'fac-1',
         userId: 'usr-p1',
-        startTime: new Date('2026-09-14T14:00:00.000Z'),
-        endTime: new Date('2026-09-14T17:00:00.000Z')
+        date: new Date('2026-09-14T00:00:00.000Z'),
+        startTime: '14:00',
+        endTime: '17:00'
       } as any)
 
       const res = await shiftsBatchPost(event)
       expect(res.statusCode).toBe(201)
       expect(res.data.count).toBe(2)
       expect(prisma.cbtfProctorShift.create).toHaveBeenCalledTimes(2)
+      expect(prisma.cbtfProctorShift.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            facilityId: 'fac-1',
+            userId: 'usr-p1',
+            date: new Date('2026-09-14T00:00:00.000Z'),
+            startTime: '14:00',
+            endTime: '17:00'
+          }
+        })
+      )
     })
 
     it('updates a specific proctor shift (single timeslot adjustment or reassignment)', async () => {
@@ -292,8 +315,9 @@ describe('API: Admin CBTF Endpoints', () => {
       vi.mocked(prisma.cbtfProctorShift.update).mockResolvedValue({
         id: 'shift-1',
         userId: 'usr-substitute',
-        startTime: new Date('2026-09-14T14:30:00.000Z'),
-        endTime: new Date('2026-09-14T17:00:00.000Z')
+        date: new Date('2026-09-14T00:00:00.000Z'),
+        startTime: '14:30',
+        endTime: '17:00'
       } as any)
 
       const res = await shiftPatch(event)
@@ -301,7 +325,13 @@ describe('API: Admin CBTF Endpoints', () => {
       expect(res.data.userId).toBe('usr-substitute')
       expect(prisma.cbtfProctorShift.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'shift-1' }
+          where: { id: 'shift-1' },
+          data: expect.objectContaining({
+            userId: 'usr-substitute',
+            date: new Date('2026-09-14T00:00:00.000Z'),
+            startTime: '14:30',
+            endTime: '17:00'
+          })
         })
       )
     })
