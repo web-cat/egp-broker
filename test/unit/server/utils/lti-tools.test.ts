@@ -210,5 +210,48 @@ describe('LTI Tool Utilities', () => {
       })
       expect(result.passportRegistrationStatus).toBe('PENDING')
     })
+
+    it('normalizes Web-CAT /v1/extension URL to /extension on save', async () => {
+      const mockDate = new Date('2023-01-01T00:00:00.000Z')
+      const updateData = {
+        passportExtensionUrl:
+          'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/v1/extension'
+      }
+
+      const updatedRecord = {
+        id: 't1',
+        name: 'Web-CAT',
+        baseUrl: 'https://web-cat.cs.vt.edu',
+        protocol: 'LTI13',
+        key: 'k',
+        supportsProxy: true,
+        supportsPassport: true,
+        supportsExtensionApi: false,
+        passportClientId: 'cid',
+        passportRegistrationUrl: null,
+        passportExtensionUrl:
+          'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/extension',
+        passportRegistrationStatus: 'REGISTERED',
+        passportRegistrationError: null,
+        passportRegisteredAt: null,
+        passportRequestedProperties: null,
+        platformId: null,
+        platform: null,
+        createdAt: mockDate
+      }
+
+      vi.mocked(prisma.ltiTool.update).mockResolvedValue(updatedRecord as any)
+
+      await updateTool('t1', updateData as any)
+
+      expect(prisma.ltiTool.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: expect.objectContaining({
+          passportExtensionUrl:
+            'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/extension'
+        }),
+        include: { platform: { select: { issuer: true } } }
+      })
+    })
   })
 })

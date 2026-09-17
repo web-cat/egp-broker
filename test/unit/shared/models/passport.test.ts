@@ -4,7 +4,8 @@ import {
   passPortPhase2CredentialsSchema,
   passPortExtensionPayloadSchema,
   passPortRollbackPayloadSchema,
-  passPortRegistrationStatusSchema
+  passPortRegistrationStatusSchema,
+  normalizePassPortExtensionUrl
 } from '../../../../shared/models/passport'
 
 describe('PassPort Shared Models', () => {
@@ -229,6 +230,37 @@ describe('PassPort Shared Models', () => {
         request_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
       }
       expect(passPortRollbackPayloadSchema.parse(rollback)).toEqual(rollback)
+    })
+  })
+
+  describe('normalizePassPortExtensionUrl', () => {
+    it('rewrites Web-CAT /wa/passport/v1/extension to /wa/passport/extension', () => {
+      const input =
+        'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/v1/extension'
+      const expected =
+        'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/extension'
+      expect(normalizePassPortExtensionUrl(input)).toBe(expected)
+    })
+
+    it('rewrites Web-CAT /wa/passport/v1/extensions with trailing s to /wa/passport/extension', () => {
+      const input =
+        'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/v1/extensions'
+      const expected =
+        'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/extension'
+      expect(normalizePassPortExtensionUrl(input)).toBe(expected)
+    })
+
+    it('trims leading/trailing whitespace', () => {
+      const input =
+        '  https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/v1/extension  '
+      const expected =
+        'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/extension'
+      expect(normalizePassPortExtensionUrl(input)).toBe(expected)
+    })
+
+    it('leaves standard PassPort v1 endpoints unchanged', () => {
+      const standardUrl = 'https://codeworkout.org/api/passport/v1/extension'
+      expect(normalizePassPortExtensionUrl(standardUrl)).toBe(standardUrl)
     })
   })
 })

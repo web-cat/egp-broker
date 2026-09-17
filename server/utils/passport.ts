@@ -13,9 +13,12 @@ import type {
 import {
   passPortPhase2CredentialsSchema,
   passPortExtensionPayloadSchema,
-  passPortRollbackPayloadSchema
+  passPortRollbackPayloadSchema,
+  normalizePassPortExtensionUrl
 } from '@@/shared/models/passport'
 import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
+
+export { normalizePassPortExtensionUrl } from '@@/shared/models/passport'
 
 /**
  * Initiates the 2-Phase Dynamic Registration Handshake for an LtiTool.
@@ -125,7 +128,7 @@ export async function handlePassPortCredentialsDelivery(
     data: {
       passportClientId: validated.credentials.client_id,
       passportClientSecret: validated.credentials.client_secret,
-      passportExtensionUrl: validated.endpoints.extension_handler,
+      passportExtensionUrl: normalizePassPortExtensionUrl(validated.endpoints.extension_handler),
       passportRequestedProperties: (validated.requested_properties || []) as any,
       passportRegistrationStatus: 'REGISTERED',
       passportRegistrationError: null,
@@ -312,13 +315,15 @@ export async function sendPassPortExtension(
     throw new Error('Tool is missing PassPort credentials (clientId or clientSecret)')
   }
 
+  const targetUrl = normalizePassPortExtensionUrl(tool.passportExtensionUrl)
+
   const { signature, timestamp } = signPassPortRequest(tool.passportClientSecret, payload)
 
   console.log(
-    `[passport] Sending extension to ${tool.passportExtensionUrl} for ${payload.user.email || payload.user.lti_user_id} on "${payload.resource.title || payload.resource.lti_resource_link_id}" (new_due_date=${payload.extension.new_due_date}, new_accept_until=${payload.extension.new_accept_until})`
+    `[passport] Sending extension to ${targetUrl} for ${payload.user.email || payload.user.lti_user_id} on "${payload.resource.title || payload.resource.lti_resource_link_id}" (new_due_date=${payload.extension.new_due_date}, new_accept_until=${payload.extension.new_accept_until})`
   )
 
-  const response = await $fetch(tool.passportExtensionUrl, {
+  const response = await $fetch(targetUrl, {
     method: 'POST',
     body: payload,
     headers: {
@@ -331,7 +336,7 @@ export async function sendPassPortExtension(
   })
 
   console.log(
-    `[passport] Successfully sent extension to ${tool.passportExtensionUrl} for ${payload.user.email || payload.user.lti_user_id}. Response:`,
+    `[passport] Successfully sent extension to ${targetUrl} for ${payload.user.email || payload.user.lti_user_id}. Response:`,
     response
   )
 }
@@ -354,13 +359,15 @@ export async function sendPassPortRollback(
     throw new Error('Tool is missing PassPort credentials (clientId or clientSecret)')
   }
 
+  const targetUrl = normalizePassPortExtensionUrl(tool.passportExtensionUrl)
+
   const payload: PassPortRollbackPayload = passPortRollbackPayloadSchema.parse({
     request_id: requestId
   })
 
   const { signature, timestamp } = signPassPortRequest(tool.passportClientSecret, payload)
 
-  await $fetch(tool.passportExtensionUrl, {
+  await $fetch(targetUrl, {
     method: 'DELETE',
     body: payload,
     headers: {

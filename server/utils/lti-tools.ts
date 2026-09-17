@@ -1,5 +1,6 @@
 import prisma from '@@/server/utils/db'
 import type { ToolRow, AdminToolQuery, CreateToolData, UpdateToolData } from '@@/shared/models/tool'
+import { normalizePassPortExtensionUrl } from '@@/shared/models/passport'
 
 /**
  * Transforms a Prisma LtiTool record into a projected ToolRow.
@@ -45,6 +46,8 @@ function sanitizeToolData<T extends CreateToolData | UpdateToolData>(
   }
   if (result.passportExtensionUrl === '') {
     result.passportExtensionUrl = null
+  } else if (typeof result.passportExtensionUrl === 'string') {
+    result.passportExtensionUrl = normalizePassPortExtensionUrl(result.passportExtensionUrl)
   }
   return result
 }

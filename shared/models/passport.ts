@@ -20,6 +20,16 @@ export const passPortRegistrationStatusSchema = z.enum([
 
 export type PassPortRegistrationStatus = z.infer<typeof passPortRegistrationStatusSchema>
 
+/**
+ * Normalizes a PassPort extension URL.
+ * Web-CAT uses Apple/NeXT WebObjects DirectActions (/wa/passport/extension) rather than REST (/v1/extension).
+ * Normalizes any Web-CAT URLs containing /wa/passport/v1/extension(s) to /wa/passport/extension.
+ */
+export function normalizePassPortExtensionUrl(url: string): string {
+  const trimmed = url.trim()
+  return trimmed.replace(/\/wa\/passport\/v1\/extensions?/, '/wa/passport/extension')
+}
+
 // =============================================================================
 // DYNAMIC REGISTRATION SCHEMAS
 // =============================================================================

@@ -4,7 +4,8 @@ import {
   signPassPortRequest,
   buildPassPortExtensionPayload,
   sendPassPortExtension,
-  sendPassPortRollback
+  sendPassPortRollback,
+  normalizePassPortExtensionUrl
 } from '../../../../server/utils/passport'
 import {
   passPortExtensionPayloadSchema,
@@ -259,6 +260,40 @@ describe('PassPort Extension Dispatch Utilities', () => {
       await expect(sendPassPortExtension(validTool, mockPayload)).rejects.toThrow(
         '500 Internal Server Error'
       )
+    })
+
+    it('normalizes Web-CAT /v1/extension URL to /extension before dispatching', async () => {
+      mockFetch.mockResolvedValueOnce({ success: true })
+
+      const webcatTool = {
+        ...validTool,
+        passportExtensionUrl:
+          'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/v1/extension'
+      }
+
+      await sendPassPortExtension(webcatTool, mockPayload)
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/extension',
+        expect.objectContaining({
+          method: 'POST'
+        })
+      )
+    })
+  })
+
+  describe('normalizePassPortExtensionUrl', () => {
+    it('rewrites Web-CAT /wa/passport/v1/extension to /wa/passport/extension', () => {
+      const input =
+        'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/v1/extension'
+      const expected =
+        'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/extension'
+      expect(normalizePassPortExtensionUrl(input)).toBe(expected)
+    })
+
+    it('leaves standard PassPort v1 endpoints unchanged', () => {
+      const standardUrl = 'https://codeworkout.org/api/passport/v1/extension'
+      expect(normalizePassPortExtensionUrl(standardUrl)).toBe(standardUrl)
     })
   })
 
