@@ -179,5 +179,17 @@ describe('resyncAssignmentPassPortExtensions', () => {
       totalCount: 2
     })
     expect(globalThis.$fetch).toHaveBeenCalledTimes(2)
+    expect(globalThis.$fetch).toHaveBeenCalledWith(
+      'https://webcat.org/api/passport/v1/extension',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.objectContaining({
+          extension: expect.objectContaining({
+            new_due_date: '2026-09-12T23:59:00.000Z',
+            new_accept_until: '2026-09-12T23:59:00.000Z'
+          })
+        })
+      })
+    )
   })
 })

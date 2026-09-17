@@ -314,7 +314,11 @@ export async function sendPassPortExtension(
 
   const { signature, timestamp } = signPassPortRequest(tool.passportClientSecret, payload)
 
-  await $fetch(tool.passportExtensionUrl, {
+  console.log(
+    `[passport] Sending extension to ${tool.passportExtensionUrl} for ${payload.user.email || payload.user.lti_user_id} on "${payload.resource.title || payload.resource.lti_resource_link_id}" (new_due_date=${payload.extension.new_due_date}, new_accept_until=${payload.extension.new_accept_until})`
+  )
+
+  const response = await $fetch(tool.passportExtensionUrl, {
     method: 'POST',
     body: payload,
     headers: {
@@ -325,6 +329,11 @@ export async function sendPassPortExtension(
     },
     timeout: 10000
   })
+
+  console.log(
+    `[passport] Successfully sent extension to ${tool.passportExtensionUrl} for ${payload.user.email || payload.user.lti_user_id}. Response:`,
+    response
+  )
 }
 
 /**
@@ -434,6 +443,10 @@ export async function resyncAssignmentPassPortExtensions(
     return { syncedCount: 0, failedCount: 0, totalCount: 0 }
   }
 
+  console.log(
+    `[passport-resync] Starting resync for assignment "${assignment.title || 'Assignment'}" (${assignmentId}): ${redemptions.length} redemption(s) to process.`
+  )
+
   const platformId = assignment.course?.deployment?.platformId || tool.platformId
   const platform = assignment.course?.deployment?.platform || tool.platform
   let syncedCount = 0
@@ -495,7 +508,7 @@ export async function resyncAssignmentPassPortExtensions(
         originalAvailableFrom: effectiveDates.availableFrom,
         newAvailableFrom: redemption.availableFrom,
         originalDueDate: effectiveDates.dueDate,
-        newDueDate: redemption.dueDate,
+        newDueDate: redemption.dueDate ?? redemption.acceptUntil,
         originalAcceptUntil: effectiveDates.acceptUntil,
         newAcceptUntil: redemption.acceptUntil,
         appliedAt: redemption.createdAt
@@ -511,6 +524,10 @@ export async function resyncAssignmentPassPortExtensions(
       failedCount++
     }
   }
+
+  console.log(
+    `[passport-resync] Finished resync for assignment "${assignment.title || 'Assignment'}" (${assignmentId}): ${syncedCount} synced, ${failedCount} failed of ${redemptions.length} total.`
+  )
 
   return { syncedCount, failedCount, totalCount: redemptions.length }
 }

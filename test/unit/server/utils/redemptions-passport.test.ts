@@ -184,7 +184,7 @@ describe('PassPort Pass Redemption Hook & Fail-Safe Handling', () => {
         extension: expect.objectContaining({
           passType: 'Late Pass',
           originalDueDate: futureDueDate,
-          newDueDate: null,
+          newDueDate: expect.any(Date),
           originalAcceptUntil: futureDueDate,
           newAcceptUntil: expect.any(Date)
         })
