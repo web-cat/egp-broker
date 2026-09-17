@@ -405,13 +405,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
           data: expect.objectContaining({ seatNumber: 2 })
         })
       )
-      expect(notifyCbtfScheduleSuccess).toHaveBeenCalledWith(
-        expect.objectContaining({
-          assignmentTitle: 'Midterm 1',
-          seatNumber: 2,
-          isReschedule: false
-        })
-      )
+      expect(notifyCbtfScheduleSuccess).not.toHaveBeenCalled()
     })
   })
 
@@ -476,13 +470,7 @@ describe('API: CBTF Student Reservation Endpoints', () => {
       expect(response.statusCode).toBe(200)
       expect(response.data.status).toBe('SCHEDULED')
       expect(response.data.startTime).toBe(newStartTime)
-      expect(notifyCbtfScheduleSuccess).toHaveBeenCalledWith(
-        expect.objectContaining({
-          assignmentTitle: 'Midterm 1',
-          seatNumber: 1,
-          isReschedule: true
-        })
-      )
+      expect(notifyCbtfScheduleSuccess).not.toHaveBeenCalled()
     })
 
     it('rejects rescheduling when new start time is in the past', async () => {

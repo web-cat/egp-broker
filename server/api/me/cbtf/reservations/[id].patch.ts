@@ -11,10 +11,7 @@ import {
   toCbtfReservationDto
 } from '@@/server/utils/cbtf'
 import { syncCbtfReservationCanvasOverride } from '@@/server/utils/cbtf-canvas'
-import {
-  notifyCbtfScheduleSuccess,
-  notifyCbtfScheduleFailure
-} from '@@/server/services/alert.service'
+import { notifyCbtfScheduleFailure } from '@@/server/services/alert.service'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 
@@ -240,24 +237,6 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     if (syncResult.overrideId) {
       updatedReservation.canvasOverrideId = syncResult.overrideId
     }
-
-    // Dispatch non-blocking admin push alert on success
-    await notifyCbtfScheduleSuccess({
-      studentName: updatedReservation.user?.firstName
-        ? `${updatedReservation.user.firstName} ${updatedReservation.user.lastName || ''}`.trim()
-        : studentInfo.studentName,
-      studentEmail: studentInfo.studentEmail,
-      studentId: updatedReservation.user?.studentId || studentInfo.studentId,
-      assignmentTitle: updatedReservation.assignment?.title || targetAssignmentTitle,
-      courseLabel: targetCourseLabel,
-      startTime: updatedReservation.startTime,
-      endTime: updatedReservation.endTime,
-      seatNumber: updatedReservation.seatNumber,
-      facilityName: facility.name,
-      isReschedule: true
-    }).catch((alertErr) =>
-      console.warn('[CBTF Alert] Failed to dispatch reschedule success alert:', alertErr)
-    )
 
     return {
       statusCode: 200,
