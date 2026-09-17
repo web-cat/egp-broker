@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="T extends Record<string, unknown> = Record<string, unknown>">
 import { ref, computed, watch } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
+import { getPaginationRowModel } from '@tanstack/vue-table'
 
 const props = withDefaults(
   defineProps<{
@@ -53,10 +54,23 @@ const page = computed({
   }
 })
 
+const tableRef = ref()
+
+const totalRows = computed(() => {
+  const rawCount = props.data?.length ?? 0
+  if (tableRef.value?.tableApi && globalFilter.value) {
+    return tableRef.value.tableApi.getFilteredRowModel().rows.length
+  }
+  return rawCount
+})
+
 const hasData = computed(() => (props.data?.length ?? 0) > 0)
-const totalRows = computed(() => props.data?.length ?? 0)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalRows.value / props.pageSize)))
+
+const paginationOptions = {
+  getPaginationRowModel: getPaginationRowModel()
+}
 
 const tableMeta = computed(() => {
   if (!props.rowClass) return undefined
@@ -90,8 +104,10 @@ const tableMeta = computed(() => {
     <!-- Table -->
     <UTable
       v-if="hasData"
+      ref="tableRef"
       v-model:global-filter="globalFilter"
       v-model:pagination="pagination"
+      :pagination-options="paginationOptions"
       :data="data as any"
       :columns="columns as any"
       :loading="loading"

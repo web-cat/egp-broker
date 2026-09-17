@@ -54,6 +54,7 @@
     "@casl/vue": "^2.2.6",
     "@nuxt/image": "1.11.0",
     "@nuxt/ui": "4.1.0",
+    "@tanstack/vue-table": "^8.21.3",
     "@nuxtjs/i18n": "^10.0.6",
     "@nuxtjs/seo": "^3.1.0",
     "@pinia/nuxt": "^0.11.2",

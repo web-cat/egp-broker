@@ -78,10 +78,12 @@ config.global.stubs = {
     props: ['name']
   },
   UTable: {
+    name: 'UTable',
     template: '<table><slot /></table>',
-    props: ['data', 'columns', 'loading', 'meta']
+    props: ['data', 'columns', 'loading', 'meta', 'paginationOptions']
   },
   UPagination: {
+    name: 'UPagination',
     template: '<nav><slot /></nav>',
     props: ['page', 'itemsPerPage', 'total']
   },
