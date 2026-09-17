@@ -290,7 +290,14 @@
     @synced="onRosterSynced"
   />
 
-  <FeaturesCourseCourseSettingsModal
+  <FeaturesTeacherTeacherGtaShiftsSection
+    v-if="courseId"
+    :course-id="courseId"
+    :interview-location="currentInterviewLocation"
+    @update:location="onCourseSettingsSaved"
+  />
+
+  <FeaturesCourseSettingsModal
     v-if="courseId"
     v-model:open="courseSettingsOpen"
     :course-id="courseId"
@@ -303,6 +310,9 @@
 import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import type { StudentRosterRow, StudentPassBalance } from '@@/shared/models/teacher'
+
+import FeaturesCourseSettingsModal from '~/components/features/course/CourseSettingsModal.vue'
+import FeaturesTeacherTeacherGtaShiftsSection from '~/components/features/teacher/TeacherGtaShiftsSection.vue'
 
 import { formatDate } from '~/utils/date'
 // Feature Composables

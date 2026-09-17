@@ -222,4 +222,63 @@ describe('TeacherDashboard Assignment Actions', () => {
     )
     expect(missingAction).toBeUndefined()
   })
+
+  it('renders TeacherGtaShiftsSection and opens CourseSettingsModal when clicking Course Settings', async () => {
+    let capturedModalOpen = false
+
+    const wrapper = mount(TeacherDashboard, {
+      props: {
+        courseId: 'course-123',
+        courseTitle: 'CS 1114',
+        isAdmin: true,
+        interviewLocation: 'McBryde 106'
+      },
+      global: {
+        stubs: {
+          UPageHeader: {
+            template: '<div><slot name="links" /><slot /></div>'
+          },
+          BaseDataTable: true,
+          UButton: {
+            template: '<button @click="$emit(\'click\')"><slot /></button>'
+          },
+          BaseButton: {
+            template: '<button @click="$emit(\'click\')"><slot /></button>'
+          },
+          FeaturesCourseSettingsModal: {
+            props: ['open', 'courseId', 'initialLocation'],
+            template: '<div data-testid="course-settings-modal" :data-open="open"></div>',
+            setup(props) {
+              return () => {
+                capturedModalOpen = !!props.open
+                return h('div', { 'data-testid': 'course-settings-modal', 'data-open': props.open })
+              }
+            }
+          },
+          FeaturesTeacherTeacherGtaShiftsSection: {
+            props: ['courseId', 'interviewLocation'],
+            template: '<div data-testid="gta-shifts-section"></div>'
+          },
+          FeaturesAdminAssignmentEditPanel: true,
+          FeaturesAdminPassTypeEditPanel: true,
+          FeaturesDashboardAssignmentRedemptionsModal: true,
+          FeaturesDashboardStudentRedemptionsModal: true,
+          FeaturesDashboardPlatformApiKeyModal: true,
+          FeaturesDashboardRosterSyncModal: true
+        }
+      }
+    })
+
+    // Check GTA shifts section rendered
+    const gtaSection = wrapper.find('[data-testid="gta-shifts-section"]')
+    expect(gtaSection.exists()).toBe(true)
+
+    // Find and click "Course Settings" button
+    const buttons = wrapper.findAll('button')
+    const settingsBtn = buttons.find((b) => b.text().includes('Course Settings'))
+    expect(settingsBtn).toBeDefined()
+    await settingsBtn!.trigger('click')
+
+    expect(capturedModalOpen).toBe(true)
+  })
 })
