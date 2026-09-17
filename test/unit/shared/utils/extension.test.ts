@@ -219,6 +219,58 @@ describe('calculatePassExtension', () => {
       expect(result.isEligible).toBe(false)
       expect(result.reason).toContain('until the current extended cutoff deadline has passed')
     })
+
+    it('rejects redemption before the due date when minDaysPastDue is 0', () => {
+      const assignment = {
+        dueDate: '2026-05-20T23:59:00.000Z',
+        acceptUntil: '2026-05-20T23:59:00.000Z'
+      }
+      const passType = {
+        extensionOnly: true,
+        hoursPerPass: 48,
+        minDaysPastDue: 0,
+        maxDaysPastDue: 2
+      }
+      // Student tries to redeem on 5/20 at 14:00 (before due date 5/20 23:59)
+      const now = new Date('2026-05-20T14:00:00.000Z')
+
+      const result = calculatePassExtension({
+        assignment,
+        passType,
+        latestRedemption: null,
+        now
+      })
+
+      expect(result.isEligible).toBe(false)
+      expect(result.reason).toBe('Redemption is not allowed before the assignment due date.')
+      expect(result.cost).toBe(0)
+    })
+
+    it('allows redemption at or after the due date when minDaysPastDue is 0', () => {
+      const assignment = {
+        dueDate: '2026-05-20T23:59:00.000Z',
+        acceptUntil: '2026-05-20T23:59:00.000Z'
+      }
+      const passType = {
+        extensionOnly: true,
+        hoursPerPass: 48,
+        minDaysPastDue: 0,
+        maxDaysPastDue: 2
+      }
+      // Student tries to redeem right after due date: 5/21 00:01
+      const now = new Date('2026-05-21T00:01:00.000Z')
+
+      const result = calculatePassExtension({
+        assignment,
+        passType,
+        latestRedemption: null,
+        now
+      })
+
+      expect(result.isEligible).toBe(true)
+      expect(result.cost).toBe(1)
+      expect(result.newAcceptUntil?.toISOString()).toBe('2026-05-22T23:59:00.000Z')
+    })
   })
 
   describe('extendsCutoffOnly: true (Extends Late/Cutoff Deadline Only)', () => {

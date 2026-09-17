@@ -314,6 +314,7 @@ export async function getCourseAssignments(
         courseTitle: a.course.title ?? null,
         toolId: a.toolId ?? null,
         toolName: a.tool?.name ?? null,
+        toolSupportsPassport: Boolean(a.tool?.supportsPassport),
         dueDate,
         availableFrom,
         acceptUntil,

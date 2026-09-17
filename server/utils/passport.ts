@@ -15,6 +15,7 @@ import {
   passPortExtensionPayloadSchema,
   passPortRollbackPayloadSchema
 } from '@@/shared/models/passport'
+import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
 
 /**
  * Initiates the 2-Phase Dynamic Registration Handshake for an LtiTool.
@@ -361,4 +362,155 @@ export async function sendPassPortRollback(
     },
     timeout: 10000
   })
+}
+
+/**
+ * Resends all active pass redemptions for an assignment to its registered PassPort LTI tool.
+ */
+export async function resyncAssignmentPassPortExtensions(
+  assignmentId: string
+): Promise<{ syncedCount: number; failedCount: number; totalCount: number }> {
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    include: {
+      tool: {
+        include: { platform: true }
+      },
+      course: {
+        include: {
+          deployment: {
+            include: { platform: true }
+          }
+        }
+      }
+    }
+  })
+
+  if (!assignment) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Assignment not found'
+    })
+  }
+
+  const tool = assignment.tool
+  if (!tool || !tool.supportsPassport) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Assignment is not connected to a tool that supports PassPort'
+    })
+  }
+
+  if (
+    tool.passportRegistrationStatus !== 'REGISTERED' ||
+    !tool.passportExtensionUrl ||
+    !tool.passportClientSecret
+  ) {
+    throw createError({
+      statusCode: 502,
+      statusMessage:
+        'External tool is not registered for PassPort extensions or credentials are missing'
+    })
+  }
+
+  const redemptions = await prisma.passRedemption.findMany({
+    where: { assignmentId },
+    include: {
+      pool: {
+        include: {
+          passType: true,
+          user: {
+            include: {
+              ltiIdentities: true
+            }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: 'asc' }
+  })
+
+  if (redemptions.length === 0) {
+    return { syncedCount: 0, failedCount: 0, totalCount: 0 }
+  }
+
+  const platformId = assignment.course?.deployment?.platformId || tool.platformId
+  const platform = assignment.course?.deployment?.platform || tool.platform
+  let syncedCount = 0
+  let failedCount = 0
+
+  for (const redemption of redemptions) {
+    const pool = redemption.pool
+    const user = pool.user
+    const studentDisplayName =
+      user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || null
+
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId: user.id,
+          courseId: assignment.courseId
+        }
+      }
+    })
+
+    const ltiIdentity =
+      user?.ltiIdentities?.find((i: any) => i.platformId === platformId) || user?.ltiIdentities?.[0]
+    const ltiUserId = ltiIdentity?.ltiSub || user.id
+
+    const effectiveDates = await resolveStudentEffectiveDates(
+      assignment,
+      user.id,
+      assignment.courseId
+    )
+
+    const payload = buildPassPortExtensionPayload({
+      context: {
+        lmsInstanceGuid:
+          assignment.course?.deployment?.deploymentHost || platform?.issuer || 'egp-broker',
+        issuer: platform?.issuer || 'https://canvas.instructure.com',
+        ltiContextId: assignment.course?.ltiContextId || assignment.courseId,
+        lmsInstance: platform?.name || assignment.course?.deployment?.deploymentHost || null,
+        ltiDeploymentId: assignment.course?.deployment?.deploymentId || null,
+        canvasCourseId: assignment.course?.canvasCourseId || null
+      },
+      user: {
+        ltiUserId,
+        brokerUserId: user.id,
+        canvasUserId: ltiIdentity?.platformUserId || null,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        email: user.email || null,
+        displayName: studentDisplayName,
+        courseRole: enrollment?.role || null
+      },
+      resource: {
+        ltiResourceLinkId: assignment.resourceLinkId || assignment.id,
+        brokerAssignmentId: assignment.id,
+        canvasAssignmentId: assignment.canvasAssignmentId || null,
+        title: assignment.title || null
+      },
+      extension: {
+        passType: pool.passType.name,
+        originalAvailableFrom: effectiveDates.availableFrom,
+        newAvailableFrom: redemption.availableFrom,
+        originalDueDate: effectiveDates.dueDate,
+        newDueDate: redemption.dueDate,
+        originalAcceptUntil: effectiveDates.acceptUntil,
+        newAcceptUntil: redemption.acceptUntil,
+        appliedAt: redemption.createdAt
+      },
+      requestedProperties: (tool.passportRequestedProperties as string[]) || null
+    })
+
+    try {
+      await sendPassPortExtension(tool, payload)
+      syncedCount++
+    } catch (err) {
+      console.error(`[passport-resync] Failed to sync redemption ${redemption.id}:`, err)
+      failedCount++
+    }
+  }
+
+  return { syncedCount, failedCount, totalCount: redemptions.length }
 }

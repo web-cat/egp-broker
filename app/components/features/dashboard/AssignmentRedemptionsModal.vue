@@ -23,11 +23,25 @@
               {{ assignment?.toolName || 'None' }}
             </span>
           </div>
-          <UBadge v-if="assignment?.toolName" color="primary" variant="subtle" size="xs">
-            <UIcon name="i-lucide-link" class="w-3 h-3 mr-1" />
-            Connected
-          </UBadge>
-          <UBadge v-else color="neutral" variant="subtle" size="xs"> Not Configured </UBadge>
+          <div class="flex items-center gap-2">
+            <UButton
+              v-if="assignment?.toolSupportsPassport"
+              size="xs"
+              color="primary"
+              variant="soft"
+              icon="i-lucide-refresh-cw"
+              :loading="isSyncingPassPort"
+              :disabled="loadingRedemptions || redemptions.length === 0"
+              @click="handlePassPortSync"
+            >
+              Sync PassPort
+            </UButton>
+            <UBadge v-if="assignment?.toolName" color="primary" variant="subtle" size="xs">
+              <UIcon name="i-lucide-link" class="w-3 h-3 mr-1" />
+              Connected
+            </UBadge>
+            <UBadge v-else color="neutral" variant="subtle" size="xs"> Not Configured </UBadge>
+          </div>
         </div>
 
         <!-- Master Assignment Baseline Dates Card -->
@@ -156,6 +170,46 @@ const redemptions = ref<AssignmentRedemptionRow[]>([])
 const overrides = ref<AssignmentOverrideDetails[]>([])
 const loadingRedemptions = ref(false)
 const loadingOverrides = ref(false)
+const isSyncingPassPort = ref(false)
+const toast = useToast()
+
+const handlePassPortSync = async () => {
+  if (!props.assignment?.id) return
+  isSyncingPassPort.value = true
+
+  try {
+    const res = await $fetch<{
+      data: { syncedCount: number; failedCount: number; totalCount: number }
+    }>(`/api/me/assignments/${props.assignment.id}/passport-sync`, {
+      method: 'POST'
+    })
+
+    const { syncedCount, failedCount, totalCount } = res.data
+    if (failedCount > 0) {
+      toast.add({
+        title: 'PassPort Sync Partial',
+        description: `Synced ${syncedCount} of ${totalCount} redemption(s) to ${props.assignment.toolName || 'tool'}. (${failedCount} failed)`,
+        color: 'warning'
+      })
+    } else {
+      toast.add({
+        title: 'PassPort Resync Complete',
+        description: `Successfully sent ${syncedCount} pass redemption date value(s) to ${props.assignment.toolName || 'external tool'}.`,
+        color: 'success'
+      })
+    }
+    await fetchData()
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to sync with external tool'
+    toast.add({
+      title: 'PassPort Sync Failed',
+      description: message,
+      color: 'error'
+    })
+  } finally {
+    isSyncingPassPort.value = false
+  }
+}
 
 const fetchData = async () => {
   if (!props.assignment?.id) return

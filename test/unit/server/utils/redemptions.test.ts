@@ -173,7 +173,7 @@ describe('Redemption Utilities', () => {
     })
 
     it('successfully redeems extension pass and deducts cost', async () => {
-      const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      const dueDate = new Date(Date.now() - 2 * 60 * 60 * 1000)
       vi.mocked(prisma.studentPassPool.findUnique).mockResolvedValue({
         id: 'pool1',
         balance: 3,

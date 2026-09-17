@@ -51,16 +51,20 @@ export function calculatePassExtension(input: PassExtensionInput): PassExtension
   const durationMs = hoursPerPass * MS_PER_HOUR
 
   // Check minimum days past due constraint
-  if (
-    passType.minDaysPastDue !== null &&
-    passType.minDaysPastDue !== undefined &&
-    passType.minDaysPastDue > 0
-  ) {
-    const minAllowedDate = new Date(origDueDate.getTime() + passType.minDaysPastDue * MS_PER_DAY)
+  const minDays =
+    passType.minDaysPastDue !== null && passType.minDaysPastDue !== undefined
+      ? passType.minDaysPastDue
+      : null
+
+  if (minDays !== null && minDays >= 0) {
+    const minAllowedDate = new Date(origDueDate.getTime() + minDays * MS_PER_DAY)
     if (now < minAllowedDate) {
       return {
         isEligible: false,
-        reason: 'Redemption is not allowed before the minimum days limit.',
+        reason:
+          minDays === 0
+            ? 'Redemption is not allowed before the assignment due date.'
+            : 'Redemption is not allowed before the minimum days limit.',
         cost: 0,
         newDueDate: null,
         newAcceptUntil: null,

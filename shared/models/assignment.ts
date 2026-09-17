@@ -33,6 +33,7 @@ export const assignmentRowSchema = z.object({
   createdAt: z.string(),
   toolId: z.string().nullable().optional(),
   toolName: z.string().nullable().optional(),
+  toolSupportsPassport: z.boolean().optional(),
   eligiblePassTypeNames: z.array(z.string()).optional(),
   eligiblePassTypes: z
     .array(
