@@ -31,7 +31,7 @@
               variant="soft"
               icon="i-lucide-refresh-cw"
               :loading="isSyncingPassPort"
-              :disabled="loadingRedemptions || redemptions.length === 0"
+              :disabled="loadingRedemptions"
               @click="handlePassPortSync"
             >
               Sync PassPort
@@ -139,7 +139,20 @@
     </template>
 
     <template #footer>
-      <div class="flex justify-end w-full">
+      <div class="flex items-center justify-between w-full">
+        <div>
+          <UButton
+            v-if="assignment?.toolSupportsPassport"
+            color="primary"
+            variant="soft"
+            icon="i-lucide-refresh-cw"
+            :loading="isSyncingPassPort"
+            :disabled="loadingRedemptions"
+            @click="handlePassPortSync"
+          >
+            Sync PassPort
+          </UButton>
+        </div>
         <UButton
           label="Close"
           color="neutral"

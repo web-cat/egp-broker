@@ -285,7 +285,7 @@ export async function getCourseAssignments(
     orderBy: [{ dueDate: 'desc' }, { title: 'asc' }],
     include: {
       course: { select: { label: true, title: true } },
-      tool: { select: { id: true, name: true } },
+      tool: { select: { id: true, name: true, supportsPassport: true } },
       passEligibilities: {
         include: { passType: true }
       }

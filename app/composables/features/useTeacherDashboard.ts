@@ -347,6 +347,53 @@ export const useTeacherDashboard = () => {
     }
   }
 
+  // --- PassPort Sync ---
+  const resyncAssignmentPassPort = async (assignment: AssignmentRow) => {
+    try {
+      toast.add({
+        title: 'Syncing PassPort',
+        description: `Sending pass redemptions for "${assignment.title || 'Assignment'}"...`,
+        color: 'neutral'
+      })
+
+      const res = await $fetch<
+        ApiResponse<{ syncedCount: number; totalCount: number; failedCount: number }>
+      >(`/api/me/assignments/${assignment.id}/passport-sync`, {
+        method: 'POST'
+      })
+
+      const data = res.data
+      const syncedCount = data?.syncedCount ?? 0
+      const totalCount = data?.totalCount ?? 0
+      const failedCount = data?.failedCount ?? 0
+
+      if (failedCount > 0) {
+        toast.add({
+          title: 'PassPort Sync Completed with Errors',
+          description: `Synced ${syncedCount} of ${totalCount} redemption(s) to ${assignment.toolName || 'tool'}. (${failedCount} failed)`,
+          color: 'warning'
+        })
+      } else {
+        toast.add({
+          title: 'PassPort Sync Succeeded',
+          description: `Successfully sent ${syncedCount} pass redemption date value(s) to ${assignment.toolName || 'external tool'}.`,
+          color: 'success'
+        })
+      }
+    } catch (err: any) {
+      console.error(err)
+      toast.add({
+        title: 'Failed to Sync PassPort',
+        description:
+          err.data?.statusMessage ||
+          err.data?.message ||
+          err.message ||
+          'Failed to sync with external tool',
+        color: 'error'
+      })
+    }
+  }
+
   return {
     // Pass Types
     passTypesData,
@@ -407,8 +454,9 @@ export const useTeacherDashboard = () => {
     saveApiKey,
     syncAssignments,
 
-    // CBTF Actions
+    // CBTF & PassPort Actions
     resyncAssignmentCbtfOverrides,
-    repairAssignmentCbtfTimezones
+    repairAssignmentCbtfTimezones,
+    resyncAssignmentPassPort
   }
 }

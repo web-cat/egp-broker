@@ -403,7 +403,8 @@ const {
   saveApiKey,
   syncAssignments,
   resyncAssignmentCbtfOverrides,
-  repairAssignmentCbtfTimezones
+  repairAssignmentCbtfTimezones,
+  resyncAssignmentPassPort
 } = useTeacherDashboard()
 
 // Toggle assignment published state
@@ -677,6 +678,14 @@ const assignmentColumns: any[] = [
           onSelect: () => repairAssignmentCbtfTimezones(row.original)
         })
       }
+    }
+
+    if (row.original.toolSupportsPassport) {
+      actions.push({
+        label: 'Sync PassPort',
+        icon: 'i-lucide-refresh-cw',
+        onSelect: () => resyncAssignmentPassPort(row.original)
+      })
     }
 
     return [actions]
