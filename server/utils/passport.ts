@@ -320,25 +320,34 @@ export async function sendPassPortExtension(
   const { signature, timestamp } = signPassPortRequest(tool.passportClientSecret, payload)
 
   console.log(
-    `[passport] Sending extension to ${targetUrl} for ${payload.user.email || payload.user.lti_user_id} on "${payload.resource.title || payload.resource.lti_resource_link_id}" (new_due_date=${payload.extension.new_due_date}, new_accept_until=${payload.extension.new_accept_until})`
+    `[passport] Sending extension to ${targetUrl} for ${payload.user.email || payload.user.lti_user_id} on "${payload.resource.title || payload.resource.lti_resource_link_id}" (client_id=${tool.passportClientId}, timestamp=${timestamp}, new_due_date=${payload.extension.new_due_date}, new_accept_until=${payload.extension.new_accept_until})`
   )
 
-  const response = await $fetch(targetUrl, {
-    method: 'POST',
-    body: payload,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-PassPort-Client-ID': tool.passportClientId,
-      'X-PassPort-Signature': signature,
-      'X-PassPort-Timestamp': String(timestamp)
-    },
-    timeout: 10000
-  })
+  try {
+    const response = await $fetch(targetUrl, {
+      method: 'POST',
+      body: payload,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-PassPort-Client-ID': tool.passportClientId,
+        'X-PassPort-Signature': signature,
+        'X-PassPort-Timestamp': String(timestamp)
+      },
+      timeout: 10000
+    })
 
-  console.log(
-    `[passport] Successfully sent extension to ${targetUrl} for ${payload.user.email || payload.user.lti_user_id}. Response:`,
-    response
-  )
+    console.log(
+      `[passport] Successfully sent extension to ${targetUrl} for ${payload.user.email || payload.user.lti_user_id}. Response:`,
+      response
+    )
+  } catch (err: any) {
+    const errorData = err?.data ?? err?.response?._data
+    console.error(
+      `[passport] Extension request to ${targetUrl} failed with status ${err?.status ?? err?.statusCode ?? 'unknown'}. Remote response:`,
+      typeof errorData === 'object' ? JSON.stringify(errorData) : errorData
+    )
+    throw err
+  }
 }
 
 /**
@@ -526,8 +535,15 @@ export async function resyncAssignmentPassPortExtensions(
     try {
       await sendPassPortExtension(tool, payload)
       syncedCount++
-    } catch (err) {
-      console.error(`[passport-resync] Failed to sync redemption ${redemption.id}:`, err)
+    } catch (err: any) {
+      const errorData = err?.data ?? err?.response?._data
+      console.error(
+        `[passport-resync] Failed to sync redemption ${redemption.id} (${payload.user.email || payload.user.lti_user_id}):`,
+        err?.message,
+        errorData
+          ? `| Remote response: ${typeof errorData === 'object' ? JSON.stringify(errorData) : errorData}`
+          : ''
+      )
       failedCount++
     }
   }

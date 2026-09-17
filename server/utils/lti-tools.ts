@@ -38,7 +38,8 @@ export function toToolRow(t: any): ToolRow {
  * Sanitizes tool input data before Prisma persistence.
  */
 function sanitizeToolData<T extends CreateToolData | UpdateToolData>(
-  data: T
+  data: T,
+  isUpdate = false
 ): Record<string, unknown> {
   const result: Record<string, unknown> = { ...data }
   if (result.passportRegistrationUrl === '') {
@@ -48,6 +49,14 @@ function sanitizeToolData<T extends CreateToolData | UpdateToolData>(
     result.passportExtensionUrl = null
   } else if (typeof result.passportExtensionUrl === 'string') {
     result.passportExtensionUrl = normalizePassPortExtensionUrl(result.passportExtensionUrl)
+  }
+  if (isUpdate) {
+    if (result.passportClientSecret === '') {
+      delete result.passportClientSecret
+    }
+    if (result.secret === '') {
+      delete result.secret
+    }
   }
   return result
 }
@@ -101,7 +110,7 @@ export async function createTool(data: CreateToolData): Promise<ToolRow> {
  * Updates an existing tool.
  */
 export async function updateTool(id: string, data: UpdateToolData): Promise<ToolRow> {
-  const sanitized = sanitizeToolData(data)
+  const sanitized = sanitizeToolData(data, true)
   const t = await prisma.ltiTool.update({
     where: { id },
     data: sanitized as any,
