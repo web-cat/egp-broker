@@ -44,10 +44,14 @@ export function useCbtfStudent() {
   })
 
   const getReservationForAssignment = (assignmentId: string): CbtfReservationDto | undefined => {
-    return reservations.value.find(
+    const active = reservations.value.find(
       (r) =>
-        r.assignmentId === assignmentId &&
-        (r.status === 'SCHEDULED' || r.status === 'CHECKED_IN' || r.status === 'MISSED')
+        r.assignmentId === assignmentId && (r.status === 'SCHEDULED' || r.status === 'CHECKED_IN')
+    )
+    if (active) return active
+
+    return reservations.value.find(
+      (r) => r.assignmentId === assignmentId && (r.status === 'MISSED' || r.status === 'CANCELLED')
     )
   }
 

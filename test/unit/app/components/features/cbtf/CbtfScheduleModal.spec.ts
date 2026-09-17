@@ -133,4 +133,26 @@ describe('CbtfScheduleModal', () => {
     expect(wrapper.text()).toContain('Reschedule Exam')
     expect(mockRescheduleReservation).not.toHaveBeenCalled()
   })
+
+  it('renders Mode A correctly for CANCELLED reservation with reschedule button and no cancel button', () => {
+    const cancelledReservation: CbtfReservationDto = {
+      ...mockExistingReservation,
+      id: 'res-cancelled',
+      status: 'CANCELLED'
+    }
+
+    const wrapper = mount(CbtfScheduleModal, {
+      props: {
+        open: true,
+        assignment: mockAssignment,
+        existingReservation: cancelledReservation
+      },
+      global: { stubs }
+    })
+
+    expect(wrapper.text()).toContain('Current Reservation')
+    expect(wrapper.text()).toContain('This reservation was cancelled')
+    expect(wrapper.text()).toContain('Reschedule Exam')
+    expect(wrapper.text()).not.toContain('Cancel Reservation')
+  })
 })

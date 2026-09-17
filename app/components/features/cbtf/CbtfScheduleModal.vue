@@ -51,6 +51,17 @@
           >
         </div>
 
+        <div
+          v-if="existingReservation.status === 'CANCELLED'"
+          class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs flex items-start gap-2"
+        >
+          <UIcon name="i-lucide-calendar-x" class="w-4 h-4 shrink-0 mt-0.5" />
+          <span
+            >This reservation was cancelled. You may reschedule for an open slot within the
+            test window.</span
+          >
+        </div>
+
         <div class="flex flex-col sm:flex-row gap-3 justify-end pt-2">
           <UButton
             v-if="existingReservation.status === 'SCHEDULED'"
@@ -587,6 +598,8 @@ const statusBadgeColor = (status: string) => {
       return 'neutral'
     case 'MISSED':
       return 'error'
+    case 'CANCELLED':
+      return 'warning'
     default:
       return 'neutral'
   }

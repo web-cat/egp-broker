@@ -495,6 +495,25 @@ export const useStudentDashboard = (isPreview = false) => {
           )
         }
 
+        if (res.status === 'CANCELLED') {
+          return h(
+            'button',
+            {
+              type: 'button',
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition-colors cursor-pointer',
+              onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                openCbtfModal(row.original)
+              }
+            },
+            [
+              h(resolveComponent('UIcon'), { name: 'i-lucide-calendar-x', class: 'w-3.5 h-3.5' }),
+              'Cancelled (Reschedule)'
+            ]
+          )
+        }
+
         return h('span', { class: 'text-xs text-neutral-500 font-medium' }, res.status)
       }
     },

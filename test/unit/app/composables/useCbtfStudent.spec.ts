@@ -30,6 +30,17 @@ const mockReservationsData = ref({
       startTime: '2026-09-01T09:00:00.000Z',
       endTime: '2026-09-01T10:00:00.000Z',
       status: 'CHECKED_OUT'
+    },
+    {
+      id: 'res-3',
+      facilityId: 'fac-1',
+      assignmentId: 'asg-3',
+      assignmentTitle: 'Project 1 Exam',
+      userId: 'usr-1',
+      seatNumber: 8,
+      startTime: '2026-10-10T14:00:00.000Z',
+      endTime: '2026-10-10T15:00:00.000Z',
+      status: 'CANCELLED'
     }
   ]
 })
@@ -57,6 +68,10 @@ describe('useCbtfStudent Composable', () => {
 
     const res1 = getReservationForAssignment('asg-1')
     expect(res1?.seatNumber).toBe(12)
+
+    const resCancelled = getReservationForAssignment('asg-3')
+    expect(resCancelled?.id).toBe('res-3')
+    expect(resCancelled?.status).toBe('CANCELLED')
 
     const resNone = getReservationForAssignment('nonexistent')
     expect(resNone).toBeUndefined()

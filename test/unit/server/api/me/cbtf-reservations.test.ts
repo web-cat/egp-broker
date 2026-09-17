@@ -473,6 +473,67 @@ describe('API: CBTF Student Reservation Endpoints', () => {
       expect(notifyCbtfScheduleSuccess).not.toHaveBeenCalled()
     })
 
+    it('reschedules reservation when current status is CANCELLED', async () => {
+      const newStartTime = '2026-10-06T15:00:00.000Z'
+      const event = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        { startTime: newStartTime },
+        { id: 'res-1' }
+      )
+
+      vi.mocked(prisma.cbtfReservation.findUnique).mockResolvedValue({
+        id: 'res-1',
+        userId: 'usr-1',
+        status: 'CANCELLED',
+        assignment: {
+          id: 'asg-1',
+          title: 'Midterm 1',
+          scheduleWindowStart: new Date('2026-10-01T00:00:00.000Z'),
+          scheduleWindowEnd: new Date('2026-10-15T00:00:00.000Z')
+        }
+      } as any)
+
+      vi.mocked(prisma.cbtfFacility.findFirst).mockResolvedValue({
+        id: 'fac-1',
+        name: 'Main CBTF',
+        totalSeats: 48,
+        seatAllocationOrder: [1, 2, 3]
+      } as any)
+
+      vi.mocked(prisma.cbtfScheduleException.findFirst).mockResolvedValue(null)
+      vi.mocked(prisma.cbtfOperatingHours.findUnique).mockResolvedValue({
+        openTime: '08:00',
+        closeTime: '17:00'
+      } as any)
+
+      vi.mocked(prisma.cbtfReservation.count).mockResolvedValue(0)
+      vi.mocked(prisma.cbtfReservation.findMany).mockResolvedValue([])
+      vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValue(null)
+
+      vi.mocked(prisma.cbtfReservation.update).mockResolvedValue({
+        id: 'res-1',
+        facilityId: 'fac-1',
+        assignmentId: 'asg-1',
+        userId: 'usr-1',
+        seatNumber: 1,
+        startTime: new Date(newStartTime),
+        endTime: new Date('2026-10-06T16:00:00.000Z'),
+        status: 'SCHEDULED',
+        assignment: { title: 'Midterm 1' },
+        user: { firstName: 'Demo', lastName: 'User', studentId: '906000001', avatarUrl: null },
+        checkedInAt: null,
+        checkedOutAt: null,
+        checkedInByUserId: null,
+        checkedOutByUserId: null
+      } as any)
+
+      const response = await reservationPatch(event)
+      expect(response.statusCode).toBe(200)
+      expect(response.data.status).toBe('SCHEDULED')
+      expect(response.data.startTime).toBe(newStartTime)
+    })
+
     it('rejects rescheduling when new start time is in the past', async () => {
       const pastTime = new Date(Date.now() - 3600000).toISOString()
       const pastDate = new Date(pastTime)

@@ -104,7 +104,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       existing.assignment?.course?.label || existing.assignment?.course?.title || null
 
     currentStep = 'Verifying Reservation Status'
-    if (existing.status !== 'SCHEDULED' && existing.status !== 'MISSED') {
+    if (
+      existing.status !== 'SCHEDULED' &&
+      existing.status !== 'MISSED' &&
+      existing.status !== 'CANCELLED'
+    ) {
       throw createError({
         statusCode: 400,
         statusMessage: `Cannot reschedule reservation in ${existing.status} status`
