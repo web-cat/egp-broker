@@ -73,6 +73,10 @@ describe('useCbtfStudent Composable', () => {
     expect(resCancelled?.id).toBe('res-3')
     expect(resCancelled?.status).toBe('CANCELLED')
 
+    const resCompleted = getReservationForAssignment('asg-2')
+    expect(resCompleted?.id).toBe('res-2')
+    expect(resCompleted?.status).toBe('CHECKED_OUT')
+
     const resNone = getReservationForAssignment('nonexistent')
     expect(resNone).toBeUndefined()
   })

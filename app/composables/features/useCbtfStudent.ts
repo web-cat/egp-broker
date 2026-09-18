@@ -50,8 +50,14 @@ export function useCbtfStudent() {
     )
     if (active) return active
 
-    return reservations.value.find(
+    const uncompleted = reservations.value.find(
       (r) => r.assignmentId === assignmentId && (r.status === 'MISSED' || r.status === 'CANCELLED')
+    )
+    if (uncompleted) return uncompleted
+
+    return reservations.value.find(
+      (r) =>
+        r.assignmentId === assignmentId && (r.status === 'CHECKED_OUT' || r.status === 'COMPLETED')
     )
   }
 

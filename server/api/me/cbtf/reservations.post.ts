@@ -160,15 +160,43 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       })
     }
 
+    // 5c. Check if student already completed this exam
+    currentStep = 'Checking For Completed Exam'
+    const existingCompleted = await prisma.cbtfReservation.findFirst({
+      where: {
+        userId: session.user.id,
+        assignmentId,
+        status: { in: ['CHECKED_OUT', 'COMPLETED'] }
+      }
+    })
+
     // 6. Verify within student's scheduling window (including retake pass window)
     currentStep = 'Verifying Student Availability Window'
     const studentWindow = await getStudentSchedulingWindow(session.user.id, assignment)
+    if (existingCompleted && !studentWindow.isPassWindow) {
+      throw createError({
+        statusCode: 403,
+        statusMessage:
+          'You have already completed this exam. A retake pass is required to schedule another attempt.'
+      })
+    }
+
     if (startTime < studentWindow.start || endTime > studentWindow.end) {
       throw createError({
         statusCode: 400,
         statusMessage: `Selected slot falls outside your test availability window (${studentWindow.start.toISOString()} to ${studentWindow.end.toISOString()})`
       })
     }
+
+    // Check if there is an uncompleted reservation (CANCELLED or MISSED) that can be reused
+    const reusableReservation = await prisma.cbtfReservation.findFirst({
+      where: {
+        userId: session.user.id,
+        assignmentId,
+        status: { in: ['CANCELLED', 'MISSED'] }
+      },
+      orderBy: { updatedAt: 'desc' }
+    })
 
     currentStep = 'Retrieving Testing Facility'
     const facility = await getPrimaryCbtfFacility()
@@ -243,22 +271,40 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
 
       const assignedSeat = assignNextSeat(seatOrder, startTime, endTime, activeReservations)
 
-      // E. Create reservation
-      const created = await tx.cbtfReservation.create({
-        data: {
-          facilityId: facility.id,
-          assignmentId,
-          userId: session.user.id,
-          seatNumber: assignedSeat,
-          startTime,
-          endTime,
-          status: 'SCHEDULED'
-        },
-        include: {
-          assignment: { select: { title: true } },
-          user: { select: { firstName: true, lastName: true, studentId: true, avatarUrl: true } }
-        }
-      })
+      // E. Create or reuse reservation
+      let created: any
+      if (reusableReservation) {
+        created = await tx.cbtfReservation.update({
+          where: { id: reusableReservation.id },
+          data: {
+            facilityId: facility.id,
+            seatNumber: assignedSeat,
+            startTime,
+            endTime,
+            status: 'SCHEDULED'
+          },
+          include: {
+            assignment: { select: { title: true } },
+            user: { select: { firstName: true, lastName: true, studentId: true, avatarUrl: true } }
+          }
+        })
+      } else {
+        created = await tx.cbtfReservation.create({
+          data: {
+            facilityId: facility.id,
+            assignmentId,
+            userId: session.user.id,
+            seatNumber: assignedSeat,
+            startTime,
+            endTime,
+            status: 'SCHEDULED'
+          },
+          include: {
+            assignment: { select: { title: true } },
+            user: { select: { firstName: true, lastName: true, studentId: true, avatarUrl: true } }
+          }
+        })
+      }
 
       return created
     })

@@ -248,30 +248,116 @@ export async function syncCbtfReservationCanvasOverride(
   const title = 'CBTF Exam Slot'
 
   try {
-    // A. Update existing override if canvasOverrideId already exists on reservation
-    if (reservation.canvasOverrideId) {
+    let overrideIdToUpdate = reservation.canvasOverrideId
+
+    // If reservation has no canvasOverrideId, check if one already exists for this student & assignment
+    if (!overrideIdToUpdate) {
+      // 1. Check if another reservation for this student & assignment has a canvasOverrideId
+      const priorReservation = await prisma.cbtfReservation.findFirst({
+        where: {
+          assignmentId: assignment.id,
+          userId: reservation.userId,
+          canvasOverrideId: { not: null },
+          id: { not: reservation.id }
+        },
+        select: { canvasOverrideId: true }
+      })
+
+      if (priorReservation?.canvasOverrideId) {
+        overrideIdToUpdate = priorReservation.canvasOverrideId
+      } else {
+        // 2. Check local AssignmentOverrideStudent
+        const localOverrideStudent = await prisma.assignmentOverrideStudent.findFirst({
+          where: {
+            userId: reservation.userId,
+            override: {
+              assignmentId: assignment.id,
+              canvasOverrideId: { not: null }
+            }
+          },
+          include: {
+            override: { select: { canvasOverrideId: true } }
+          }
+        })
+
+        if (localOverrideStudent?.override?.canvasOverrideId) {
+          overrideIdToUpdate = localOverrideStudent.override.canvasOverrideId
+        } else {
+          // 3. Query Canvas API directly for existing overrides targeting this student
+          const existingCanvasOverrides = await fetchCanvasAssignmentOverrides(
+            domain,
+            canvasCourseId,
+            canvasAssignmentId,
+            apiKey
+          )
+          const matchedOverride = existingCanvasOverrides.find(
+            (o) => Array.isArray(o.student_ids) && o.student_ids.includes(studentCanvasId)
+          )
+          if (matchedOverride?.id) {
+            overrideIdToUpdate = matchedOverride.id.toString()
+          }
+        }
+      }
+    }
+
+    // A. Update existing override if canvasOverrideId already exists or was reconciled
+    if (overrideIdToUpdate) {
       try {
         const updated = await updateCanvasAssignmentOverride(
           domain,
           canvasCourseId,
           canvasAssignmentId,
-          reservation.canvasOverrideId,
+          overrideIdToUpdate,
           { unlock_at, due_at, lock_at },
           apiKey
         )
 
         const overrideIdStr = updated.id.toString()
 
-        // Update local AssignmentOverride record if tracked
-        await prisma.assignmentOverride.updateMany({
+        // Link canvasOverrideId onto the current CBTF reservation if not already linked
+        if (reservation.canvasOverrideId !== overrideIdStr) {
+          await prisma.cbtfReservation.update({
+            where: { id: reservation.id },
+            data: { canvasOverrideId: overrideIdStr }
+          })
+        }
+
+        // Upsert local AssignmentOverride record
+        const localOverride = await prisma.assignmentOverride.upsert({
           where: {
-            assignmentId: assignment.id,
-            canvasOverrideId: overrideIdStr
+            assignmentId_canvasOverrideId: {
+              assignmentId: assignment.id,
+              canvasOverrideId: overrideIdStr
+            }
           },
-          data: {
+          update: {
+            title,
             availableFrom: reservation.startTime,
             dueDate: reservation.endTime,
             acceptUntil: reservation.endTime
+          },
+          create: {
+            assignmentId: assignment.id,
+            canvasOverrideId: overrideIdStr,
+            title,
+            availableFrom: reservation.startTime,
+            dueDate: reservation.endTime,
+            acceptUntil: reservation.endTime
+          }
+        })
+
+        // Link individual student in join table
+        await prisma.assignmentOverrideStudent.upsert({
+          where: {
+            overrideId_userId: {
+              overrideId: localOverride.id,
+              userId: reservation.userId
+            }
+          },
+          update: {},
+          create: {
+            overrideId: localOverride.id,
+            userId: reservation.userId
           }
         })
 
@@ -285,19 +371,57 @@ export async function syncCbtfReservationCanvasOverride(
     }
 
     // B. Create a new individual override in Canvas
-    const created = await createCanvasAssignmentOverride(
-      domain,
-      canvasCourseId,
-      canvasAssignmentId,
-      {
-        student_ids: [studentCanvasId],
-        title,
-        unlock_at,
-        due_at,
-        lock_at
-      },
-      apiKey
-    )
+    let created: any
+    try {
+      created = await createCanvasAssignmentOverride(
+        domain,
+        canvasCourseId,
+        canvasAssignmentId,
+        {
+          student_ids: [studentCanvasId],
+          title,
+          unlock_at,
+          due_at,
+          lock_at
+        },
+        apiKey
+      )
+    } catch (createErr: any) {
+      // Fallback: If Canvas rejects because override already exists for student, fetch and update it
+      const isTargetedConflict =
+        createErr?.message?.includes('already targeted') ||
+        createErr?.status === 400 ||
+        createErr?.statusCode === 400
+
+      if (isTargetedConflict) {
+        const existingOverrides = await fetchCanvasAssignmentOverrides(
+          domain,
+          canvasCourseId,
+          canvasAssignmentId,
+          apiKey
+        )
+        const matched = existingOverrides.find(
+          (o) => Array.isArray(o.student_ids) && o.student_ids.includes(studentCanvasId)
+        )
+        if (matched?.id) {
+          const updated = await updateCanvasAssignmentOverride(
+            domain,
+            canvasCourseId,
+            canvasAssignmentId,
+            matched.id.toString(),
+            { unlock_at, due_at, lock_at },
+            apiKey
+          )
+          const overrideIdStr = updated.id.toString()
+          await prisma.cbtfReservation.update({
+            where: { id: reservation.id },
+            data: { canvasOverrideId: overrideIdStr }
+          })
+          return { status: 'updated', overrideId: overrideIdStr }
+        }
+      }
+      throw createErr
+    }
 
     const overrideIdStr = created.id.toString()
 

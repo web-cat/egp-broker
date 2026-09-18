@@ -199,7 +199,11 @@ export const useStudentDashboard = (isPreview = false) => {
   const selectedCbtfAssignment = ref<AssignmentRow | null>(null)
   const selectedCbtfReservation = computed(() => {
     if (!selectedCbtfAssignment.value) return null
-    return getReservationForAssignment(selectedCbtfAssignment.value.id) || null
+    const res = getReservationForAssignment(selectedCbtfAssignment.value.id)
+    if (res && res.status !== 'CHECKED_OUT' && res.status !== 'COMPLETED') {
+      return res
+    }
+    return null
   })
 
   const openCbtfModal = (assignment: AssignmentRow) => {
@@ -510,6 +514,54 @@ export const useStudentDashboard = (isPreview = false) => {
             [
               h(resolveComponent('UIcon'), { name: 'i-lucide-calendar-x', class: 'w-3.5 h-3.5' }),
               'Cancelled (Reschedule)'
+            ]
+          )
+        }
+
+        if (res.status === 'CHECKED_OUT' || res.status === 'COMPLETED') {
+          // Check if student has redeemed a pass for this assignment (e.g. retake pass)
+          const latestRedemption = redemptionsData.value?.data?.find(
+            (r: any) => r.assignmentTitle === row.original.title
+          )
+          const isRetakeEligible =
+            latestRedemption &&
+            (!res.checkedOutAt ||
+              new Date(latestRedemption.createdAt) >= new Date(res.checkedOutAt))
+
+          if (isRetakeEligible) {
+            return h(
+              'button',
+              {
+                type: 'button',
+                class:
+                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-primary-50 text-primary-700 dark:bg-primary-950/50 dark:text-primary-300 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors cursor-pointer',
+                onClick: (e: MouseEvent) => {
+                  e.stopPropagation()
+                  openCbtfModal(row.original)
+                }
+              },
+              [
+                h(resolveComponent('UIcon'), {
+                  name: 'i-lucide-calendar-plus',
+                  class: 'w-3.5 h-3.5'
+                }),
+                'Schedule Retake'
+              ]
+            )
+          }
+
+          return h(
+            'span',
+            {
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+            },
+            [
+              h(resolveComponent('UIcon'), {
+                name: 'i-lucide-check-circle-2',
+                class: 'w-3.5 h-3.5'
+              }),
+              'Completed'
             ]
           )
         }

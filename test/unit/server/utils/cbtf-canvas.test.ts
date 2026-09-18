@@ -270,6 +270,109 @@ describe('CBTF Canvas Override Coordinator (cbtf-canvas)', () => {
         })
       )
     })
+
+    it('adopts and updates existing Canvas override when student already has an override targeting them on Canvas', async () => {
+      vi.spyOn(prisma.cbtfReservation, 'findUnique').mockResolvedValue(mockReservation as any)
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key-1' }] }
+      } as any)
+
+      // Mock fetchCanvasAssignmentOverrides returning an existing override for student 9876
+      vi.spyOn(canvasModule, 'fetchCanvasAssignmentOverrides').mockResolvedValue([
+        {
+          id: 8888,
+          assignment_id: 456,
+          title: 'Old CBTF Slot',
+          student_ids: [9876],
+          unlock_at: '2026-09-10T14:00:00.000Z',
+          due_at: '2026-09-10T15:00:00.000Z',
+          lock_at: '2026-09-10T15:00:00.000Z'
+        } as any
+      ])
+
+      const updateOverrideSpy = vi
+        .spyOn(canvasModule, 'updateCanvasAssignmentOverride')
+        .mockResolvedValue({
+          id: 8888,
+          assignment_id: 456,
+          title: 'CBTF Exam Slot',
+          student_ids: [9876],
+          unlock_at: '2026-09-15T14:00:00.000Z',
+          due_at: '2026-09-15T15:00:00.000Z',
+          lock_at: '2026-09-15T15:00:00.000Z'
+        })
+      const createOverrideSpy = vi.spyOn(canvasModule, 'createCanvasAssignmentOverride')
+      const updateReservationSpy = vi
+        .spyOn(prisma.cbtfReservation, 'update')
+        .mockResolvedValue({} as any)
+      vi.spyOn(prisma.assignmentOverride, 'upsert').mockResolvedValue({ id: 'local-ov-1' } as any)
+      vi.spyOn(prisma.assignmentOverrideStudent, 'upsert').mockResolvedValue({} as any)
+
+      const result = await syncCbtfReservationCanvasOverride('res-100')
+
+      expect(result.status).toBe('updated')
+      expect(result.overrideId).toBe('8888')
+      expect(createOverrideSpy).not.toHaveBeenCalled()
+      expect(updateOverrideSpy).toHaveBeenCalledWith(
+        'canvas.vt.edu',
+        '123',
+        '456',
+        '8888',
+        expect.any(Object),
+        'teacher-key-1'
+      )
+      expect(updateReservationSpy).toHaveBeenCalledWith({
+        where: { id: 'res-100' },
+        data: { canvasOverrideId: '8888' }
+      })
+    })
+
+    it('adopts existing Canvas override ID from prior reservation for the same student and assignment in database', async () => {
+      vi.spyOn(prisma.cbtfReservation, 'findUnique').mockResolvedValue(mockReservation as any)
+      vi.spyOn(prisma.cbtfReservation, 'findFirst').mockResolvedValue({
+        id: 'res-prior',
+        canvasOverrideId: '7777'
+      } as any)
+      vi.spyOn(prisma.enrollment, 'findFirst').mockResolvedValue({
+        user: { ltiIdentities: [{ platformApiKey: 'teacher-key-1' }] }
+      } as any)
+
+      const updateOverrideSpy = vi
+        .spyOn(canvasModule, 'updateCanvasAssignmentOverride')
+        .mockResolvedValue({
+          id: 7777,
+          assignment_id: 456,
+          title: 'CBTF Exam Slot',
+          student_ids: [9876],
+          unlock_at: '2026-09-15T14:00:00.000Z',
+          due_at: '2026-09-15T15:00:00.000Z',
+          lock_at: '2026-09-15T15:00:00.000Z'
+        })
+      const createOverrideSpy = vi.spyOn(canvasModule, 'createCanvasAssignmentOverride')
+      const updateReservationSpy = vi
+        .spyOn(prisma.cbtfReservation, 'update')
+        .mockResolvedValue({} as any)
+      vi.spyOn(prisma.assignmentOverride, 'upsert').mockResolvedValue({ id: 'local-ov-1' } as any)
+      vi.spyOn(prisma.assignmentOverrideStudent, 'upsert').mockResolvedValue({} as any)
+
+      const result = await syncCbtfReservationCanvasOverride('res-100')
+
+      expect(result.status).toBe('updated')
+      expect(result.overrideId).toBe('7777')
+      expect(createOverrideSpy).not.toHaveBeenCalled()
+      expect(updateOverrideSpy).toHaveBeenCalledWith(
+        'canvas.vt.edu',
+        '123',
+        '456',
+        '7777',
+        expect.any(Object),
+        'teacher-key-1'
+      )
+      expect(updateReservationSpy).toHaveBeenCalledWith({
+        where: { id: 'res-100' },
+        data: { canvasOverrideId: '7777' }
+      })
+    })
   })
 
   describe('deleteCbtfReservationCanvasOverride', () => {
