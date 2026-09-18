@@ -185,7 +185,7 @@ describe('resyncAssignmentPassPortExtensions', () => {
         method: 'POST',
         body: expect.objectContaining({
           extension: expect.objectContaining({
-            new_due_date: '2026-09-12T23:59:00.000Z',
+            new_due_date: null,
             new_accept_until: '2026-09-12T23:59:00.000Z'
           })
         })

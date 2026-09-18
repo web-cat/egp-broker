@@ -524,7 +524,7 @@ export async function resyncAssignmentPassPortExtensions(
         originalAvailableFrom: effectiveDates.availableFrom,
         newAvailableFrom: redemption.availableFrom,
         originalDueDate: effectiveDates.dueDate,
-        newDueDate: redemption.dueDate ?? redemption.acceptUntil,
+        newDueDate: redemption.dueDate,
         originalAcceptUntil: effectiveDates.acceptUntil,
         newAcceptUntil: redemption.acceptUntil,
         appliedAt: redemption.createdAt

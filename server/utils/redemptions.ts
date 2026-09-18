@@ -333,7 +333,7 @@ export async function redeemPass(
             originalAvailableFrom: effectiveDates.availableFrom,
             newAvailableFrom: extension.newAvailableFrom,
             originalDueDate: effectiveDates.dueDate,
-            newDueDate: extension.newDueDate ?? extension.newAcceptUntil,
+            newDueDate: extension.newDueDate,
             originalAcceptUntil: effectiveDates.acceptUntil,
             newAcceptUntil: extension.newAcceptUntil,
             appliedAt: new Date()
