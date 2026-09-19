@@ -4,12 +4,12 @@ import {
   signPassPortRequest,
   buildPassPortExtensionPayload,
   sendPassPortExtension,
-  sendPassPortRollback,
-  normalizePassPortExtensionUrl
+  sendPassPortRollback
 } from '../../../../server/utils/passport'
 import {
   passPortExtensionPayloadSchema,
-  type PassPortExtensionPayload
+  type PassPortExtensionPayload,
+  normalizePassPortExtensionUrl
 } from '../../../../shared/models/passport'
 
 describe('PassPort Extension Dispatch Utilities', () => {

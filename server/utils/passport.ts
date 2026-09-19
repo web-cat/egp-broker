@@ -18,8 +18,6 @@ import {
 } from '@@/shared/models/passport'
 import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
 
-export { normalizePassPortExtensionUrl } from '@@/shared/models/passport'
-
 /**
  * Initiates the 2-Phase Dynamic Registration Handshake for an LtiTool.
  * Sends Phase 1 POST request to tool's passportRegistrationUrl with a tokenized callback URL.
