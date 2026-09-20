@@ -129,6 +129,36 @@ describe('useGtaInterviewStudent Composable', () => {
     expect(result.id).toBe('res-new')
   })
 
+  it('passes rescheduleReservationId in POST body when provided', async () => {
+    const courseId = ref('course-1')
+    const assignmentId = ref('assign-1')
+
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: {
+        id: 'res-rescheduled',
+        status: 'SCHEDULED',
+        startTime: '2026-10-06T14:00:00.000Z',
+        endTime: '2026-10-06T14:10:00.000Z',
+        gta: { firstName: 'Alice', lastName: 'Smith' }
+      }
+    })
+
+    const { bookSlot } = useGtaInterviewStudent(courseId, assignmentId)
+
+    await bookSlot('2026-10-06T14:00:00.000Z', 'res-old-123')
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/me/courses/course-1/assignments/assign-1/interview-reservations',
+      {
+        method: 'POST',
+        body: {
+          startTime: '2026-10-06T14:00:00.000Z',
+          rescheduleReservationId: 'res-old-123'
+        }
+      }
+    )
+  })
+
   it('handles booking failure gracefully', async () => {
     const courseId = ref('course-1')
     const assignmentId = ref('assign-1')

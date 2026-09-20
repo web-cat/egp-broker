@@ -22,7 +22,8 @@ vi.mock('@@/server/utils/db', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn()
-    }
+    },
+    $transaction: vi.fn((cb: any) => (typeof cb === 'function' ? cb(prisma) : Promise.all(cb)))
   }
 }))
 
@@ -151,6 +152,117 @@ describe('API: Student GTA Interview Reservations', () => {
           statusMessage: expect.stringContaining('already have an active scheduled interview')
         })
       )
+    })
+
+    it('reschedules an active SCHEDULED reservation atomically when rescheduleReservationId is provided', async () => {
+      const event = mockEvent(
+        { id: 'student-1', globalRole: 'USER' },
+        { startTime: futureSlot, rescheduleReservationId: 'res-old' }
+      )
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign-1',
+        courseId: 'course-1',
+        hasInterviews: true,
+        interviewWindowStart: null,
+        interviewWindowEnd: null,
+        course: { id: 'course-1', interviewLocation: 'McBryde 106' }
+      } as any)
+
+      // When checking reschedule reservation, find old reservation
+      vi.mocked(prisma.gtaInterviewReservation.findUnique).mockResolvedValue({
+        id: 'res-old',
+        assignmentId: 'assign-1',
+        studentId: 'student-1',
+        status: 'SCHEDULED'
+      } as any)
+
+      // No OTHER active reservation exists
+      vi.mocked(prisma.gtaInterviewReservation.findFirst).mockResolvedValue(null)
+
+      vi.mocked(prisma.gtaShift.findMany).mockResolvedValue([
+        {
+          id: 'shift-1',
+          courseId: 'course-1',
+          userId: 'gta-1',
+          date: new Date('2099-10-05T00:00:00.000Z'),
+          startTime: '10:00',
+          endTime: '11:00'
+        }
+      ] as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.findMany).mockResolvedValue([])
+
+      vi.mocked(prisma.gtaInterviewReservation.update).mockResolvedValue({
+        id: 'res-old',
+        status: 'CANCELLED'
+      } as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.create).mockResolvedValue({
+        id: 'res-new',
+        assignmentId: 'assign-1',
+        studentId: 'student-1',
+        gtaId: 'gta-1',
+        startTime: new Date(futureSlot),
+        endTime: new Date('2099-10-05T10:15:00.000Z'),
+        status: 'SCHEDULED',
+        gta: { id: 'gta-1', firstName: 'Alice', lastName: 'GTA' },
+        assignment: { title: 'Project 1', course: { interviewLocation: 'McBryde 106' } }
+      } as any)
+
+      const res = await reservationsPost(event)
+      expect(res.statusCode).toBe(201)
+      expect(res.data.id).toBe('res-new')
+      expect(prisma.gtaInterviewReservation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'res-old' },
+          data: expect.objectContaining({ status: 'CANCELLED' })
+        })
+      )
+      expect(prisma.gtaInterviewReservation.create).toHaveBeenCalled()
+    })
+
+    it('allows booking when previous reservation is CANCELLED', async () => {
+      const event = mockEvent({ id: 'student-1', globalRole: 'USER' }, { startTime: futureSlot })
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign-1',
+        courseId: 'course-1',
+        hasInterviews: true,
+        course: { id: 'course-1' }
+      } as any)
+
+      // findFirst returns null because status is not SCHEDULED
+      vi.mocked(prisma.gtaInterviewReservation.findFirst).mockResolvedValue(null)
+
+      vi.mocked(prisma.gtaShift.findMany).mockResolvedValue([
+        {
+          id: 'shift-1',
+          courseId: 'course-1',
+          userId: 'gta-1',
+          date: new Date('2099-10-05T00:00:00.000Z'),
+          startTime: '10:00',
+          endTime: '11:00'
+        }
+      ] as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.findMany).mockResolvedValue([])
+
+      vi.mocked(prisma.gtaInterviewReservation.create).mockResolvedValue({
+        id: 'res-new',
+        assignmentId: 'assign-1',
+        studentId: 'student-1',
+        gtaId: 'gta-1',
+        startTime: new Date(futureSlot),
+        endTime: new Date('2099-10-05T10:15:00.000Z'),
+        status: 'SCHEDULED',
+        gta: { id: 'gta-1', firstName: 'Alice', lastName: 'GTA' },
+        assignment: { title: 'Project 1', course: { interviewLocation: 'McBryde 106' } }
+      } as any)
+
+      const res = await reservationsPost(event)
+      expect(res.statusCode).toBe(201)
+      expect(res.data.id).toBe('res-new')
     })
 
     it('throws 409 if all on-duty GTAs for this slot are already booked', async () => {

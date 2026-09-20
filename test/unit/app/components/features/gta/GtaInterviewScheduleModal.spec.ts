@@ -164,6 +164,73 @@ describe('GtaInterviewScheduleModal', () => {
     expect(wrapper.text()).toContain('Reschedule Appointment')
   })
 
+  it('renders Mode A: cancelled reservation view with reschedule prompt and no cancel button', () => {
+    const cancelledReservation: GtaInterviewReservationDto = {
+      ...mockExistingReservation,
+      id: 'res-gta-cancelled',
+      status: 'CANCELLED'
+    }
+
+    const wrapper = mount(GtaInterviewScheduleModal, {
+      props: {
+        open: true,
+        courseId: 'course-1',
+        assignment: mockAssignment,
+        existingReservation: cancelledReservation
+      },
+      global: { stubs }
+    })
+
+    expect(wrapper.text()).toContain('CANCELLED')
+    expect(wrapper.text()).toContain('This interview reservation was cancelled')
+    expect(wrapper.text()).toContain('Reschedule Appointment')
+    expect(wrapper.text()).not.toContain('Cancel Reservation')
+  })
+
+  it('passes rescheduleReservationId when rescheduling a SCHEDULED appointment', async () => {
+    const wrapper = mount(GtaInterviewScheduleModal, {
+      props: {
+        open: true,
+        courseId: 'course-1',
+        assignment: mockAssignment,
+        existingReservation: mockExistingReservation,
+        interviewLocation: 'McBryde 106'
+      },
+      global: { stubs }
+    })
+
+    // Click Reschedule Appointment
+    const buttons = wrapper.findAll('button')
+    const rescheduleBtn = buttons.find((b) => b.text().includes('Reschedule Appointment'))
+    expect(rescheduleBtn).toBeDefined()
+    await rescheduleBtn!.trigger('click')
+
+    // In Mode B, step 1: select block
+    const blockBtn = wrapper.find('button.text-left')
+    expect(blockBtn.exists()).toBe(true)
+    await blockBtn.trigger('click')
+
+    // Step 2: select slot
+    const slotBtns = wrapper.findAll('button')
+    const nineAmBtn = slotBtns.find((b) => b.text().includes('9:00 AM'))
+    expect(nineAmBtn).toBeDefined()
+    await nineAmBtn!.trigger('click')
+
+    // Step 3: confirm booking
+    const step3Btns = wrapper.findAll('button')
+    const confirmBtn = step3Btns.find((b) => b.text().includes('Confirm Interview Booking'))
+    expect(confirmBtn).toBeDefined()
+
+    mockBookSlot.mockResolvedValueOnce({
+      ...mockExistingReservation,
+      id: 'res-new-gta'
+    })
+    await confirmBtn!.trigger('click')
+
+    expect(mockBookSlot).toHaveBeenCalledWith('2026-10-05T09:00:00.000Z', 'res-gta-1')
+    expect(wrapper.emitted('reserved')).toBeTruthy()
+  })
+
   it('navigates Mode B 3-step wizard and confirms booking', async () => {
     const wrapper = mount(GtaInterviewScheduleModal, {
       props: {

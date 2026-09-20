@@ -55,7 +55,10 @@ export function useGtaInterviewStudent(
   const isBooking = ref(false)
   const isCancelling = ref(false)
 
-  const bookSlot = async (startTime: string): Promise<GtaInterviewReservationDto> => {
+  const bookSlot = async (
+    startTime: string,
+    rescheduleReservationId?: string
+  ): Promise<GtaInterviewReservationDto> => {
     if (!cId.value || !aId.value) {
       throw new Error('Course and assignment IDs are required')
     }
@@ -66,7 +69,10 @@ export function useGtaInterviewStudent(
         `/api/me/courses/${cId.value}/assignments/${aId.value}/interview-reservations`,
         {
           method: 'POST',
-          body: { startTime }
+          body: {
+            startTime,
+            ...(rescheduleReservationId ? { rescheduleReservationId } : {})
+          }
         }
       )
 

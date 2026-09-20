@@ -130,6 +130,19 @@ describe('Shared Schema: GTA Interview Schemas', () => {
       expect(result.success).toBe(true)
     })
 
+    it('accepts optional rescheduleReservationId', () => {
+      const valid = {
+        assignmentId: 'assign-1',
+        startTime: '2026-09-18T10:00:00.000Z',
+        rescheduleReservationId: 'res-old-123'
+      }
+      const result = createGtaInterviewReservationInputSchema.safeParse(valid)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.rescheduleReservationId).toBe('res-old-123')
+      }
+    })
+
     it('rejects non-datetime string', () => {
       const invalid = {
         assignmentId: 'assign-1',

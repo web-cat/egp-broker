@@ -83,7 +83,8 @@ export type GtaBatchGenerateShiftsInput = z.infer<typeof gtaBatchGenerateShiftsS
 
 export const createGtaInterviewReservationInputSchema = z.object({
   assignmentId: z.string().min(1, 'Assignment ID is required'),
-  startTime: z.string().datetime()
+  startTime: z.string().datetime(),
+  rescheduleReservationId: z.string().cuid().or(z.string().min(1)).optional()
 })
 
 export type CreateGtaInterviewReservationInput = z.infer<

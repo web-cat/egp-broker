@@ -66,14 +66,20 @@ export const useStudentDashboard = (isPreview = false) => {
   })
 
   const getGtaReservationForAssignment = (assignmentId: string): any | undefined => {
-    return gtaReservations.value.find(
+    const active = gtaReservations.value.find(
       (r) =>
-        r.assignmentId === assignmentId &&
-        (r.status === 'SCHEDULED' ||
-          r.status === 'CHECKED_IN' ||
-          r.status === 'COMPLETED' ||
-          r.status === 'CHECKED_OUT' ||
-          r.status === 'MISSED')
+        r.assignmentId === assignmentId && (r.status === 'SCHEDULED' || r.status === 'CHECKED_IN')
+    )
+    if (active) return active
+
+    const completed = gtaReservations.value.find(
+      (r) =>
+        r.assignmentId === assignmentId && (r.status === 'COMPLETED' || r.status === 'CHECKED_OUT')
+    )
+    if (completed) return completed
+
+    return gtaReservations.value.find(
+      (r) => r.assignmentId === assignmentId && (r.status === 'MISSED' || r.status === 'CANCELLED')
     )
   }
 
@@ -671,6 +677,25 @@ export const useStudentDashboard = (isPreview = false) => {
             [
               h(resolveComponent('UIcon'), { name: 'i-lucide-alert-circle', class: 'w-3.5 h-3.5' }),
               'Missed (Reschedule)'
+            ]
+          )
+        }
+
+        if (res.status === 'CANCELLED') {
+          return h(
+            'button',
+            {
+              type: 'button',
+              class:
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition-colors cursor-pointer',
+              onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                openGtaModal(row.original)
+              }
+            },
+            [
+              h(resolveComponent('UIcon'), { name: 'i-lucide-calendar-x', class: 'w-3.5 h-3.5' }),
+              'Cancelled (Reschedule)'
             ]
           )
         }

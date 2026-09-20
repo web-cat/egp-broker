@@ -32,7 +32,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
-  const { startTime: requestedStartTimeStr } = validation.data
+  const { startTime: requestedStartTimeStr, rescheduleReservationId } = validation.data
   const requestedStartTime = new Date(requestedStartTimeStr)
   const now = new Date()
 
@@ -81,12 +81,37 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
-  // Ensure student has at most ONE active scheduled interview for this assignment
+  let reservationToReschedule: { id: string; status: string } | null = null
+  if (rescheduleReservationId) {
+    const existing = await prisma.gtaInterviewReservation.findUnique({
+      where: { id: rescheduleReservationId }
+    })
+    if (!existing || existing.studentId !== auth.userId || existing.assignmentId !== assignmentId) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Reservation to reschedule not found'
+      })
+    }
+    if (
+      existing.status !== 'SCHEDULED' &&
+      existing.status !== 'MISSED' &&
+      existing.status !== 'CANCELLED'
+    ) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Cannot reschedule interview reservation in ${existing.status} status`
+      })
+    }
+    reservationToReschedule = existing
+  }
+
+  // Ensure student has at most ONE active scheduled interview for this assignment (excluding the one being rescheduled)
   const existingActive = await prisma.gtaInterviewReservation.findFirst({
     where: {
       assignmentId,
       studentId: auth.userId,
-      status: 'SCHEDULED'
+      status: 'SCHEDULED',
+      ...(rescheduleReservationId ? { id: { not: rescheduleReservationId } } : {})
     }
   })
 
@@ -132,12 +157,13 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
-  // Find which of these GTAs already have an active reservation at this exact slot
+  // Find which of these GTAs already have an active reservation at this exact slot (excluding the reservation being rescheduled)
   const bookedReservations = await prisma.gtaInterviewReservation.findMany({
     where: {
       assignment: { courseId },
       startTime: requestedStartTime,
-      status: { notIn: ['CANCELLED', 'MISSED'] }
+      status: { notIn: ['CANCELLED', 'MISSED'] },
+      ...(rescheduleReservationId ? { id: { not: rescheduleReservationId } } : {})
     },
     select: {
       gtaId: true
@@ -160,39 +186,50 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     requestedStartTime.getTime() + INTERVIEW_DURATION_MINUTES * 60 * 1000
   )
 
-  const reservation = await prisma.gtaInterviewReservation.create({
-    data: {
-      assignmentId,
-      studentId: auth.userId,
-      gtaId: assignedGtaId,
-      startTime: requestedStartTime,
-      endTime: requestedEndTime,
-      status: 'SCHEDULED'
-    },
-    include: {
-      gta: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          avatarUrl: true
+  const reservation = await prisma.$transaction(async (tx) => {
+    if (reservationToReschedule && reservationToReschedule.status === 'SCHEDULED') {
+      await tx.gtaInterviewReservation.update({
+        where: { id: reservationToReschedule.id },
+        data: {
+          status: 'CANCELLED'
         }
+      })
+    }
+
+    return await tx.gtaInterviewReservation.create({
+      data: {
+        assignmentId,
+        studentId: auth.userId,
+        gtaId: assignedGtaId,
+        startTime: requestedStartTime,
+        endTime: requestedEndTime,
+        status: 'SCHEDULED'
       },
-      assignment: {
-        select: {
-          id: true,
-          title: true,
-          course: {
-            select: {
-              id: true,
-              title: true,
-              interviewLocation: true
+      include: {
+        gta: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatarUrl: true
+          }
+        },
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            course: {
+              select: {
+                id: true,
+                title: true,
+                interviewLocation: true
+              }
             }
           }
         }
       }
-    }
+    })
   })
 
   return {

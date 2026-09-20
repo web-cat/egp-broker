@@ -79,6 +79,17 @@
           </span>
         </div>
 
+        <!-- Cancelled Alert -->
+        <div
+          v-if="activeOrLatestReservation.status === 'CANCELLED'"
+          class="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2.5"
+        >
+          <UIcon name="i-lucide-calendar-x" class="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            This interview reservation was cancelled. You may reschedule for any available open slot within the interview window.
+          </span>
+        </div>
+
         <!-- Actions -->
         <div class="flex flex-col sm:flex-row gap-3 justify-end pt-2">
           <UButton
@@ -99,7 +110,7 @@
             @click="handleCancel"
           />
           <UButton
-            v-if="activeOrLatestReservation.status === 'MISSED'"
+            v-if="activeOrLatestReservation.status === 'MISSED' || activeOrLatestReservation.status === 'CANCELLED'"
             color="primary"
             variant="solid"
             label="Reschedule Appointment"
@@ -421,7 +432,13 @@ const selectSlot = (slot: GtaInterviewSlotDto) => {
 const handleConfirmBooking = async () => {
   if (!selectedSlot.value) return
   try {
-    const res = await bookSlot(selectedSlot.value.startTime)
+    const rescheduleId =
+      isRescheduling.value && activeOrLatestReservation.value?.status === 'SCHEDULED'
+        ? activeOrLatestReservation.value.id
+        : undefined
+    const res = rescheduleId
+      ? await bookSlot(selectedSlot.value.startTime, rescheduleId)
+      : await bookSlot(selectedSlot.value.startTime)
     emit('reserved', res)
     isRescheduling.value = false
   } catch {
@@ -450,6 +467,8 @@ const statusBadgeColor = (status: string) => {
       return 'success'
     case 'MISSED':
       return 'error'
+    case 'CANCELLED':
+      return 'warning'
     default:
       return 'neutral'
   }
