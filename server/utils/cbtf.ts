@@ -18,6 +18,17 @@ import type {
   CbtfReservationDto
 } from '@@/shared/models/cbtf'
 
+import {
+  DEFAULT_TIMEZONE,
+  DEFAULT_CBTF_TIMEZONE,
+  DEFAULT_GTA_TIMEZONE,
+  getLocalDateString,
+  extractCalendarDate,
+  getLocalDayOfWeek,
+  getLocalTimeParts,
+  combineDateAndTime
+} from '@@/server/utils/timezone'
+
 export interface FacilityOperatingHoursResult {
   isOpen: boolean
   openTime: string | null
@@ -83,78 +94,19 @@ export async function getPrimaryCbtfFacility(
   return facility
 }
 
-export const DEFAULT_CBTF_TIMEZONE = 'America/New_York'
+export {
+  DEFAULT_TIMEZONE,
+  DEFAULT_CBTF_TIMEZONE,
+  DEFAULT_GTA_TIMEZONE,
+  getLocalDateString,
+  extractCalendarDate,
+  getLocalDayOfWeek,
+  getLocalTimeParts,
+  combineDateAndTime
+}
 
 export function getFacilityTimezone(facility?: { timezone?: string | null }): string {
   return facility?.timezone || DEFAULT_CBTF_TIMEZONE
-}
-
-export function getLocalDateString(date: Date, timeZone: string = DEFAULT_CBTF_TIMEZONE): string {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  })
-  return formatter.format(date)
-}
-
-export function extractCalendarDate(
-  date: Date | string,
-  timeZone: string = DEFAULT_CBTF_TIMEZONE
-): string {
-  if (typeof date === 'string') return date.split('T')[0]
-  if (
-    date.getUTCHours() === 0 &&
-    date.getUTCMinutes() === 0 &&
-    date.getUTCSeconds() === 0 &&
-    date.getUTCMilliseconds() === 0
-  ) {
-    return date.toISOString().split('T')[0]
-  }
-  return getLocalDateString(date, timeZone)
-}
-
-export function getLocalDayOfWeek(date: Date, timeZone: string = DEFAULT_CBTF_TIMEZONE): number {
-  const formatter = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' })
-  const day = formatter.format(date)
-  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
-  return map[day] ?? 0
-}
-
-export function getLocalTimeParts(
-  date: Date,
-  timeZone: string = DEFAULT_CBTF_TIMEZONE
-): {
-  hour24: number
-  minute: number
-  dayOfWeek: number
-  formattedTime: string
-} {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: false
-  })
-  const parts = Object.fromEntries(formatter.formatToParts(date).map((p) => [p.type, p.value]))
-  const hour24 = parts.hour === '24' ? 0 : Number(parts.hour)
-  const minute = Number(parts.minute)
-
-  const displayFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  })
-  const formattedTime = displayFormatter.format(date)
-
-  return {
-    hour24,
-    minute,
-    dayOfWeek: getLocalDayOfWeek(date, timeZone),
-    formattedTime
-  }
 }
 
 /**
@@ -227,49 +179,6 @@ export async function getFacilityOperatingHoursForDate(
     closeTime: null,
     reason: 'Testing center closed on this day of week'
   }
-}
-
-/**
- * Helper to build Date object (in UTC) from date and "HH:mm" time string in the facility's timezone.
- */
-export function combineDateAndTime(
-  date: Date | string,
-  timeStr: string,
-  timeZone: string = DEFAULT_CBTF_TIMEZONE
-): Date {
-  const dateStr = extractCalendarDate(date, timeZone)
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const [hours, minutes] = timeStr.split(':').map(Number)
-
-  if (timeZone === 'UTC') {
-    return new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0))
-  }
-
-  const naiveUtc = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0))
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  })
-  const parts = Object.fromEntries(formatter.formatToParts(naiveUtc).map((p) => [p.type, p.value]))
-  const parsedHour = parts.hour === '24' ? 0 : Number(parts.hour)
-  const inTz = new Date(
-    Date.UTC(
-      Number(parts.year),
-      Number(parts.month) - 1,
-      Number(parts.day),
-      parsedHour,
-      Number(parts.minute),
-      Number(parts.second)
-    )
-  )
-  const offsetMs = inTz.getTime() - naiveUtc.getTime()
-  return new Date(naiveUtc.getTime() - offsetMs)
 }
 
 /**

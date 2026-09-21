@@ -681,6 +681,10 @@ model CbtfScheduleException {
 }
 
 /// Scheduled work shifts for proctors in the facility.
+/// NOTE ON TIMEZONES:
+/// - `date` stores the calendar date at midnight UTC (00:00:00.000Z).
+/// - `startTime` and `endTime` store 24-hour local wall-clock times ("HH:mm") in the facility's timezone.
+/// To convert a shift to an absolute UTC instant, use `combineDateAndTime(date, time, timeZone)`.
 model CbtfProctorShift {
   id         String       @id @default(cuid())
   facilityId String
@@ -689,8 +693,11 @@ model CbtfProctorShift {
   userId     String
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  /// Calendar date of the shift, stored as midnight UTC (00:00:00.000Z)
   date       DateTime
+  /// Local wall-clock start time ("HH:mm", 24h format) in the facility timezone
   startTime  String
+  /// Local wall-clock end time ("HH:mm", 24h format) in the facility timezone
   endTime    String
 
   createdAt  DateTime     @default(now())
@@ -701,6 +708,9 @@ model CbtfProctorShift {
 }
 
 /// An individual student reservation for an exam in the CBTF.
+/// NOTE ON TIMEZONES:
+/// - `startTime`, `endTime`, `checkedInAt`, and `checkedOutAt` are stored as absolute UTC instants.
+/// To format for student or proctor display in local time, convert to the facility's timezone.
 model CbtfReservation {
   id                 String                @id @default(cuid())
   facilityId         String
@@ -713,11 +723,15 @@ model CbtfReservation {
   user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   seatNumber         Int
+  /// Scheduled exam start time, stored as an absolute UTC instant
   startTime          DateTime
+  /// Scheduled exam end time, stored as an absolute UTC instant
   endTime            DateTime
   status             CbtfReservationStatus @default(SCHEDULED)
 
+  /// Actual check-in timestamp, stored as an absolute UTC instant
   checkedInAt        DateTime?
+  /// Actual check-out timestamp, stored as an absolute UTC instant
   checkedOutAt       DateTime?
   checkedInByUserId  String?
   checkedOutByUserId String?
@@ -771,6 +785,10 @@ enum GtaInterviewStatus {
 }
 
 /// Scheduled work shifts for Graduate Teaching Assistants in a course.
+/// NOTE ON TIMEZONES:
+/// - `date` stores the calendar date at midnight UTC (00:00:00.000Z).
+/// - `startTime` and `endTime` store 24-hour local wall-clock times ("HH:mm") in the course's timezone.
+/// To convert a shift to an absolute UTC instant, use `combineDateAndTime(date, time, timeZone)`.
 model GtaShift {
   id         String   @id @default(cuid())
   courseId   String
@@ -779,8 +797,11 @@ model GtaShift {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  /// Calendar date of the shift, stored as midnight UTC (00:00:00.000Z)
   date       DateTime
+  /// Local wall-clock start time ("HH:mm", 24h format) in the course timezone
   startTime  String
+  /// Local wall-clock end time ("HH:mm", 24h format) in the course timezone
   endTime    String
 
   createdAt  DateTime @default(now())
@@ -792,6 +813,9 @@ model GtaShift {
 }
 
 /// An individual 1-on-1 grading interview reservation with a Graduate TA.
+/// NOTE ON TIMEZONES:
+/// - `startTime`, `endTime`, `checkedInAt`, and `checkedOutAt` are stored as absolute UTC instants.
+/// To format for student or GTA display in local time, convert to the course/facility timezone.
 model GtaInterviewReservation {
   id           String             @id @default(cuid())
 
@@ -804,11 +828,15 @@ model GtaInterviewReservation {
   gtaId        String
   gta          User               @relation("GtaReservations", fields: [gtaId], references: [id], onDelete: Cascade)
 
+  /// Scheduled interview start time, stored as an absolute UTC instant
   startTime    DateTime
+  /// Scheduled interview end time, stored as an absolute UTC instant
   endTime      DateTime
   status       GtaInterviewStatus @default(SCHEDULED)
 
+  /// Actual check-in timestamp, stored as an absolute UTC instant
   checkedInAt  DateTime?
+  /// Actual check-out timestamp, stored as an absolute UTC instant
   checkedOutAt DateTime?
 
   notes        String?            @db.Text

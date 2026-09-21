@@ -6,7 +6,7 @@ import {
   DEFAULT_GTA_TIMEZONE,
   GTA_INTERVIEW_MIN_LEAD_HOURS
 } from '@@/server/utils/gta-slots'
-import { getLocalDateString } from '@@/server/utils/cbtf'
+import { getLocalDateString } from '@@/server/utils/timezone'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
