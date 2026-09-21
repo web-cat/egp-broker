@@ -112,25 +112,3 @@ export const updateCourseInterviewLocationInputSchema = z.object({
 export type UpdateCourseInterviewLocationInput = z.infer<
   typeof updateCourseInterviewLocationInputSchema
 >
-
-export const repairGtaTimezonesResponseSchema = z.object({
-  totalChecked: z.number().int(),
-  totalRepaired: z.number().int(),
-  alreadyCorrect: z.number().int().default(0),
-  conflicts: z.number().int().default(0),
-  errors: z.number().int().default(0),
-  details: z.array(
-    z.object({
-      reservationId: z.string(),
-      studentName: z.string(),
-      gtaName: z.string(),
-      previousStartUtc: z.string(),
-      repairedStartUtc: z.string(),
-      repairedStartEdt: z.string(),
-      status: z.enum(['repaired', 'already_correct', 'conflict', 'error']),
-      message: z.string().optional()
-    })
-  )
-})
-
-export type RepairGtaTimezonesResponse = z.infer<typeof repairGtaTimezonesResponseSchema>

@@ -404,7 +404,6 @@ const {
   syncAssignments,
   resyncAssignmentCbtfOverrides,
   repairAssignmentCbtfTimezones,
-  repairAssignmentGtaTimezones,
   resyncAssignmentPassPort
 } = useTeacherDashboard()
 
@@ -681,15 +680,6 @@ const assignmentColumns: any[] = [
       }
     }
 
-    if (row.original.hasInterviews) {
-      if (props.isAdmin) {
-        actions.push({
-          label: 'Repair GTA Interview Timezones (Admin)',
-          icon: 'i-lucide-wrench',
-          onSelect: () => repairAssignmentGtaTimezones(row.original)
-        })
-      }
-    }
 
     if (row.original.toolSupportsPassport) {
       actions.push({

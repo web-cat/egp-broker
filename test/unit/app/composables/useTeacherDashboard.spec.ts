@@ -255,34 +255,4 @@ describe('useTeacherDashboard', () => {
       })
     )
   })
-
-  it('handles repairAssignmentGtaTimezones success and shows toast with repaired count', async () => {
-    const dashboard = useTeacherDashboard()
-    const mockAssignment: any = { id: 'asg-gta', title: 'Project 1 Interview', hasInterviews: true }
-
-    mockFetch.mockResolvedValueOnce({
-      statusCode: 200,
-      data: {
-        totalChecked: 10,
-        totalRepaired: 8,
-        alreadyCorrect: 2,
-        conflicts: 0,
-        errors: 0,
-        details: []
-      }
-    })
-
-    await dashboard.repairAssignmentGtaTimezones(mockAssignment)
-
-    expect(mockFetch).toHaveBeenCalledWith('/api/me/assignments/asg-gta/gta-repair-timezone', {
-      method: 'POST'
-    })
-    expect(mockToast.add).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'GTA Timezones Repaired',
-        description: 'Checked 10 reservations; 8 repaired. (2 already correct)',
-        color: 'success'
-      })
-    )
-  })
 })
