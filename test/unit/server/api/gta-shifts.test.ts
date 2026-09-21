@@ -18,6 +18,10 @@ vi.mock('@@/server/utils/db', () => ({
       update: vi.fn(),
       delete: vi.fn()
     },
+    gtaInterviewReservation: {
+      findMany: vi.fn().mockResolvedValue([]),
+      update: vi.fn()
+    },
     $transaction: vi.fn((promises) => Promise.all(promises))
   }
 }))
@@ -290,7 +294,10 @@ describe('API: Course GTA Shifts Endpoints', () => {
       vi.mocked(prisma.gtaShift.findUnique).mockResolvedValue({
         id: 'shift-1',
         courseId: 'course-1',
-        userId: 'gta-1'
+        userId: 'gta-1',
+        date: new Date('2026-10-05T00:00:00.000Z'),
+        startTime: '10:00',
+        endTime: '12:00'
       } as any)
       vi.mocked(prisma.enrollment.findUnique)
         .mockResolvedValueOnce({
@@ -335,7 +342,10 @@ describe('API: Course GTA Shifts Endpoints', () => {
       vi.mocked(prisma.gtaShift.findUnique).mockResolvedValue({
         id: 'shift-1',
         courseId: 'course-1',
-        userId: 'gta-1'
+        userId: 'gta-1',
+        date: new Date('2026-10-05T00:00:00.000Z'),
+        startTime: '10:00',
+        endTime: '12:00'
       } as any)
       vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
         id: 'enr-ta',

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
+import { combineDateAndTime } from '../../../../shared/utils/timezone'
 import {
   calculateMaxArrivalsPerSlot,
-  combineDateAndTime,
   generateAvailableSlotsForDate,
   getOffsetSeatIndices,
   assignNextSeat,

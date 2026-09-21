@@ -182,3 +182,79 @@ export interface GtaInterviewReservationDto {
     email?: string | null
   } | null
 }
+
+export interface ImpactedReservation {
+  reservationId: string
+  studentId: string
+  studentName: string
+  studentEmail: string
+  assignmentId: string
+  assignmentTitle: string
+  startTime: string
+  endTime: string
+  previousGtaId: string
+  previousGtaName: string
+  newGtaId?: string
+  newGtaName?: string
+  reason?: string
+}
+
+export interface ShiftImpactSummary {
+  rescheduled: ImpactedReservation[]
+  cancelled: ImpactedReservation[]
+}
+
+export interface AvailableGtaDto {
+  id: string
+  name: string
+  email: string
+}
+
+export interface GtaShiftSlotDetail {
+  startTime: string
+  endTime: string
+  timeLabel: string
+  isReserved: boolean
+  reservation?: {
+    id: string
+    studentId: string
+    studentName: string
+    studentEmail: string
+    assignmentId: string
+    assignmentTitle: string
+    status: GtaInterviewStatusType
+    startTime: string
+    endTime: string
+  }
+  canReschedule: boolean
+  availableGtas: AvailableGtaDto[]
+}
+
+export interface GtaShiftDetailsDto {
+  shift: {
+    id: string
+    courseId: string
+    userId: string
+    date: string
+    startTime: string
+    endTime: string
+    gta: {
+      id: string
+      name: string
+      email: string
+      avatarUrl?: string | null
+    }
+  }
+  slots: GtaShiftSlotDetail[]
+  totalSlots: number
+  reservedCount: number
+  vacantCount: number
+}
+
+export const rescheduleInterviewReservationInputSchema = z.object({
+  targetGtaId: z.string().optional()
+})
+
+export type RescheduleInterviewReservationInput = z.infer<
+  typeof rescheduleInterviewReservationInputSchema
+>

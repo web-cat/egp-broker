@@ -414,6 +414,20 @@
         </div>
       </template>
     </UModal>
+    <!-- Modal: Shift Details -->
+    <GtaShiftDetailsModal
+      v-model:open="showDetailsModal"
+      :shift-id="selectedShiftId"
+      :course-id="courseId"
+      @changed="() => refreshShifts()"
+    />
+
+    <!-- Modal: Impact Summary -->
+    <GtaShiftImpactModal
+      v-model:open="showImpactModal"
+      :impact="impactSummary"
+      :action-type="impactActionType"
+    />
   </div>
 </template>
 
@@ -431,6 +445,9 @@ import {
   formatShiftDate,
   type ParsedShiftSlot
 } from '@@/shared/utils/proctor-schedule-parser'
+import GtaShiftDetailsModal from '~/components/features/teacher/GtaShiftDetailsModal.vue'
+import GtaShiftImpactModal from '~/components/features/teacher/GtaShiftImpactModal.vue'
+import type { ShiftImpactSummary } from '@@/shared/schemas/gta-interview.schema'
 
 const props = defineProps<{
   courseId: string
@@ -641,6 +658,19 @@ const editShiftForm = reactive({
   endTime: ''
 })
 
+// --- Details & Impact Modal State ---
+const showDetailsModal = ref(false)
+const selectedShiftId = ref<string | null>(null)
+
+const showImpactModal = ref(false)
+const impactSummary = ref<ShiftImpactSummary | null>(null)
+const impactActionType = ref<'edit' | 'delete'>('edit')
+
+const openDetailsModal = (shift: GtaShiftItem) => {
+  selectedShiftId.value = shift.id
+  showDetailsModal.value = true
+}
+
 const openEditShiftModal = (shift: GtaShiftItem) => {
   editingShiftId.value = shift.id
   editShiftForm.userId = shift.userId || shift.user?.id || ''
@@ -656,13 +686,18 @@ const handleUpdateShift = async () => {
     return
   isUpdatingShift.value = true
   try {
-    await updateShift(editingShiftId.value, {
+    const res = await updateShift(editingShiftId.value, {
       userId: editShiftForm.userId || undefined,
       date: editShiftForm.date,
       startTime: editShiftForm.startTime,
       endTime: editShiftForm.endTime
     })
     showEditShiftModal.value = false
+    if (res?.impact && (res.impact.rescheduled?.length > 0 || res.impact.cancelled?.length > 0)) {
+      impactSummary.value = res.impact
+      impactActionType.value = 'edit'
+      showImpactModal.value = true
+    }
   } finally {
     isUpdatingShift.value = false
   }
@@ -714,6 +749,14 @@ const shiftColumns = [
           color: 'neutral',
           variant: 'ghost',
           size: 'xs',
+          icon: 'i-lucide-info',
+          title: 'Shift Details & Slots',
+          onClick: () => openDetailsModal(row.original)
+        }),
+        h(resolveComponent('UButton'), {
+          color: 'neutral',
+          variant: 'ghost',
+          size: 'xs',
           icon: 'i-lucide-pencil',
           title: 'Edit Shift',
           onClick: () => openEditShiftModal(row.original)
@@ -724,9 +767,14 @@ const shiftColumns = [
           size: 'xs',
           icon: 'i-lucide-trash-2',
           title: 'Delete Shift',
-          onClick: () => {
+          onClick: async () => {
             if (confirm('Are you sure you want to delete this GTA shift?')) {
-              deleteShift(row.original.id)
+              const res = await deleteShift(row.original.id)
+              if (res?.impact && (res.impact.rescheduled?.length > 0 || res.impact.cancelled?.length > 0)) {
+                impactSummary.value = res.impact
+                impactActionType.value = 'delete'
+                showImpactModal.value = true
+              }
             }
           }
         })

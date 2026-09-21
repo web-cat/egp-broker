@@ -19,15 +19,13 @@ import type {
 } from '@@/shared/models/cbtf'
 
 import {
-  DEFAULT_TIMEZONE,
   DEFAULT_CBTF_TIMEZONE,
-  DEFAULT_GTA_TIMEZONE,
   getLocalDateString,
   extractCalendarDate,
   getLocalDayOfWeek,
   getLocalTimeParts,
   combineDateAndTime
-} from '@@/server/utils/timezone'
+} from '@@/shared/utils/timezone'
 
 export interface FacilityOperatingHoursResult {
   isOpen: boolean
@@ -92,17 +90,6 @@ export async function getPrimaryCbtfFacility(
   }
 
   return facility
-}
-
-export {
-  DEFAULT_TIMEZONE,
-  DEFAULT_CBTF_TIMEZONE,
-  DEFAULT_GTA_TIMEZONE,
-  getLocalDateString,
-  extractCalendarDate,
-  getLocalDayOfWeek,
-  getLocalTimeParts,
-  combineDateAndTime
 }
 
 export function getFacilityTimezone(facility?: { timezone?: string | null }): string {

@@ -50,7 +50,10 @@ vi.mock('~/composables/features/useTeacherGtaShifts', () => ({
     updateShift: mockUpdateShift,
     deleteShift: mockDeleteShift,
     batchGenerateShifts: mockBatchGenerateShifts,
-    updateInterviewLocation: mockUpdateInterviewLocation
+    updateInterviewLocation: mockUpdateInterviewLocation,
+    getShiftDetails: vi.fn(),
+    rescheduleInterview: vi.fn(),
+    cancelInterview: vi.fn()
   })
 }))
 
@@ -139,5 +142,92 @@ describe('TeacherGtaShiftsSection component', () => {
     expect(mockUpdateInterviewLocation).toHaveBeenCalledWith('Torgersen 2150')
     expect(wrapper.emitted('update:location')).toBeTruthy()
     expect(wrapper.emitted('update:location')![0]).toEqual(['Torgersen 2150'])
+  })
+
+  it('renders Shift Details & Slots action button and handles delete with impact summary', async () => {
+    mockDeleteShift.mockResolvedValue({
+      success: true,
+      impact: {
+        rescheduled: [
+          {
+            reservationId: 'res-1',
+            studentName: 'Bob Student',
+            studentEmail: 'bob@vt.edu',
+            assignmentTitle: 'Project 1',
+            startTime: '2026-10-05T14:00:00.000Z',
+            previousGtaName: 'Alice',
+            newGtaName: 'Charlie'
+          }
+        ],
+        cancelled: []
+      }
+    })
+
+    const wrapper = mount(TeacherGtaShiftsSection, {
+      props: {
+        courseId: 'course-1',
+        interviewLocation: 'McBryde 106'
+      },
+      global: {
+        stubs: {
+          BaseDataTable: {
+            props: ['data', 'columns'],
+            template: `
+              <div data-testid="table">
+                <div v-for="row in data" :key="row.id" class="row">
+                  <component :is="columns.find(c => c.id === 'actions')?.cell({ row: { original: row } })" />
+                </div>
+              </div>
+            `
+          },
+          UButton: {
+            props: ['title', 'icon'],
+            template:
+              '<button :title="title" :data-title="title" @click="$emit(\'click\')"><slot /></button>'
+          },
+          GtaShiftDetailsModal: {
+            props: ['open', 'shiftId'],
+            template:
+              '<div data-testid="details-modal" :data-open="open" :data-shift-id="shiftId" />'
+          },
+          GtaShiftImpactModal: {
+            props: ['open', 'impact'],
+            template: '<div data-testid="impact-modal" :data-open="open" />'
+          },
+          UBadge: true,
+          UIcon: true,
+          UInput: true,
+          USelect: true,
+          UModal: true,
+          UFormField: true,
+          BaseFormInput: true
+        }
+      }
+    })
+
+    // Verify Details button is rendered with title "Shift Details & Slots"
+    const detailsBtn = wrapper.find('[data-title="Shift Details & Slots"]')
+    expect(detailsBtn.exists()).toBe(true)
+
+    // Click Details button
+    await detailsBtn.trigger('click')
+    const detailsModal = wrapper.find('[data-testid="details-modal"]')
+    expect(detailsModal.attributes('data-open')).toBe('true')
+    expect(detailsModal.attributes('data-shift-id')).toBe('shift-1')
+
+    // Stub confirm to true
+    vi.stubGlobal('confirm', () => true)
+
+    // Click Delete button
+    const deleteBtn = wrapper.find('[data-title="Delete Shift"]')
+    expect(deleteBtn.exists()).toBe(true)
+    await deleteBtn.trigger('click')
+
+    expect(mockDeleteShift).toHaveBeenCalledWith('shift-1')
+    await wrapper.vm.$nextTick()
+
+    // Verify impact modal is opened
+    const impactModal = wrapper.find('[data-testid="impact-modal"]')
+    expect(impactModal.attributes('data-open')).toBe('true')
   })
 })

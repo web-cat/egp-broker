@@ -128,17 +128,89 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
   const deleteShift = async (id: string) => {
     if (!courseId.value) return
     try {
-      await $fetch(`/api/me/courses/${courseId.value}/gta-shifts/${id}`, {
-        method: 'DELETE'
-      })
+      const res = await $fetch<ApiResponse<{ success: boolean; impact: any }>>(
+        `/api/me/courses/${courseId.value}/gta-shifts/${id}`,
+        {
+          method: 'DELETE'
+        }
+      )
       toast.add({
         title: 'Shift Deleted',
         color: 'info'
       })
       await refreshShifts()
+      return res.data
     } catch (err: any) {
       toast.add({
         title: 'Failed to Delete Shift',
+        description: err.data?.statusMessage || err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
+  const getShiftDetails = async (id: string) => {
+    if (!courseId.value) return null
+    try {
+      const res = await $fetch<ApiResponse<any>>(
+        `/api/me/courses/${courseId.value}/gta-shifts/${id}/details`
+      )
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Load Shift Details',
+        description: err.data?.statusMessage || err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
+  const rescheduleInterview = async (interviewId: string, targetGtaId?: string) => {
+    if (!courseId.value) return null
+    try {
+      const res = await $fetch<ApiResponse<any>>(
+        `/api/me/courses/${courseId.value}/interviews/${interviewId}/reschedule`,
+        {
+          method: 'POST',
+          body: { targetGtaId }
+        }
+      )
+      toast.add({
+        title: 'Interview Rescheduled',
+        description: `Successfully reassigned to ${res.data?.newGta?.name || 'new GTA'}.`,
+        color: 'success'
+      })
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Reschedule Failed',
+        description: err.data?.statusMessage || err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
+  const cancelInterview = async (interviewId: string) => {
+    if (!courseId.value) return null
+    try {
+      const res = await $fetch<ApiResponse<any>>(
+        `/api/me/courses/${courseId.value}/interviews/${interviewId}/cancel`,
+        {
+          method: 'POST'
+        }
+      )
+      toast.add({
+        title: 'Interview Cancelled',
+        description: 'Successfully cancelled student appointment.',
+        color: 'info'
+      })
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Cancel Failed',
         description: err.data?.statusMessage || err.data?.message || err.message,
         color: 'error'
       })
@@ -218,6 +290,9 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
     updateShift,
     deleteShift,
     batchGenerateShifts,
-    updateInterviewLocation
+    updateInterviewLocation,
+    getShiftDetails,
+    rescheduleInterview,
+    cancelInterview
   }
 }

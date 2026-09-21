@@ -9,6 +9,38 @@
       class="mb-6"
     />
 
+    <!-- Email Diagnostics / Test Email Bar -->
+    <div
+      class="mb-6 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="p-2.5 rounded-lg bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 shrink-0"
+        >
+          <UIcon name="i-lucide-mail" class="w-5 h-5" />
+        </div>
+        <div>
+          <h4 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+            Email System Test
+          </h4>
+          <p class="text-xs text-neutral-500 dark:text-neutral-400">
+            Send a test email to your account ({{ userEmail || 'your email' }}) to verify SMTP
+            settings.
+          </p>
+        </div>
+      </div>
+      <UButton
+        data-testid="send-test-email-btn"
+        color="primary"
+        variant="subtle"
+        size="sm"
+        icon="i-lucide-send"
+        label="Send Test Email"
+        :loading="sendingTestEmail"
+        @click="handleSendTestEmail"
+      />
+    </div>
+
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <!-- Platforms Card -->
       <BaseCard class="text-center">
@@ -78,7 +110,36 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useAdminStats } from '~/composables/features/useAdminStats'
 
 const { error, status, stats, simpleCards } = useAdminStats()
+const { user } = useUserSession()
+const toast = useToast()
+
+const userEmail = computed(() => user.value?.email)
+const sendingTestEmail = ref(false)
+
+const handleSendTestEmail = async () => {
+  sendingTestEmail.value = true
+  try {
+    const res = await $fetch<{ statusCode: number; data: { success: boolean; email: string } }>(
+      '/api/admin/test-email',
+      { method: 'POST' }
+    )
+    toast.add({
+      title: 'Test Email Sent',
+      description: `A test email has been dispatched to ${res?.data?.email || userEmail.value || 'your email'}.`,
+      color: 'success'
+    })
+  } catch (err: any) {
+    toast.add({
+      title: 'Email Test Failed',
+      description: err?.data?.statusMessage || err?.message || 'Failed to dispatch test email.',
+      color: 'error'
+    })
+  } finally {
+    sendingTestEmail.value = false
+  }
+}
 </script>

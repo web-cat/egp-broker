@@ -4,12 +4,12 @@ import { createReservationInputSchema } from '@@/shared/schemas/cbtf.schema'
 import {
   getPrimaryCbtfFacility,
   getFacilityOperatingHoursForDate,
-  combineDateAndTime,
   calculateMaxArrivalsPerSlot,
   assignNextSeat,
   getStudentSchedulingWindow,
   toCbtfReservationDto
 } from '@@/server/utils/cbtf'
+import { combineDateAndTime } from '@@/shared/utils/timezone'
 import { syncCbtfReservationCanvasOverride } from '@@/server/utils/cbtf-canvas'
 import { notifyCbtfScheduleFailure } from '@@/server/services/alert.service'
 import type { ApiResponse } from '@@/shared/types/api'

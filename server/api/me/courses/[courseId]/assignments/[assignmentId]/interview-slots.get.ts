@@ -1,12 +1,8 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseMember } from '@@/server/utils/gta-interview'
-import {
-  calculateGtaSlotsForShifts,
-  DEFAULT_GTA_TIMEZONE,
-  GTA_INTERVIEW_MIN_LEAD_HOURS
-} from '@@/server/utils/gta-slots'
-import { getLocalDateString } from '@@/server/utils/timezone'
+import { calculateGtaSlotsForShifts, GTA_INTERVIEW_MIN_LEAD_HOURS } from '@@/server/utils/gta-slots'
+import { DEFAULT_GTA_TIMEZONE, getLocalDateString } from '@@/shared/utils/timezone'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {

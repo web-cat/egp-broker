@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   calculateGtaSlotsForShifts,
-  GTA_INTERVIEW_MIN_LEAD_HOURS,
-  DEFAULT_GTA_TIMEZONE
+  GTA_INTERVIEW_MIN_LEAD_HOURS
 } from '../../../../server/utils/gta-slots'
-import { combineDateAndTime } from '../../../../server/utils/cbtf'
+import { combineDateAndTime, DEFAULT_GTA_TIMEZONE } from '../../../../shared/utils/timezone'
 
 describe('Server Utility: calculateGtaSlotsForShifts', () => {
   // Monday 8:00 AM EDT (UTC-4) = 12:00 PM UTC

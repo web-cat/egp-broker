@@ -5,10 +5,13 @@ import { createGtaInterviewReservationInputSchema } from '@@/shared/schemas/gta-
 import {
   INTERVIEW_DURATION_MINUTES,
   GTA_INTERVIEW_MIN_LEAD_HOURS,
-  GTA_INTERVIEW_MIN_LEAD_MS,
-  DEFAULT_GTA_TIMEZONE
+  GTA_INTERVIEW_MIN_LEAD_MS
 } from '@@/server/utils/gta-slots'
-import { getLocalDateString, getLocalTimeParts } from '@@/server/utils/timezone'
+import {
+  DEFAULT_GTA_TIMEZONE,
+  getLocalDateString,
+  getLocalTimeParts
+} from '@@/shared/utils/timezone'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {

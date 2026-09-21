@@ -4,6 +4,7 @@ import {
   assertCourseInstructorOrSelfGta,
   assertUserIsCourseGta
 } from '@@/server/utils/gta-interview'
+import { reconcileShiftReservations } from '@@/server/utils/gta-shift-rescheduling'
 import { updateGtaShiftInputSchema } from '@@/shared/schemas/gta-interview.schema'
 import type { ApiResponse } from '@@/shared/types/api'
 
@@ -42,6 +43,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     await assertUserIsCourseGta(courseId, userId)
   }
 
+  // Automatically reschedule or cancel reservations that no longer fit
+  const impact = await reconcileShiftReservations(courseId, id, {
+    userId,
+    date,
+    startTime,
+    endTime
+  })
+
   const updateData: any = {}
   if (userId) updateData.userId = userId
   if (date) updateData.date = new Date(`${date}T00:00:00.000Z`)
@@ -66,6 +75,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   return {
     statusCode: 200,
-    data: updated
+    data: {
+      ...updated,
+      impact
+    }
   }
 })

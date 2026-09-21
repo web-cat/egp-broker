@@ -3,9 +3,7 @@ import {
   combineDateAndTime,
   getLocalDayOfWeek,
   DEFAULT_GTA_TIMEZONE
-} from '@@/server/utils/timezone'
-
-export { DEFAULT_GTA_TIMEZONE }
+} from '@@/shared/utils/timezone'
 export const INTERVIEW_SLOT_INTERVAL_MINUTES = 10
 export const INTERVIEW_DURATION_MINUTES = 5
 export const GTA_AFTERNOON_DIVIDING_TIME = '12:30'
