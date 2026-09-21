@@ -192,4 +192,39 @@ describe('Server Utility: reconcileShiftReservations', () => {
       data: { gtaId: 'gta-2' }
     })
   })
+
+  it('performs dry-run calculation without executing database updates when dryRun is true', async () => {
+    const reservationCutOff = {
+      id: 'res-cutoff',
+      gtaId: 'gta-1',
+      startTime: new Date('2026-10-05T15:30:00.000Z'),
+      endTime: new Date('2026-10-05T15:40:00.000Z'),
+      status: 'SCHEDULED',
+      student: { id: 'student-2', firstName: 'Mark', lastName: 'Lee', email: 'mlee@vt.edu' },
+      assignment: { id: 'asg-1', title: 'Project 1' },
+      gta: { id: 'gta-1', firstName: 'Alice', lastName: 'Smith', email: 'asmith@vt.edu' }
+    }
+
+    vi.mocked(prisma.gtaInterviewReservation.findMany)
+      .mockResolvedValueOnce([reservationCutOff] as any)
+      .mockResolvedValueOnce([] as any)
+
+    vi.mocked(prisma.gtaShift.findMany).mockResolvedValueOnce([mockConcurrentShift] as any)
+
+    const impact = await reconcileShiftReservations(
+      'course-1',
+      'shift-1',
+      {
+        startTime: '10:00',
+        endTime: '11:00'
+      },
+      undefined,
+      true // dryRun: true
+    )
+
+    expect(impact.rescheduled).toHaveLength(1)
+    expect(impact.rescheduled[0].studentName).toBe('Mark Lee')
+    expect(impact.rescheduled[0].newGtaName).toBe('Bob Jones')
+    expect(prisma.gtaInterviewReservation.update).not.toHaveBeenCalled()
+  })
 })

@@ -26,7 +26,8 @@ export async function reconcileShiftReservations(
   courseId: string,
   shiftId: string,
   updatedShiftParams?: ShiftUpdateParams | null,
-  timeZone: string = DEFAULT_GTA_TIMEZONE
+  timeZone: string = DEFAULT_GTA_TIMEZONE,
+  dryRun: boolean = false
 ): Promise<ShiftImpactSummary> {
   const existingShift = await prisma.gtaShift.findUnique({
     where: { id: shiftId },
@@ -209,10 +210,12 @@ export async function reconcileShiftReservations(
         candidateUser.email
 
       // Reassign to candidate GTA
-      await prisma.gtaInterviewReservation.update({
-        where: { id: res.id },
-        data: { gtaId: candidateUser.id }
-      })
+      if (!dryRun) {
+        await prisma.gtaInterviewReservation.update({
+          where: { id: res.id },
+          data: { gtaId: candidateUser.id }
+        })
+      }
 
       // Mark this GTA as now booked for this timeslot
       if (!bookedGtaBySlot.has(slotStartIso)) {
@@ -236,10 +239,12 @@ export async function reconcileShiftReservations(
       })
     } else {
       // No concurrent GTA available at this exact timeslot -> Cancel appointment
-      await prisma.gtaInterviewReservation.update({
-        where: { id: res.id },
-        data: { status: 'CANCELLED' }
-      })
+      if (!dryRun) {
+        await prisma.gtaInterviewReservation.update({
+          where: { id: res.id },
+          data: { status: 'CANCELLED' }
+        })
+      }
 
       cancelled.push({
         reservationId: res.id,
@@ -258,4 +263,13 @@ export async function reconcileShiftReservations(
   }
 
   return { rescheduled, cancelled }
+}
+
+export async function previewShiftImpact(
+  courseId: string,
+  shiftId: string,
+  updatedShiftParams?: ShiftUpdateParams | null,
+  timeZone: string = DEFAULT_GTA_TIMEZONE
+): Promise<ShiftImpactSummary> {
+  return reconcileShiftReservations(courseId, shiftId, updatedShiftParams, timeZone, true)
 }

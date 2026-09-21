@@ -1,5 +1,6 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
 import type { ApiResponse } from '@@/shared/types/api'
+import type { ShiftImpactSummary } from '@@/shared/schemas/gta-interview.schema'
 
 export interface GtaShiftUser {
   id: string
@@ -150,6 +151,36 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
     }
   }
 
+  const previewShiftImpact = async (
+    id: string,
+    payload?: {
+      userId?: string
+      date?: string
+      startTime?: string
+      endTime?: string
+      isDelete?: boolean
+    }
+  ): Promise<ShiftImpactSummary> => {
+    if (!courseId.value) return { rescheduled: [], cancelled: [] }
+    try {
+      const res = await $fetch<ShiftImpactSummary>(
+        `/api/me/courses/${courseId.value}/gta-shifts/${id}/preview`,
+        {
+          method: 'POST',
+          body: payload || {}
+        }
+      )
+      return res
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Check Shift Impact',
+        description: err.data?.statusMessage || err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
   const getShiftDetails = async (id: string) => {
     if (!courseId.value) return null
     try {
@@ -289,6 +320,7 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
     createShift,
     updateShift,
     deleteShift,
+    previewShiftImpact,
     batchGenerateShifts,
     updateInterviewLocation,
     getShiftDetails,

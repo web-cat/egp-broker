@@ -6,6 +6,7 @@ import TeacherGtaShiftsSection from '~/components/features/teacher/TeacherGtaShi
 const mockCreateShift = vi.fn()
 const mockUpdateShift = vi.fn()
 const mockDeleteShift = vi.fn()
+const mockPreviewShiftImpact = vi.fn()
 const mockBatchGenerateShifts = vi.fn()
 const mockUpdateInterviewLocation = vi.fn()
 const mockRefreshShifts = vi.fn()
@@ -49,6 +50,7 @@ vi.mock('~/composables/features/useTeacherGtaShifts', () => ({
     createShift: mockCreateShift,
     updateShift: mockUpdateShift,
     deleteShift: mockDeleteShift,
+    previewShiftImpact: mockPreviewShiftImpact,
     batchGenerateShifts: mockBatchGenerateShifts,
     updateInterviewLocation: mockUpdateInterviewLocation,
     getShiftDetails: vi.fn(),
@@ -191,8 +193,10 @@ describe('TeacherGtaShiftsSection component', () => {
               '<div data-testid="details-modal" :data-open="open" :data-shift-id="shiftId" />'
           },
           GtaShiftImpactModal: {
-            props: ['open', 'impact'],
-            template: '<div data-testid="impact-modal" :data-open="open" />'
+            props: ['open', 'impact', 'actionType', 'loading'],
+            emits: ['confirm', 'update:open'],
+            template:
+              '<div data-testid="impact-modal" :data-open="open" :data-action-type="actionType"><button data-testid="modal-confirm-btn" @click="$emit(\'confirm\')">Confirm</button></div>'
           },
           UBadge: true,
           UIcon: true,
@@ -215,19 +219,44 @@ describe('TeacherGtaShiftsSection component', () => {
     expect(detailsModal.attributes('data-open')).toBe('true')
     expect(detailsModal.attributes('data-shift-id')).toBe('shift-1')
 
-    // Stub confirm to true
-    vi.stubGlobal('confirm', () => true)
+    mockPreviewShiftImpact.mockResolvedValue({
+      rescheduled: [],
+      cancelled: [
+        {
+          reservationId: 'res-1',
+          studentId: 's-1',
+          studentName: 'Jane Student',
+          studentEmail: 'jane@vt.edu',
+          assignmentId: 'a-1',
+          assignmentTitle: 'Project 1',
+          startTime: '2026-09-18T14:00:00.000Z',
+          endTime: '2026-09-18T14:10:00.000Z',
+          previousGtaId: 'ta-1',
+          previousGtaName: 'Alice Smith'
+        }
+      ]
+    })
 
     // Click Delete button
     const deleteBtn = wrapper.find('[data-title="Delete Shift"]')
     expect(deleteBtn.exists()).toBe(true)
     await deleteBtn.trigger('click')
 
-    expect(mockDeleteShift).toHaveBeenCalledWith('shift-1')
+    // Preview should be called first, NOT delete
+    expect(mockPreviewShiftImpact).toHaveBeenCalledWith('shift-1', { isDelete: true })
+    expect(mockDeleteShift).not.toHaveBeenCalled()
     await wrapper.vm.$nextTick()
 
-    // Verify impact modal is opened
+    // Verify pre-confirmation impact modal is opened
     const impactModal = wrapper.find('[data-testid="impact-modal"]')
     expect(impactModal.attributes('data-open')).toBe('true')
+    expect(impactModal.attributes('data-action-type')).toBe('delete')
+
+    // Now click confirm in the modal
+    const confirmBtn = wrapper.find('[data-testid="modal-confirm-btn"]')
+    await confirmBtn.trigger('click')
+
+    // Now deleteShift is called
+    expect(mockDeleteShift).toHaveBeenCalledWith('shift-1')
   })
 })

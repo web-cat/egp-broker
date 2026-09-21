@@ -422,14 +422,17 @@
       @changed="() => refreshShifts()"
     />
 
-    <!-- Modal: Impact Summary -->
+    <!-- Modal: Impact Summary / Pre-Confirmation -->
     <GtaShiftImpactModal
       v-model:open="showImpactModal"
       :impact="impactSummary"
       :action-type="impactActionType"
+      :loading="isExecutingConfirmedAction"
+      @confirm="handleExecuteConfirmedAction"
     />
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, h, resolveComponent } from 'vue'
@@ -466,9 +469,11 @@ const {
   createShift,
   updateShift,
   deleteShift,
+  previewShiftImpact,
   batchGenerateShifts,
   updateInterviewLocation
 } = useTeacherGtaShifts(computed(() => props.courseId))
+
 
 // --- Location Management ---
 const localLocation = ref(props.interviewLocation ?? '')
@@ -665,6 +670,8 @@ const selectedShiftId = ref<string | null>(null)
 const showImpactModal = ref(false)
 const impactSummary = ref<ShiftImpactSummary | null>(null)
 const impactActionType = ref<'edit' | 'delete'>('edit')
+const isExecutingConfirmedAction = ref(false)
+const pendingDeleteShiftId = ref('')
 
 const openDetailsModal = (shift: GtaShiftItem) => {
   selectedShiftId.value = shift.id
@@ -686,22 +693,70 @@ const handleUpdateShift = async () => {
     return
   isUpdatingShift.value = true
   try {
-    const res = await updateShift(editingShiftId.value, {
+    const preview = await previewShiftImpact(editingShiftId.value, {
       userId: editShiftForm.userId || undefined,
       date: editShiftForm.date,
       startTime: editShiftForm.startTime,
       endTime: editShiftForm.endTime
     })
-    showEditShiftModal.value = false
-    if (res?.impact && (res.impact.rescheduled?.length > 0 || res.impact.cancelled?.length > 0)) {
-      impactSummary.value = res.impact
+
+    if (preview && (preview.rescheduled?.length > 0 || preview.cancelled?.length > 0)) {
+      impactSummary.value = preview
       impactActionType.value = 'edit'
+      showEditShiftModal.value = false
       showImpactModal.value = true
+    } else {
+      await updateShift(editingShiftId.value, {
+        userId: editShiftForm.userId || undefined,
+        date: editShiftForm.date,
+        startTime: editShiftForm.startTime,
+        endTime: editShiftForm.endTime
+      })
+      showEditShiftModal.value = false
+      editingShiftId.value = ''
     }
   } finally {
     isUpdatingShift.value = false
   }
 }
+
+const startDeleteShift = async (shiftId: string) => {
+  pendingDeleteShiftId.value = shiftId
+  try {
+    const preview = await previewShiftImpact(shiftId, { isDelete: true })
+    impactSummary.value = preview
+  } catch {
+    impactSummary.value = { rescheduled: [], cancelled: [] }
+  }
+  impactActionType.value = 'delete'
+  showImpactModal.value = true
+}
+
+const handleExecuteConfirmedAction = async () => {
+  isExecutingConfirmedAction.value = true
+  try {
+    if (impactActionType.value === 'edit') {
+      if (editingShiftId.value) {
+        await updateShift(editingShiftId.value, {
+          userId: editShiftForm.userId || undefined,
+          date: editShiftForm.date,
+          startTime: editShiftForm.startTime,
+          endTime: editShiftForm.endTime
+        })
+        editingShiftId.value = ''
+      }
+    } else if (impactActionType.value === 'delete') {
+      if (pendingDeleteShiftId.value) {
+        await deleteShift(pendingDeleteShiftId.value)
+        pendingDeleteShiftId.value = ''
+      }
+    }
+    showImpactModal.value = false
+  } finally {
+    isExecutingConfirmedAction.value = false
+  }
+}
+
 
 // --- Shift Columns ---
 const shiftColumns = [
@@ -767,18 +822,10 @@ const shiftColumns = [
           size: 'xs',
           icon: 'i-lucide-trash-2',
           title: 'Delete Shift',
-          onClick: async () => {
-            if (confirm('Are you sure you want to delete this GTA shift?')) {
-              const res = await deleteShift(row.original.id)
-              if (res?.impact && (res.impact.rescheduled?.length > 0 || res.impact.cancelled?.length > 0)) {
-                impactSummary.value = res.impact
-                impactActionType.value = 'delete'
-                showImpactModal.value = true
-              }
-            }
-          }
+          onClick: () => startDeleteShift(row.original.id)
         })
       ])
   }
 ]
+
 </script>

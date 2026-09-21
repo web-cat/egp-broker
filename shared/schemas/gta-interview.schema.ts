@@ -258,3 +258,16 @@ export const rescheduleInterviewReservationInputSchema = z.object({
 export type RescheduleInterviewReservationInput = z.infer<
   typeof rescheduleInterviewReservationInputSchema
 >
+
+export const previewShiftImpactInputSchema = z.object({
+  userId: z.string().optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
+    .optional(),
+  startTime: z.string().regex(gtaTimeRegex, 'Invalid startTime format (HH:mm)').optional(),
+  endTime: z.string().regex(gtaTimeRegex, 'Invalid endTime format (HH:mm)').optional(),
+  isDelete: z.boolean().optional()
+})
+
+export type PreviewShiftImpactInput = z.infer<typeof previewShiftImpactInputSchema>
