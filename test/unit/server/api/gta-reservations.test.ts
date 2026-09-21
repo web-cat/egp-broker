@@ -72,7 +72,7 @@ describe('API: Student GTA Interview Reservations', () => {
   })
 
   describe('POST /api/me/courses/:courseId/assignments/:assignmentId/interview-reservations', () => {
-    const futureSlot = '2099-10-05T10:10:00.000Z'
+    const futureSlot = '2099-10-05T14:10:00.000Z'
 
     it('successfully books slot and assigns an available GTA', async () => {
       const event = mockEvent({ id: 'student-1', globalRole: 'USER' }, { startTime: futureSlot })
@@ -107,7 +107,7 @@ describe('API: Student GTA Interview Reservations', () => {
         studentId: 'student-1',
         gtaId: 'gta-1',
         startTime: new Date(futureSlot),
-        endTime: new Date('2099-10-05T10:15:00.000Z'),
+        endTime: new Date('2099-10-05T14:15:00.000Z'),
         status: 'SCHEDULED',
         gta: { id: 'gta-1', firstName: 'Alice', lastName: 'GTA' },
         assignment: { title: 'Project 1', course: { interviewLocation: 'McBryde 106' } }
@@ -124,7 +124,7 @@ describe('API: Student GTA Interview Reservations', () => {
             studentId: 'student-1',
             gtaId: 'gta-1',
             startTime: new Date(futureSlot),
-            endTime: new Date('2099-10-05T10:15:00.000Z'),
+            endTime: new Date('2099-10-05T14:15:00.000Z'),
             status: 'SCHEDULED'
           })
         })
@@ -218,7 +218,7 @@ describe('API: Student GTA Interview Reservations', () => {
         studentId: 'student-1',
         gtaId: 'gta-1',
         startTime: new Date(futureSlot),
-        endTime: new Date('2099-10-05T10:15:00.000Z'),
+        endTime: new Date('2099-10-05T14:15:00.000Z'),
         status: 'SCHEDULED',
         gta: { id: 'gta-1', firstName: 'Alice', lastName: 'GTA' },
         assignment: { title: 'Project 1', course: { interviewLocation: 'McBryde 106' } }
@@ -268,7 +268,7 @@ describe('API: Student GTA Interview Reservations', () => {
         studentId: 'student-1',
         gtaId: 'gta-1',
         startTime: new Date(futureSlot),
-        endTime: new Date('2099-10-05T10:15:00.000Z'),
+        endTime: new Date('2099-10-05T14:15:00.000Z'),
         status: 'SCHEDULED',
         gta: { id: 'gta-1', firstName: 'Alice', lastName: 'GTA' },
         assignment: { title: 'Project 1', course: { interviewLocation: 'McBryde 106' } }

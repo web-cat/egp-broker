@@ -1,5 +1,7 @@
 import { formatTimeStr12h } from '@@/shared/utils/proctor-schedule-parser'
+import { combineDateAndTime, getLocalDayOfWeek, DEFAULT_CBTF_TIMEZONE } from '@@/server/utils/cbtf'
 
+export const DEFAULT_GTA_TIMEZONE = DEFAULT_CBTF_TIMEZONE
 export const INTERVIEW_SLOT_INTERVAL_MINUTES = 10
 export const INTERVIEW_DURATION_MINUTES = 5
 export const GTA_AFTERNOON_DIVIDING_TIME = '12:30'
@@ -55,6 +57,7 @@ export interface ReservationInput {
  * Breaks GTA shifts into 10-minute interview intervals (5-minute interview + 5-minute buffer),
  * calculates overlapping GTA capacity, subtracts active reservations, filters by
  * assignment window and current time, and groups available slots into half-day blocks.
+ * Shift times are interpreted in the specified timezone (default America/New_York).
  */
 export function calculateGtaSlotsForShifts(
   shifts: ShiftInput[],
@@ -62,7 +65,8 @@ export function calculateGtaSlotsForShifts(
   windowStart?: Date | string | null,
   windowEnd?: Date | string | null,
   now: Date = new Date(),
-  minLeadHours: number = GTA_INTERVIEW_MIN_LEAD_HOURS
+  minLeadHours: number = GTA_INTERVIEW_MIN_LEAD_HOURS,
+  timeZone: string = DEFAULT_GTA_TIMEZONE
 ): GtaHalfDayBlock[] {
   // Map of slotStartIso -> Set of GTA userIds on duty
   const slotGtasMap = new Map<string, Set<string>>()
@@ -93,13 +97,15 @@ export function calculateGtaSlotsForShifts(
       const slotH = Math.floor(m / 60)
       const slotM = m % 60
       const time24 = `${String(slotH).padStart(2, '0')}:${String(slotM).padStart(2, '0')}`
-      const slotStartIso = `${dStr}T${time24}:00.000Z`
+      const slotStartDate = combineDateAndTime(dStr, time24, timeZone)
+      const slotStartIso = slotStartDate.toISOString()
 
       const endM = m + INTERVIEW_DURATION_MINUTES
       const endH = Math.floor(endM / 60)
       const endMin = endM % 60
       const endTime24 = `${String(endH).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`
-      const endSlotIso = `${dStr}T${endTime24}:00.000Z`
+      const endSlotDate = combineDateAndTime(dStr, endTime24, timeZone)
+      const endSlotIso = endSlotDate.toISOString()
 
       if (!slotGtasMap.has(slotStartIso)) {
         slotGtasMap.set(slotStartIso, new Set())
@@ -180,8 +186,7 @@ export function calculateGtaSlotsForShifts(
     if (slots.length === 0) continue
 
     const [dateStr, blockType] = blockKey.split('_') as [string, 'MORNING' | 'AFTERNOON']
-    const dateObj = new Date(`${dateStr}T00:00:00.000Z`)
-    const dayOfWeek = dateObj.getUTCDay()
+    const dayOfWeek = getLocalDayOfWeek(combineDateAndTime(dateStr, '12:00', timeZone), timeZone)
     const dayName = DAY_NAMES[dayOfWeek]
 
     // Sort slots chronologically
@@ -201,21 +206,21 @@ export function calculateGtaSlotsForShifts(
       })
       .sort((a, b) => a.time24.localeCompare(b.time24))
 
-    const earliestStartIso =
-      blockTheoreticalMeta.length > 0
-        ? `${dateStr}T${blockTheoreticalMeta[0].time24}:00.000Z`
-        : `${dateStr}T00:00:00.000Z`
-    const latestEndIso =
-      blockTheoreticalMeta.length > 0
-        ? `${dateStr}T${blockTheoreticalMeta[blockTheoreticalMeta.length - 1].endTime24}:00.000Z`
-        : `${dateStr}T23:59:59.999Z`
-
     const blockStart = isMorning
-      ? new Date(earliestStartIso)
-      : new Date(`${dateStr}T${GTA_AFTERNOON_DIVIDING_TIME}:00.000Z`)
+      ? blockTheoreticalMeta.length > 0
+        ? combineDateAndTime(dateStr, blockTheoreticalMeta[0].time24, timeZone)
+        : combineDateAndTime(dateStr, '00:00', timeZone)
+      : combineDateAndTime(dateStr, GTA_AFTERNOON_DIVIDING_TIME, timeZone)
+
     const blockEnd = isMorning
-      ? new Date(`${dateStr}T${GTA_AFTERNOON_DIVIDING_TIME}:00.000Z`)
-      : new Date(latestEndIso)
+      ? combineDateAndTime(dateStr, GTA_AFTERNOON_DIVIDING_TIME, timeZone)
+      : blockTheoreticalMeta.length > 0
+        ? combineDateAndTime(
+            dateStr,
+            blockTheoreticalMeta[blockTheoreticalMeta.length - 1].endTime24,
+            timeZone
+          )
+        : combineDateAndTime(dateStr, '23:59', timeZone)
 
     const isCurrentBlock = now >= blockStart && now < blockEnd
 

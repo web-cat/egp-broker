@@ -1,13 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import {
   calculateGtaSlotsForShifts,
-  GTA_INTERVIEW_MIN_LEAD_HOURS
+  GTA_INTERVIEW_MIN_LEAD_HOURS,
+  DEFAULT_GTA_TIMEZONE
 } from '../../../../server/utils/gta-slots'
+import { combineDateAndTime } from '../../../../server/utils/cbtf'
 
 describe('Server Utility: calculateGtaSlotsForShifts', () => {
-  const referenceNow = new Date('2026-10-05T08:00:00.000Z') // Monday 8:00 AM UTC
+  // Monday 8:00 AM EDT (UTC-4) = 12:00 PM UTC
+  const referenceNow = new Date('2026-10-05T12:00:00.000Z')
 
-  it('generates 10-minute slots with 5-minute interview duration for a 1-hour shift', () => {
+  it('generates 10-minute slots with 5-minute interview duration for a 1-hour shift in EDT', () => {
     const shifts = [
       {
         userId: 'gta-1',
@@ -28,9 +31,10 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
     // 10:00, 10:10, 10:20, 10:30, 10:40, 10:50 (6 slots)
     expect(morningBlock.slots).toHaveLength(6)
 
+    // In America/New_York (EDT = UTC-4), 10:00 AM EDT is 14:00:00.000Z in UTC
     expect(morningBlock.slots[0]).toEqual({
-      startTime: '2026-10-05T10:00:00.000Z',
-      endTime: '2026-10-05T10:05:00.000Z',
+      startTime: '2026-10-05T14:00:00.000Z',
+      endTime: '2026-10-05T14:05:00.000Z',
       time24: '10:00',
       label: '10:00 AM – 10:05 AM',
       availableGtaCount: 1,
@@ -38,13 +42,39 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
     })
 
     expect(morningBlock.slots[5]).toEqual({
-      startTime: '2026-10-05T10:50:00.000Z',
-      endTime: '2026-10-05T10:55:00.000Z',
+      startTime: '2026-10-05T14:50:00.000Z',
+      endTime: '2026-10-05T14:55:00.000Z',
       time24: '10:50',
       label: '10:50 AM – 10:55 AM',
       availableGtaCount: 1,
       totalGtaCount: 1
     })
+  })
+
+  it('interprets 12:00 PM shift in EDT as 16:00 UTC (not naive 12:00 UTC)', () => {
+    const shifts = [
+      {
+        userId: 'gta-1',
+        date: '2026-09-21',
+        startTime: '12:00',
+        endTime: '14:00'
+      }
+    ]
+
+    // 9:00 AM EDT = 13:00 UTC
+    const morningNow = new Date('2026-09-21T13:00:00.000Z')
+    const blocks = calculateGtaSlotsForShifts(shifts, [], null, null, morningNow)
+
+    // Shift spans across 12:30 dividing time, so it creates Morning and Afternoon blocks
+    expect(blocks).toHaveLength(2)
+    const morning = blocks.find((b) => b.blockType === 'MORNING')
+    expect(morning).toBeDefined()
+    const slot1200 = morning!.slots[0]
+    expect(slot1200.time24).toBe('12:00')
+    expect(slot1200.label).toBe('12:00 PM – 12:05 PM')
+    // Crucial check: 12:00 PM EDT must be 16:00:00.000Z (true UTC), NOT 12:00:00.000Z
+    expect(slot1200.startTime).toBe('2026-09-21T16:00:00.000Z')
+    expect(slot1200.endTime).toBe('2026-09-21T16:05:00.000Z')
   })
 
   it('calculates aggregated capacity for overlapping GTA shifts', () => {
@@ -96,27 +126,27 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
     ]
 
     const existingReservations = [
-      // 1 reservation at 10:10 with GTA 1
+      // 1 reservation at 10:10 EDT (14:10 UTC) with GTA 1
       {
         gtaId: 'gta-1',
-        startTime: '2026-10-05T10:10:00.000Z',
+        startTime: '2026-10-05T14:10:00.000Z',
         status: 'SCHEDULED'
       },
-      // 2 reservations at 10:20 (both GTAs booked)
+      // 2 reservations at 10:20 EDT (14:20 UTC) (both GTAs booked)
       {
         gtaId: 'gta-1',
-        startTime: '2026-10-05T10:20:00.000Z',
+        startTime: '2026-10-05T14:20:00.000Z',
         status: 'SCHEDULED'
       },
       {
         gtaId: 'gta-2',
-        startTime: '2026-10-05T10:20:00.000Z',
+        startTime: '2026-10-05T14:20:00.000Z',
         status: 'SCHEDULED'
       },
-      // 1 cancelled reservation at 10:30 (should NOT occupy capacity)
+      // 1 cancelled reservation at 10:30 EDT (should NOT occupy capacity)
       {
         gtaId: 'gta-1',
-        startTime: '2026-10-05T10:30:00.000Z',
+        startTime: '2026-10-05T14:30:00.000Z',
         status: 'CANCELLED'
       }
     ]
@@ -180,8 +210,9 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
       }
     ]
 
-    const windowStart = new Date('2026-10-05T10:30:00.000Z')
-    const windowEnd = new Date('2026-10-05T11:15:00.000Z')
+    // In EDT (UTC-4), 10:30 EDT is 14:30 UTC and 11:15 EDT is 15:15 UTC
+    const windowStart = new Date('2026-10-05T14:30:00.000Z')
+    const windowEnd = new Date('2026-10-05T15:15:00.000Z')
 
     const blocks = calculateGtaSlotsForShifts(shifts, [], windowStart, windowEnd, referenceNow)
 
@@ -203,10 +234,10 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
       }
     ]
 
-    // At 8:25 AM, 2 hours in the future is 10:25 AM
-    // Slots at 10:00, 10:10, 10:20 are within 2 hours and must be excluded; 10:30 is the first available slot
-    const referenceNow = new Date('2026-10-05T08:25:00.000Z')
-    const blocks = calculateGtaSlotsForShifts(shifts, [], null, null, referenceNow)
+    // At 8:25 AM EDT (12:25 UTC), 2 hours in the future is 10:25 AM EDT (14:25 UTC)
+    // Slots at 10:00, 10:10, 10:20 (14:00, 14:10, 14:20 UTC) are within 2 hours and must be excluded; 10:30 is the first available slot
+    const leadNow = new Date('2026-10-05T12:25:00.000Z')
+    const blocks = calculateGtaSlotsForShifts(shifts, [], null, null, leadNow)
 
     expect(blocks).toHaveLength(1)
     const slots = blocks[0].slots
@@ -225,15 +256,19 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
       }
     ]
 
-    // At 9:45 AM, 10:00 AM slot is 15 minutes away - it should be excluded because min lead is 2 hours
-    const referenceNow = new Date('2026-10-05T09:45:00.000Z')
-    const blocks = calculateGtaSlotsForShifts(shifts, [], null, null, referenceNow)
+    // At 9:45 AM EDT (13:45 UTC), 10:00 AM EDT slot is 15 minutes away - it should be excluded because min lead is 2 hours
+    const leadNow = new Date('2026-10-05T13:45:00.000Z')
+    const blocks = calculateGtaSlotsForShifts(shifts, [], null, null, leadNow)
 
     expect(blocks).toHaveLength(0)
   })
 
   it('exports GTA_INTERVIEW_MIN_LEAD_HOURS set to 2', () => {
     expect(GTA_INTERVIEW_MIN_LEAD_HOURS).toBe(2)
+  })
+
+  it('exports DEFAULT_GTA_TIMEZONE as America/New_York', () => {
+    expect(DEFAULT_GTA_TIMEZONE).toBe('America/New_York')
   })
 
   it('caps lookahead to the next 4 available half-day blocks when utilization is <= 75%', () => {
@@ -275,7 +310,7 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
       for (const t of times) {
         reservations.push({
           gtaId: 'gta-1',
-          startTime: `${d}T${t}:00.000Z`,
+          startTime: combineDateAndTime(d, t, 'America/New_York').toISOString(),
           status: 'SCHEDULED'
         })
       }
@@ -294,11 +329,11 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
   })
 
   it('includes current in-progress block in addition to future lookahead blocks', () => {
-    // Current time is Monday 10:00 AM.
-    // Shift is 10:00 - 12:30 (slots from 10:00 to 12:20).
+    // Current time is Monday 10:00 AM EDT (14:00 UTC).
+    // Shift is 10:00 - 12:30 (slots from 10:00 to 12:20 EDT).
     // Min lead time is 2 hours, so slots at 12:00, 12:10, 12:20 are open.
     // Monday morning is currently in-progress (10:00 <= 10:00 < 12:30).
-    const midMorningNow = new Date('2026-10-05T10:00:00.000Z')
+    const midMorningNow = new Date('2026-10-05T14:00:00.000Z')
     const shifts = [
       { userId: 'gta-1', date: '2026-10-05', startTime: '10:00', endTime: '12:30' },
       { userId: 'gta-1', date: '2026-10-06', startTime: '10:00', endTime: '11:00' },

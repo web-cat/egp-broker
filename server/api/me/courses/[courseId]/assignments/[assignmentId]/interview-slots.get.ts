@@ -1,7 +1,12 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseMember } from '@@/server/utils/gta-interview'
-import { calculateGtaSlotsForShifts } from '@@/server/utils/gta-slots'
+import {
+  calculateGtaSlotsForShifts,
+  DEFAULT_GTA_TIMEZONE,
+  GTA_INTERVIEW_MIN_LEAD_HOURS
+} from '@@/server/utils/gta-slots'
+import { getLocalDateString } from '@@/server/utils/cbtf'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
@@ -41,14 +46,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   }
 
   const now = new Date()
-  const todayUtcStr = now.toISOString().split('T')[0]
-  const todayUtc = new Date(`${todayUtcStr}T00:00:00.000Z`)
+  const todayLocalStr = getLocalDateString(now, DEFAULT_GTA_TIMEZONE)
+  const todayMidnightUtc = new Date(`${todayLocalStr}T00:00:00.000Z`)
 
   // Fetch upcoming GTA shifts for this course
   const shifts = await prisma.gtaShift.findMany({
     where: {
       courseId,
-      date: { gte: todayUtc }
+      date: { gte: todayMidnightUtc }
     }
   })
 
@@ -72,7 +77,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     activeReservations,
     assignment.interviewWindowStart,
     assignment.interviewWindowEnd,
-    now
+    now,
+    GTA_INTERVIEW_MIN_LEAD_HOURS,
+    DEFAULT_GTA_TIMEZONE
   )
 
   return {

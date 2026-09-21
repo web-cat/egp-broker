@@ -9,6 +9,7 @@ import type {
   ResyncCbtfOverridesResponse,
   RepairCbtfTimezonesResponse
 } from '@@/shared/schemas/cbtf.schema'
+import type { RepairGtaTimezonesResponse } from '@@/shared/schemas/gta-interview.schema'
 import { useAdminCrud } from '~/composables/features/admin/useAdminCrud'
 
 export const useTeacherDashboard = () => {
@@ -347,6 +348,62 @@ export const useTeacherDashboard = () => {
     }
   }
 
+  // --- GTA Interview Timezone Repair ---
+  const repairAssignmentGtaTimezones = async (assignment: AssignmentRow) => {
+    try {
+      toast.add({
+        title: 'Repairing GTA Interview Timezones',
+        description: `Analyzing and repairing pre-fix interview reservations for "${assignment.title || 'Assignment'}"...`,
+        color: 'neutral'
+      })
+
+      const res = await $fetch<ApiResponse<RepairGtaTimezonesResponse>>(
+        `/api/me/assignments/${assignment.id}/gta-repair-timezone`,
+        { method: 'POST' }
+      )
+
+      const data = res.data
+      const totalChecked = data?.totalChecked ?? 0
+      const totalRepaired = data?.totalRepaired ?? 0
+      const resWord = totalChecked === 1 ? 'reservation' : 'reservations'
+
+      let description = `Checked ${totalChecked} ${resWord}; ${totalRepaired} repaired.`
+      const notes: string[] = []
+      if (data?.alreadyCorrect && data.alreadyCorrect > 0) {
+        notes.push(`${data.alreadyCorrect} already correct`)
+      }
+      if (data?.conflicts && data.conflicts > 0) {
+        notes.push(`${data.conflicts} ${data.conflicts === 1 ? 'conflict' : 'conflicts'}`)
+      }
+      if (data?.errors && data.errors > 0) {
+        notes.push(`${data.errors} failed`)
+      }
+      if (notes.length > 0) {
+        description += ` (${notes.join(', ')})`
+      }
+
+      const hasWarning =
+        (data?.errors && data.errors > 0) || (data?.conflicts && data.conflicts > 0)
+
+      toast.add({
+        title: 'GTA Timezones Repaired',
+        description,
+        color: hasWarning ? 'warning' : 'success'
+      })
+    } catch (err: any) {
+      console.error(err)
+      toast.add({
+        title: 'Failed to Repair GTA Timezones',
+        description:
+          err.data?.statusMessage ||
+          err.data?.message ||
+          err.message ||
+          'An unexpected error occurred while repairing timezones.',
+        color: 'error'
+      })
+    }
+  }
+
   // --- PassPort Sync ---
   const resyncAssignmentPassPort = async (assignment: AssignmentRow) => {
     try {
@@ -454,9 +511,10 @@ export const useTeacherDashboard = () => {
     saveApiKey,
     syncAssignments,
 
-    // CBTF & PassPort Actions
+    // CBTF, GTA & PassPort Actions
     resyncAssignmentCbtfOverrides,
     repairAssignmentCbtfTimezones,
+    repairAssignmentGtaTimezones,
     resyncAssignmentPassPort
   }
 }

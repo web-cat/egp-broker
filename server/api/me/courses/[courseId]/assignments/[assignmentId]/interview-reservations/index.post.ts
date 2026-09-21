@@ -5,8 +5,10 @@ import { createGtaInterviewReservationInputSchema } from '@@/shared/schemas/gta-
 import {
   INTERVIEW_DURATION_MINUTES,
   GTA_INTERVIEW_MIN_LEAD_HOURS,
-  GTA_INTERVIEW_MIN_LEAD_MS
+  GTA_INTERVIEW_MIN_LEAD_MS,
+  DEFAULT_GTA_TIMEZONE
 } from '@@/server/utils/gta-slots'
+import { getLocalDateString, getLocalTimeParts } from '@@/server/utils/cbtf'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
@@ -36,25 +38,21 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
-  const { startTime: requestedStartTimeStr, rescheduleReservationId } = validation.data
-  const requestedStartTime = new Date(requestedStartTimeStr)
+  const { startTime, rescheduleReservationId } = validation.data
+  const requestedStartTime = new Date(startTime)
+
+  // Enforce minimum lead time (2 hours in advance of now)
   const now = new Date()
+  const earliestAllowedBookingTime = new Date(now.getTime() + GTA_INTERVIEW_MIN_LEAD_MS)
 
-  if (requestedStartTime <= now) {
+  if (requestedStartTime < earliestAllowedBookingTime) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Cannot schedule an interview appointment in the past'
+      statusMessage: `Interview reservations must be booked at least ${GTA_INTERVIEW_MIN_LEAD_HOURS} hours in advance.`
     })
   }
 
-  const minAllowedStartTime = new Date(now.getTime() + GTA_INTERVIEW_MIN_LEAD_MS)
-  if (requestedStartTime < minAllowedStartTime) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: `Interview appointments must be scheduled at least ${GTA_INTERVIEW_MIN_LEAD_HOURS} hours in advance`
-    })
-  }
-
+  // Fetch assignment & verify configuration
   const assignment = await prisma.assignment.findUnique({
     where: { id: assignmentId },
     include: {
@@ -74,7 +72,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   if (!assignment.hasInterviews) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'This assignment does not incorporate grading interviews'
+      statusMessage: 'This assignment does not require grading interviews'
     })
   }
 
@@ -82,18 +80,18 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   if (assignment.interviewWindowStart && requestedStartTime < assignment.interviewWindowStart) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Requested appointment is before the assignment interview window opens'
+      statusMessage: 'Requested time is before the assignment interview window opens'
     })
   }
-
   if (assignment.interviewWindowEnd && requestedStartTime > assignment.interviewWindowEnd) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Requested appointment is after the assignment interview window closes'
+      statusMessage: 'Requested time is after the assignment interview window closes'
     })
   }
 
-  let reservationToReschedule: { id: string; status: string } | null = null
+  // Reschedule validation if provided
+  let reservationToReschedule: any = null
   if (rescheduleReservationId) {
     const existing = await prisma.gtaInterviewReservation.findUnique({
       where: { id: rescheduleReservationId }
@@ -135,12 +133,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
-  // Determine on-duty GTAs for this slot
-  const dateStr = requestedStartTime.toISOString().split('T')[0]
+  // Determine on-duty GTAs for this slot in course local timezone
+  const dateStr = getLocalDateString(requestedStartTime, DEFAULT_GTA_TIMEZONE)
   const dateMidnightUtc = new Date(`${dateStr}T00:00:00.000Z`)
-  const slotTime24 = requestedStartTime.toISOString().substring(11, 16)
-  const [slotH, slotM] = slotTime24.split(':').map(Number)
-  const slotMinuteOfDay = slotH * 60 + slotM
+  const { hour24, minute } = getLocalTimeParts(requestedStartTime, DEFAULT_GTA_TIMEZONE)
+  const slotMinuteOfDay = hour24 * 60 + minute
 
   const shiftsOnDate = await prisma.gtaShift.findMany({
     where: {
