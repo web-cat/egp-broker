@@ -297,4 +297,87 @@ describe('GtaInterviewScheduleModal', () => {
     expect(mockCancelReservation).toHaveBeenCalledWith('res-gta-1')
     expect(wrapper.emitted('cancelled')).toBeTruthy()
   })
+
+  it('renders Step 1 half-day blocks with CBTF-style scheduling information', async () => {
+    mockSlotsData.value = {
+      blocks: [
+        {
+          id: '2026-10-05-morning',
+          date: '2026-10-05',
+          dayOfWeek: 1,
+          dayName: 'Monday',
+          blockType: 'MORNING',
+          label: 'Monday Morning',
+          dateLabel: 'Oct 5',
+          timeRangeLabel: 'Morning (Before 12:30 PM)',
+          isCurrentBlock: true,
+          openSlotsCount: 2,
+          totalSlotsCount: 6,
+          utilizationPercentage: 67,
+          isHighDemand: true,
+          slots: [
+            {
+              startTime: '2026-10-05T09:00:00.000Z',
+              endTime: '2026-10-05T09:10:00.000Z',
+              time24: '09:00',
+              label: '9:00 AM – 9:05 AM',
+              availableGtaCount: 1,
+              totalGtaCount: 1
+            }
+          ]
+        },
+        {
+          id: '2026-10-05-afternoon',
+          date: '2026-10-05',
+          dayOfWeek: 1,
+          dayName: 'Monday',
+          blockType: 'AFTERNOON',
+          label: 'Monday Afternoon',
+          dateLabel: 'Oct 5',
+          timeRangeLabel: 'Afternoon (12:30 PM & Later)',
+          isCurrentBlock: false,
+          openSlotsCount: 5,
+          totalSlotsCount: 6,
+          utilizationPercentage: 17,
+          isHighDemand: false,
+          slots: [
+            {
+              startTime: '2026-10-05T13:00:00.000Z',
+              endTime: '2026-10-05T13:10:00.000Z',
+              time24: '13:00',
+              label: '1:00 PM – 1:05 PM',
+              availableGtaCount: 2,
+              totalGtaCount: 2
+            }
+          ]
+        }
+      ]
+    }
+
+    const wrapper = mount(GtaInterviewScheduleModal, {
+      props: {
+        open: true,
+        courseId: 'course-1',
+        assignment: mockAssignment,
+        existingReservation: null
+      },
+      global: { stubs }
+    })
+
+    const text = wrapper.text()
+    // Labels and subheaders
+    expect(text).toContain('Monday Morning')
+    expect(text).toContain('Oct 5 • Morning (Before 12:30 PM)')
+    expect(text).toContain('Monday Afternoon')
+    expect(text).toContain('Oct 5 • Afternoon (12:30 PM & Later)')
+
+    // Badges & Metrics
+    expect(text).toContain('In Progress')
+    expect(text).toContain('High Demand')
+    expect(text).toContain('5 slots open')
+    expect(text).toContain('67% full')
+    expect(text).toContain('4 / 6 booked')
+    expect(text).toContain('17% full')
+    expect(text).toContain('1 / 6 booked')
+  })
 })

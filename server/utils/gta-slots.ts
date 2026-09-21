@@ -17,6 +17,20 @@ export const GTA_LOOKAHEAD_BLOCKS_HIGH_DEMAND = 5
 export const GTA_HIGH_DEMAND_UTILIZATION_THRESHOLD = 75
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const MONTH_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec'
+]
 
 export interface GtaSlot {
   startTime: string // ISO string
@@ -28,11 +42,14 @@ export interface GtaSlot {
 }
 
 export interface GtaHalfDayBlock {
+  id: string // e.g. "2026-10-05-morning"
   date: string // "YYYY-MM-DD"
   dayOfWeek: number
   dayName: string
   blockType: 'MORNING' | 'AFTERNOON'
+  label: string
   blockLabel: string
+  dateLabel: string
   timeRangeLabel: string
   slots: GtaSlot[]
   isCurrentBlock?: boolean
@@ -238,13 +255,21 @@ export function calculateGtaSlotsForShifts(
           )
         : 100
     const isHighDemand = utilizationPercentage > 60
+    const [, monthStr, dayStr] = dateStr.split('-')
+    const monthIndex = parseInt(monthStr, 10) - 1
+    const dayNum = parseInt(dayStr, 10)
+    const dateLabel = `${MONTH_NAMES[monthIndex]} ${dayNum}`
+    const id = `${dateStr}-${blockType.toLowerCase()}`
 
     candidateBlocks.push({
+      id,
       date: dateStr,
       dayOfWeek,
       dayName,
       blockType,
+      label: blockLabel,
       blockLabel,
+      dateLabel,
       timeRangeLabel,
       slots,
       isCurrentBlock,

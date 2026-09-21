@@ -112,3 +112,73 @@ export const updateCourseInterviewLocationInputSchema = z.object({
 export type UpdateCourseInterviewLocationInput = z.infer<
   typeof updateCourseInterviewLocationInputSchema
 >
+
+export interface GtaInterviewSlotDto {
+  startTime: string
+  endTime: string
+  time24?: string
+  label?: string
+  timeLabel?: string
+  availableGtaCount?: number
+  totalGtaCount?: number
+  capacity?: number
+  availableCapacity?: number
+  totalGtasOnDuty?: number
+}
+
+export interface GtaInterviewHalfDayBlockDto {
+  id: string
+  date: string
+  dayOfWeek?: number
+  dayName?: string
+  blockType?: 'MORNING' | 'AFTERNOON'
+  halfDay?: 'MORNING' | 'AFTERNOON'
+  period?: string
+  label: string
+  blockLabel?: string
+  dateLabel?: string
+  timeRangeLabel?: string
+  isCurrentBlock?: boolean
+  openSlotsCount?: number
+  availableSlotsCount?: number
+  totalSlotsCount?: number
+  totalCapacity?: number
+  utilizationPercentage?: number
+  isHighDemand?: boolean
+  slots: GtaInterviewSlotDto[]
+}
+
+export interface GtaInterviewSlotsResponse {
+  assignmentId: string
+  assignmentTitle: string
+  interviewLocation?: string | null
+  interviewWindowStart?: string | Date | null
+  interviewWindowEnd?: string | Date | null
+  blocks: GtaInterviewHalfDayBlockDto[]
+}
+
+export interface GtaInterviewReservationDto {
+  id: string
+  assignmentId: string
+  assignmentTitle?: string
+  studentId: string
+  gtaId: string
+  startTime: string
+  endTime: string
+  status: GtaInterviewStatusType
+  interviewLocation?: string | null
+  notes?: string | null
+  createdAt?: string
+  updatedAt?: string
+  gta?: {
+    id: string
+    firstName: string | null
+    lastName: string | null
+    email: string
+  } | null
+  student?: {
+    id: string
+    name?: string | null
+    email?: string | null
+  } | null
+}

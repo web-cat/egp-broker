@@ -24,15 +24,27 @@
               {{ assignment?.title || 'Grading Interview' }}
             </p>
             <p class="text-sm font-medium text-neutral-600 dark:text-neutral-300">
-              {{ formatReservationTime(activeOrLatestReservation.startTime, activeOrLatestReservation.endTime) }}
+              {{
+                formatReservationTime(
+                  activeOrLatestReservation.startTime,
+                  activeOrLatestReservation.endTime
+                )
+              }}
             </p>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-neutral-200 dark:border-neutral-800"
+          >
             <!-- Assigned GTA -->
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-950 flex items-center justify-center shrink-0">
-                <UIcon name="i-lucide-user" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
+              <div
+                class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-950 flex items-center justify-center shrink-0"
+              >
+                <UIcon
+                  name="i-lucide-user"
+                  class="w-4 h-4 text-primary-600 dark:text-primary-400"
+                />
               </div>
               <div class="min-w-0">
                 <p class="text-xs text-neutral-500 font-medium">Assigned Graduate TA</p>
@@ -44,8 +56,13 @@
 
             <!-- Meeting Location -->
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center shrink-0">
-                <UIcon name="i-lucide-map-pin" class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <div
+                class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center shrink-0"
+              >
+                <UIcon
+                  name="i-lucide-map-pin"
+                  class="w-4 h-4 text-indigo-600 dark:text-indigo-400"
+                />
               </div>
               <div class="min-w-0">
                 <p class="text-xs text-neutral-500 font-medium">Meeting Location</p>
@@ -64,18 +81,23 @@
         >
           <UIcon name="i-lucide-alert-circle" class="w-4 h-4 shrink-0 mt-0.5" />
           <span>
-            You missed your scheduled interview time. You may reschedule for any available open slot within the interview window.
+            You missed your scheduled interview time. You may reschedule for any available open slot
+            within the interview window.
           </span>
         </div>
 
         <!-- Completed Alert -->
         <div
-          v-if="activeOrLatestReservation.status === 'COMPLETED' || activeOrLatestReservation.status === 'CHECKED_OUT'"
+          v-if="
+            activeOrLatestReservation.status === 'COMPLETED' ||
+            activeOrLatestReservation.status === 'CHECKED_OUT'
+          "
           class="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs flex items-start gap-2.5"
         >
           <UIcon name="i-lucide-check-circle-2" class="w-4 h-4 shrink-0 mt-0.5" />
           <span>
-            Your grading interview is complete. You are now eligible to redeem resubmission passes for this assignment.
+            Your grading interview is complete. You are now eligible to redeem resubmission passes
+            for this assignment.
           </span>
         </div>
 
@@ -86,7 +108,8 @@
         >
           <UIcon name="i-lucide-calendar-x" class="w-4 h-4 shrink-0 mt-0.5" />
           <span>
-            This interview reservation was cancelled. You may reschedule for any available open slot within the interview window.
+            This interview reservation was cancelled. You may reschedule for any available open slot
+            within the interview window.
           </span>
         </div>
 
@@ -110,7 +133,10 @@
             @click="handleCancel"
           />
           <UButton
-            v-if="activeOrLatestReservation.status === 'MISSED' || activeOrLatestReservation.status === 'CANCELLED'"
+            v-if="
+              activeOrLatestReservation.status === 'MISSED' ||
+              activeOrLatestReservation.status === 'CANCELLED'
+            "
             color="primary"
             variant="solid"
             label="Reschedule Appointment"
@@ -123,7 +149,9 @@
       <!-- Mode B: Progressive Narrowing Stepper -->
       <div v-else class="space-y-6">
         <!-- Stepper Indicator -->
-        <div class="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
+        <div
+          class="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800"
+        >
           <div class="flex items-center gap-2">
             <div v-for="s in [1, 2, 3]" :key="s" class="flex items-center gap-2">
               <div
@@ -148,48 +176,149 @@
         </div>
 
         <!-- Step 1: Half-Day Block Selection -->
-        <div v-if="currentStep === 1" class="space-y-3">
-          <p class="text-xs text-neutral-500 mb-2">
-            Select an available morning or afternoon period with open Graduate TA slots.
+        <div v-if="currentStep === 1" class="space-y-4">
+          <p class="text-sm text-neutral-600 dark:text-neutral-400">
+            Select an available morning or afternoon period with open Graduate TA slots:
           </p>
 
           <div v-if="slotsStatus === 'pending'" class="py-12 flex justify-center">
             <UIcon name="i-lucide-loader-2" class="w-8 h-8 animate-spin text-primary-500" />
           </div>
 
-          <div v-else-if="!availableBlocks.length" class="text-center py-10 text-neutral-500 text-sm space-y-2">
-            <UIcon name="i-lucide-calendar-off" class="w-10 h-10 mx-auto text-neutral-400 opacity-60" />
-            <p class="font-medium">No Open Interview Slots</p>
-            <p class="text-xs text-neutral-400 max-w-sm mx-auto">
-              There are currently no open Graduate TA slots within the assignment's interview window. Please check back soon as GTAs post shifts.
-            </p>
+          <div v-else-if="!availableBlocks.length" class="p-6 text-center space-y-3">
+            <div
+              v-if="isRescheduling && activeOrLatestReservation"
+              class="p-4 rounded-xl border border-primary-500/30 bg-primary-50/50 dark:bg-primary-950/30 text-left space-y-2"
+            >
+              <div
+                class="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold text-sm"
+              >
+                <UIcon name="i-lucide-shield-check" class="w-5 h-5 text-primary-500 shrink-0" />
+                <span>Current Reservation Protected</span>
+              </div>
+              <p class="text-xs text-neutral-600 dark:text-neutral-400">
+                No alternative open slots were found within the assignment window. Your existing
+                reservation for
+                <strong class="text-neutral-800 dark:text-neutral-200">
+                  {{
+                    formatReservationTime(
+                      activeOrLatestReservation.startTime,
+                      activeOrLatestReservation.endTime
+                    )
+                  }}
+                </strong>
+                with
+                <strong class="text-neutral-800 dark:text-neutral-200">
+                  {{ formatGtaName(activeOrLatestReservation.gta) }}
+                </strong>
+                remains active.
+              </p>
+            </div>
+            <div v-else class="space-y-2 py-4">
+              <UIcon
+                name="i-lucide-calendar-off"
+                class="w-10 h-10 mx-auto text-neutral-400 opacity-60"
+              />
+              <p class="font-medium text-sm text-neutral-700 dark:text-neutral-300">
+                No Open Interview Slots
+              </p>
+              <p class="text-xs text-neutral-400 max-w-sm mx-auto">
+                There are currently no open Graduate TA slots within the assignment's interview
+                window. Please check back soon as GTAs post shifts.
+              </p>
+            </div>
           </div>
 
-          <div v-else class="grid grid-cols-1 gap-2.5 max-h-[360px] overflow-y-auto pr-1">
+          <div
+            v-else
+            class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[360px] overflow-y-auto pr-1"
+          >
             <button
               v-for="block in availableBlocks"
               :key="blockKey(block)"
               type="button"
-              class="w-full text-left p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:border-primary-500/60 hover:bg-primary-50/20 dark:hover:bg-primary-950/20 transition-all flex items-center justify-between group cursor-pointer"
+              class="p-4 rounded-xl border text-left transition-all cursor-pointer space-y-3 relative overflow-hidden"
+              :class="[
+                selectedBlock && blockKey(selectedBlock) === blockKey(block)
+                  ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-950/30 ring-2 ring-primary-500'
+                  : isBlockHighDemand(block)
+                    ? 'border-amber-300 dark:border-amber-800/80 bg-amber-50/20 dark:bg-amber-950/10 hover:border-amber-400 dark:hover:border-amber-700'
+                    : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+              ]"
               @click="selectBlock(block)"
             >
-              <div class="space-y-1">
-                <p class="text-sm font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
-                  {{ block.label }}
-                </p>
-                <p class="text-xs text-neutral-500">
-                  {{ block.halfDay === 'MORNING' ? 'Morning (Before 12:30 PM)' : 'Afternoon (12:30 PM and later)' }}
-                </p>
+              <!-- Top Row: Block Title & Date -->
+              <div class="flex items-start justify-between gap-2">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <p class="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+                      {{ getBlockLabel(block) }}
+                    </p>
+                    <UBadge
+                      v-if="block.isCurrentBlock"
+                      color="success"
+                      variant="subtle"
+                      size="xs"
+                      class="animate-pulse"
+                    >
+                      In Progress
+                    </UBadge>
+                  </div>
+                  <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                    {{ getBlockDateLabel(block) }} • {{ getBlockTimeRangeLabel(block) }}
+                  </p>
+                </div>
+
+                <!-- High Demand / Capacity Badge -->
+                <UBadge
+                  v-if="isBlockHighDemand(block)"
+                  color="warning"
+                  variant="subtle"
+                  size="xs"
+                  class="shrink-0 flex items-center gap-1 font-semibold"
+                >
+                  <UIcon name="i-lucide-flame" class="w-3.5 h-3.5 text-amber-500" />
+                  <span>High Demand</span>
+                </UBadge>
+                <UBadge v-else color="neutral" variant="subtle" size="xs" class="shrink-0">
+                  {{ getOpenSlotsCount(block) }} slot{{ getOpenSlotsCount(block) === 1 ? '' : 's' }}
+                  open
+                </UBadge>
               </div>
 
-              <div class="flex items-center gap-2">
-                <UBadge color="primary" variant="subtle" size="sm">
-                  {{ block.availableSlotsCount }} slot{{ block.availableSlotsCount === 1 ? '' : 's' }}
-                </UBadge>
-                <UIcon
-                  name="i-lucide-chevron-right"
-                  class="w-4 h-4 text-neutral-400 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all"
-                />
+              <!-- Utilization Progress & Metric -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs">
+                  <span
+                    :class="[
+                      isBlockHighDemand(block)
+                        ? 'font-semibold text-amber-600 dark:text-amber-400'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    ]"
+                  >
+                    {{ getUtilizationPercentage(block) }}% full
+                  </span>
+                  <span class="text-neutral-400 text-[11px]">
+                    {{ getBookedSlotsCount(block) }} / {{ getTotalSlotsCount(block) }} booked
+                  </span>
+                </div>
+                <div
+                  class="w-full h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden"
+                >
+                  <div
+                    class="h-full rounded-full transition-all"
+                    :class="[
+                      getUtilizationPercentage(block) < 50
+                        ? 'bg-green-500'
+                        : getUtilizationPercentage(block) <= 60
+                          ? 'bg-emerald-500'
+                          : getUtilizationPercentage(block) <= 75
+                            ? 'bg-amber-500'
+                            : 'bg-red-500'
+                    ]"
+                    :style="{ width: `${getUtilizationPercentage(block)}%` }"
+                  />
+                </div>
               </div>
             </button>
           </div>
@@ -201,7 +330,7 @@
             <div>
               <p class="text-xs font-semibold text-neutral-500">Selected Period</p>
               <p class="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-                {{ selectedBlock.label }}
+                {{ getBlockLabel(selectedBlock) }}
               </p>
             </div>
             <UButton
@@ -235,7 +364,10 @@
                 {{ formatSlotTime(slot.startTime) }}
               </span>
               <span class="text-[10px] text-neutral-500 font-medium">
-                {{ slot.capacity }} TA{{ slot.capacity === 1 ? '' : 's' }} open
+                {{ slot.capacity ?? slot.availableGtaCount }} TA{{
+                  (slot.capacity ?? slot.availableGtaCount) === 1 ? '' : 's'
+                }}
+                open
               </span>
             </button>
           </div>
@@ -265,9 +397,7 @@
 
               <div>
                 <p class="text-neutral-500 font-medium">Duration</p>
-                <p class="font-semibold text-neutral-800 dark:text-neutral-200">
-                  5 minutes
-                </p>
+                <p class="font-semibold text-neutral-800 dark:text-neutral-200">5 minutes</p>
               </div>
 
               <div class="sm:col-span-2">
@@ -284,7 +414,8 @@
           >
             <UIcon name="i-lucide-sparkles" class="w-4 h-4 text-primary-500 shrink-0 mt-0.5" />
             <span>
-              An on-duty Graduate TA will be automatically assigned to your appointment upon confirmation.
+              An on-duty Graduate TA will be automatically assigned to your appointment upon
+              confirmation.
             </span>
           </div>
 
@@ -306,7 +437,10 @@
           </div>
         </div>
 
-        <div v-if="isRescheduling && activeOrLatestReservation" class="pt-2 border-t border-neutral-200 dark:border-neutral-800">
+        <div
+          v-if="isRescheduling && activeOrLatestReservation"
+          class="pt-2 border-t border-neutral-200 dark:border-neutral-800"
+        >
           <UButton
             variant="ghost"
             color="neutral"
@@ -355,7 +489,10 @@ const {
   isCancelling,
   bookSlot,
   cancelReservation
-} = useGtaInterviewStudent(computed(() => props.courseId), assignmentId)
+} = useGtaInterviewStudent(
+  computed(() => props.courseId),
+  assignmentId
+)
 
 const activeOrLatestReservation = computed(() => {
   return myReservation.value || props.existingReservation || null
@@ -417,7 +554,78 @@ const stepTitle = computed(() => {
   }
 })
 
-const blockKey = (b: GtaInterviewHalfDayBlockDto) => `${b.date}-${b.halfDay}`
+const blockKey = (b: GtaInterviewHalfDayBlockDto) =>
+  b.id || `${b.date}-${b.blockType || b.halfDay || 'period'}`
+
+const getBlockLabel = (block: GtaInterviewHalfDayBlockDto) => {
+  return block.label || block.blockLabel || 'Interview Period'
+}
+
+const getBlockDateLabel = (block: GtaInterviewHalfDayBlockDto) => {
+  if (block.dateLabel) return block.dateLabel
+  if (!block.date) return ''
+  const parts = block.date.split('-')
+  if (parts.length === 3) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ]
+    const m = parseInt(parts[1], 10) - 1
+    const d = parseInt(parts[2], 10)
+    if (m >= 0 && m < 12) {
+      return `${months[m]} ${d}`
+    }
+  }
+  return block.date
+}
+
+const getBlockTimeRangeLabel = (block: GtaInterviewHalfDayBlockDto) => {
+  if (block.timeRangeLabel) return block.timeRangeLabel
+  const isMorning =
+    block.blockType === 'MORNING' || block.halfDay === 'MORNING' || block.period === 'morning'
+  return isMorning ? 'Morning (Before 12:30 PM)' : 'Afternoon (12:30 PM & Later)'
+}
+
+const getOpenSlotsCount = (block: GtaInterviewHalfDayBlockDto): number => {
+  if (typeof block.openSlotsCount === 'number') return block.openSlotsCount
+  if (typeof block.availableSlotsCount === 'number') return block.availableSlotsCount
+  return block.slots?.length || 0
+}
+
+const getTotalSlotsCount = (block: GtaInterviewHalfDayBlockDto): number => {
+  if (typeof block.totalSlotsCount === 'number') return block.totalSlotsCount
+  if (typeof block.totalCapacity === 'number') return block.totalCapacity
+  return getOpenSlotsCount(block)
+}
+
+const getBookedSlotsCount = (block: GtaInterviewHalfDayBlockDto): number => {
+  const total = getTotalSlotsCount(block)
+  const open = getOpenSlotsCount(block)
+  return Math.max(0, total - open)
+}
+
+const getUtilizationPercentage = (block: GtaInterviewHalfDayBlockDto): number => {
+  if (typeof block.utilizationPercentage === 'number') return block.utilizationPercentage
+  const total = getTotalSlotsCount(block)
+  const open = getOpenSlotsCount(block)
+  if (total <= 0) return 0
+  return Math.max(0, Math.min(100, Math.round(((total - open) / total) * 100)))
+}
+
+const isBlockHighDemand = (block: GtaInterviewHalfDayBlockDto): boolean => {
+  if (typeof block.isHighDemand === 'boolean') return block.isHighDemand
+  return getUtilizationPercentage(block) > 60
+}
 
 const selectBlock = (block: GtaInterviewHalfDayBlockDto) => {
   selectedBlock.value = block
@@ -474,7 +682,11 @@ const statusBadgeColor = (status: string) => {
   }
 }
 
-const formatGtaName = (gta?: { firstName: string | null; lastName: string | null; email: string }) => {
+const formatGtaName = (gta?: {
+  firstName: string | null
+  lastName: string | null
+  email: string
+}) => {
   if (!gta) return 'Graduate TA'
   const full = `${gta.firstName || ''} ${gta.lastName || ''}`.trim()
   return full || gta.email

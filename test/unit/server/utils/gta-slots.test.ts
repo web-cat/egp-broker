@@ -24,9 +24,18 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
 
     expect(blocks).toHaveLength(1)
     const morningBlock = blocks[0]
+    expect(morningBlock.id).toBe('2026-10-05-morning')
     expect(morningBlock.blockType).toBe('MORNING')
     expect(morningBlock.date).toBe('2026-10-05')
     expect(morningBlock.dayName).toBe('Monday')
+    expect(morningBlock.label).toBe('Monday Morning')
+    expect(morningBlock.blockLabel).toBe('Monday Morning')
+    expect(morningBlock.dateLabel).toBe('Oct 5')
+    expect(morningBlock.timeRangeLabel).toBe('Morning (Before 12:30 PM)')
+    expect(morningBlock.openSlotsCount).toBe(6)
+    expect(morningBlock.totalSlotsCount).toBe(6)
+    expect(morningBlock.utilizationPercentage).toBe(0)
+    expect(morningBlock.isHighDemand).toBe(false)
 
     // 10:00, 10:10, 10:20, 10:30, 10:40, 10:50 (6 slots)
     expect(morningBlock.slots).toHaveLength(6)
