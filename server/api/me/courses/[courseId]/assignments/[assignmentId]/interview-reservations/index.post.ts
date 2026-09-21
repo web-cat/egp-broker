@@ -2,7 +2,11 @@ import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseMember } from '@@/server/utils/gta-interview'
 import { createGtaInterviewReservationInputSchema } from '@@/shared/schemas/gta-interview.schema'
-import { INTERVIEW_DURATION_MINUTES } from '@@/server/utils/gta-slots'
+import {
+  INTERVIEW_DURATION_MINUTES,
+  GTA_INTERVIEW_MIN_LEAD_HOURS,
+  GTA_INTERVIEW_MIN_LEAD_MS
+} from '@@/server/utils/gta-slots'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
@@ -40,6 +44,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({
       statusCode: 400,
       statusMessage: 'Cannot schedule an interview appointment in the past'
+    })
+  }
+
+  const minAllowedStartTime = new Date(now.getTime() + GTA_INTERVIEW_MIN_LEAD_MS)
+  if (requestedStartTime < minAllowedStartTime) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Interview appointments must be scheduled at least ${GTA_INTERVIEW_MIN_LEAD_HOURS} hours in advance`
     })
   }
 

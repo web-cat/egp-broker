@@ -154,6 +154,20 @@ describe('API: Student GTA Interview Reservations', () => {
       )
     })
 
+    it('rejects booking if requested timeslot is less than 2 hours in the future', async () => {
+      const nearSlot = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+      const event = mockEvent({ id: 'student-1', globalRole: 'USER' }, { startTime: nearSlot })
+
+      vi.mocked(prisma.gtaInterviewReservation.findFirst).mockResolvedValue(null)
+
+      await expect(reservationsPost(event)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 400,
+          statusMessage: expect.stringContaining('at least 2 hours in advance')
+        })
+      )
+    })
+
     it('reschedules an active SCHEDULED reservation atomically when rescheduleReservationId is provided', async () => {
       const event = mockEvent(
         { id: 'student-1', globalRole: 'USER' },

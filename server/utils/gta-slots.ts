@@ -3,6 +3,12 @@ import { formatTimeStr12h } from '@@/shared/utils/proctor-schedule-parser'
 export const INTERVIEW_SLOT_INTERVAL_MINUTES = 10
 export const INTERVIEW_DURATION_MINUTES = 5
 export const GTA_AFTERNOON_DIVIDING_TIME = '12:30'
+export const GTA_INTERVIEW_MIN_LEAD_HOURS = 2
+export const GTA_INTERVIEW_MIN_LEAD_MS = GTA_INTERVIEW_MIN_LEAD_HOURS * 60 * 60 * 1000
+
+export const GTA_LOOKAHEAD_BLOCKS_DEFAULT = 4
+export const GTA_LOOKAHEAD_BLOCKS_HIGH_DEMAND = 5
+export const GTA_HIGH_DEMAND_UTILIZATION_THRESHOLD = 75
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -23,6 +29,11 @@ export interface GtaHalfDayBlock {
   blockLabel: string
   timeRangeLabel: string
   slots: GtaSlot[]
+  isCurrentBlock?: boolean
+  openSlotsCount?: number
+  totalSlotsCount?: number
+  utilizationPercentage?: number
+  isHighDemand?: boolean
 }
 
 export interface ShiftInput {
@@ -50,7 +61,8 @@ export function calculateGtaSlotsForShifts(
   existingReservations: ReservationInput[] = [],
   windowStart?: Date | string | null,
   windowEnd?: Date | string | null,
-  now: Date = new Date()
+  now: Date = new Date(),
+  minLeadHours: number = GTA_INTERVIEW_MIN_LEAD_HOURS
 ): GtaHalfDayBlock[] {
   // Map of slotStartIso -> Set of GTA userIds on duty
   const slotGtasMap = new Map<string, Set<string>>()
@@ -122,11 +134,14 @@ export function calculateGtaSlotsForShifts(
   // Map of blockKey (dateStr_MORNING or dateStr_AFTERNOON) -> GtaSlot[]
   const blocksMap = new Map<string, GtaSlot[]>()
 
+  const minLeadMs = minLeadHours * 60 * 60 * 1000
+  const minAllowedSlotTime = new Date(now.getTime() + minLeadMs)
+
   for (const [slotStartIso, gtaSet] of slotGtasMap.entries()) {
     const slotStartDate = new Date(slotStartIso)
 
-    // Must be in the future
-    if (slotStartDate <= now) continue
+    // Must be at least minLeadHours (2 hours) in the future
+    if (slotStartDate < minAllowedSlotTime) continue
 
     // Must be within window
     if (winStart && slotStartDate < winStart) continue
@@ -159,7 +174,7 @@ export function calculateGtaSlotsForShifts(
   }
 
   // Convert grouped blocks to array
-  const blocks: GtaHalfDayBlock[] = []
+  const candidateBlocks: GtaHalfDayBlock[] = []
 
   for (const [blockKey, slots] of blocksMap.entries()) {
     if (slots.length === 0) continue
@@ -178,20 +193,86 @@ export function calculateGtaSlotsForShifts(
       ? `Morning (Before ${formatTimeStr12h(GTA_AFTERNOON_DIVIDING_TIME)})`
       : `Afternoon (${formatTimeStr12h(GTA_AFTERNOON_DIVIDING_TIME)} & Later)`
 
-    blocks.push({
+    // Collect theoretical slots for this block to determine total count and boundaries
+    const blockTheoreticalMeta = Array.from(slotMetaMap.values())
+      .filter((meta) => {
+        const isM = meta.time24 < GTA_AFTERNOON_DIVIDING_TIME
+        return `${meta.dateStr}_${isM ? 'MORNING' : 'AFTERNOON'}` === blockKey
+      })
+      .sort((a, b) => a.time24.localeCompare(b.time24))
+
+    const earliestStartIso =
+      blockTheoreticalMeta.length > 0
+        ? `${dateStr}T${blockTheoreticalMeta[0].time24}:00.000Z`
+        : `${dateStr}T00:00:00.000Z`
+    const latestEndIso =
+      blockTheoreticalMeta.length > 0
+        ? `${dateStr}T${blockTheoreticalMeta[blockTheoreticalMeta.length - 1].endTime24}:00.000Z`
+        : `${dateStr}T23:59:59.999Z`
+
+    const blockStart = isMorning
+      ? new Date(earliestStartIso)
+      : new Date(`${dateStr}T${GTA_AFTERNOON_DIVIDING_TIME}:00.000Z`)
+    const blockEnd = isMorning
+      ? new Date(`${dateStr}T${GTA_AFTERNOON_DIVIDING_TIME}:00.000Z`)
+      : new Date(latestEndIso)
+
+    const isCurrentBlock = now >= blockStart && now < blockEnd
+
+    const totalSlotsCount = blockTheoreticalMeta.length || slots.length
+    const openSlotsCount = slots.length
+    const utilizationPercentage =
+      totalSlotsCount > 0
+        ? Math.max(
+            0,
+            Math.min(100, Math.round(((totalSlotsCount - openSlotsCount) / totalSlotsCount) * 100))
+          )
+        : 100
+    const isHighDemand = utilizationPercentage > 60
+
+    candidateBlocks.push({
       date: dateStr,
       dayOfWeek,
       dayName,
       blockType,
       blockLabel,
       timeRangeLabel,
-      slots
+      slots,
+      isCurrentBlock,
+      openSlotsCount,
+      totalSlotsCount,
+      utilizationPercentage,
+      isHighDemand
     })
   }
 
-  // Sort blocks chronologically (by date, then MORNING before AFTERNOON)
-  return blocks.sort((a, b) => {
+  // Sort candidate blocks chronologically (by date, then MORNING before AFTERNOON)
+  const sortedBlocks = candidateBlocks.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date)
     return a.blockType === 'MORNING' ? -1 : 1
   })
+
+  // Identify current in-progress block vs future blocks
+  const currentBlock = sortedBlocks.find((b) => b.isCurrentBlock)
+  const futureBlocks = sortedBlocks.filter((b) => !b.isCurrentBlock)
+
+  // Evaluate initial lookahead blocks: current (if active) + next 4
+  const initialLookaheadBlocks = currentBlock
+    ? [currentBlock, ...futureBlocks.slice(0, GTA_LOOKAHEAD_BLOCKS_DEFAULT)]
+    : futureBlocks.slice(0, GTA_LOOKAHEAD_BLOCKS_DEFAULT)
+
+  // If all evaluated blocks have utilization > 75%, show next 5 blocks instead of 4
+  const allAbove75 =
+    initialLookaheadBlocks.length > 0 &&
+    initialLookaheadBlocks.every(
+      (b) => (b.utilizationPercentage ?? 0) > GTA_HIGH_DEMAND_UTILIZATION_THRESHOLD
+    )
+
+  const futureCount = allAbove75 ? GTA_LOOKAHEAD_BLOCKS_HIGH_DEMAND : GTA_LOOKAHEAD_BLOCKS_DEFAULT
+
+  const selectedBlocks = currentBlock
+    ? [currentBlock, ...futureBlocks.slice(0, futureCount)]
+    : futureBlocks.slice(0, futureCount)
+
+  return selectedBlocks
 }
