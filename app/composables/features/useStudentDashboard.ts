@@ -132,19 +132,36 @@ export const useStudentDashboard = (isPreview = false) => {
         // 0. Published check: Hide if unpublished
         if (a.published === false) return false
 
-        // 1. Always show assignments that require CBTF scheduling
-        if (a.isSchedulable) return true
+        // 1. Availability check: Hide if not yet unlocked
+        if (a.availableFrom && new Date(a.availableFrom) > now) return false
 
-        // 2. Only show assignments where passes can be used
+        // 2. Actionability check:
+        // Must either be schedulable (CBTF/GTA) or have eligible pass types
         const hasPassTypes =
           (a.eligiblePassTypes && a.eligiblePassTypes.length > 0) ||
           (a.eligiblePassTypeNames && a.eligiblePassTypeNames.length > 0)
-        if (!hasPassTypes) return false
+        if (!a.isSchedulable && !a.hasInterviews && !hasPassTypes) return false
 
-        // 2. Availability check: Hide if not yet unlocked
-        if (a.availableFrom && new Date(a.availableFrom) > now) return false
+        // 3. Active reservation check: Keep visible if student has an upcoming/active reservation
+        const cbtfRes = getReservationForAssignment?.(a.id)
+        if (
+          cbtfRes &&
+          ['SCHEDULED', 'CHECKED_IN'].includes(cbtfRes.status) &&
+          new Date(cbtfRes.endTime) >= now
+        ) {
+          return true
+        }
 
-        // 3. Check if there is an active extension currently in progress
+        const gtaRes = getGtaReservationForAssignment?.(a.id)
+        if (
+          gtaRes &&
+          ['SCHEDULED', 'CHECKED_IN'].includes(gtaRes.status) &&
+          new Date(gtaRes.endTime) >= now
+        ) {
+          return true
+        }
+
+        // 4. Active extension check: Keep visible if an extension is currently active
         const latestRedemption = redemptionsData.value?.data?.find(
           (r: any) => r.assignmentTitle === a.title
         )
@@ -155,27 +172,46 @@ export const useStudentDashboard = (isPreview = false) => {
           return true
         }
 
-        // 4. Keep if upcoming due date is in the future
+        // 5. Initial window check:
+        // Keep visible if not yet past accept until, due date, or scheduling windows
+        if (a.acceptUntil && new Date(a.acceptUntil) > now) {
+          return true
+        }
         if (a.dueDate && new Date(a.dueDate) > now) {
           return true
         }
+        if (a.isSchedulable && a.scheduleWindowEnd && new Date(a.scheduleWindowEnd) > now) {
+          return true
+        }
+        if (a.hasInterviews && a.interviewWindowEnd && new Date(a.interviewWindowEnd) > now) {
+          return true
+        }
 
-        // 5. If past due, keep only if at least one pass type is still within its redemption window
+        // 6. Pass redemption window check:
+        // If past accept until and due date, keep only if at least one pass type is still within its redemption window
         const passTypes = a.eligiblePassTypes || []
         if (passTypes.length > 0) {
           const hasOpenWindow = passTypes.some((pt) => {
             if (pt.maxDaysPastDue !== null && pt.maxDaysPastDue !== undefined) {
-              const origDue = a.dueDate ? new Date(a.dueDate) : now
+              const origDue = a.dueDate
+                ? new Date(a.dueDate)
+                : a.acceptUntil
+                  ? new Date(a.acceptUntil)
+                  : null
+              if (!origDue) return false
               const maxAllowed = new Date(
                 origDue.getTime() + pt.maxDaysPastDue * 24 * 60 * 60 * 1000
               )
               return now <= maxAllowed
             }
-            if (a.acceptUntil) return new Date(a.acceptUntil) > now
             if (a.eligibleUntil) return new Date(a.eligibleUntil) > now
+            // If maxDaysPastDue is null/undefined and no eligibleUntil cutoff is specified,
+            // it means there is no expiration limit for pass redemption
             return true
           })
           if (hasOpenWindow) return true
+        } else if (a.eligibleUntil && new Date(a.eligibleUntil) > now) {
+          return true
         }
 
         return false
@@ -322,6 +358,10 @@ export const useStudentDashboard = (isPreview = false) => {
           'div',
           { class: 'flex flex-wrap gap-2.5 items-center' },
           types.map((pt: any) => {
+            const pool = effectivePassPools.value.find((p) => p.id === pt.id || p.name === pt.name)
+            const balance = pool?.balance ?? 0
+            const hasBalance = balance > 0
+
             const assignmentRedemptions =
               redemptionsData.value?.data?.filter(
                 (r: any) => r.assignmentTitle === row.original.title
