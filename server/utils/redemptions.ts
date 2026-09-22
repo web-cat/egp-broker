@@ -1,6 +1,7 @@
 import { createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import type { RedemptionRow } from '@@/shared/models/pass'
+import type { RepairCbtfRedemptionsResponse } from '@@/shared/schemas/cbtf.schema'
 import { calculatePassExtension } from '@@/shared/utils/extension'
 import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
 import { notifyPassRedemption, notifyPassPortSyncFailure } from '@@/server/services/alert.service'
@@ -449,5 +450,192 @@ export async function redeemPass(
       }
     }
     throw err
+  }
+}
+
+/**
+ * Repairs PassRedemption records for a CBTF assignment whose deadline windows
+ * were calculated against an individual CBTF reservation slot rather than the
+ * true assignment/section baseline due date.
+ */
+export async function repairAssignmentCbtfPassRedemptions(
+  assignmentId: string
+): Promise<RepairCbtfRedemptionsResponse> {
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    select: {
+      id: true,
+      courseId: true,
+      isSchedulable: true,
+      title: true,
+      dueDate: true,
+      availableFrom: true,
+      acceptUntil: true
+    }
+  })
+
+  if (!assignment) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Assignment not found'
+    })
+  }
+
+  if (!assignment.isSchedulable) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Assignment is not configured for CBTF scheduling'
+    })
+  }
+
+  const redemptions = await prisma.passRedemption.findMany({
+    where: { assignmentId },
+    include: {
+      pool: {
+        include: {
+          passType: true,
+          user: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'asc' }
+  })
+
+  let totalRepaired = 0
+  let alreadyCorrect = 0
+  let errors = 0
+  const details: RepairCbtfRedemptionsResponse['details'] = []
+
+  // Group by student to track prior redemptions sequentially
+  const studentRedemptionsMap = new Map<string, typeof redemptions>()
+  for (const r of redemptions) {
+    const list = studentRedemptionsMap.get(r.pool.userId) || []
+    list.push(r)
+    studentRedemptionsMap.set(r.pool.userId, list)
+  }
+
+  for (const [userId, studentReds] of studentRedemptionsMap.entries()) {
+    // Resolve baseline dates for this student (excluding CBTF overrides)
+    const effectiveDates = await resolveStudentEffectiveDates(
+      assignment,
+      userId,
+      assignment.courseId
+    )
+
+    let priorRedemptionForStudent: any = null
+    let priorCount = 0
+
+    for (const r of studentReds) {
+      const studentName =
+        [r.pool.user.firstName, r.pool.user.lastName].filter(Boolean).join(' ').trim() ||
+        r.pool.user.email ||
+        userId
+
+      try {
+        const extension = calculatePassExtension({
+          assignment: {
+            dueDate: effectiveDates.dueDate,
+            availableFrom: effectiveDates.availableFrom,
+            acceptUntil: effectiveDates.acceptUntil
+          },
+          passType: r.pool.passType,
+          latestRedemption: priorRedemptionForStudent,
+          priorRedemptionsCount: priorCount,
+          now: r.createdAt
+        })
+
+        if (!extension.isEligible) {
+          details.push({
+            redemptionId: r.id,
+            studentName,
+            studentEmail: r.pool.user.email,
+            oldDueDate: r.dueDate?.toISOString() ?? null,
+            newDueDate: r.dueDate?.toISOString() ?? null,
+            oldAcceptUntil: r.acceptUntil?.toISOString() ?? null,
+            newAcceptUntil: r.acceptUntil?.toISOString() ?? null,
+            status: 'already_correct',
+            message: extension.reason
+          })
+          alreadyCorrect++
+          priorRedemptionForStudent = r
+          priorCount++
+          continue
+        }
+
+        const oldDueIso = r.dueDate?.toISOString() ?? null
+        const newDueIso = extension.newDueDate?.toISOString() ?? null
+        const oldAcceptIso = r.acceptUntil?.toISOString() ?? null
+        const newAcceptIso = extension.newAcceptUntil?.toISOString() ?? null
+
+        const changed = oldDueIso !== newDueIso || oldAcceptIso !== newAcceptIso
+
+        if (changed) {
+          await prisma.passRedemption.update({
+            where: { id: r.id },
+            data: {
+              dueDate: extension.newDueDate,
+              acceptUntil: extension.newAcceptUntil,
+              availableFrom: extension.newAvailableFrom ?? r.availableFrom
+            }
+          })
+
+          totalRepaired++
+          details.push({
+            redemptionId: r.id,
+            studentName,
+            studentEmail: r.pool.user.email,
+            oldDueDate: oldDueIso,
+            newDueDate: newDueIso,
+            oldAcceptUntil: oldAcceptIso,
+            newAcceptUntil: newAcceptIso,
+            status: 'repaired'
+          })
+
+          priorRedemptionForStudent = {
+            ...r,
+            dueDate: extension.newDueDate,
+            acceptUntil: extension.newAcceptUntil,
+            availableFrom: extension.newAvailableFrom ?? r.availableFrom
+          }
+        } else {
+          alreadyCorrect++
+          details.push({
+            redemptionId: r.id,
+            studentName,
+            studentEmail: r.pool.user.email,
+            oldDueDate: oldDueIso,
+            newDueDate: newDueIso,
+            oldAcceptUntil: oldAcceptIso,
+            newAcceptUntil: oldAcceptIso,
+            status: 'already_correct'
+          })
+          priorRedemptionForStudent = r
+        }
+      } catch (err: any) {
+        errors++
+        details.push({
+          redemptionId: r.id,
+          studentName,
+          studentEmail: r.pool.user.email,
+          oldDueDate: r.dueDate?.toISOString() ?? null,
+          newDueDate: null,
+          oldAcceptUntil: r.acceptUntil?.toISOString() ?? null,
+          newAcceptUntil: null,
+          status: 'error',
+          message: err.message || 'Failed to recalculate redemption'
+        })
+        priorRedemptionForStudent = r
+      }
+
+      priorCount++
+    }
+  }
+
+  return {
+    totalChecked: redemptions.length,
+    totalRepaired,
+    alreadyCorrect,
+    errors,
+    details
   }
 }

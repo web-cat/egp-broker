@@ -255,4 +255,78 @@ describe('useTeacherDashboard', () => {
       })
     )
   })
+
+  it('handles repairAssignmentCbtfPassRedemptions success and shows toast', async () => {
+    const dashboard = useTeacherDashboard()
+    const mockAssignment: any = { id: 'asg-6', title: 'Quiz 1', isSchedulable: true }
+
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: {
+        totalChecked: 5,
+        totalRepaired: 4,
+        alreadyCorrect: 1,
+        errors: 0,
+        details: []
+      }
+    })
+
+    await dashboard.repairAssignmentCbtfPassRedemptions(mockAssignment)
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/me/assignments/asg-6/cbtf-repair-redemptions', {
+      method: 'POST'
+    })
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Pass Redemptions Repaired',
+        description: 'Checked 5 redemptions; 4 repaired. (1 already correct)',
+        color: 'success'
+      })
+    )
+  })
+
+  it('handles repairAssignmentCbtfPassRedemptions with warnings when errors occur', async () => {
+    const dashboard = useTeacherDashboard()
+    const mockAssignment: any = { id: 'asg-6', title: 'Quiz 1', isSchedulable: true }
+
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: {
+        totalChecked: 2,
+        totalRepaired: 1,
+        alreadyCorrect: 0,
+        errors: 1,
+        details: []
+      }
+    })
+
+    await dashboard.repairAssignmentCbtfPassRedemptions(mockAssignment)
+
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Pass Redemptions Repaired',
+        description: 'Checked 2 redemptions; 1 repaired. (1 failed)',
+        color: 'warning'
+      })
+    )
+  })
+
+  it('handles repairAssignmentCbtfPassRedemptions failure and shows error toast', async () => {
+    const dashboard = useTeacherDashboard()
+    const mockAssignment: any = { id: 'asg-6', title: 'Quiz 1', isSchedulable: true }
+
+    mockFetch.mockRejectedValueOnce({
+      data: { statusMessage: 'Assignment is not configured for CBTF scheduling' }
+    })
+
+    await dashboard.repairAssignmentCbtfPassRedemptions(mockAssignment)
+
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Failed to Repair Pass Redemptions',
+        description: 'Assignment is not configured for CBTF scheduling',
+        color: 'error'
+      })
+    )
+  })
 })

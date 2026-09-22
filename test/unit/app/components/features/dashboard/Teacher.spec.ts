@@ -7,6 +7,8 @@ import { actionsColumn } from '~/utils/tableHelpers'
 
 const mockOpenStudentRedemptions = vi.fn()
 const mockResyncAssignmentCbtfOverrides = vi.fn()
+const mockRepairAssignmentCbtfTimezones = vi.fn()
+const mockRepairAssignmentCbtfPassRedemptions = vi.fn()
 
 vi.stubGlobal('useState', (_key: string, init?: () => any) => ref(init ? init() : null))
 vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
@@ -74,7 +76,9 @@ vi.mock('~/composables/features/useTeacherDashboard', () => ({
     openApiKeyModal: vi.fn(),
     saveApiKey: vi.fn(),
     syncAssignments: vi.fn(),
-    resyncAssignmentCbtfOverrides: mockResyncAssignmentCbtfOverrides
+    resyncAssignmentCbtfOverrides: mockResyncAssignmentCbtfOverrides,
+    repairAssignmentCbtfTimezones: mockRepairAssignmentCbtfTimezones,
+    repairAssignmentCbtfPassRedemptions: mockRepairAssignmentCbtfPassRedemptions
   })
 }))
 
@@ -221,6 +225,103 @@ describe('TeacherDashboard Assignment Actions', () => {
       (item: any) => item.label === 'Resync Canvas Overrides'
     )
     expect(missingAction).toBeUndefined()
+  })
+
+  it('includes "Repair Pass Redemptions (Admin)" only when isAdmin is true and assignment is schedulable', () => {
+    let capturedAssignmentColumns: any[] = []
+
+    // Mount with isAdmin: true
+    mount(TeacherDashboard, {
+      props: {
+        isAdmin: true
+      },
+      global: {
+        stubs: {
+          BaseDataTable: {
+            props: ['columns', 'data'],
+            setup(props) {
+              if (props.columns && props.columns.some((c: any) => c.accessorKey === 'title')) {
+                capturedAssignmentColumns = props.columns
+              }
+              return () => null
+            }
+          },
+          UCard: true,
+          UTabs: true,
+          UButton: true,
+          UIcon: true,
+          UBadge: true,
+          UTooltip: true,
+          BasePageHeader: true,
+          BaseStatusBadge: true,
+          FeaturesAdminAssignmentEditPanel: true,
+          FeaturesAdminPassTypeEditPanel: true,
+          FeaturesDashboardAssignmentRedemptionsModal: true,
+          FeaturesDashboardStudentRedemptionsModal: true,
+          FeaturesDashboardPlatformApiKeyModal: true,
+          FeaturesDashboardRosterSyncModal: true
+        }
+      }
+    })
+
+    const actionsCol = capturedAssignmentColumns.find((c) => c.id === 'actions')
+    expect(actionsCol).toBeDefined()
+
+    const schedulableRow = {
+      original: { id: 'asg-1', title: 'CBTF Quiz', isSchedulable: true, published: true },
+      getValue: vi.fn()
+    }
+    const cellVNode = actionsCol.cell({ row: schedulableRow })
+    const items = cellVNode.props?.items?.[0] || []
+    const repairAction = items.find((item: any) => item.label === 'Repair Pass Redemptions (Admin)')
+    expect(repairAction).toBeDefined()
+    expect(repairAction.icon).toBe('i-lucide-wrench')
+
+    repairAction.onSelect()
+    expect(mockRepairAssignmentCbtfPassRedemptions).toHaveBeenCalledWith(schedulableRow.original)
+
+    // Schedulable but non-admin
+    capturedAssignmentColumns = []
+    mount(TeacherDashboard, {
+      props: {
+        isAdmin: false
+      },
+      global: {
+        stubs: {
+          BaseDataTable: {
+            props: ['columns', 'data'],
+            setup(props) {
+              if (props.columns && props.columns.some((c: any) => c.accessorKey === 'title')) {
+                capturedAssignmentColumns = props.columns
+              }
+              return () => null
+            }
+          },
+          UCard: true,
+          UTabs: true,
+          UButton: true,
+          UIcon: true,
+          UBadge: true,
+          UTooltip: true,
+          BasePageHeader: true,
+          BaseStatusBadge: true,
+          FeaturesAdminAssignmentEditPanel: true,
+          FeaturesAdminPassTypeEditPanel: true,
+          FeaturesDashboardAssignmentRedemptionsModal: true,
+          FeaturesDashboardStudentRedemptionsModal: true,
+          FeaturesDashboardPlatformApiKeyModal: true,
+          FeaturesDashboardRosterSyncModal: true
+        }
+      }
+    })
+
+    const nonAdminActionsCol = capturedAssignmentColumns.find((c) => c.id === 'actions')
+    const nonAdminVNode = nonAdminActionsCol.cell({ row: schedulableRow })
+    const nonAdminItems = nonAdminVNode.props?.items?.[0] || []
+    const missingRepairAction = nonAdminItems.find(
+      (item: any) => item.label === 'Repair Pass Redemptions (Admin)'
+    )
+    expect(missingRepairAction).toBeUndefined()
   })
 
   it('renders TeacherGtaShiftsSection and opens CourseSettingsModal when clicking Course Settings', async () => {

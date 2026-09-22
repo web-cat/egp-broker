@@ -404,6 +404,7 @@ const {
   syncAssignments,
   resyncAssignmentCbtfOverrides,
   repairAssignmentCbtfTimezones,
+  repairAssignmentCbtfPassRedemptions,
   resyncAssignmentPassPort
 } = useTeacherDashboard()
 
@@ -676,6 +677,12 @@ const assignmentColumns: any[] = [
           label: 'Repair Timezones & Reseat (Admin)',
           icon: 'i-lucide-wrench',
           onSelect: () => repairAssignmentCbtfTimezones(row.original)
+        })
+
+        actions.push({
+          label: 'Repair Pass Redemptions (Admin)',
+          icon: 'i-lucide-wrench',
+          onSelect: () => repairAssignmentCbtfPassRedemptions(row.original)
         })
       }
     }

@@ -18,10 +18,36 @@ export async function resolveStudentEffectiveDates(
   courseId: string
 ): Promise<EffectiveAssignmentDates> {
   // 1. Check for individual student override
+  // Note: We MUST exclude CBTF exam slot overrides because they represent
+  // scheduled testing session access windows rather than assignment/section deadline policies.
+  const cbtfReservations =
+    typeof prisma.cbtfReservation?.findMany === 'function'
+      ? await prisma.cbtfReservation.findMany({
+          where: {
+            userId,
+            assignmentId: assignment.id,
+            canvasOverrideId: { not: null }
+          },
+          select: { canvasOverrideId: true }
+        })
+      : []
+  const cbtfOverrideCanvasIds = cbtfReservations
+    .map((r) => r.canvasOverrideId)
+    .filter((id): id is string => Boolean(id))
+
   const studentOverride = await prisma.assignmentOverrideStudent.findFirst({
     where: {
       userId,
-      override: { assignmentId: assignment.id }
+      override: {
+        assignmentId: assignment.id,
+        NOT: [
+          { title: { equals: 'CBTF Exam Slot', mode: 'insensitive' } },
+          { title: { startsWith: 'CBTF', mode: 'insensitive' } },
+          ...(cbtfOverrideCanvasIds.length > 0
+            ? [{ canvasOverrideId: { in: cbtfOverrideCanvasIds } }]
+            : [])
+        ]
+      }
     },
     include: { override: true }
   })

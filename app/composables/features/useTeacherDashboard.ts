@@ -7,7 +7,8 @@ import type { RosterSyncStatusData } from '@@/shared/models/course'
 import type { ApiResponse } from '@@/shared/types/api'
 import type {
   ResyncCbtfOverridesResponse,
-  RepairCbtfTimezonesResponse
+  RepairCbtfTimezonesResponse,
+  RepairCbtfRedemptionsResponse
 } from '@@/shared/schemas/cbtf.schema'
 import { useAdminCrud } from '~/composables/features/admin/useAdminCrud'
 
@@ -347,6 +348,58 @@ export const useTeacherDashboard = () => {
     }
   }
 
+  // --- Admin-only CBTF Pass Redemptions Repair ---
+  const repairAssignmentCbtfPassRedemptions = async (assignment: AssignmentRow) => {
+    try {
+      toast.add({
+        title: 'Repairing Pass Redemptions',
+        description: `Analyzing and repairing pass redemption dates for "${assignment.title || 'Assignment'}"...`,
+        color: 'neutral'
+      })
+
+      const res = await $fetch<ApiResponse<RepairCbtfRedemptionsResponse>>(
+        `/api/me/assignments/${assignment.id}/cbtf-repair-redemptions`,
+        { method: 'POST' }
+      )
+
+      const data = res.data
+      const totalChecked = data?.totalChecked ?? 0
+      const totalRepaired = data?.totalRepaired ?? 0
+      const redWord = totalChecked === 1 ? 'redemption' : 'redemptions'
+
+      let description = `Checked ${totalChecked} ${redWord}; ${totalRepaired} repaired.`
+      const notes: string[] = []
+      if (data?.alreadyCorrect && data.alreadyCorrect > 0) {
+        notes.push(`${data.alreadyCorrect} already correct`)
+      }
+      if (data?.errors && data.errors > 0) {
+        notes.push(`${data.errors} failed`)
+      }
+      if (notes.length > 0) {
+        description += ` (${notes.join(', ')})`
+      }
+
+      const hasWarning = !!(data?.errors && data.errors > 0)
+
+      toast.add({
+        title: 'Pass Redemptions Repaired',
+        description,
+        color: hasWarning ? 'warning' : 'success'
+      })
+    } catch (err: any) {
+      console.error(err)
+      toast.add({
+        title: 'Failed to Repair Pass Redemptions',
+        description:
+          err.data?.statusMessage ||
+          err.data?.message ||
+          err.message ||
+          'An unexpected error occurred while repairing pass redemptions.',
+        color: 'error'
+      })
+    }
+  }
+
   // --- PassPort Sync ---
   const resyncAssignmentPassPort = async (assignment: AssignmentRow) => {
     try {
@@ -457,6 +510,7 @@ export const useTeacherDashboard = () => {
     // CBTF & PassPort Actions
     resyncAssignmentCbtfOverrides,
     repairAssignmentCbtfTimezones,
+    repairAssignmentCbtfPassRedemptions,
     resyncAssignmentPassPort
   }
 }

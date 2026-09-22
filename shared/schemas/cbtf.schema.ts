@@ -267,6 +267,28 @@ export const repairCbtfTimezonesResponseSchema = z.object({
 
 export type RepairCbtfTimezonesResponse = z.infer<typeof repairCbtfTimezonesResponseSchema>
 
+export const repairCbtfRedemptionsResponseSchema = z.object({
+  totalChecked: z.number().int(),
+  totalRepaired: z.number().int(),
+  alreadyCorrect: z.number().int().default(0),
+  errors: z.number().int().default(0),
+  details: z.array(
+    z.object({
+      redemptionId: z.string(),
+      studentName: z.string(),
+      studentEmail: z.string().optional(),
+      oldDueDate: z.string().nullable().optional(),
+      newDueDate: z.string().nullable().optional(),
+      oldAcceptUntil: z.string().nullable().optional(),
+      newAcceptUntil: z.string().nullable().optional(),
+      status: z.enum(['repaired', 'already_correct', 'error']),
+      message: z.string().optional()
+    })
+  )
+})
+
+export type RepairCbtfRedemptionsResponse = z.infer<typeof repairCbtfRedemptionsResponseSchema>
+
 export const cbtfReservationQuerySchema = z.object({
   search: z.string().trim().optional(),
   status: z

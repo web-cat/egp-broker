@@ -38,6 +38,9 @@ vi.mock('@@/server/utils/db', () => ({
     assignmentOverride: {
       findFirst: vi.fn()
     },
+    cbtfReservation: {
+      findMany: vi.fn().mockResolvedValue([])
+    },
     $transaction: vi.fn((callback) => callback(prisma))
   }
 }))
