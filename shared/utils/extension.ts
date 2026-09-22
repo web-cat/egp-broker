@@ -17,12 +17,14 @@ export interface PassExtensionInput {
     hoursPerPass: number
     minDaysPastDue?: number | null
     maxDaysPastDue?: number | null
+    maxRedemptionsPerAssignment?: number | null
   }
   latestRedemption?: {
     dueDate?: Date | string | null
     acceptUntil?: Date | string | null
     availableFrom?: Date | string | null
   } | null
+  priorRedemptionsCount?: number
   now?: Date
 }
 
@@ -45,6 +47,23 @@ const MS_PER_DAY = 24 * MS_PER_HOUR
 export function calculatePassExtension(input: PassExtensionInput): PassExtensionResult {
   const { assignment, passType, latestRedemption } = input
   const now = input.now ? new Date(input.now) : new Date()
+
+  // Check maximum redemptions per assignment constraint
+  if (
+    passType.maxRedemptionsPerAssignment !== null &&
+    passType.maxRedemptionsPerAssignment !== undefined &&
+    input.priorRedemptionsCount !== undefined &&
+    input.priorRedemptionsCount >= passType.maxRedemptionsPerAssignment
+  ) {
+    return {
+      isEligible: false,
+      reason: 'Maximum pass redemptions reached for this assignment.',
+      cost: 0,
+      newDueDate: null,
+      newAcceptUntil: null,
+      isClipped: false
+    }
+  }
 
   const origDueDate = assignment.dueDate ? new Date(assignment.dueDate) : now
   const hoursPerPass = passType.hoursPerPass > 0 ? passType.hoursPerPass : 24

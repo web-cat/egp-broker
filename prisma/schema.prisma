@@ -432,6 +432,9 @@ model PassType {
   minDaysPastDue Int?
   maxDaysPastDue Int?
 
+  /// Max number of times a student can redeem this pass type on a single assignment (null = no limit, default: 1).
+  maxRedemptionsPerAssignment Int? @default(1)
+
   // Cool down period
   coolDownPeriod Int?
   coolDownUnit   PassCoolDownUnit?

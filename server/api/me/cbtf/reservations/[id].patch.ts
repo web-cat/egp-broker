@@ -7,6 +7,7 @@ import {
   calculateMaxArrivalsPerSlot,
   assignNextSeat,
   getStudentSchedulingWindow,
+  autoExpirePastScheduledReservations,
   toCbtfReservationDto
 } from '@@/server/utils/cbtf'
 import { combineDateAndTime } from '@@/shared/utils/timezone'
@@ -83,6 +84,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
         statusMessage: 'Cannot reschedule to a time slot in the past'
       })
     }
+
+    // Auto-expire any past-due SCHEDULED reservations for this student to MISSED
+    await autoExpirePastScheduledReservations({ userId: session.user.id })
 
     currentStep = 'Retrieving Existing Reservation'
     const existing = await prisma.cbtfReservation.findUnique({

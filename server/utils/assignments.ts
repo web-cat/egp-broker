@@ -335,7 +335,8 @@ export async function getCourseAssignments(
           extensionOnly: pe.passType.extensionOnly,
           extendsCutoffOnly: pe.passType.extendsCutoffOnly,
           minDaysPastDue: pe.passType.minDaysPastDue,
-          maxDaysPastDue: pe.passType.maxDaysPastDue
+          maxDaysPastDue: pe.passType.maxDaysPastDue,
+          maxRedemptionsPerAssignment: pe.passType.maxRedemptionsPerAssignment
         })),
         eligibilities: a.passEligibilities.map((pe) => ({
           passTypeId: pe.passType.id,

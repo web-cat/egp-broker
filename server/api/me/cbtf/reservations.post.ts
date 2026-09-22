@@ -7,6 +7,7 @@ import {
   calculateMaxArrivalsPerSlot,
   assignNextSeat,
   getStudentSchedulingWindow,
+  autoExpirePastScheduledReservations,
   toCbtfReservationDto
 } from '@@/server/utils/cbtf'
 import { combineDateAndTime } from '@@/shared/utils/timezone'
@@ -122,6 +123,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
         statusMessage: 'You are not enrolled in this course'
       })
     }
+
+    // 4b. Auto-expire any past-due SCHEDULED reservations for this student to MISSED
+    await autoExpirePastScheduledReservations({ userId: session.user.id })
 
     // 5. Prevent double booking: student cannot have active reservation for this assignment
     currentStep = 'Checking For Double Booking'

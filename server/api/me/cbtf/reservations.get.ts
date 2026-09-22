@@ -1,6 +1,6 @@
 import { defineEventHandler, createError } from 'h3'
 import prisma from '@@/server/utils/db'
-import { toCbtfReservationDto } from '@@/server/utils/cbtf'
+import { toCbtfReservationDto, autoExpirePastScheduledReservations } from '@@/server/utils/cbtf'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 
@@ -9,6 +9,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
   if (!session?.user?.id) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
+
+  await autoExpirePastScheduledReservations({ userId: session.user.id })
 
   const reservations = await prisma.cbtfReservation.findMany({
     where: { userId: session.user.id },

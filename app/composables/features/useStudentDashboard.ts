@@ -322,9 +322,11 @@ export const useStudentDashboard = (isPreview = false) => {
           'div',
           { class: 'flex flex-wrap gap-2.5 items-center' },
           types.map((pt: any) => {
-            const pool = effectivePassPools.value.find((p) => p.name === pt.name)
-            const balance = pool?.balance ?? 0
-            const hasBalance = balance > 0
+            const assignmentRedemptions =
+              redemptionsData.value?.data?.filter(
+                (r: any) => r.assignmentTitle === row.original.title
+              ) || []
+            const priorRedemptionsCount = assignmentRedemptions.length
 
             const ext = calculatePassExtension({
               assignment: row.original,
@@ -332,9 +334,11 @@ export const useStudentDashboard = (isPreview = false) => {
                 extensionOnly: pt.extensionOnly ?? false,
                 hoursPerPass: pt.hoursPerPass || 24,
                 minDaysPastDue: pt.minDaysPastDue,
-                maxDaysPastDue: pt.maxDaysPastDue
+                maxDaysPastDue: pt.maxDaysPastDue,
+                maxRedemptionsPerAssignment: pt.maxRedemptionsPerAssignment
               },
               latestRedemption,
+              priorRedemptionsCount,
               now
             })
 

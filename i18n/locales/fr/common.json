@@ -15,6 +15,7 @@
       "hoursPerPassLabel": "Hours per Pass",
       "minDaysPastDueLabel": "Min Days Past Due",
       "maxDaysPastDueLabel": "Max Days Past Due",
+      "maxRedemptionsPerAssignmentLabel": "Max Passes Per Assignment",
       "nonePlaceholder": "None",
       "coolDownSettingsTitle": "Cool Down Settings",
       "periodLabel": "Period",

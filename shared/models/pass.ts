@@ -52,6 +52,7 @@ export const passTypeDataSchema = z.object({
   coolDownResetOffset: z.number().nullable(),
   minDaysPastDue: z.number().int().min(0).nullable(),
   maxDaysPastDue: z.number().int().min(0).nullable(),
+  maxRedemptionsPerAssignment: z.number().int().min(1).nullable().optional(),
   createdAt: z.string()
 })
 
@@ -71,7 +72,8 @@ export const createPassTypeSchema = z.object({
   coolDownReset: z.enum(['HOUR', 'DAY', 'WEEK']).optional().nullable(),
   coolDownResetOffset: z.number().int().min(0).optional().nullable(),
   minDaysPastDue: z.number().int().min(0).optional().nullable(),
-  maxDaysPastDue: z.number().int().min(0).optional().nullable()
+  maxDaysPastDue: z.number().int().min(0).optional().nullable(),
+  maxRedemptionsPerAssignment: z.number().int().min(1).optional().nullable().default(1)
 })
 
 export const updatePassTypeSchema = createPassTypeSchema.partial()

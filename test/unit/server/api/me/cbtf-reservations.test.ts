@@ -25,7 +25,8 @@ vi.mock('@@/server/utils/db', () => ({
       findUnique: vi.fn(),
       count: vi.fn(),
       create: vi.fn(),
-      update: vi.fn()
+      update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 })
     },
     cbtfFacility: { findFirst: vi.fn(), create: vi.fn() },
     cbtfScheduleException: { findFirst: vi.fn() },
@@ -519,6 +520,61 @@ describe('API: CBTF Student Reservation Endpoints', () => {
       expect(response.statusCode).toBe(201)
       expect(response.data.id).toBe('res-retake')
       expect(prisma.cbtfReservation.create).toHaveBeenCalled()
+    })
+
+    it('triggers autoExpirePastScheduledReservations before booking', async () => {
+      const startTime = '2026-10-05T13:15:00.000Z'
+      const event = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        {
+          assignmentId: 'clh1234567890123456789012',
+          startTime
+        }
+      )
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'clh1234567890123456789012',
+        courseId: 'course-1',
+        title: 'Midterm 1',
+        isSchedulable: true,
+        scheduleWindowStart: new Date('2026-10-01T00:00:00.000Z'),
+        scheduleWindowEnd: new Date('2026-10-10T23:59:59.000Z')
+      } as any)
+      vi.mocked(prisma.enrollment.findFirst).mockResolvedValue({ id: 'enr-1' } as any)
+      vi.mocked(prisma.cbtfFacility.findFirst).mockResolvedValue({
+        id: 'fac-1',
+        totalSeats: 24,
+        seatAllocationOrder: Array.from({ length: 24 }, (_, i) => i + 1),
+        operatingHours: [{ dayOfWeek: 1, openTime: '08:00', closeTime: '17:00' }],
+        scheduleExceptions: []
+      } as any)
+      vi.mocked(prisma.cbtfOperatingHours.findUnique).mockResolvedValue({
+        openTime: '08:00',
+        closeTime: '17:00'
+      } as any)
+      vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValue(null)
+      vi.mocked(prisma.cbtfReservation.count).mockResolvedValue(0)
+      vi.mocked(prisma.cbtfReservation.findMany).mockResolvedValue([])
+      vi.mocked(prisma.cbtfReservation.create).mockResolvedValue({
+        id: 'res-new',
+        status: 'SCHEDULED',
+        assignment: { title: 'Midterm 1' },
+        user: { firstName: 'Demo', lastName: 'User', studentId: '906000001', avatarUrl: null }
+      } as any)
+
+      await reservationsPost(event)
+
+      expect(prisma.cbtfReservation.updateMany).toHaveBeenCalledWith({
+        where: {
+          status: 'SCHEDULED',
+          endTime: { lt: expect.any(Date) },
+          userId: 'usr-1'
+        },
+        data: {
+          status: 'MISSED'
+        }
+      })
     })
 
     it('reuses existing CANCELLED or MISSED reservation record when scheduling via POST', async () => {

@@ -1249,3 +1249,32 @@ export async function addReservationNote(
     updatedAt: note.updatedAt.toISOString()
   }
 }
+
+/**
+ * Automatically transitions past-due reservations in SCHEDULED status whose
+ * scheduled end time has elapsed into MISSED status.
+ * Can be filtered by userId, facilityId, and/or assignmentId.
+ */
+export async function autoExpirePastScheduledReservations(
+  filter?: { userId?: string; facilityId?: string; assignmentId?: string },
+  tx: PrismaClient | typeof prisma = prisma
+): Promise<number> {
+  const now = new Date()
+  const where: Record<string, any> = {
+    status: 'SCHEDULED',
+    endTime: { lt: now }
+  }
+
+  if (filter?.userId) where.userId = filter.userId
+  if (filter?.facilityId) where.facilityId = filter.facilityId
+  if (filter?.assignmentId) where.assignmentId = filter.assignmentId
+
+  const result = await (tx as any).cbtfReservation.updateMany({
+    where,
+    data: {
+      status: 'MISSED'
+    }
+  })
+
+  return result.count
+}

@@ -47,7 +47,7 @@
             />
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-3 gap-4">
             <BaseFormInput
               v-model.number="state.minDaysPastDue"
               name="minDaysPastDue"
@@ -62,6 +62,14 @@
               :label="$t('admin.passType.maxDaysPastDueLabel')"
               type="number"
               min="0"
+              :placeholder="$t('admin.passType.nonePlaceholder')"
+            />
+            <BaseFormInput
+              v-model.number="state.maxRedemptionsPerAssignment"
+              name="maxRedemptionsPerAssignment"
+              :label="$t('admin.passType.maxRedemptionsPerAssignmentLabel')"
+              type="number"
+              min="1"
               :placeholder="$t('admin.passType.nonePlaceholder')"
             />
           </div>
@@ -193,6 +201,7 @@ const state = reactive({
   allowRequests: false,
   minDaysPastDue: null as number | null,
   maxDaysPastDue: null as number | null,
+  maxRedemptionsPerAssignment: 1 as number | null,
   coolDownPeriod: undefined as any,
   coolDownUnit: undefined as string | undefined,
   coolDownReset: undefined as string | undefined,
@@ -214,6 +223,7 @@ watch(
       state.allowRequests = passType.allowRequests
       state.minDaysPastDue = passType.minDaysPastDue
       state.maxDaysPastDue = passType.maxDaysPastDue
+      state.maxRedemptionsPerAssignment = passType.maxRedemptionsPerAssignment ?? 1
       state.coolDownPeriod = passType.coolDownPeriod ?? undefined
       state.coolDownUnit = passType.coolDownUnit ?? undefined
       state.coolDownReset = passType.coolDownReset ?? undefined
@@ -229,6 +239,7 @@ watch(
       state.allowRequests = false
       state.minDaysPastDue = null
       state.maxDaysPastDue = null
+      state.maxRedemptionsPerAssignment = 1
       state.coolDownPeriod = undefined
       state.coolDownUnit = undefined
       state.coolDownReset = undefined
@@ -252,6 +263,7 @@ const handleSubmit = async () => {
       allowRequests: state.allowRequests,
       minDaysPastDue: state.minDaysPastDue,
       maxDaysPastDue: state.maxDaysPastDue,
+      maxRedemptionsPerAssignment: state.maxRedemptionsPerAssignment ?? 1,
       coolDownPeriod: state.coolDownPeriod ? Number(state.coolDownPeriod) : null,
       coolDownUnit: (state.coolDownUnit as 'HOUR' | 'DAY' | 'WEEK' | undefined) ?? null,
       coolDownReset: (state.coolDownReset as 'HOUR' | 'DAY' | 'WEEK' | undefined) ?? null,

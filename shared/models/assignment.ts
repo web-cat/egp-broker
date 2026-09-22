@@ -44,7 +44,8 @@ export const assignmentRowSchema = z.object({
         extensionOnly: z.boolean().optional(),
         extendsCutoffOnly: z.boolean().optional(),
         minDaysPastDue: z.number().nullable().optional(),
-        maxDaysPastDue: z.number().nullable().optional()
+        maxDaysPastDue: z.number().nullable().optional(),
+        maxRedemptionsPerAssignment: z.number().nullable().optional()
       })
     )
     .optional(),

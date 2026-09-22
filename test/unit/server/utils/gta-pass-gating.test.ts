@@ -12,6 +12,7 @@ vi.mock('@@/server/utils/db', () => {
     passRedemption: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
+      count: vi.fn().mockResolvedValue(0),
       create: vi.fn().mockResolvedValue({ id: 'red-1', cost: 1 })
     },
     studentPassPool: {

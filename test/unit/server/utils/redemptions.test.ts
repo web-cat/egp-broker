@@ -12,6 +12,7 @@ vi.mock('@@/server/utils/db', () => ({
     passRedemption: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
+      count: vi.fn().mockResolvedValue(0),
       create: vi.fn()
     },
     studentPassPool: {
@@ -288,6 +289,34 @@ describe('Redemption Utilities', () => {
         data: expect.objectContaining({
           cost: 1
         })
+      })
+    })
+
+    it('throws 400 when student has reached maxRedemptionsPerAssignment', async () => {
+      vi.mocked(prisma.studentPassPool.findUnique).mockResolvedValue({
+        id: 'pool1',
+        balance: 2,
+        passType: {
+          id: 'pt1',
+          hoursPerPass: 24,
+          extensionOnly: false,
+          maxRedemptionsPerAssignment: 1,
+          courseId: 'c1'
+        }
+      } as any)
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'a1',
+        dueDate: new Date(Date.now() - 1000),
+        passEligibilities: [{ passTypeId: 'pt1' }]
+      } as any)
+
+      vi.mocked(prisma.passRedemption.count).mockResolvedValue(1)
+
+      await expect(redeemPass('u1', 'a1', 'pt1')).rejects.toMatchObject({
+        statusCode: 400,
+        statusMessage:
+          'You have reached the maximum number of passes (1) allowed for this assignment.'
       })
     })
   })

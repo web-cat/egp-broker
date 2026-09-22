@@ -397,5 +397,44 @@ describe('calculatePassExtension', () => {
       expect(result.newDueDate?.toISOString()).toBe('2026-06-02T12:00:00.000Z')
       expect(result.newAcceptUntil?.toISOString()).toBe('2026-06-02T12:00:00.000Z')
     })
+
+    it('rejects redemption when priorRedemptionsCount meets or exceeds maxRedemptionsPerAssignment', () => {
+      const now = new Date('2026-06-01T12:00:00.000Z')
+      const passTypeWithLimit = {
+        ...passTypeRetry,
+        maxRedemptionsPerAssignment: 1
+      }
+
+      const result = calculatePassExtension({
+        assignment: baseAssignment,
+        passType: passTypeWithLimit,
+        latestRedemption: null,
+        priorRedemptionsCount: 1,
+        now
+      })
+
+      expect(result.isEligible).toBe(false)
+      expect(result.reason).toBe('Maximum pass redemptions reached for this assignment.')
+      expect(result.cost).toBe(0)
+    })
+
+    it('allows redemption when priorRedemptionsCount is less than maxRedemptionsPerAssignment', () => {
+      const now = new Date('2026-06-01T12:00:00.000Z')
+      const passTypeWithLimit = {
+        ...passTypeRetry,
+        maxRedemptionsPerAssignment: 2
+      }
+
+      const result = calculatePassExtension({
+        assignment: baseAssignment,
+        passType: passTypeWithLimit,
+        latestRedemption: null,
+        priorRedemptionsCount: 1,
+        now
+      })
+
+      expect(result.isEligible).toBe(true)
+      expect(result.cost).toBe(1)
+    })
   })
 })

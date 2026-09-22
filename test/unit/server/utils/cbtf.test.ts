@@ -8,6 +8,7 @@ import {
   getFacilityOperatingHoursForDate,
   getStudentSchedulingWindow,
   getRecommendedDaysAndSlots,
+  autoExpirePastScheduledReservations,
   toCbtfReservationDto
 } from '../../../../server/utils/cbtf'
 
@@ -546,6 +547,57 @@ describe('CBTF Server Utilities', () => {
       expect(dto.studentId).toBe('906000001')
       expect(dto.seatNumber).toBe(5)
       expect(dto.startTime).toBe('2026-09-10T10:00:00.000Z')
+    })
+  })
+
+  describe('autoExpirePastScheduledReservations', () => {
+    it('updates past SCHEDULED reservations to MISSED', async () => {
+      const mockUpdateMany = vi.fn().mockResolvedValue({ count: 3 })
+      const mockTx: any = {
+        cbtfReservation: {
+          updateMany: mockUpdateMany
+        }
+      }
+
+      const count = await autoExpirePastScheduledReservations(
+        { userId: 'u1', facilityId: 'f1', assignmentId: 'a1' },
+        mockTx
+      )
+
+      expect(count).toBe(3)
+      expect(mockUpdateMany).toHaveBeenCalledWith({
+        where: {
+          status: 'SCHEDULED',
+          endTime: { lt: expect.any(Date) },
+          userId: 'u1',
+          facilityId: 'f1',
+          assignmentId: 'a1'
+        },
+        data: {
+          status: 'MISSED'
+        }
+      })
+    })
+
+    it('works with empty filter', async () => {
+      const mockUpdateMany = vi.fn().mockResolvedValue({ count: 0 })
+      const mockTx: any = {
+        cbtfReservation: {
+          updateMany: mockUpdateMany
+        }
+      }
+
+      const count = await autoExpirePastScheduledReservations(undefined, mockTx)
+      expect(count).toBe(0)
+      expect(mockUpdateMany).toHaveBeenCalledWith({
+        where: {
+          status: 'SCHEDULED',
+          endTime: { lt: expect.any(Date) }
+        },
+        data: {
+          status: 'MISSED'
+        }
+      })
     })
   })
 })

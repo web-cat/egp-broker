@@ -215,14 +215,35 @@ export async function redeemPass(
         pool.passType.courseId
       )
 
-      // 4. Find latest redemption for this student & assignment
-      const latestRedemption = await tx.passRedemption.findFirst({
-        where: {
-          pool: { userId },
-          assignmentId
-        },
-        orderBy: { createdAt: 'desc' }
-      })
+      // 4. Find prior redemptions count and latest redemption for this student & assignment
+      const priorRedemptionsCount =
+        typeof tx.passRedemption?.count === 'function'
+          ? await tx.passRedemption.count({
+              where: {
+                pool: { userId },
+                assignmentId
+              }
+            })
+          : 0
+
+      const maxAllowed = pool.passType.maxRedemptionsPerAssignment ?? 1
+      if (priorRedemptionsCount >= maxAllowed) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: `You have reached the maximum number of passes (${maxAllowed}) allowed for this assignment.`
+        })
+      }
+
+      const latestRedemption =
+        priorRedemptionsCount > 0
+          ? await tx.passRedemption.findFirst({
+              where: {
+                pool: { userId },
+                assignmentId
+              },
+              orderBy: { createdAt: 'desc' }
+            })
+          : null
 
       // 5. Calculate extension dates and required pass cost
       const extension = calculatePassExtension({
@@ -233,6 +254,7 @@ export async function redeemPass(
         },
         passType: pool.passType,
         latestRedemption,
+        priorRedemptionsCount,
         now: new Date()
       })
 
