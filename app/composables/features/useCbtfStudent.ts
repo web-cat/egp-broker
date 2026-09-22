@@ -101,11 +101,29 @@ export function useCbtfStudent() {
       await refreshReservations()
       return res.data
     } catch (err: any) {
-      toast.add({
-        title: 'Booking Failed',
-        description: err.data?.message || err.message || 'Could not reserve slot.',
-        color: 'error'
-      })
+      const isConflict =
+        err.statusCode === 409 || err.status === 409 || err.data?.statusCode === 409
+
+      if (isConflict) {
+        toast.add({
+          title: 'Time Slot No Longer Available',
+          description:
+            err.data?.statusMessage ||
+            err.data?.message ||
+            'This time slot was just booked by another student. Please select a different time.',
+          color: 'warning'
+        })
+      } else {
+        toast.add({
+          title: 'Booking Failed',
+          description:
+            err.data?.statusMessage ||
+            err.data?.message ||
+            err.message ||
+            'Could not reserve slot.',
+          color: 'error'
+        })
+      }
       throw err
     }
   }
@@ -130,11 +148,29 @@ export function useCbtfStudent() {
       await refreshReservations()
       return res.data
     } catch (err: any) {
-      toast.add({
-        title: 'Reschedule Failed',
-        description: err.data?.message || err.message || 'Could not reschedule slot.',
-        color: 'error'
-      })
+      const isConflict =
+        err.statusCode === 409 || err.status === 409 || err.data?.statusCode === 409
+
+      if (isConflict) {
+        toast.add({
+          title: 'Time Slot No Longer Available',
+          description:
+            err.data?.statusMessage ||
+            err.data?.message ||
+            'This time slot was just booked by another student. Please select a different time.',
+          color: 'warning'
+        })
+      } else {
+        toast.add({
+          title: 'Reschedule Failed',
+          description:
+            err.data?.statusMessage ||
+            err.data?.message ||
+            err.message ||
+            'Could not reschedule slot.',
+          color: 'error'
+        })
+      }
       throw err
     }
   }

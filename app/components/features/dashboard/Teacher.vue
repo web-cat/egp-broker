@@ -403,8 +403,6 @@ const {
   saveApiKey,
   syncAssignments,
   resyncAssignmentCbtfOverrides,
-  repairAssignmentCbtfTimezones,
-  repairAssignmentCbtfPassRedemptions,
   resyncAssignmentPassPort
 } = useTeacherDashboard()
 
@@ -671,20 +669,6 @@ const assignmentColumns: any[] = [
         icon: 'i-lucide-refresh-cw',
         onSelect: () => resyncAssignmentCbtfOverrides(row.original)
       })
-
-      if (props.isAdmin) {
-        actions.push({
-          label: 'Repair Timezones & Reseat (Admin)',
-          icon: 'i-lucide-wrench',
-          onSelect: () => repairAssignmentCbtfTimezones(row.original)
-        })
-
-        actions.push({
-          label: 'Repair Pass Redemptions (Admin)',
-          icon: 'i-lucide-wrench',
-          onSelect: () => repairAssignmentCbtfPassRedemptions(row.original)
-        })
-      }
     }
 
 

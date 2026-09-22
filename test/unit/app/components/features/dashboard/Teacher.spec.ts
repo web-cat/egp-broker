@@ -227,10 +227,9 @@ describe('TeacherDashboard Assignment Actions', () => {
     expect(missingAction).toBeUndefined()
   })
 
-  it('includes "Repair Pass Redemptions (Admin)" only when isAdmin is true and assignment is schedulable', () => {
+  it('does not include repair admin actions in assignment action menu even when isAdmin is true', () => {
     let capturedAssignmentColumns: any[] = []
 
-    // Mount with isAdmin: true
     mount(TeacherDashboard, {
       props: {
         isAdmin: true
@@ -273,55 +272,16 @@ describe('TeacherDashboard Assignment Actions', () => {
     }
     const cellVNode = actionsCol.cell({ row: schedulableRow })
     const items = cellVNode.props?.items?.[0] || []
-    const repairAction = items.find((item: any) => item.label === 'Repair Pass Redemptions (Admin)')
-    expect(repairAction).toBeDefined()
-    expect(repairAction.icon).toBe('i-lucide-wrench')
 
-    repairAction.onSelect()
-    expect(mockRepairAssignmentCbtfPassRedemptions).toHaveBeenCalledWith(schedulableRow.original)
-
-    // Schedulable but non-admin
-    capturedAssignmentColumns = []
-    mount(TeacherDashboard, {
-      props: {
-        isAdmin: false
-      },
-      global: {
-        stubs: {
-          BaseDataTable: {
-            props: ['columns', 'data'],
-            setup(props) {
-              if (props.columns && props.columns.some((c: any) => c.accessorKey === 'title')) {
-                capturedAssignmentColumns = props.columns
-              }
-              return () => null
-            }
-          },
-          UCard: true,
-          UTabs: true,
-          UButton: true,
-          UIcon: true,
-          UBadge: true,
-          UTooltip: true,
-          BasePageHeader: true,
-          BaseStatusBadge: true,
-          FeaturesAdminAssignmentEditPanel: true,
-          FeaturesAdminPassTypeEditPanel: true,
-          FeaturesDashboardAssignmentRedemptionsModal: true,
-          FeaturesDashboardStudentRedemptionsModal: true,
-          FeaturesDashboardPlatformApiKeyModal: true,
-          FeaturesDashboardRosterSyncModal: true
-        }
-      }
-    })
-
-    const nonAdminActionsCol = capturedAssignmentColumns.find((c) => c.id === 'actions')
-    const nonAdminVNode = nonAdminActionsCol.cell({ row: schedulableRow })
-    const nonAdminItems = nonAdminVNode.props?.items?.[0] || []
-    const missingRepairAction = nonAdminItems.find(
+    const repairPassAction = items.find(
       (item: any) => item.label === 'Repair Pass Redemptions (Admin)'
     )
-    expect(missingRepairAction).toBeUndefined()
+    expect(repairPassAction).toBeUndefined()
+
+    const repairTzAction = items.find(
+      (item: any) => item.label === 'Repair Timezones & Reseat (Admin)'
+    )
+    expect(repairTzAction).toBeUndefined()
   })
 
   it('renders TeacherGtaShiftsSection and opens CourseSettingsModal when clicking Course Settings', async () => {

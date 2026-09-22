@@ -1,3 +1,4 @@
+import type { PrismaClient } from '@prisma/client'
 import prisma from '@@/server/utils/db'
 import type { EffectiveAssignmentDates } from '@@/shared/models/override'
 
@@ -15,14 +16,16 @@ export interface AssignmentDateSource {
 export async function resolveStudentEffectiveDates(
   assignment: AssignmentDateSource,
   userId: string,
-  courseId: string
+  courseId: string,
+  tx: PrismaClient | typeof prisma = prisma
 ): Promise<EffectiveAssignmentDates> {
+  const client = (tx as any) || prisma
   // 1. Check for individual student override
   // Note: We MUST exclude CBTF exam slot overrides because they represent
   // scheduled testing session access windows rather than assignment/section deadline policies.
   const cbtfReservations =
-    typeof prisma.cbtfReservation?.findMany === 'function'
-      ? await prisma.cbtfReservation.findMany({
+    typeof client.cbtfReservation?.findMany === 'function'
+      ? await client.cbtfReservation.findMany({
           where: {
             userId,
             assignmentId: assignment.id,
@@ -35,7 +38,7 @@ export async function resolveStudentEffectiveDates(
     .map((r) => r.canvasOverrideId)
     .filter((id): id is string => Boolean(id))
 
-  const studentOverride = await prisma.assignmentOverrideStudent.findFirst({
+  const studentOverride = await client.assignmentOverrideStudent.findFirst({
     where: {
       userId,
       override: {
@@ -64,13 +67,13 @@ export async function resolveStudentEffectiveDates(
   }
 
   // 2. Check for section-level override
-  const enrollment = await prisma.enrollment.findUnique({
+  const enrollment = await client.enrollment.findUnique({
     where: { userId_courseId: { userId, courseId } },
     select: { courseSectionId: true }
   })
 
   if (enrollment?.courseSectionId) {
-    const sectionOverride = await prisma.assignmentOverride.findFirst({
+    const sectionOverride = await client.assignmentOverride.findFirst({
       where: {
         assignmentId: assignment.id,
         courseSectionId: enrollment.courseSectionId

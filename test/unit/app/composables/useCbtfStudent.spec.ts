@@ -184,4 +184,44 @@ describe('useCbtfStudent Composable', () => {
     expect(mockToast.add).toHaveBeenCalledWith(expect.objectContaining({ color: 'info' }))
     expect(mockRefresh).toHaveBeenCalled()
   })
+
+  it('shows warning toast when createReservation encounters 409 allocation conflict', async () => {
+    const error409: any = new Error('Arrival capacity reached')
+    error409.statusCode = 409
+    error409.data = {
+      statusCode: 409,
+      message: 'Arrival capacity reached for this 5-minute time slot'
+    }
+    mockFetch.mockRejectedValueOnce(error409)
+
+    const { createReservation } = useCbtfStudent()
+    await expect(createReservation('asg-3', '2026-10-06T10:00:00.000Z')).rejects.toThrow()
+
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Time Slot No Longer Available',
+        color: 'warning'
+      })
+    )
+  })
+
+  it('shows warning toast when rescheduleReservation encounters 409 allocation conflict', async () => {
+    const error409: any = new Error('Testing facility is completely full')
+    error409.statusCode = 409
+    error409.data = {
+      statusCode: 409,
+      message: 'Testing facility is completely full during this time slot'
+    }
+    mockFetch.mockRejectedValueOnce(error409)
+
+    const { rescheduleReservation } = useCbtfStudent()
+    await expect(rescheduleReservation('res-1', '2026-10-07T14:00:00.000Z')).rejects.toThrow()
+
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Time Slot No Longer Available',
+        color: 'warning'
+      })
+    )
+  })
 })

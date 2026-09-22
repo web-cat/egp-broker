@@ -8,6 +8,7 @@
 import { createError } from 'h3'
 import type { PrismaClient } from '@prisma/client'
 import prisma from '@@/server/utils/db'
+import { resolveStudentEffectiveDates } from './overrides'
 import { sendCbtfIncidentNotification } from './cbtf-notifications'
 import type {
   CbtfFacility,
@@ -318,6 +319,7 @@ export async function getStudentSchedulingWindow(
   userId: string,
   assignment: {
     id: string
+    courseId?: string | null
     scheduleWindowStart: Date | null
     scheduleWindowEnd: Date | null
     availableFrom: Date | null
@@ -349,12 +351,32 @@ export async function getStudentSchedulingWindow(
     }
   }
 
-  // Fallback to assignment's configured scheduling window
-  const start = assignment.scheduleWindowStart || assignment.availableFrom || new Date()
+  // Fallback to assignment's configured scheduling window or effective section dates
+  let effectiveAvailableFrom = assignment.availableFrom
+  let effectiveDueDate = assignment.dueDate
+  let effectiveAcceptUntil = assignment.acceptUntil
+
+  if (assignment.courseId) {
+    try {
+      const effective = await resolveStudentEffectiveDates(
+        assignment,
+        userId,
+        assignment.courseId,
+        tx
+      )
+      effectiveAvailableFrom = effective.availableFrom
+      effectiveDueDate = effective.dueDate
+      effectiveAcceptUntil = effective.acceptUntil
+    } catch {
+      // Fallback cleanly to assignment base dates if resolution errors
+    }
+  }
+
+  const start = assignment.scheduleWindowStart || effectiveAvailableFrom || new Date()
   const end =
     assignment.scheduleWindowEnd ||
-    assignment.acceptUntil ||
-    assignment.dueDate ||
+    effectiveAcceptUntil ||
+    effectiveDueDate ||
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
   return {
@@ -492,12 +514,17 @@ export async function getRecommendedDaysAndSlots(
         const blockStart = combineDateAndTime(dateStr, hours.openTime, timeZone)
         const blockEnd = afternoonDividingUtc
         const theoreticalBlockSlots = theoreticalSlots.filter(
-          (s) => s.startTime < afternoonDividingUtc
+          (s) =>
+            s.startTime < afternoonDividingUtc &&
+            s.startTime >= studentWindow.start &&
+            s.endTime <= studentWindow.end
         )
         const openSlots = allSlots.filter(
           (s) =>
             s.startTime < afternoonDividingUtc &&
-            s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000
+            s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000 &&
+            s.startTime >= studentWindow.start &&
+            s.endTime <= studentWindow.end
         )
 
         if (openSlots.length > 0) {
@@ -540,12 +567,17 @@ export async function getRecommendedDaysAndSlots(
         const blockStart = afternoonDividingUtc
         const blockEnd = combineDateAndTime(dateStr, hours.closeTime, timeZone)
         const theoreticalBlockSlots = theoreticalSlots.filter(
-          (s) => s.startTime >= afternoonDividingUtc
+          (s) =>
+            s.startTime >= afternoonDividingUtc &&
+            s.startTime >= studentWindow.start &&
+            s.endTime <= studentWindow.end
         )
         const openSlots = allSlots.filter(
           (s) =>
             s.startTime >= afternoonDividingUtc &&
-            s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000
+            s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000 &&
+            s.startTime >= studentWindow.start &&
+            s.endTime <= studentWindow.end
         )
 
         if (openSlots.length > 0) {

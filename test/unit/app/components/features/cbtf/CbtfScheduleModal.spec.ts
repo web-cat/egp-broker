@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import CbtfScheduleModal from '~/components/features/cbtf/CbtfScheduleModal.vue'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 
@@ -154,5 +154,96 @@ describe('CbtfScheduleModal', () => {
     expect(wrapper.text()).toContain('This reservation was cancelled')
     expect(wrapper.text()).toContain('Reschedule Exam')
     expect(wrapper.text()).not.toContain('Cancel Reservation')
+  })
+
+  it('navigates back to Step 2 and displays slot unavailable message when booking encounters a 409 conflict', async () => {
+    const mockBlock = {
+      id: '2026-10-05-morning',
+      date: '2026-10-05',
+      dayOfWeek: 1,
+      blockType: 'morning',
+      label: 'Monday Morning',
+      dateLabel: 'Oct 5',
+      timeRangeLabel: '9:00 AM – 12:30 PM',
+      isCurrentBlock: false,
+      openSlotsCount: 2,
+      totalSlotsCount: 10,
+      utilizationPercentage: 80,
+      isHighDemand: true
+    }
+    const slot1 = {
+      hour: 10,
+      startTime: '2026-10-05T14:00:00.000Z',
+      endTime: '2026-10-05T15:00:00.000Z',
+      formattedTime: '10:00 AM'
+    }
+    const slot2 = {
+      hour: 11,
+      startTime: '2026-10-05T15:00:00.000Z',
+      endTime: '2026-10-05T16:00:00.000Z',
+      formattedTime: '11:00 AM'
+    }
+
+    mockFetchAvailability.mockResolvedValue({
+      blocks: [mockBlock],
+      recommendedDays: [],
+      hourlySlots: [slot1, slot2]
+    })
+
+    const conflictErr: any = new Error('Arrival capacity reached')
+    conflictErr.statusCode = 409
+    mockCreateReservation.mockRejectedValueOnce(conflictErr)
+
+    const wrapper = mount(CbtfScheduleModal, {
+      props: {
+        open: true,
+        assignment: mockAssignment,
+        existingReservation: null
+      },
+      global: { stubs }
+    })
+
+    // Wait for availability to load
+    await flushPromises()
+
+    // Step 1: Click the block
+    const blockBtn = wrapper.find('button[type="button"]')
+    expect(blockBtn.exists()).toBe(true)
+    await blockBtn.trigger('click')
+    await flushPromises()
+
+    // Step 2: Choose slot 1
+    const slotButtons = wrapper.findAll('button[type="button"]')
+    const slot1Btn = slotButtons.find((b) => b.text().includes('10:00 AM'))
+    expect(slot1Btn).toBeDefined()
+    await slot1Btn!.trigger('click')
+    await flushPromises()
+
+    // Step 3: Review & Confirm
+    expect(wrapper.text()).toContain('Step 3 of 3')
+    expect(wrapper.text()).toContain('Reservation Summary')
+    const confirmBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Confirm Reservation'))
+    expect(confirmBtn).toBeDefined()
+
+    // Mock next fetch availability to only have slot2
+    mockFetchAvailability.mockResolvedValueOnce({
+      blocks: [mockBlock],
+      recommendedDays: [],
+      hourlySlots: [slot2]
+    })
+
+    // Click confirm -> triggers 409 conflict
+    await confirmBtn!.trigger('click')
+    await flushPromises()
+
+    // Should now be on Step 2 of 3
+    expect(wrapper.text()).toContain('Step 2 of 3')
+    expect(wrapper.text()).toContain('The 10:00 AM time slot is no longer available')
+
+    const remainingSlotButtons = wrapper.findAll('button[type="button"]')
+    expect(remainingSlotButtons.some((b) => b.text().includes('10:00 AM'))).toBe(false)
+    expect(remainingSlotButtons.some((b) => b.text().includes('11:00 AM'))).toBe(true)
   })
 })

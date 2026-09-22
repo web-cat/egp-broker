@@ -519,6 +519,115 @@ describe('CBTF Server Utilities', () => {
       }
       expect(result.blocks.length).toBe(5)
     })
+
+    it('excludes slots that start before studentWindow.start or end after studentWindow.end', async () => {
+      const fourHourFacility: any = {
+        id: 'fac-bounded',
+        totalSeats: 48,
+        timezone: 'America/New_York',
+        seatAllocationOrder: Array.from({ length: 48 }, (_, i) => i + 1),
+        operatingHours: [{ dayOfWeek: 1, openTime: '09:00', closeTime: '17:00' }],
+        scheduleExceptions: []
+      }
+
+      const mockTx: any = {
+        cbtfReservation: { findMany: vi.fn().mockResolvedValue([]) },
+        cbtfScheduleException: { findFirst: vi.fn().mockResolvedValue(null) },
+        cbtfOperatingHours: {
+          findUnique: vi.fn().mockResolvedValue({ openTime: '09:00', closeTime: '17:00' })
+        }
+      }
+
+      // Window starts at 10:00 EDT (14:00 UTC) and ends at 14:00 EDT (18:00 UTC) on 2026-10-05
+      const win = {
+        start: new Date('2026-10-05T14:00:00.000Z'),
+        end: new Date('2026-10-05T18:00:00.000Z'),
+        isPassWindow: false,
+        redemptionId: null
+      }
+
+      // Morning block: arrivals 09:00 to 12:30. But window starts at 10:00.
+      const morningResult = await getRecommendedDaysAndSlots(
+        fourHourFacility,
+        win,
+        '2026-10-05-morning',
+        undefined,
+        mockTx
+      )
+
+      // None of the hourly slots should start before 10:00 EDT (14:00 UTC)
+      for (const slot of morningResult.hourlySlots) {
+        expect(new Date(slot.startTime).getTime()).toBeGreaterThanOrEqual(win.start.getTime())
+        expect(new Date(slot.endTime).getTime()).toBeLessThanOrEqual(win.end.getTime())
+      }
+      expect(morningResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('9:00 AM')
+      expect(morningResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('9:30 AM')
+      expect(morningResult.hourlySlots.map((s) => s.formattedTime)).toContain('10:00 AM')
+
+      // Afternoon block: arrivals 12:30 to 16:00. But window ends at 14:00 EDT (18:00 UTC).
+      // Each exam is 1 hour, so slots must end <= 14:00 EDT.
+      // Therefore, arrival slots at or after 13:05 EDT (which end at or after 14:05 EDT) must be excluded!
+      const afternoonResult = await getRecommendedDaysAndSlots(
+        fourHourFacility,
+        win,
+        '2026-10-05-afternoon',
+        undefined,
+        mockTx
+      )
+
+      for (const slot of afternoonResult.hourlySlots) {
+        expect(new Date(slot.startTime).getTime()).toBeGreaterThanOrEqual(win.start.getTime())
+        expect(new Date(slot.endTime).getTime()).toBeLessThanOrEqual(win.end.getTime())
+      }
+      // Exactly 2 half-hour periods fit in the 12:30..14:00 window (12:30 bucket and 13:00 bucket)
+      expect(afternoonResult.hourlySlots.length).toBe(2)
+      expect(afternoonResult.hourlySlots[0].hour).toBe(12)
+      expect(afternoonResult.hourlySlots[1].hour).toBe(13)
+      // 1:30 PM starts at 13:30 and ends at 2:30 PM (> 2:00 PM window end), so must be excluded
+      expect(afternoonResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('1:30 PM')
+      expect(afternoonResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('2:00 PM')
+      expect(afternoonResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('3:00 PM')
+      expect(afternoonResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('4:00 PM')
+    })
+  })
+
+  describe('getStudentSchedulingWindow with section overrides', () => {
+    it('uses effective section override dates when assignment.courseId is provided and no pass redemption exists', async () => {
+      const baseDueDate = new Date('2026-10-01T21:00:00.000Z')
+      const sectionDueDate = new Date('2026-10-05T21:00:00.000Z')
+
+      const mockTx: any = {
+        passRedemption: { findFirst: vi.fn().mockResolvedValue(null) },
+        cbtfReservation: { findMany: vi.fn().mockResolvedValue([]) },
+        assignmentOverrideStudent: { findFirst: vi.fn().mockResolvedValue(null) },
+        enrollment: {
+          findUnique: vi.fn().mockResolvedValue({ courseSectionId: 'sec-1' })
+        },
+        assignmentOverride: {
+          findFirst: vi.fn().mockResolvedValue({
+            assignmentId: 'asg-sec',
+            courseSectionId: 'sec-1',
+            dueDate: sectionDueDate,
+            availableFrom: null,
+            acceptUntil: null
+          })
+        }
+      }
+
+      const assignment = {
+        id: 'asg-sec',
+        courseId: 'course-1',
+        scheduleWindowStart: null,
+        scheduleWindowEnd: null,
+        availableFrom: new Date('2026-09-20T00:00:00.000Z'),
+        dueDate: baseDueDate,
+        acceptUntil: null
+      }
+
+      const windowResult = await getStudentSchedulingWindow('student-1', assignment, mockTx)
+      expect(windowResult.end).toEqual(sectionDueDate)
+      expect(windowResult.isPassWindow).toBe(false)
+    })
   })
 
   describe('toCbtfReservationDto', () => {

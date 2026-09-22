@@ -291,6 +291,24 @@
 
         <!-- Wizard Step 2: Hourly Slot Selection -->
         <div v-else-if="currentStep === 2" class="space-y-4">
+          <!-- Slot Unavailable Alert Banner (Concurrency conflict) -->
+          <div
+            v-if="slotUnavailableMessage"
+            class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2"
+          >
+            <UIcon name="i-lucide-alert-triangle" class="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+            <div class="flex-1">
+              <span>{{ slotUnavailableMessage }}</span>
+            </div>
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-x"
+              @click="slotUnavailableMessage = null"
+            />
+          </div>
+
           <p class="text-sm text-neutral-600 dark:text-neutral-400">
             Pick an arrival time for
             <strong>{{ selectedBlock?.label }}, {{ selectedBlock?.dateLabel }}</strong> ({{
@@ -457,6 +475,7 @@ const selectedBlockId = ref<string>('')
 const selectedSlot = ref<CbtfHourlySlotChoice | null>(null)
 const availabilityData = ref<CbtfAvailabilityData | null>(null)
 const confirmedReservation = ref<CbtfReservationDto | null>(null)
+const slotUnavailableMessage = ref<string | null>(null)
 
 // Step titles
 const stepTitle = computed(() => {
@@ -516,12 +535,14 @@ const loadAvailability = async (blockId?: string) => {
 const chooseBlock = async (block: CbtfHalfDayBlock) => {
   selectedBlockId.value = block.id
   selectedSlot.value = null
+  slotUnavailableMessage.value = null
   currentStep.value = 2
   await loadAvailability(block.id)
 }
 
 const chooseSlot = (slot: CbtfHourlySlotChoice) => {
   selectedSlot.value = slot
+  slotUnavailableMessage.value = null
   currentStep.value = 3
 }
 
@@ -530,11 +551,13 @@ const startRescheduling = () => {
   currentStep.value = 1
   selectedBlockId.value = ''
   selectedSlot.value = null
+  slotUnavailableMessage.value = null
   confirmedReservation.value = null
   loadAvailability()
 }
 
 const handleCancelRescheduling = () => {
+  slotUnavailableMessage.value = null
   if (isRescheduling.value && props.existingReservation) {
     isRescheduling.value = false
     currentStep.value = 1
@@ -548,20 +571,43 @@ const handleCancelRescheduling = () => {
 const handleConfirmBooking = async () => {
   if (!props.assignment?.id || !selectedSlot.value) return
   booking.value = true
+  const attemptedSlot = selectedSlot.value
   try {
     let result: CbtfReservationDto
     if (isRescheduling.value && props.existingReservation?.id) {
       result = await rescheduleReservation(
         props.existingReservation.id,
-        selectedSlot.value.startTime
+        attemptedSlot.startTime
       )
     } else {
-      result = await createReservation(props.assignment.id, selectedSlot.value.startTime)
+      result = await createReservation(props.assignment.id, attemptedSlot.startTime)
     }
     confirmedReservation.value = result
     emit('reserved', result)
-  } catch (err) {
+  } catch (err: any) {
     console.error(err)
+    const isConflict =
+      err.statusCode === 409 ||
+      err.status === 409 ||
+      err.data?.statusCode === 409 ||
+      err.message?.includes('capacity') ||
+      err.message?.includes('full') ||
+      err.message?.includes('unallocated')
+
+    if (isConflict) {
+      const timeLabel = attemptedSlot?.formattedTime || 'selected'
+      slotUnavailableMessage.value = `The ${timeLabel} time slot is no longer available because another student just reserved it. Please select a different time.`
+      selectedSlot.value = null
+      currentStep.value = 2
+      if (selectedBlockId.value) {
+        await loadAvailability(selectedBlockId.value)
+      }
+      if (availabilityData.value?.hourlySlots && attemptedSlot?.startTime) {
+        availabilityData.value.hourlySlots = availabilityData.value.hourlySlots.filter(
+          (s) => s.startTime !== attemptedSlot.startTime
+        )
+      }
+    }
   } finally {
     booking.value = false
   }
@@ -605,16 +651,21 @@ const statusBadgeColor = (status: string) => {
   }
 }
 
-watch(open, (isOpen) => {
-  if (isOpen) {
-    confirmedReservation.value = null
-    isRescheduling.value = false
-    currentStep.value = 1
-    selectedSlot.value = null
-    selectedBlockId.value = ''
-    if (!props.existingReservation) {
-      loadAvailability()
+watch(
+  open,
+  (isOpen) => {
+    if (isOpen) {
+      confirmedReservation.value = null
+      isRescheduling.value = false
+      currentStep.value = 1
+      selectedSlot.value = null
+      selectedBlockId.value = ''
+      slotUnavailableMessage.value = null
+      if (!props.existingReservation) {
+        loadAvailability()
+      }
     }
-  }
-})
+  },
+  { immediate: true }
+)
 </script>
