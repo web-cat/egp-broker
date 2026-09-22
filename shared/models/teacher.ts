@@ -81,3 +81,33 @@ export const updateStudentPassPoolsSchema = z.object({
 })
 
 export type UpdateStudentPassPoolsInput = z.infer<typeof updateStudentPassPoolsSchema>
+
+/**
+ * Schema for teacher forcibly redeeming a pass for a student
+ */
+export const teacherForceRedeemPassSchema = z.object({
+  assignmentId: z.string().min(1, 'Assignment is required'),
+  passTypeId: z.string().min(1, 'Pass type is required'),
+  deductFromBalance: z.boolean().default(true),
+  availableFrom: z.string().nullable().optional(),
+  dueDate: z.string().nullable().optional(),
+  acceptUntil: z.string().nullable().optional()
+})
+
+export type TeacherForceRedeemPassInput = z.infer<typeof teacherForceRedeemPassSchema>
+
+export interface TeacherForceRedeemPassResponse {
+  redemption: {
+    id: string
+    poolId: string
+    assignmentId: string
+    cost: number
+    availableFrom: string | null
+    dueDate: string | null
+    acceptUntil: string | null
+    canvasOverrideId?: string | null
+    createdAt: string
+  }
+  passBalances: StudentPassBalance[]
+  warning?: string
+}

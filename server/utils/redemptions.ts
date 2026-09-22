@@ -10,6 +10,18 @@ import {
   sendPassPortExtension,
   sendPassPortRollback
 } from '@@/server/utils/passport'
+import {
+  getPlatformCanvasDomain,
+  createCanvasAssignmentOverride,
+  updateCanvasAssignmentOverride,
+  fetchCanvasAssignmentOverrides
+} from '@@/server/utils/canvas'
+import { findInstructorCanvasApiKey, isPlainCanvasOrNewQuizzes } from '@@/server/utils/cbtf-canvas'
+import type {
+  TeacherForceRedeemPassInput,
+  TeacherForceRedeemPassResponse,
+  StudentPassBalance
+} from '@@/shared/models/teacher'
 
 /**
  * Retrieves pass redemptions for a student in a course.
@@ -637,5 +649,606 @@ export async function repairAssignmentCbtfPassRedemptions(
     alreadyCorrect,
     errors,
     details
+  }
+}
+
+/**
+ * Synchronizes an individual PassRedemption to Canvas as an assignment override.
+ */
+export async function syncPassRedemptionCanvasOverride(
+  redemptionId: string,
+  instructorUserId?: string
+): Promise<{ status: 'updated' | 'created' | 'skipped'; overrideId?: string; reason?: string }> {
+  const redemption = await prisma.passRedemption.findUnique({
+    where: { id: redemptionId },
+    include: {
+      pool: {
+        include: {
+          passType: true,
+          user: {
+            include: {
+              ltiIdentities: true,
+              enrollments: true
+            }
+          }
+        }
+      },
+      assignment: {
+        include: {
+          tool: true,
+          course: {
+            include: {
+              deployment: {
+                include: {
+                  platform: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  })
+
+  if (!redemption) {
+    return { status: 'skipped', reason: 'redemption_not_found' }
+  }
+
+  const assignment = redemption.assignment
+  const course = assignment?.course
+  const passType = redemption.pool.passType
+  const student = redemption.pool.user
+
+  // Check if native Canvas or New Quizzes
+  if (!isPlainCanvasOrNewQuizzes(assignment)) {
+    return { status: 'skipped', reason: 'external_tool' }
+  }
+
+  const canvasCourseId = course?.canvasCourseId
+  const canvasAssignmentId = assignment?.canvasAssignmentId
+
+  if (
+    !canvasCourseId ||
+    canvasCourseId.startsWith('$') ||
+    !canvasAssignmentId ||
+    canvasAssignmentId.startsWith('$')
+  ) {
+    return { status: 'skipped', reason: 'missing_canvas_ids' }
+  }
+
+  const platform = course.deployment?.platform
+  if (!platform) {
+    return { status: 'skipped', reason: 'no_platform' }
+  }
+
+  const domain = getPlatformCanvasDomain(platform, course.deployment?.deploymentHost)
+
+  // Resolve student's Canvas user ID
+  const studentIdentity =
+    student.ltiIdentities.find((i) => i.platformId === platform.id) ||
+    student.ltiIdentities.find((i) => Boolean(i.platformUserId))
+
+  const platformUserId = studentIdentity?.platformUserId
+  if (!platformUserId) {
+    return { status: 'skipped', reason: 'no_student_canvas_id' }
+  }
+
+  const studentCanvasId = parseInt(platformUserId, 10)
+  if (isNaN(studentCanvasId)) {
+    return { status: 'skipped', reason: 'invalid_student_canvas_id' }
+  }
+
+  // Resolve instructor Canvas API key
+  let apiKey: string | null = null
+  if (instructorUserId) {
+    const instructorIdentity = await prisma.ltiIdentity.findFirst({
+      where: {
+        userId: instructorUserId,
+        platformId: platform.id,
+        platformApiKey: { not: null }
+      }
+    })
+    apiKey = instructorIdentity?.platformApiKey || null
+  }
+
+  if (!apiKey) {
+    const studentEnrollment = student.enrollments?.find((e) => e.courseId === course.id)
+    const courseSectionId = studentEnrollment?.courseSectionId
+    apiKey = await findInstructorCanvasApiKey(course.id, courseSectionId, platform.id)
+  }
+
+  if (!apiKey) {
+    return { status: 'skipped', reason: 'no_instructor_key' }
+  }
+
+  const title = `[EGP Pass] ${passType.name}`
+  const unlock_at = redemption.availableFrom
+    ? new Date(redemption.availableFrom).toISOString()
+    : null
+  const due_at = redemption.dueDate ? new Date(redemption.dueDate).toISOString() : null
+  const lock_at = redemption.acceptUntil ? new Date(redemption.acceptUntil).toISOString() : due_at
+
+  try {
+    let overrideIdToUpdate = redemption.canvasOverrideId
+
+    if (!overrideIdToUpdate) {
+      // Check prior redemptions for this student & assignment
+      const priorRedemption = await prisma.passRedemption.findFirst({
+        where: {
+          assignmentId: assignment.id,
+          pool: { userId: student.id },
+          canvasOverrideId: { not: null },
+          id: { not: redemption.id }
+        },
+        select: { canvasOverrideId: true }
+      })
+
+      if (priorRedemption?.canvasOverrideId) {
+        overrideIdToUpdate = priorRedemption.canvasOverrideId
+      } else {
+        // Query Canvas for existing override targeting this student
+        const existingCanvasOverrides = await fetchCanvasAssignmentOverrides(
+          domain,
+          canvasCourseId,
+          canvasAssignmentId,
+          apiKey
+        )
+        const matchedOverride = existingCanvasOverrides.find(
+          (o) => Array.isArray(o.student_ids) && o.student_ids.includes(studentCanvasId)
+        )
+        if (matchedOverride?.id) {
+          overrideIdToUpdate = matchedOverride.id.toString()
+        }
+      }
+    }
+
+    if (overrideIdToUpdate) {
+      try {
+        const updated = await updateCanvasAssignmentOverride(
+          domain,
+          canvasCourseId,
+          canvasAssignmentId,
+          overrideIdToUpdate,
+          { unlock_at, due_at, lock_at },
+          apiKey
+        )
+
+        const overrideIdStr = updated.id.toString()
+        if (redemption.canvasOverrideId !== overrideIdStr) {
+          await prisma.passRedemption.update({
+            where: { id: redemption.id },
+            data: { canvasOverrideId: overrideIdStr }
+          })
+        }
+
+        const localOverride = await prisma.assignmentOverride.upsert({
+          where: {
+            assignmentId_canvasOverrideId: {
+              assignmentId: assignment.id,
+              canvasOverrideId: overrideIdStr
+            }
+          },
+          update: {
+            title,
+            availableFrom: redemption.availableFrom,
+            dueDate: redemption.dueDate,
+            acceptUntil: redemption.acceptUntil
+          },
+          create: {
+            assignmentId: assignment.id,
+            canvasOverrideId: overrideIdStr,
+            title,
+            availableFrom: redemption.availableFrom,
+            dueDate: redemption.dueDate,
+            acceptUntil: redemption.acceptUntil
+          }
+        })
+
+        await prisma.assignmentOverrideStudent.upsert({
+          where: {
+            overrideId_userId: {
+              overrideId: localOverride.id,
+              userId: student.id
+            }
+          },
+          update: {},
+          create: {
+            overrideId: localOverride.id,
+            userId: student.id
+          }
+        })
+
+        return { status: 'updated', overrideId: overrideIdStr }
+      } catch (updateErr: any) {
+        if (updateErr?.statusCode !== 404 && updateErr?.response?.status !== 404) {
+          throw updateErr
+        }
+      }
+    }
+
+    // Create new override
+    let created: any
+    try {
+      created = await createCanvasAssignmentOverride(
+        domain,
+        canvasCourseId,
+        canvasAssignmentId,
+        {
+          student_ids: [studentCanvasId],
+          title,
+          unlock_at,
+          due_at,
+          lock_at
+        },
+        apiKey
+      )
+    } catch (createErr: any) {
+      // If student already has an override in Canvas, find and update it
+      const existingCanvasOverrides = await fetchCanvasAssignmentOverrides(
+        domain,
+        canvasCourseId,
+        canvasAssignmentId,
+        apiKey
+      )
+      const matched = existingCanvasOverrides.find(
+        (o) => Array.isArray(o.student_ids) && o.student_ids.includes(studentCanvasId)
+      )
+      if (matched?.id) {
+        created = await updateCanvasAssignmentOverride(
+          domain,
+          canvasCourseId,
+          canvasAssignmentId,
+          matched.id.toString(),
+          { unlock_at, due_at, lock_at },
+          apiKey
+        )
+      } else {
+        throw createErr
+      }
+    }
+
+    const overrideIdStr = created.id.toString()
+    await prisma.passRedemption.update({
+      where: { id: redemption.id },
+      data: { canvasOverrideId: overrideIdStr }
+    })
+
+    const localOverride = await prisma.assignmentOverride.upsert({
+      where: {
+        assignmentId_canvasOverrideId: {
+          assignmentId: assignment.id,
+          canvasOverrideId: overrideIdStr
+        }
+      },
+      update: {
+        title,
+        availableFrom: redemption.availableFrom,
+        dueDate: redemption.dueDate,
+        acceptUntil: redemption.acceptUntil
+      },
+      create: {
+        assignmentId: assignment.id,
+        canvasOverrideId: overrideIdStr,
+        title,
+        availableFrom: redemption.availableFrom,
+        dueDate: redemption.dueDate,
+        acceptUntil: redemption.acceptUntil
+      }
+    })
+
+    await prisma.assignmentOverrideStudent.upsert({
+      where: {
+        overrideId_userId: {
+          overrideId: localOverride.id,
+          userId: student.id
+        }
+      },
+      update: {},
+      create: {
+        overrideId: localOverride.id,
+        userId: student.id
+      }
+    })
+
+    return { status: 'created', overrideId: overrideIdStr }
+  } catch (canvasErr: unknown) {
+    const msg = canvasErr instanceof Error ? canvasErr.message : String(canvasErr)
+    console.error('[pass-canvas-sync] Failed to sync pass override to Canvas:', msg)
+    return { status: 'skipped', reason: msg }
+  }
+}
+
+/**
+ * Forcibly redeems a pass for a student by a teacher, bypassing min/max days restrictions
+ * and optionally deducting from the student's pass balance.
+ */
+export async function teacherForceRedeemPass(
+  input: TeacherForceRedeemPassInput & { courseId: string; instructorUserId?: string }
+): Promise<TeacherForceRedeemPassResponse> {
+  const {
+    userId,
+    courseId,
+    assignmentId,
+    passTypeId,
+    deductFromBalance = true,
+    availableFrom,
+    dueDate,
+    acceptUntil,
+    instructorUserId
+  } = input
+
+  // 1. Verify student enrollment in course
+  const enrollment = await prisma.enrollment.findUnique({
+    where: {
+      userId_courseId: {
+        userId,
+        courseId
+      }
+    }
+  })
+
+  if (!enrollment) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Student is not enrolled in this course'
+    })
+  }
+
+  // 2. Verify assignment belongs to course and is configured with the pass type
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    include: {
+      tool: {
+        include: {
+          platform: true
+        }
+      },
+      course: {
+        include: {
+          deployment: {
+            include: {
+              platform: true
+            }
+          }
+        }
+      },
+      passEligibilities: {
+        where: { passTypeId }
+      }
+    }
+  })
+
+  if (
+    !assignment ||
+    assignment.courseId !== courseId ||
+    assignment.passEligibilities.length === 0
+  ) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Assignment is not eligible for this pass type'
+    })
+  }
+
+  // 3. Find or lazily create StudentPassPool
+  let pool = await prisma.studentPassPool.findUnique({
+    where: { userId_passTypeId: { userId, passTypeId } },
+    include: {
+      passType: {
+        include: { course: true }
+      },
+      user: {
+        include: {
+          ltiIdentities: true
+        }
+      }
+    }
+  })
+
+  if (!pool) {
+    const passType = await prisma.passType.findUnique({
+      where: { id: passTypeId },
+      include: { course: true }
+    })
+
+    if (!passType || passType.courseId !== courseId) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Pass type not found in this course'
+      })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        ltiIdentities: true
+      }
+    })
+
+    if (!user) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'User not found'
+      })
+    }
+
+    pool = await prisma.studentPassPool.create({
+      data: {
+        userId,
+        passTypeId,
+        balance: passType.initialBalance
+      },
+      include: {
+        passType: {
+          include: { course: true }
+        },
+        user: {
+          include: {
+            ltiIdentities: true
+          }
+        }
+      }
+    })
+  }
+
+  // 4. Determine dates: default start "now", default end now + passType.hoursPerPass
+  const now = new Date()
+  const defaultHours = pool.passType.hoursPerPass > 0 ? pool.passType.hoursPerPass : 24
+  const start = availableFrom ? new Date(availableFrom) : now
+  const due = dueDate
+    ? new Date(dueDate)
+    : new Date(start.getTime() + defaultHours * 60 * 60 * 1000)
+  const lock = acceptUntil ? new Date(acceptUntil) : due
+
+  // 5. Handle balance deduction & cost
+  const cost = deductFromBalance ? 1 : 0
+  if (deductFromBalance) {
+    await prisma.studentPassPool.update({
+      where: { id: pool.id },
+      data: { balance: Math.max(0, pool.balance - 1) }
+    })
+  }
+
+  // 6. External LTI Tool (PassPort) dispatch if supported
+  const tool = assignment.tool
+  if (tool?.supportsPassport) {
+    const studentDisplayName =
+      pool.user?.firstName && pool.user?.lastName
+        ? `${pool.user.firstName} ${pool.user.lastName}`
+        : pool.user?.email || null
+
+    const platformId = assignment.course?.deployment?.platformId || tool.platformId
+    const ltiIdentity =
+      pool.user?.ltiIdentities?.find((i: any) => i.platformId === platformId) ||
+      pool.user?.ltiIdentities?.[0]
+    const platform = assignment.course?.deployment?.platform || tool.platform
+
+    const payload = buildPassPortExtensionPayload({
+      context: {
+        lmsInstanceGuid:
+          assignment.course?.deployment?.deploymentHost || platform?.issuer || 'egp-broker',
+        issuer: platform?.issuer || 'https://canvas.instructure.com',
+        ltiContextId: assignment.course?.ltiContextId || assignment.courseId,
+        lmsInstance: platform?.name || assignment.course?.deployment?.deploymentHost || null,
+        ltiDeploymentId: assignment.course?.deployment?.deploymentId || null,
+        canvasCourseId: assignment.course?.canvasCourseId || null
+      },
+      user: {
+        ltiUserId: ltiIdentity?.ltiSub || pool.user.id,
+        brokerUserId: pool.user.id,
+        canvasUserId: ltiIdentity?.platformUserId || null,
+        firstName: pool.user.firstName || null,
+        lastName: pool.user.lastName || null,
+        email: pool.user.email || null,
+        displayName: studentDisplayName,
+        courseRole: enrollment?.role || null
+      },
+      resource: {
+        ltiResourceLinkId: assignment.resourceLinkId || assignment.id,
+        brokerAssignmentId: assignment.id,
+        canvasAssignmentId: assignment.canvasAssignmentId || null,
+        title: assignment.title || null
+      },
+      extension: {
+        passType: pool.passType.name,
+        originalAvailableFrom: assignment.availableFrom,
+        newAvailableFrom: start,
+        originalDueDate: assignment.dueDate,
+        newDueDate: due,
+        originalAcceptUntil: assignment.acceptUntil,
+        newAcceptUntil: lock,
+        appliedAt: new Date()
+      },
+      requestedProperties: (tool.passportRequestedProperties as string[]) || null
+    })
+
+    try {
+      await sendPassPortExtension(tool, payload)
+    } catch (passportErr: unknown) {
+      const msg = passportErr instanceof Error ? passportErr.message : String(passportErr)
+      console.error('[teacher-force-redeem] PassPort extension dispatch failed:', msg)
+      await notifyPassPortSyncFailure({
+        toolName: tool.name || 'External Tool',
+        assignmentTitle: assignment.title || 'Assignment',
+        courseLabel: assignment.course?.label || null,
+        studentName: studentDisplayName,
+        studentEmail: pool.user?.email,
+        error: msg,
+        requestId: payload.request_id
+      }).catch(() => {})
+    }
+  }
+
+  // 7. Create PassRedemption record
+  const redemption = await prisma.passRedemption.create({
+    data: {
+      poolId: pool.id,
+      assignmentId,
+      cost,
+      availableFrom: start,
+      dueDate: due,
+      acceptUntil: lock
+    }
+  })
+
+  // 8. Sync Canvas override if assignment has Canvas IDs
+  let warning: string | undefined
+  if (assignment.canvasAssignmentId && assignment.course?.canvasCourseId) {
+    const syncRes = await syncPassRedemptionCanvasOverride(redemption.id, instructorUserId)
+    if (syncRes.status === 'skipped' && syncRes.reason) {
+      warning = `Pass redeemed, but Canvas override sync was skipped: ${syncRes.reason}`
+    }
+  }
+
+  // 9. Alert notification (fire and forget)
+  notifyPassRedemption({
+    userName:
+      pool.user?.firstName && pool.user?.lastName
+        ? `${pool.user.firstName} ${pool.user.lastName}`
+        : pool.user?.email,
+    userEmail: pool.user?.email,
+    passTypeName: pool.passType?.name || 'Pass',
+    assignmentTitle: assignment.title,
+    courseName: pool.passType?.course?.name,
+    cost,
+    newDueDate: due || lock
+  }).catch(() => {})
+
+  // 10. Fetch updated student pass balances for course
+  const coursePassTypes = await prisma.passType.findMany({
+    where: { courseId },
+    select: { id: true, name: true, initialBalance: true }
+  })
+
+  const updatedPools = await prisma.studentPassPool.findMany({
+    where: {
+      userId,
+      passTypeId: { in: coursePassTypes.map((pt) => pt.id) }
+    }
+  })
+
+  const passBalances: StudentPassBalance[] = coursePassTypes.map((pt) => {
+    const p = updatedPools.find((item) => item.passTypeId === pt.id)
+    return {
+      passTypeId: pt.id,
+      passTypeName: pt.name,
+      balance: p ? p.balance : pt.initialBalance,
+      initialBalance: pt.initialBalance
+    }
+  })
+
+  return {
+    redemption: {
+      id: redemption.id,
+      poolId: redemption.poolId,
+      assignmentId: redemption.assignmentId,
+      cost: redemption.cost,
+      availableFrom: redemption.availableFrom ? redemption.availableFrom.toISOString() : null,
+      dueDate: redemption.dueDate ? redemption.dueDate.toISOString() : null,
+      acceptUntil: redemption.acceptUntil ? redemption.acceptUntil.toISOString() : null,
+      canvasOverrideId: redemption.canvasOverrideId ?? null,
+      createdAt: redemption.createdAt.toISOString()
+    },
+    passBalances,
+    warning
   }
 }

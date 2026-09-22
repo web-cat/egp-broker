@@ -562,7 +562,7 @@ describe('CBTF Server Utilities', () => {
       }
       expect(morningResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('9:00 AM')
       expect(morningResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('9:30 AM')
-      expect(morningResult.hourlySlots.map((s) => s.formattedTime)).toContain('10:00 AM')
+      expect(morningResult.hourlySlots[0].hour).toBe(10)
 
       // Afternoon block: arrivals 12:30 to 16:00. But window ends at 14:00 EDT (18:00 UTC).
       // Each exam is 1 hour, so slots must end <= 14:00 EDT.

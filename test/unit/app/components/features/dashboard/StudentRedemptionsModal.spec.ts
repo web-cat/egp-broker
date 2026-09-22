@@ -51,7 +51,8 @@ describe('StudentRedemptionsModal', () => {
           UIcon: true,
           UButton: true,
           UInput: true,
-          BaseDataTable: true
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
         }
       }
     })
@@ -81,7 +82,8 @@ describe('StudentRedemptionsModal', () => {
           UIcon: true,
           UButton: true,
           UInput: true,
-          BaseDataTable: true
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
         }
       }
     })
@@ -111,7 +113,8 @@ describe('StudentRedemptionsModal', () => {
           UIcon: true,
           UButton: true,
           UInput: true,
-          BaseDataTable: true
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
         }
       }
     })
@@ -141,7 +144,8 @@ describe('StudentRedemptionsModal', () => {
           UIcon: true,
           UButton: true,
           UInput: true,
-          BaseDataTable: true
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
         }
       }
     })
@@ -168,11 +172,82 @@ describe('StudentRedemptionsModal', () => {
           UIcon: true,
           UButton: true,
           UInput: true,
-          BaseDataTable: true
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
         }
       }
     })
 
     expect(capturedDescription).toBe('Student redemption history')
+  })
+
+  it('renders Redeem Pass button and opens force redeem modal when clicked', async () => {
+    const wrapper = mount(StudentRedemptionsModal, {
+      props: {
+        open: true,
+        student: baseStudent
+      },
+      global: {
+        stubs: {
+          UModal: {
+            props: ['open', 'title', 'description'],
+            setup(_props, { slots }) {
+              return () => slots.body?.()
+            }
+          },
+          UIcon: true,
+          UButton: {
+            props: ['label', 'icon'],
+            template: '<button class="u-button" :data-label="label">{{ label }}</button>'
+          },
+          UInput: true,
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
+        }
+      }
+    })
+
+    const vm = wrapper.vm as any
+    expect(vm.forceRedeemModalOpen).toBe(false)
+
+    const redeemBtn = wrapper.findAll('button').find((b) => b.text().includes('Redeem Pass'))
+    expect(redeemBtn).toBeDefined()
+    await redeemBtn?.trigger('click')
+
+    expect(vm.forceRedeemModalOpen).toBe(true)
+  })
+
+  it('updates student balances and emits saved when onPassRedeemed is triggered', async () => {
+    const wrapper = mount(StudentRedemptionsModal, {
+      props: {
+        open: true,
+        student: { ...baseStudent }
+      },
+      global: {
+        stubs: {
+          UModal: true,
+          UIcon: true,
+          UButton: true,
+          UInput: true,
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
+        }
+      }
+    })
+
+    const vm = wrapper.vm as any
+    const newBalances = [
+      {
+        passTypeId: 'pt-1',
+        passTypeName: 'Late Pass',
+        balance: 1,
+        initialBalance: 3
+      }
+    ]
+
+    vm.onPassRedeemed(newBalances)
+
+    expect(wrapper.emitted('saved')).toBeTruthy()
+    expect(wrapper.emitted('saved')?.[0]).toEqual([newBalances])
   })
 })

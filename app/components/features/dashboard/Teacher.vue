@@ -281,6 +281,7 @@
   <FeaturesDashboardStudentRedemptionsModal
     v-model:open="studentRedemptionsOpen"
     :student="selectedStudentForRedemptions"
+    :assignments="assignmentsData?.data || []"
     @saved="onStudentBalancesUpdated"
   />
 

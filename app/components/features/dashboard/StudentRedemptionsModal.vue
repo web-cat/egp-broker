@@ -10,7 +10,7 @@
       <div class="space-y-6">
         <!-- Pass Balances Summary -->
         <div
-          v-if="student?.passBalances?.length"
+          v-if="currentPassBalances.length"
           class="p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
         >
           <div class="flex items-center justify-between mb-3">
@@ -52,7 +52,7 @@
           <!-- Read-only View -->
           <div v-if="!isEditingBalances" class="flex flex-wrap gap-3">
             <div
-              v-for="pb in student.passBalances"
+              v-for="pb in currentPassBalances"
               :key="pb.passTypeId"
               class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-xs"
             >
@@ -73,7 +73,7 @@
           <!-- Edit Mode View -->
           <div v-else class="flex flex-wrap gap-3">
             <div
-              v-for="pb in student.passBalances"
+              v-for="pb in currentPassBalances"
               :key="pb.passTypeId"
               class="flex items-center gap-3 px-3 py-2 rounded-md bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 shadow-xs"
             >
@@ -126,11 +126,20 @@
 
         <!-- Redemption Log Table -->
         <div class="space-y-2">
-          <p
-            class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 px-1"
-          >
-            Redemption Log
-          </p>
+          <div class="flex items-center justify-between px-1">
+            <p
+              class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400"
+            >
+              Redemption Log
+            </p>
+            <UButton
+              size="xs"
+              color="primary"
+              icon="i-lucide-ticket-plus"
+              label="Redeem Pass"
+              @click="forceRedeemModalOpen = true"
+            />
+          </div>
           <BaseDataTable
             :data="redemptions"
             :columns="columns"
@@ -141,6 +150,14 @@
             empty-text="No pass redemptions recorded for this student."
           />
         </div>
+
+        <!-- Teacher Force Redeem Pass Modal -->
+        <FeaturesDashboardTeacherRedeemPassModal
+          v-model:open="forceRedeemModalOpen"
+          :student="student"
+          :assignments="effectiveAssignments"
+          @redeemed="onPassRedeemed"
+        />
       </div>
     </template>
 
@@ -163,13 +180,20 @@ import type {
   StudentRedemptionHistoryRow,
   StudentPassBalance
 } from '@@/shared/models/teacher'
+import type { AssignmentRow } from '@@/shared/models/assignment'
 import type { ApiResponse } from '@@/shared/types/api'
 import { formatDate } from '~/utils/date'
 
-const props = defineProps<{
-  open: boolean
-  student: StudentRosterRow | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    student: StudentRosterRow | null
+    assignments?: AssignmentRow[]
+  }>(),
+  {
+    assignments: () => []
+  }
+)
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
@@ -192,15 +216,48 @@ const toast = useToast()
 const redemptions = ref<StudentRedemptionHistoryRow[]>([])
 const loading = ref(false)
 
+// Force redeem pass modal state
+const forceRedeemModalOpen = ref(false)
+const internalAssignments = ref<AssignmentRow[]>([])
+const localPassBalances = ref<StudentPassBalance[] | null>(null)
+const currentPassBalances = computed(
+  () => localPassBalances.value ?? props.student?.passBalances ?? []
+)
+
+const effectiveAssignments = computed(() => {
+  if (props.assignments && props.assignments.length > 0) {
+    return props.assignments
+  }
+  return internalAssignments.value
+})
+
+const fetchAssignmentsIfEmpty = async () => {
+  if (props.assignments && props.assignments.length > 0) return
+  try {
+    const res = await $fetch<ApiResponse<AssignmentRow[]>>('/api/me/assignments')
+    if (res.data) {
+      internalAssignments.value = res.data
+    }
+  } catch (err) {
+    console.error('Failed to fetch assignments for pass redemption:', err)
+  }
+}
+
+const onPassRedeemed = (newBalances: StudentPassBalance[]) => {
+  localPassBalances.value = newBalances
+  fetchRedemptions()
+  emit('saved', newBalances)
+}
+
 // Edit pass balances state
 const isEditingBalances = ref(false)
 const editableBalances = ref<Record<string, number>>({})
 const savingBalances = ref(false)
 
 const startEditingBalances = () => {
-  if (!props.student?.passBalances) return
+  if (!currentPassBalances.value.length) return
   const map: Record<string, number> = {}
-  for (const pb of props.student.passBalances) {
+  for (const pb of currentPassBalances.value) {
     map[pb.passTypeId] = pb.balance
   }
   editableBalances.value = map
@@ -232,6 +289,7 @@ const saveBalances = async () => {
     )
 
     if (res.data) {
+      localPassBalances.value = res.data
       emit('saved', res.data)
       toast.add({
         title: 'Pass balances updated',
@@ -276,8 +334,10 @@ watch(
   ([isOpen, id]) => {
     isEditingBalances.value = false
     editableBalances.value = {}
+    localPassBalances.value = null
     if (isOpen && id) {
       fetchRedemptions()
+      fetchAssignmentsIfEmpty()
     } else {
       redemptions.value = []
     }
