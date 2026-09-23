@@ -73,7 +73,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UFormField
             label="Start Date (Available From)"
-            help="Defaults to now."
+            help="Defaults to now (Eastern Time)."
           >
             <UInput
               v-model="startDate"
@@ -85,7 +85,7 @@
 
           <UFormField
             label="End Date (Deadline & Lock)"
-            help="Defaults to start + pass duration."
+            help="Defaults to start + pass duration (Eastern Time)."
           >
             <UInput
               v-model="endDate"
@@ -107,6 +107,7 @@
           </div>
           <p>
             Duration: <strong>{{ durationHours }} hour{{ durationHours === 1 ? '' : 's' }}</strong>.
+            All times are interpreted in <strong>Eastern Time (America/New_York)</strong>.
             <span v-if="selectedAssignment.toolSupportsPassport">
               Communicates extension directly to connected external tool (PassPort).
             </span>
@@ -143,6 +144,12 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import {
+  DEFAULT_TIMEZONE,
+  getLocalDateString,
+  getLocalTimeParts,
+  combineDateAndTime
+} from '@@/shared/utils/timezone'
 import type {
   StudentRosterRow,
   StudentPassBalance,
@@ -228,16 +235,25 @@ const canSubmit = computed(() => {
   )
 })
 
-function toDateTimeLocal(d: Date): string {
+function toDateTimeLocalString(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
+  const dateStr = getLocalDateString(date, timeZone)
+  const parts = getLocalTimeParts(date, timeZone)
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${dateStr}T${pad(parts.hour24)}:${pad(parts.minute)}`
+}
+
+function parseDateTimeLocalInput(value: string, timeZone: string = DEFAULT_TIMEZONE): string {
+  if (!value) return new Date().toISOString()
+  const [dateStr, timePart] = value.split('T')
+  const timeStr = timePart ? timePart.slice(0, 5) : '00:00'
+  return combineDateAndTime(dateStr, timeStr, timeZone).toISOString()
 }
 
 function calculateDefaultDates(hours: number) {
   const now = new Date()
-  startDate.value = toDateTimeLocal(now)
+  startDate.value = toDateTimeLocalString(now)
   const end = new Date(now.getTime() + hours * 3600 * 1000)
-  endDate.value = toDateTimeLocal(end)
+  endDate.value = toDateTimeLocalString(end)
 }
 
 // Watch modal opening
@@ -280,10 +296,13 @@ watch(
   () => selectedPassTypeId.value,
   () => {
     if (selectedPassType.value) {
-      const startMs = startDate.value ? new Date(startDate.value).getTime() : Date.now()
+      const startIso = startDate.value
+        ? parseDateTimeLocalInput(startDate.value)
+        : new Date().toISOString()
+      const startMs = new Date(startIso).getTime()
       const hours = selectedPassType.value.hoursPerPass || 24
       const end = new Date(startMs + hours * 3600 * 1000)
-      endDate.value = toDateTimeLocal(end)
+      endDate.value = toDateTimeLocalString(end)
     }
   }
 )
@@ -297,9 +316,11 @@ async function handleSubmit() {
       assignmentId: selectedAssignmentId.value,
       passTypeId: selectedPassTypeId.value,
       deductFromBalance: deductFromBalance.value,
-      availableFrom: startDate.value ? new Date(startDate.value).toISOString() : new Date().toISOString(),
-      dueDate: endDate.value ? new Date(endDate.value).toISOString() : null,
-      acceptUntil: endDate.value ? new Date(endDate.value).toISOString() : null
+      availableFrom: startDate.value
+        ? parseDateTimeLocalInput(startDate.value)
+        : new Date().toISOString(),
+      dueDate: endDate.value ? parseDateTimeLocalInput(endDate.value) : null,
+      acceptUntil: endDate.value ? parseDateTimeLocalInput(endDate.value) : null
     }
 
     const res = await $fetch<ApiResponse<TeacherForceRedeemPassResponse>>(

@@ -261,4 +261,61 @@ describe('TeacherRedeemPassModal', () => {
     expect(wrapper.emitted('redeemed')).toBeTruthy()
     expect(wrapper.emitted('update:open')).toContainEqual([false])
   })
+
+  it('interprets entered dates in DEFAULT_TIMEZONE (America/New_York) upon submission', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      statusCode: 200,
+      data: {
+        redemption: { id: 'red-1' },
+        passBalances: []
+      }
+    })
+    vi.stubGlobal('$fetch', mockFetch)
+
+    const wrapper = mount(TeacherRedeemPassModal, {
+      props: {
+        open: true,
+        student: baseStudent,
+        assignments: baseAssignments
+      },
+      global: {
+        stubs: {
+          UModal: true,
+          USelect: true,
+          UInput: true,
+          USwitch: true,
+          UButton: true,
+          UIcon: true
+        }
+      }
+    })
+
+    const vm = wrapper.vm as any
+    vm.selectedAssignmentId = 'assign-1'
+    vm.selectedPassTypeId = 'pt-1' // 48h duration
+    vm.startDate = '2026-09-25T12:00'
+    await wrapper.vm.$nextTick()
+
+    // Automatic calculation sets endDate to startDate + 48h in America/New_York
+    expect(vm.endDate).toBe('2026-09-27T12:00')
+
+    // Teacher can also manually adjust endDate
+    vm.endDate = '2026-09-26T18:00'
+    await wrapper.vm.$nextTick()
+
+    await vm.handleSubmit()
+
+    // 12:00 PM EDT (UTC-4) in America/New_York -> 16:00:00.000Z
+    // 6:00 PM EDT (UTC-4) in America/New_York -> 22:00:00.000Z
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/me/students/user-1/redemptions',
+      expect.objectContaining({
+        body: expect.objectContaining({
+          availableFrom: '2026-09-25T16:00:00.000Z',
+          dueDate: '2026-09-26T22:00:00.000Z',
+          acceptUntil: '2026-09-26T22:00:00.000Z'
+        })
+      })
+    )
+  })
 })
