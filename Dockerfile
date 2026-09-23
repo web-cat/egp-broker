@@ -6,7 +6,7 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 # Enable corepack to use pnpm version specified in package.json
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 
 # Install system essentials
 RUN apt-get update && apt-get install -y \
@@ -43,17 +43,19 @@ CMD pnpm run postinstall && pnpm prisma migrate dev && scripts/dev-run.sh
 
 
 # --- Build Stage ---
-# ... (rest of stage)
 FROM base AS build
 
-# Copy all source files
+# Copy package management files for pre-installing dependencies
+COPY package.json pnpm-lock.yaml ./
+
+# Install all dependencies (cached unless package.json/pnpm-lock.yaml changes)
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
+
+# Copy application source files
 COPY . .
 
-# Install all dependencies and build
-RUN pnpm install --frozen-lockfile
-# pnpm run postinstall ensures prisma client generation
-RUN pnpm run postinstall
-RUN pnpm run build
+# Generate Prisma client and build Nuxt (postinstall runs once)
+RUN pnpm run postinstall && pnpm run build
 
 
 # --- Production Stage ---

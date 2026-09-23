@@ -39,6 +39,11 @@ coverage
 .nyc_output
 playwright-report
 test-results
+test/
+
+# Documentation and Agent metadata
+docs/
+.agent/
 
 # Misc local files
 *.pdf
