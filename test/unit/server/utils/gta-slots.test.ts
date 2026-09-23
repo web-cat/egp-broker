@@ -361,4 +361,111 @@ describe('Server Utility: calculateGtaSlotsForShifts', () => {
     expect(blocks[1].isCurrentBlock).toBe(false)
     expect(blocks[4].date).toBe('2026-10-09')
   })
+
+  it('does not show half-day blocks or appointment times that precede "now"', () => {
+    const shifts = [
+      { userId: 'gta-1', date: '2026-10-05', startTime: '09:00', endTime: '12:00' },
+      { userId: 'gta-1', date: '2026-10-05', startTime: '13:00', endTime: '16:00' }
+    ]
+
+    // Monday 12:45 PM EDT (16:45 UTC). Morning block ended at 12:30 PM EDT (16:30 UTC).
+    const afternoonNow = new Date('2026-10-05T16:45:00.000Z')
+    const blocks = calculateGtaSlotsForShifts(shifts, [], null, null, afternoonNow, 0)
+
+    // Morning block must NOT be shown because it ended before now
+    expect(blocks.find((b) => b.blockType === 'MORNING')).toBeUndefined()
+
+    // Afternoon block is shown, but slots before 12:45 PM EDT must not be shown
+    const afternoonBlock = blocks.find((b) => b.blockType === 'AFTERNOON')
+    expect(afternoonBlock).toBeDefined()
+    expect(afternoonBlock!.slots.length).toBeGreaterThan(0)
+    // All slots in afternoon must be >= now
+    for (const slot of afternoonBlock!.slots) {
+      expect(new Date(slot.startTime).getTime()).toBeGreaterThanOrEqual(afternoonNow.getTime())
+    }
+  })
+
+  it('does not show half-day blocks or appointment times before the beginning of the scheduling window', () => {
+    const shifts = [
+      { userId: 'gta-1', date: '2026-10-05', startTime: '10:00', endTime: '12:00' },
+      { userId: 'gta-1', date: '2026-10-05', startTime: '13:00', endTime: '16:00' },
+      { userId: 'gta-1', date: '2026-10-06', startTime: '10:00', endTime: '12:00' }
+    ]
+
+    // Window opens Monday at 1:30 PM EDT (17:30 UTC).
+    // Monday Morning block ends at 12:30 PM EDT (16:30 UTC) which is <= windowStart.
+    const windowStart = new Date('2026-10-05T17:30:00.000Z')
+    const blocks = calculateGtaSlotsForShifts(shifts, [], windowStart, null, referenceNow)
+
+    // Monday Morning block ended before windowStart and must NOT be shown
+    expect(blocks.find((b) => b.date === '2026-10-05' && b.blockType === 'MORNING')).toBeUndefined()
+
+    // Monday Afternoon is shown, but slots before 1:30 PM EDT (13:00, 13:10, 13:20) must not be shown
+    const monAfternoon = blocks.find((b) => b.date === '2026-10-05' && b.blockType === 'AFTERNOON')
+    expect(monAfternoon).toBeDefined()
+    expect(monAfternoon!.slots[0].time24).toBe('13:30')
+    for (const slot of monAfternoon!.slots) {
+      expect(new Date(slot.startTime).getTime()).toBeGreaterThanOrEqual(windowStart.getTime())
+    }
+
+    // Tuesday Morning is shown
+    expect(blocks.find((b) => b.date === '2026-10-06' && b.blockType === 'MORNING')).toBeDefined()
+  })
+
+  it('does not show half-day blocks or appointment times after the end of the scheduling window', () => {
+    const shifts = [
+      { userId: 'gta-1', date: '2026-10-05', startTime: '10:00', endTime: '12:00' },
+      { userId: 'gta-1', date: '2026-10-05', startTime: '13:00', endTime: '16:00' },
+      { userId: 'gta-1', date: '2026-10-06', startTime: '10:00', endTime: '12:00' }
+    ]
+
+    // Window closes Monday at 11:30 AM EDT (15:30 UTC).
+    const windowEnd = new Date('2026-10-05T15:30:00.000Z')
+    const blocks = calculateGtaSlotsForShifts(shifts, [], null, windowEnd, referenceNow)
+
+    // Monday Afternoon and Tuesday Morning start after windowEnd and must NOT be shown
+    expect(
+      blocks.find((b) => b.date === '2026-10-05' && b.blockType === 'AFTERNOON')
+    ).toBeUndefined()
+    expect(blocks.find((b) => b.date === '2026-10-06')).toBeUndefined()
+
+    // Monday Morning is shown, but slots at or after 11:30 AM EDT must not be shown
+    const monMorning = blocks.find((b) => b.date === '2026-10-05' && b.blockType === 'MORNING')
+    expect(monMorning).toBeDefined()
+    // 11:20 slot is 11:20 - 11:25 EDT (ends at 15:25 UTC <= 15:30 UTC)
+    expect(monMorning!.slots[monMorning!.slots.length - 1].time24).toBe('11:20')
+    for (const slot of monMorning!.slots) {
+      expect(new Date(slot.startTime).getTime()).toBeLessThan(windowEnd.getTime())
+      expect(new Date(slot.endTime).getTime()).toBeLessThanOrEqual(windowEnd.getTime())
+    }
+  })
+
+  it('excludes slots that extend past windowEnd even if starting before it', () => {
+    const shifts = [{ userId: 'gta-1', date: '2026-10-05', startTime: '10:00', endTime: '11:00' }]
+
+    // Window closes at 10:22 AM EDT (14:22 UTC).
+    // Slot 10:20 - 10:25 EDT ends at 10:25 AM EDT > 10:22 AM EDT and must be excluded.
+    const windowEnd = new Date('2026-10-05T14:22:00.000Z')
+    const blocks = calculateGtaSlotsForShifts(shifts, [], null, windowEnd, referenceNow)
+
+    expect(blocks).toHaveLength(1)
+    const slots = blocks[0].slots
+    // Only 10:00 (ends 10:05) and 10:10 (ends 10:15) fit within the window
+    expect(slots.map((s) => s.time24)).toEqual(['10:00', '10:10'])
+  })
+
+  it('does not show afternoon block when windowEnd is exact afternoon dividing time (12:30 EDT)', () => {
+    const shifts = [
+      { userId: 'gta-1', date: '2026-10-05', startTime: '10:00', endTime: '12:30' },
+      { userId: 'gta-1', date: '2026-10-05', startTime: '12:30', endTime: '15:00' }
+    ]
+
+    // 12:30 PM EDT = 16:30 UTC
+    const windowEnd = new Date('2026-10-05T16:30:00.000Z')
+    const blocks = calculateGtaSlotsForShifts(shifts, [], null, windowEnd, referenceNow)
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0].blockType).toBe('MORNING')
+    expect(blocks.find((b) => b.blockType === 'AFTERNOON')).toBeUndefined()
+  })
 })

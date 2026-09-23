@@ -155,6 +155,7 @@ export function calculateGtaSlotsForShifts(
 
   const winStart = windowStart ? new Date(windowStart) : null
   const winEnd = windowEnd ? new Date(windowEnd) : null
+  const searchStart = new Date(Math.max(now.getTime(), winStart ? winStart.getTime() : 0))
 
   // Map of blockKey (dateStr_MORNING or dateStr_AFTERNOON) -> GtaSlot[]
   const blocksMap = new Map<string, GtaSlot[]>()
@@ -164,13 +165,18 @@ export function calculateGtaSlotsForShifts(
 
   for (const [slotStartIso, gtaSet] of slotGtasMap.entries()) {
     const slotStartDate = new Date(slotStartIso)
+    const meta = slotMetaMap.get(slotStartIso)!
+    const slotEndDate = new Date(meta.endSlotIso)
+
+    // Must not be before now
+    if (slotStartDate < now) continue
 
     // Must be at least minLeadHours (2 hours) in the future
     if (slotStartDate < minAllowedSlotTime) continue
 
     // Must be within window
     if (winStart && slotStartDate < winStart) continue
-    if (winEnd && slotStartDate > winEnd) continue
+    if (winEnd && (slotStartDate >= winEnd || slotEndDate > winEnd)) continue
 
     const totalGtaCount = gtaSet.size
     const bookedCount = activeReservationsBySlot.get(slotStartIso) || 0
@@ -179,7 +185,6 @@ export function calculateGtaSlotsForShifts(
     // Skip if all on-duty GTAs are booked
     if (availableGtaCount <= 0) continue
 
-    const meta = slotMetaMap.get(slotStartIso)!
     const isMorning = meta.time24 < GTA_AFTERNOON_DIVIDING_TIME
     const blockType = isMorning ? 'MORNING' : 'AFTERNOON'
     const blockKey = `${meta.dateStr}_${blockType}`
@@ -241,9 +246,24 @@ export function calculateGtaSlotsForShifts(
           )
         : combineDateAndTime(dateStr, '23:59', timeZone)
 
+    // Do not show half-day blocks before "now" or before the beginning of the scheduling window
+    if (blockEnd <= searchStart) continue
+
+    // Do not show blocks after the end of the scheduling window
+    if (winEnd && blockStart >= winEnd) continue
+
     const isCurrentBlock = now >= blockStart && now < blockEnd
 
-    const totalSlotsCount = blockTheoreticalMeta.length || slots.length
+    // Theoretical slots within window for capacity and utilization calculation
+    const blockTheoreticalInWindow = blockTheoreticalMeta.filter((meta) => {
+      const sDate = combineDateAndTime(meta.dateStr, meta.time24, timeZone)
+      const eDate = combineDateAndTime(meta.dateStr, meta.endTime24, timeZone)
+      if (winStart && sDate < winStart) return false
+      if (winEnd && (sDate >= winEnd || eDate > winEnd)) return false
+      return true
+    })
+
+    const totalSlotsCount = blockTheoreticalInWindow.length || slots.length
     const openSlotsCount = slots.length
     const utilizationPercentage =
       totalSlotsCount > 0
