@@ -372,7 +372,18 @@ export async function getStudentSchedulingWindow(
     }
   }
 
-  const start = assignment.scheduleWindowStart || effectiveAvailableFrom || new Date()
+  let start: Date
+  if (effectiveAvailableFrom && assignment.scheduleWindowStart) {
+    start = new Date(
+      Math.max(effectiveAvailableFrom.getTime(), assignment.scheduleWindowStart.getTime())
+    )
+  } else if (effectiveAvailableFrom) {
+    start = effectiveAvailableFrom
+  } else if (assignment.scheduleWindowStart) {
+    start = assignment.scheduleWindowStart
+  } else {
+    start = new Date()
+  }
   const end =
     assignment.scheduleWindowEnd ||
     effectiveAcceptUntil ||
@@ -513,52 +524,56 @@ export async function getRecommendedDaysAndSlots(
       if (hours.openTime < CBTF_AFTERNOON_DIVIDING_TIME) {
         const blockStart = combineDateAndTime(dateStr, hours.openTime, timeZone)
         const blockEnd = afternoonDividingUtc
-        const theoreticalBlockSlots = theoreticalSlots.filter(
-          (s) =>
-            s.startTime < afternoonDividingUtc &&
-            s.startTime >= studentWindow.start &&
-            s.endTime <= studentWindow.end
-        )
-        const openSlots = allSlots.filter(
-          (s) =>
-            s.startTime < afternoonDividingUtc &&
-            s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000 &&
-            s.startTime >= studentWindow.start &&
-            s.endTime <= studentWindow.end
-        )
 
-        if (openSlots.length > 0) {
-          const isCurrentBlock = now >= blockStart && now < blockEnd
-          const totalSlotsCount = theoreticalBlockSlots.length
-          const openSlotsCount = openSlots.length
-          const utilizationPercentage =
-            totalSlotsCount > 0
-              ? Math.max(
-                  0,
-                  Math.min(
-                    100,
-                    Math.round(((totalSlotsCount - openSlotsCount) / totalSlotsCount) * 100)
+        // Do not show half-day blocks that precede searchStart (max of now and assignment opening / accept-from time)
+        if (blockEnd > searchStart) {
+          const theoreticalBlockSlots = theoreticalSlots.filter(
+            (s) =>
+              s.startTime < afternoonDividingUtc &&
+              s.startTime >= studentWindow.start &&
+              s.endTime <= studentWindow.end
+          )
+          const openSlots = allSlots.filter(
+            (s) =>
+              s.startTime < afternoonDividingUtc &&
+              s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000 &&
+              s.startTime >= studentWindow.start &&
+              s.endTime <= studentWindow.end
+          )
+
+          if (openSlots.length > 0) {
+            const isCurrentBlock = now >= blockStart && now < blockEnd
+            const totalSlotsCount = theoreticalBlockSlots.length
+            const openSlotsCount = openSlots.length
+            const utilizationPercentage =
+              totalSlotsCount > 0
+                ? Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      Math.round(((totalSlotsCount - openSlotsCount) / totalSlotsCount) * 100)
+                    )
                   )
-                )
-              : 100
+                : 100
 
-          candidateBlockItems.push({
-            block: {
-              id: `${dateStr}-morning`,
-              date: dateStr,
-              dayOfWeek,
-              blockType: 'morning',
-              label: `${dayName} Morning`,
-              dateLabel,
-              timeRangeLabel: `${formatTimeStr12h(hours.openTime)} – ${formatTimeStr12h(CBTF_AFTERNOON_DIVIDING_TIME)}`,
-              isCurrentBlock,
-              openSlotsCount,
-              totalSlotsCount,
-              utilizationPercentage,
-              isHighDemand: utilizationPercentage > 60
-            },
-            openSlots
-          })
+            candidateBlockItems.push({
+              block: {
+                id: `${dateStr}-morning`,
+                date: dateStr,
+                dayOfWeek,
+                blockType: 'morning',
+                label: `${dayName} Morning`,
+                dateLabel,
+                timeRangeLabel: `${formatTimeStr12h(hours.openTime)} – ${formatTimeStr12h(CBTF_AFTERNOON_DIVIDING_TIME)}`,
+                isCurrentBlock,
+                openSlotsCount,
+                totalSlotsCount,
+                utilizationPercentage,
+                isHighDemand: utilizationPercentage > 60
+              },
+              openSlots
+            })
+          }
         }
       }
 
@@ -566,52 +581,56 @@ export async function getRecommendedDaysAndSlots(
       if (hours.closeTime > CBTF_AFTERNOON_DIVIDING_TIME) {
         const blockStart = afternoonDividingUtc
         const blockEnd = combineDateAndTime(dateStr, hours.closeTime, timeZone)
-        const theoreticalBlockSlots = theoreticalSlots.filter(
-          (s) =>
-            s.startTime >= afternoonDividingUtc &&
-            s.startTime >= studentWindow.start &&
-            s.endTime <= studentWindow.end
-        )
-        const openSlots = allSlots.filter(
-          (s) =>
-            s.startTime >= afternoonDividingUtc &&
-            s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000 &&
-            s.startTime >= studentWindow.start &&
-            s.endTime <= studentWindow.end
-        )
 
-        if (openSlots.length > 0) {
-          const isCurrentBlock = now >= blockStart && now < blockEnd
-          const totalSlotsCount = theoreticalBlockSlots.length
-          const openSlotsCount = openSlots.length
-          const utilizationPercentage =
-            totalSlotsCount > 0
-              ? Math.max(
-                  0,
-                  Math.min(
-                    100,
-                    Math.round(((totalSlotsCount - openSlotsCount) / totalSlotsCount) * 100)
+        // Do not show half-day blocks that precede searchStart (max of now and assignment opening / accept-from time)
+        if (blockEnd > searchStart) {
+          const theoreticalBlockSlots = theoreticalSlots.filter(
+            (s) =>
+              s.startTime >= afternoonDividingUtc &&
+              s.startTime >= studentWindow.start &&
+              s.endTime <= studentWindow.end
+          )
+          const openSlots = allSlots.filter(
+            (s) =>
+              s.startTime >= afternoonDividingUtc &&
+              s.startTime.getTime() >= now.getTime() + 15 * 60 * 1000 &&
+              s.startTime >= studentWindow.start &&
+              s.endTime <= studentWindow.end
+          )
+
+          if (openSlots.length > 0) {
+            const isCurrentBlock = now >= blockStart && now < blockEnd
+            const totalSlotsCount = theoreticalBlockSlots.length
+            const openSlotsCount = openSlots.length
+            const utilizationPercentage =
+              totalSlotsCount > 0
+                ? Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      Math.round(((totalSlotsCount - openSlotsCount) / totalSlotsCount) * 100)
+                    )
                   )
-                )
-              : 100
+                : 100
 
-          candidateBlockItems.push({
-            block: {
-              id: `${dateStr}-afternoon`,
-              date: dateStr,
-              dayOfWeek,
-              blockType: 'afternoon',
-              label: `${dayName} Afternoon`,
-              dateLabel,
-              timeRangeLabel: `${formatTimeStr12h(CBTF_AFTERNOON_DIVIDING_TIME)} – ${formatTimeStr12h(hours.closeTime)}`,
-              isCurrentBlock,
-              openSlotsCount,
-              totalSlotsCount,
-              utilizationPercentage,
-              isHighDemand: utilizationPercentage > 60
-            },
-            openSlots
-          })
+            candidateBlockItems.push({
+              block: {
+                id: `${dateStr}-afternoon`,
+                date: dateStr,
+                dayOfWeek,
+                blockType: 'afternoon',
+                label: `${dayName} Afternoon`,
+                dateLabel,
+                timeRangeLabel: `${formatTimeStr12h(CBTF_AFTERNOON_DIVIDING_TIME)} – ${formatTimeStr12h(hours.closeTime)}`,
+                isCurrentBlock,
+                openSlotsCount,
+                totalSlotsCount,
+                utilizationPercentage,
+                isHighDemand: utilizationPercentage > 60
+              },
+              openSlots
+            })
+          }
         }
       }
     }

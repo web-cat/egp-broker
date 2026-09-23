@@ -286,6 +286,59 @@ describe('CBTF Server Utilities', () => {
       expect(window.start.toISOString()).toBe('2026-09-22T08:00:00.000Z')
       expect(window.end.toISOString()).toBe('2026-09-25T18:00:00.000Z')
     })
+
+    it('excludes dates prior to availableFrom even if scheduleWindowStart is set earlier', async () => {
+      const mockTx: any = {
+        passRedemption: { findFirst: vi.fn().mockResolvedValue(null) }
+      }
+      const assignment = {
+        id: 'asg-early-window',
+        scheduleWindowStart: new Date('2026-09-10T08:00:00.000Z'),
+        scheduleWindowEnd: new Date('2026-09-20T18:00:00.000Z'),
+        availableFrom: new Date('2026-09-15T08:00:00.000Z'),
+        dueDate: null,
+        acceptUntil: null
+      }
+
+      const window = await getStudentSchedulingWindow('usr-1', assignment, mockTx)
+      expect(window.isPassWindow).toBe(false)
+      // Must not precede availableFrom (the assignment accept-from opening date/time)
+      expect(window.start.toISOString()).toBe('2026-09-15T08:00:00.000Z')
+    })
+
+    it('uses scheduleWindowStart when it starts after availableFrom', async () => {
+      const mockTx: any = {
+        passRedemption: { findFirst: vi.fn().mockResolvedValue(null) }
+      }
+      const assignment = {
+        id: 'asg-late-window',
+        scheduleWindowStart: new Date('2026-09-18T08:00:00.000Z'),
+        scheduleWindowEnd: new Date('2026-09-25T18:00:00.000Z'),
+        availableFrom: new Date('2026-09-15T08:00:00.000Z'),
+        dueDate: null,
+        acceptUntil: null
+      }
+
+      const window = await getStudentSchedulingWindow('usr-1', assignment, mockTx)
+      expect(window.start.toISOString()).toBe('2026-09-18T08:00:00.000Z')
+    })
+
+    it('uses availableFrom as start when scheduleWindowStart is null', async () => {
+      const mockTx: any = {
+        passRedemption: { findFirst: vi.fn().mockResolvedValue(null) }
+      }
+      const assignment = {
+        id: 'asg-no-sched-start',
+        scheduleWindowStart: null,
+        scheduleWindowEnd: new Date('2026-09-25T18:00:00.000Z'),
+        availableFrom: new Date('2026-09-15T08:00:00.000Z'),
+        dueDate: null,
+        acceptUntil: null
+      }
+
+      const window = await getStudentSchedulingWindow('usr-1', assignment, mockTx)
+      expect(window.start.toISOString()).toBe('2026-09-15T08:00:00.000Z')
+    })
   })
 
   describe('getRecommendedDaysAndSlots', () => {
@@ -588,6 +641,41 @@ describe('CBTF Server Utilities', () => {
       expect(afternoonResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('2:00 PM')
       expect(afternoonResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('3:00 PM')
       expect(afternoonResult.hourlySlots.map((s) => s.formattedTime)).not.toContain('4:00 PM')
+    })
+
+    it('does not show half-day blocks that precede the opening date/time of the assignment', async () => {
+      const mockTx: any = {
+        cbtfReservation: { findMany: vi.fn().mockResolvedValue([]) },
+        cbtfScheduleException: { findFirst: vi.fn().mockResolvedValue(null) },
+        cbtfOperatingHours: {
+          findUnique: vi.fn().mockImplementation(({ where }) => {
+            const h = facility.operatingHours.find(
+              (o: any) => o.dayOfWeek === where.facilityId_dayOfWeek.dayOfWeek
+            )
+            return Promise.resolve(h || null)
+          })
+        }
+      }
+
+      // Assignment opening (accept from) time is Monday Oct 5 at 2:00 PM (14:00 EDT = 18:00 UTC)
+      // Operating hours are Mon-Fri 08:00 to 17:00.
+      // Monday Morning (08:00-12:30 EDT) ends at 12:30 EDT (16:30 UTC), preceding 2:00 PM.
+      // Therefore, Monday Morning must be excluded, and the next 4 blocks must start with Monday Afternoon.
+      const win = {
+        start: new Date('2026-10-05T18:00:00.000Z'),
+        end: new Date('2026-10-09T23:59:59.000Z'),
+        isPassWindow: false,
+        redemptionId: null
+      }
+
+      const result = await getRecommendedDaysAndSlots(facility, win, undefined, undefined, mockTx)
+
+      expect(result.blocks.length).toBe(4)
+      expect(result.blocks.map((b) => b.id)).not.toContain('2026-10-05-morning')
+      expect(result.blocks[0].id).toBe('2026-10-05-afternoon')
+      expect(result.blocks[1].id).toBe('2026-10-06-morning')
+      expect(result.blocks[2].id).toBe('2026-10-06-afternoon')
+      expect(result.blocks[3].id).toBe('2026-10-07-morning')
     })
   })
 
