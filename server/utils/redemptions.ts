@@ -4,7 +4,7 @@ import type { RedemptionRow } from '@@/shared/models/pass'
 import type { RepairCbtfRedemptionsResponse } from '@@/shared/schemas/cbtf.schema'
 import { calculatePassExtension } from '@@/shared/utils/extension'
 import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
-import { notifyPassRedemption, notifyPassPortSyncFailure } from '@@/server/services/alert.service'
+import { notifyPassPortSyncFailure } from '@@/server/services/alert.service'
 import {
   buildPassPortExtensionPayload,
   sendPassPortExtension,
@@ -84,15 +84,6 @@ export async function redeemPass(
   passTypeId: string,
   promptResponses?: Record<string, any>
 ) {
-  let alertData: {
-    userName?: string | null
-    userEmail?: string | null
-    passTypeName: string
-    assignmentTitle: string
-    courseName?: string | null
-    cost: number
-  } | null = null
-
   let passportDispatchedTool: {
     passportExtensionUrl?: string | null
     passportClientId?: string | null
@@ -419,37 +410,8 @@ export async function redeemPass(
         data: { balance: { decrement: extension.cost } }
       })
 
-      alertData = {
-        userName:
-          pool.user?.firstName && pool.user?.lastName
-            ? `${pool.user.firstName} ${pool.user.lastName}`
-            : pool.user?.email,
-        userEmail: pool.user?.email,
-        passTypeName: pool.passType?.name || 'Pass',
-        assignmentTitle: assignment.title,
-        courseName: pool.passType?.course?.name,
-        cost: extension.cost
-      }
-
       return newRedemption
     })
-
-    if (alertData) {
-      try {
-        await notifyPassRedemption({
-          userName: alertData.userName,
-          userEmail: alertData.userEmail,
-          passTypeName: alertData.passTypeName,
-          assignmentTitle: alertData.assignmentTitle,
-          courseName: alertData.courseName,
-          cost: alertData.cost,
-          newDueDate: redemption.dueDate || redemption.acceptUntil
-        })
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err)
-        console.error('[redemption-alert] Failed to trigger redemption notification:', message)
-      }
-    }
 
     return redemption
   } catch (err: unknown) {
@@ -1199,21 +1161,7 @@ export async function teacherForceRedeemPass(
     }
   }
 
-  // 9. Alert notification (fire and forget)
-  notifyPassRedemption({
-    userName:
-      pool.user?.firstName && pool.user?.lastName
-        ? `${pool.user.firstName} ${pool.user.lastName}`
-        : pool.user?.email,
-    userEmail: pool.user?.email,
-    passTypeName: pool.passType?.name || 'Pass',
-    assignmentTitle: assignment.title,
-    courseName: pool.passType?.course?.name,
-    cost,
-    newDueDate: due || lock
-  }).catch(() => {})
-
-  // 10. Fetch updated student pass balances for course
+  // 9. Fetch updated student pass balances for course
   const coursePassTypes = await prisma.passType.findMany({
     where: { courseId },
     select: { id: true, name: true, initialBalance: true }

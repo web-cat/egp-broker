@@ -217,11 +217,7 @@ describe('Redemption Utilities', () => {
         where: { id: 'pool1' },
         data: { balance: { decrement: 1 } }
       })
-      expect(notifyPassRedemption).toHaveBeenCalledWith(
-        expect.objectContaining({
-          cost: 1
-        })
-      )
+      expect(notifyPassRedemption).not.toHaveBeenCalled()
     })
 
     it('throws error if balance is insufficient for multi-pass catch-up cost', async () => {

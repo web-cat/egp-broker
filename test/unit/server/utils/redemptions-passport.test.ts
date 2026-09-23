@@ -147,7 +147,7 @@ describe('PassPort Pass Redemption Hook & Fail-Safe Handling', () => {
       where: { id: 'pool-1' },
       data: { balance: { decrement: 1 } }
     })
-    expect(notifyPassRedemption).toHaveBeenCalled()
+    expect(notifyPassRedemption).not.toHaveBeenCalled()
   })
 
   it('dispatches PassPort extension webhook when tool supports PassPort and is REGISTERED', async () => {

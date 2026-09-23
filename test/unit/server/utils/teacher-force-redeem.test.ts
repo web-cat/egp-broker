@@ -213,7 +213,7 @@ describe('Teacher Force Redeem Pass', () => {
       })
     )
     expect(result.passBalances).toBeDefined()
-    expect(notifyPassRedemption).toHaveBeenCalled()
+    expect(notifyPassRedemption).not.toHaveBeenCalled()
   })
 
   it('does NOT deduct from pass balance and sets cost to 0 when deductFromBalance is false', async () => {
