@@ -230,6 +230,11 @@
       />
     </div>
 
+    <!-- Tab 6: Reservation Notes -->
+    <div v-else-if="activeTab === 'notes'" class="space-y-4">
+      <FeaturesCbtfReservationNotesTable />
+    </div>
+
     <!-- Modal: Operating Hours Upsert -->
     <UModal v-model:open="showHoursModal" title="Set Weekly Operating Hours">
       <template #body>
@@ -722,7 +727,8 @@ const tabs = [
   { id: 'hours', label: 'Operating Hours', icon: 'i-lucide-clock' },
   { id: 'exceptions', label: 'Exceptions', icon: 'i-lucide-calendar-off' },
   { id: 'shifts', label: 'Proctor Shifts', icon: 'i-lucide-users' },
-  { id: 'reservations', label: 'Reservations Log', icon: 'i-lucide-clipboard-list' }
+  { id: 'reservations', label: 'Reservations Log', icon: 'i-lucide-clipboard-list' },
+  { id: 'notes', label: 'Reservation Notes', icon: 'i-lucide-file-text' }
 ]
 
 const activeTab = ref('facility')

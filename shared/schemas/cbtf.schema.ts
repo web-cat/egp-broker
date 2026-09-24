@@ -335,3 +335,24 @@ export const cbtfAdminUpdateReservationSchema = z
   )
 
 export type CbtfAdminUpdateReservationInput = z.infer<typeof cbtfAdminUpdateReservationSchema>
+
+export const cbtfAdminNotesQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  student: z.string().trim().optional(),
+  assignment: z.string().trim().optional(),
+  course: z.string().trim().optional(),
+  from: z
+    .string()
+    .datetime()
+    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}/))
+    .optional(),
+  to: z
+    .string()
+    .datetime()
+    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}/))
+    .optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(20)
+})
+
+export type CbtfAdminNotesQuery = z.infer<typeof cbtfAdminNotesQuerySchema>

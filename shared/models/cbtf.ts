@@ -127,3 +127,39 @@ export interface CbtfHourlySlotChoice {
   endTime: string // ISO string
   formattedTime: string // e.g. "9:15 AM"
 }
+
+export interface CbtfAdminReservationNoteDto {
+  id: string
+  reservationId: string
+  content: string
+  hasPhotos: boolean
+  createdAt: string
+  updatedAt: string
+  author?: {
+    id: string
+    name: string
+    email?: string | null
+  }
+  reservation?: {
+    id: string
+    seatNumber: number
+    startTime: string
+    endTime: string
+    status: string
+    student?: {
+      id: string
+      name: string
+      email?: string | null
+      studentId?: string | null
+    }
+    assignment?: {
+      id: string
+      title?: string | null
+    }
+    course?: {
+      id: string
+      label?: string | null
+      title?: string | null
+    }
+  }
+}
