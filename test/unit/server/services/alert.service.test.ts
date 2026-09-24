@@ -3,7 +3,8 @@ import {
   sendAdminAlert,
   notifyPassRedemption,
   notifyCbtfScheduleSuccess,
-  notifyCbtfScheduleFailure
+  notifyCbtfScheduleFailure,
+  notifyProctorNote
 } from '../../../../server/services/alert.service'
 
 describe('Alert Service (ntfy)', () => {
@@ -327,6 +328,74 @@ describe('Alert Service (ntfy)', () => {
       expect(callBody).toContain(
         'Location: server/api/me/cbtf/reservations.post.ts (Arrival Throttle Limit Check)'
       )
+    })
+  })
+
+  describe('notifyProctorNote', () => {
+    it('formats and sends alert when a proctor enters an observation note', async () => {
+      vi.stubGlobal('useRuntimeConfig', () => ({
+        ntfy: {
+          serverUrl: 'https://ntfy.sh',
+          topic: 'egp-broker-admin',
+          token: ''
+        }
+      }))
+
+      mockFetch.mockResolvedValueOnce({ id: 'note-alert-1' })
+
+      const result = await notifyProctorNote({
+        studentName: 'Alice Smith',
+        studentEmail: 'asmith@vt.edu',
+        studentId: '906000001',
+        assignmentTitle: 'Midterm Exam 1',
+        courseLabel: 'CS 2114',
+        startTime: '2026-10-15T14:00:00.000Z',
+        seatNumber: 12,
+        authorName: 'Proctor Pat',
+        content: 'Student attempted to use notes on desk',
+        hasPhotos: true
+      })
+
+      expect(result).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-admin', {
+        method: 'POST',
+        body: expect.stringContaining('Alice Smith <asmith@vt.edu> [ID: 906000001]'),
+        headers: expect.objectContaining({
+          Title: expect.stringContaining('Midterm Exam 1'),
+          Priority: 'default',
+          Tags: expect.stringContaining('cbtf')
+        })
+      })
+
+      const callBody = mockFetch.mock.calls[0][1].body
+      expect(callBody).toContain('Midterm Exam 1')
+      expect(callBody).toContain('2026-10-15T14:00:00.000Z')
+      expect(callBody).toContain('Student attempted to use notes on desk')
+      expect(callBody).toContain('Seat: #12')
+      expect(callBody).toContain('Proctor: Proctor Pat')
+    })
+
+    it('handles minimal fields with fallbacks gracefully', async () => {
+      vi.stubGlobal('useRuntimeConfig', () => ({
+        ntfy: {
+          serverUrl: 'https://ntfy.sh',
+          topic: 'egp-broker-admin',
+          token: ''
+        }
+      }))
+
+      mockFetch.mockResolvedValueOnce({ id: 'note-alert-2' })
+
+      const result = await notifyProctorNote({
+        startTime: new Date('2026-10-15T14:00:00.000Z'),
+        content: 'Brief observation note'
+      })
+
+      expect(result).toBe(true)
+      const callBody = mockFetch.mock.calls[0][1].body
+      expect(callBody).toContain('A student')
+      expect(callBody).toContain('2026-10-15T14:00:00.000Z')
+      expect(callBody).toContain('Brief observation note')
     })
   })
 })

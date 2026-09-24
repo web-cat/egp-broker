@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import notesPost from '../../../../../server/api/proctor/notes.post'
 import notesGet from '../../../../../server/api/proctor/notes.get'
 import prisma from '@@/server/utils/db'
+import { notifyProctorNote } from '@@/server/services/alert.service'
+
+vi.mock('@@/server/services/alert.service', () => ({
+  notifyProctorNote: vi.fn().mockResolvedValue(true)
+}))
 
 vi.mock('@@/server/utils/db', () => ({
   default: {
@@ -116,6 +121,13 @@ describe('API: Proctor Notes Endpoints', () => {
             authorId: 'proctor-1',
             hasPhotos: true
           })
+        })
+      )
+      expect(notifyProctorNote).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentName: 'Alice Smith',
+          content: 'Suspicious glancing toward seat 15',
+          hasPhotos: true
         })
       )
     })

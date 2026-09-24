@@ -10,6 +10,7 @@ import type { PrismaClient } from '@prisma/client'
 import prisma from '@@/server/utils/db'
 import { resolveStudentEffectiveDates } from './overrides'
 import { sendCbtfIncidentNotification } from './cbtf-notifications'
+import { notifyProctorNote } from '@@/server/services/alert.service'
 import type {
   CbtfFacility,
   CbtfReservation,
@@ -1275,10 +1276,23 @@ export async function addReservationNote(
         select: {
           id: true,
           seatNumber: true,
+          startTime: true,
+          assignment: {
+            select: {
+              title: true,
+              course: {
+                select: {
+                  label: true,
+                  title: true
+                }
+              }
+            }
+          },
           user: {
             select: {
               firstName: true,
               lastName: true,
+              email: true,
               studentId: true
             }
           }
@@ -1287,13 +1301,34 @@ export async function addReservationNote(
     }
   })
 
+  try {
+    await notifyProctorNote({
+      studentName: note.reservation?.user
+        ? `${note.reservation.user.firstName} ${note.reservation.user.lastName}`.trim()
+        : null,
+      studentEmail: note.reservation?.user?.email ?? null,
+      studentId: note.reservation?.user?.studentId ?? null,
+      assignmentTitle: note.reservation?.assignment?.title ?? null,
+      courseLabel: note.reservation?.assignment?.course?.label ?? null,
+      startTime: note.reservation?.startTime,
+      seatNumber: note.reservation?.seatNumber ?? null,
+      authorName: note.author ? `${note.author.firstName} ${note.author.lastName}`.trim() : null,
+      content: note.content,
+      hasPhotos: note.hasPhotos
+    })
+  } catch (alertErr) {
+    console.warn('[CBTF Proctor Note Alert] Failed to dispatch ntfy alert:', alertErr)
+  }
+
   return {
     id: note.id,
     reservationId: note.reservationId,
-    seatNumber: note.reservation.seatNumber,
-    studentName: `${note.reservation.user.firstName} ${note.reservation.user.lastName}`.trim(),
+    seatNumber: note.reservation?.seatNumber,
+    studentName: note.reservation?.user
+      ? `${note.reservation.user.firstName} ${note.reservation.user.lastName}`.trim()
+      : '',
     authorId: note.authorId,
-    authorName: `${note.author.firstName} ${note.author.lastName}`.trim(),
+    authorName: note.author ? `${note.author.firstName} ${note.author.lastName}`.trim() : '',
     content: note.content,
     hasPhotos: note.hasPhotos,
     createdAt: note.createdAt.toISOString(),

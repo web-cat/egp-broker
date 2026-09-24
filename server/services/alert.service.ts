@@ -268,3 +268,46 @@ export async function notifyCbtfScheduleFailure(
     tags: ['warning', 'cbtf', 'x', 'rotating_light']
   })
 }
+
+export interface ProctorNoteAlertData {
+  studentName?: string | null
+  studentEmail?: string | null
+  studentId?: string | null
+  assignmentTitle?: string | null
+  courseLabel?: string | null
+  startTime?: string | Date | null
+  seatNumber?: number | null
+  authorName?: string | null
+  content: string
+  hasPhotos?: boolean
+}
+
+/**
+ * Notify administrator about a proctor note entered for a CBTF reservation.
+ */
+export async function notifyProctorNote(data: ProctorNoteAlertData): Promise<boolean> {
+  const identity = formatStudentIdentity(data)
+  const assignment = data.assignmentTitle ? ` for "${data.assignmentTitle}"` : ''
+  const course = data.courseLabel ? ` in ${data.courseLabel}` : ''
+  const startStr = data.startTime
+    ? data.startTime instanceof Date
+      ? data.startTime.toISOString()
+      : String(data.startTime)
+    : 'Unknown'
+  const seat = data.seatNumber ? `\nSeat: #${data.seatNumber}` : ''
+  const proctor = data.authorName ? `\nProctor: ${data.authorName}` : ''
+  const photos = data.hasPhotos ? '\nPhotos: Attached / Captured' : ''
+
+  const message = `Proctor note entered for ${identity}${assignment}${course}.\nReservation Start Time: ${startStr}${seat}${proctor}${photos}\n\nNote:\n${data.content}`
+
+  const title = data.studentName
+    ? `Proctor Note: ${data.studentName} (${data.assignmentTitle || 'CBTF Exam'})`
+    : `Proctor Note: ${data.assignmentTitle || 'CBTF Exam'}`
+
+  return await sendAdminAlert({
+    title,
+    message,
+    priority: 'default',
+    tags: ['memo', 'cbtf']
+  })
+}
