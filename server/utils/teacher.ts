@@ -7,6 +7,8 @@ import type {
 } from '@@/shared/models/teacher'
 import type { AssignmentOverrideDetails } from '@@/shared/models/override'
 import type { CourseSectionRow } from '@@/shared/models/section'
+import type { CbtfReservationDto } from '@@/shared/models/cbtf'
+import { toCbtfReservationDto, autoExpirePastScheduledReservations } from '@@/server/utils/cbtf'
 
 /**
  * Retrieves all redemptions for a specific assignment in a course.
@@ -163,7 +165,7 @@ export async function getStudentRedemptionHistory(
       assignment: { select: { id: true, title: true } },
       pool: {
         include: {
-          passType: { select: { name: true, hoursPerPass: true } }
+          passType: { select: { name: true, hoursPerPass: true, extensionOnly: true } }
         }
       }
     }
@@ -185,6 +187,8 @@ export async function getStudentRedemptionHistory(
       passTypeName: r.pool.passType.name,
       cost: r.cost,
       hoursPerPass: r.pool.passType.hoursPerPass,
+      extensionOnly: r.pool.passType.extensionOnly,
+      createdAt: r.createdAt.toISOString(),
       redeemedAt: r.createdAt.toISOString(),
       dueDate: r.dueDate?.toISOString() ?? null,
       acceptUntil: r.acceptUntil?.toISOString() ?? null,
@@ -327,4 +331,28 @@ export async function getStudentInterviewHistory(
     notes: r.notes ?? null,
     createdAt: r.createdAt.toISOString()
   }))
+}
+
+/**
+ * Retrieves all CBTF reservations for a specific student in a course.
+ */
+export async function getStudentCbtfReservations(
+  studentId: string,
+  courseId: string
+): Promise<CbtfReservationDto[]> {
+  await autoExpirePastScheduledReservations({ userId: studentId })
+
+  const reservations = await prisma.cbtfReservation.findMany({
+    where: {
+      userId: studentId,
+      assignment: { courseId }
+    },
+    include: {
+      assignment: { select: { title: true } },
+      user: { select: { firstName: true, lastName: true, studentId: true, avatarUrl: true } }
+    },
+    orderBy: { startTime: 'desc' }
+  })
+
+  return reservations.map(toCbtfReservationDto)
 }

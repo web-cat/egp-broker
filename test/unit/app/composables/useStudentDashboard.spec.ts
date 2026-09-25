@@ -91,11 +91,16 @@ vi.mock('~/composables/features/useEnrollmentsFeature', () => ({
 describe('useStudentDashboard - hasBalance and pass redemption column', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.setSystemTime(new Date('2026-09-22T12:00:00Z'))
     mockGetReservationForAssignment.mockReturnValue(null)
     mockPassPools.value = {
       data: [{ id: 'p1', name: 'Quiz Pass', balance: 2, hoursPerPass: 168 }]
     }
     mockRedemptions.value = { data: [] }
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders a clickable button when pass is eligible and student has balance > 0', () => {

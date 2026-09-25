@@ -59,6 +59,8 @@ export const studentRedemptionHistoryRowSchema = z.object({
   passTypeName: z.string(),
   cost: z.number(),
   hoursPerPass: z.number(),
+  extensionOnly: z.boolean().optional(),
+  createdAt: z.string().optional(),
   redeemedAt: z.string(),
   dueDate: z.string().nullable(),
   acceptUntil: z.string().nullable(),

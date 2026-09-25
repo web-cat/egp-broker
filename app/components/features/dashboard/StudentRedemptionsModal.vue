@@ -171,6 +171,27 @@
           />
         </div>
 
+        <!-- Student Assignment View Table -->
+        <div class="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+          <div class="flex items-center justify-between px-1">
+            <p
+              class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400"
+            >
+              Assignments (Student View)
+            </p>
+          </div>
+          <BaseDataTable
+            :data="studentFilteredAssignments"
+            :columns="studentAssignmentColumns"
+            :row-class="studentAssignmentRowClass"
+            :loading="assignmentsLoading || loading || cbtfReservationsLoading || interviewsLoading"
+            searchable
+            search-placeholder="Search assignments…"
+            empty-icon="i-lucide-clipboard-list"
+            empty-text="No assignments to show."
+          />
+        </div>
+
         <!-- Teacher Force Redeem Pass Modal -->
         <FeaturesDashboardTeacherRedeemPassModal
           v-model:open="forceRedeemModalOpen"
@@ -202,8 +223,14 @@ import type {
   StudentInterviewHistoryRow
 } from '@@/shared/models/teacher'
 import type { AssignmentRow } from '@@/shared/models/assignment'
+import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 import type { ApiResponse } from '@@/shared/types/api'
 import { formatDate } from '~/utils/date'
+import { filterStudentAssignments } from '@@/shared/utils/student-assignments'
+import {
+  createStudentAssignmentColumns,
+  studentAssignmentRowClass
+} from '~/composables/features/useStudentAssignmentTable'
 
 const props = withDefaults(
   defineProps<{
@@ -254,8 +281,11 @@ const effectiveAssignments = computed(() => {
   return internalAssignments.value
 })
 
+const assignmentsLoading = ref(false)
+
 const fetchAssignmentsIfEmpty = async () => {
   if (props.assignments && props.assignments.length > 0) return
+  assignmentsLoading.value = true
   try {
     const res = await $fetch<ApiResponse<AssignmentRow[]>>('/api/me/assignments')
     if (res.data) {
@@ -263,12 +293,16 @@ const fetchAssignmentsIfEmpty = async () => {
     }
   } catch (err) {
     console.error('Failed to fetch assignments for pass redemption:', err)
+  } finally {
+    assignmentsLoading.value = false
   }
 }
 
 const onPassRedeemed = (newBalances: StudentPassBalance[]) => {
   localPassBalances.value = newBalances
   fetchRedemptions()
+  fetchInterviews()
+  fetchCbtfReservations()
   emit('saved', newBalances)
 }
 
@@ -372,6 +406,91 @@ const fetchInterviews = async () => {
   }
 }
 
+const cbtfReservations = ref<CbtfReservationDto[]>([])
+const cbtfReservationsLoading = ref(false)
+
+const fetchCbtfReservations = async () => {
+  if (!props.student?.userId) return
+  cbtfReservationsLoading.value = true
+  try {
+    const url = props.courseId
+      ? `/api/me/students/${props.student.userId}/cbtf-reservations?courseId=${props.courseId}`
+      : `/api/me/students/${props.student.userId}/cbtf-reservations`
+    const res = await $fetch<{ data: CbtfReservationDto[] }>(url)
+    cbtfReservations.value = res.data || []
+  } catch (err) {
+    console.error('Failed to fetch student CBTF reservations:', err)
+    cbtfReservations.value = []
+  } finally {
+    cbtfReservationsLoading.value = false
+  }
+}
+
+const getCbtfReservationForAssignment = (assignmentId: string): CbtfReservationDto | undefined => {
+  const active = cbtfReservations.value.find(
+    (r) =>
+      r.assignmentId === assignmentId && (r.status === 'SCHEDULED' || r.status === 'CHECKED_IN')
+  )
+  if (active) return active
+
+  const uncompleted = cbtfReservations.value.find(
+    (r) => r.assignmentId === assignmentId && (r.status === 'MISSED' || r.status === 'CANCELLED')
+  )
+  if (uncompleted) return uncompleted
+
+  return cbtfReservations.value.find(
+    (r) =>
+      r.assignmentId === assignmentId && (r.status === 'CHECKED_OUT' || r.status === 'COMPLETED')
+  )
+}
+
+const getGtaReservationForAssignment = (assignmentId: string): any | undefined => {
+  const active = interviews.value.find(
+    (r) =>
+      r.assignmentId === assignmentId && (r.status === 'SCHEDULED' || r.status === 'CHECKED_IN')
+  )
+  if (active) return active
+
+  const completed = interviews.value.find(
+    (r) =>
+      r.assignmentId === assignmentId && (r.status === 'COMPLETED' || r.status === 'CHECKED_OUT')
+  )
+  if (completed) return completed
+
+  return interviews.value.find(
+    (r) => r.assignmentId === assignmentId && (r.status === 'MISSED' || r.status === 'CANCELLED')
+  )
+}
+
+const studentFilteredAssignments = computed(() => {
+  if (!effectiveAssignments.value || !effectiveAssignments.value.length) return []
+
+  return filterStudentAssignments({
+    assignments: effectiveAssignments.value,
+    redemptions: redemptions.value,
+    getCbtfReservation: getCbtfReservationForAssignment,
+    getGtaReservation: getGtaReservationForAssignment
+  })
+})
+
+const studentAssignmentColumns = computed(() => {
+  const passPools = currentPassBalances.value.map((pb) => ({
+    id: pb.passTypeId,
+    passTypeId: pb.passTypeId,
+    name: pb.passTypeName,
+    balance: pb.balance,
+    initialBalance: pb.initialBalance
+  }))
+
+  return createStudentAssignmentColumns({
+    interactive: false,
+    redemptions: () => redemptions.value,
+    passPools: () => passPools,
+    getCbtfReservation: getCbtfReservationForAssignment,
+    getGtaReservation: getGtaReservationForAssignment
+  })
+})
+
 watch(
   () => [props.open, props.student?.userId],
   ([isOpen, id]) => {
@@ -381,10 +500,12 @@ watch(
     if (isOpen && id) {
       fetchRedemptions()
       fetchInterviews()
+      fetchCbtfReservations()
       fetchAssignmentsIfEmpty()
     } else {
       redemptions.value = []
       interviews.value = []
+      cbtfReservations.value = []
     }
   },
   { immediate: true }

@@ -326,10 +326,122 @@ describe('StudentRedemptionsModal', () => {
     const vm = wrapper.vm as any
     vm.redemptions = [{ id: 'red-1' }]
     vm.interviews = [{ id: 'res-1' }]
+    vm.cbtfReservations = [{ id: 'cbtf-1' }]
 
     await wrapper.setProps({ open: false })
 
     expect(vm.redemptions).toEqual([])
     expect(vm.interviews).toEqual([])
+    expect(vm.cbtfReservations).toEqual([])
+  })
+
+  it('fetches student CBTF reservations on open when student has an id', async () => {
+    const mockCbtf = [
+      {
+        id: 'cbtf-1',
+        assignmentId: 'assign-1',
+        seatNumber: 15,
+        status: 'SCHEDULED',
+        startTime: '2026-10-01T10:00:00Z',
+        endTime: '2026-10-01T11:00:00Z'
+      }
+    ]
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/cbtf-reservations')) {
+        return Promise.resolve({ data: mockCbtf })
+      }
+      return Promise.resolve({ data: [] })
+    })
+    vi.stubGlobal('$fetch', mockFetch)
+
+    const wrapper = mount(StudentRedemptionsModal, {
+      props: {
+        open: true,
+        student: { ...baseStudent },
+        courseId: 'course-123'
+      },
+      global: {
+        stubs: {
+          UModal: true,
+          UIcon: true,
+          UButton: true,
+          UInput: true,
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
+        }
+      }
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/me/students/user-1/cbtf-reservations?courseId=course-123'
+    )
+    const vm = wrapper.vm as any
+    expect(vm.cbtfReservations).toHaveLength(1)
+    expect(vm.cbtfReservations[0].id).toBe('cbtf-1')
+  })
+
+  it('computes studentFilteredAssignments and studentAssignmentColumns without interactive action buttons', async () => {
+    const mockAssignments = [
+      {
+        id: 'assign-1',
+        title: 'Midterm Exam',
+        dueDate: '2026-10-15T00:00:00Z',
+        availableFrom: '2026-09-01T00:00:00Z',
+        acceptUntil: '2026-10-20T00:00:00Z',
+        published: true,
+        isSchedulable: true,
+        hasInterviews: true,
+        createdAt: '2026-09-01T00:00:00Z',
+        eligiblePassTypes: [{ id: 'pt-1', name: 'Late Pass' }]
+      }
+    ]
+
+    const wrapper = mount(StudentRedemptionsModal, {
+      props: {
+        open: true,
+        student: { ...baseStudent },
+        assignments: mockAssignments as any,
+        courseId: 'course-123'
+      },
+      global: {
+        stubs: {
+          UModal: true,
+          UIcon: true,
+          UButton: true,
+          UInput: true,
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
+        }
+      }
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    const vm = wrapper.vm as any
+    expect(vm.studentFilteredAssignments).toHaveLength(1)
+    expect(vm.studentFilteredAssignments[0].id).toBe('assign-1')
+
+    const cols = vm.studentAssignmentColumns
+    expect(cols.map((c: any) => c.accessorKey)).toEqual([
+      'title',
+      'eligiblePassTypes',
+      'dueDate',
+      'availableFrom',
+      'cbtfSlot',
+      'gtaInterviewSlot'
+    ])
+
+    // Inspect CBTF cell
+    const cbtfCol = cols.find((c: any) => c.accessorKey === 'cbtfSlot')
+    const row = {
+      original: mockAssignments[0],
+      getValue: (k: string) => (mockAssignments[0] as any)[k]
+    }
+    const cbtfVNode = cbtfCol.cell({ row })
+    // In read-only mode, it is rendered as a span (not a button) with no onClick
+    expect(cbtfVNode.type).toBe('span')
+    expect(cbtfVNode.props?.onClick).toBeUndefined()
   })
 })
