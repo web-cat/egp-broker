@@ -3,7 +3,8 @@ import {
   assignmentRedemptionRowSchema,
   studentPassBalanceSchema,
   studentRosterRowSchema,
-  studentRedemptionHistoryRowSchema
+  studentRedemptionHistoryRowSchema,
+  studentInterviewHistoryRowSchema
 } from '../../../../shared/models/teacher'
 
 describe('Teacher Shared Schemas', () => {
@@ -76,6 +77,27 @@ describe('Teacher Shared Schemas', () => {
     }
 
     const result = studentRedemptionHistoryRowSchema.safeParse(valid)
+    expect(result.success).toBe(true)
+  })
+
+  it('validates studentInterviewHistoryRowSchema', () => {
+    const valid = {
+      id: 'res-1',
+      assignmentId: 'asg-1',
+      assignmentTitle: 'Project 1',
+      gtaId: 'gta-1',
+      gtaName: 'TA John',
+      gtaEmail: 'john@example.com',
+      startTime: '2026-09-25T14:00:00.000Z',
+      endTime: '2026-09-25T14:15:00.000Z',
+      status: 'SCHEDULED',
+      checkedInAt: null,
+      checkedOutAt: null,
+      notes: 'Initial interview booking',
+      createdAt: '2026-09-24T12:00:00.000Z'
+    }
+
+    const result = studentInterviewHistoryRowSchema.safeParse(valid)
     expect(result.success).toBe(true)
   })
 })

@@ -282,6 +282,7 @@
     v-model:open="studentRedemptionsOpen"
     :student="selectedStudentForRedemptions"
     :assignments="assignmentsData?.data || []"
+    :course-id="courseId"
     @saved="onStudentBalancesUpdated"
   />
 

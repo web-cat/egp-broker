@@ -2,7 +2,8 @@ import prisma from '@@/server/utils/db'
 import type {
   AssignmentRedemptionRow,
   StudentRosterRow,
-  StudentRedemptionHistoryRow
+  StudentRedemptionHistoryRow,
+  StudentInterviewHistoryRow
 } from '@@/shared/models/teacher'
 import type { AssignmentOverrideDetails } from '@@/shared/models/override'
 import type { CourseSectionRow } from '@@/shared/models/section'
@@ -279,5 +280,51 @@ export async function getCourseSections(courseId: string): Promise<CourseSection
     canvasSectionId: s.canvasSectionId,
     totalStudents: s._count.enrollments,
     totalOverrides: s._count.overrides
+  }))
+}
+
+/**
+ * Retrieves all GTA interview reservations for a specific student in a course.
+ */
+export async function getStudentInterviewHistory(
+  studentId: string,
+  courseId: string
+): Promise<StudentInterviewHistoryRow[]> {
+  const reservations = await prisma.gtaInterviewReservation.findMany({
+    where: {
+      studentId,
+      assignment: { courseId }
+    },
+    orderBy: { startTime: 'desc' },
+    include: {
+      assignment: { select: { id: true, title: true } },
+      gta: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true
+        }
+      }
+    }
+  })
+
+  return reservations.map((r) => ({
+    id: r.id,
+    assignmentId: r.assignment.id,
+    assignmentTitle: r.assignment.title || 'Untitled Assignment',
+    gtaId: r.gtaId,
+    gtaName:
+      [r.gta?.firstName, r.gta?.lastName].filter(Boolean).join(' ').trim() ||
+      r.gta?.email ||
+      'Unknown GTA',
+    gtaEmail: r.gta?.email || null,
+    startTime: r.startTime.toISOString(),
+    endTime: r.endTime.toISOString(),
+    status: r.status,
+    checkedInAt: r.checkedInAt?.toISOString() ?? null,
+    checkedOutAt: r.checkedOutAt?.toISOString() ?? null,
+    notes: r.notes ?? null,
+    createdAt: r.createdAt.toISOString()
   }))
 }

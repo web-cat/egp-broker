@@ -151,6 +151,26 @@
           />
         </div>
 
+        <!-- GTA Interview Reservations Table -->
+        <div class="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+          <div class="flex items-center justify-between px-1">
+            <p
+              class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400"
+            >
+              GTA Interview Reservations
+            </p>
+          </div>
+          <BaseDataTable
+            :data="interviews"
+            :columns="interviewColumns"
+            :loading="interviewsLoading"
+            searchable
+            search-placeholder="Search interviews…"
+            empty-icon="i-lucide-calendar"
+            empty-text="No GTA interview reservations recorded for this student."
+          />
+        </div>
+
         <!-- Teacher Force Redeem Pass Modal -->
         <FeaturesDashboardTeacherRedeemPassModal
           v-model:open="forceRedeemModalOpen"
@@ -178,7 +198,8 @@
 import type {
   StudentRosterRow,
   StudentRedemptionHistoryRow,
-  StudentPassBalance
+  StudentPassBalance,
+  StudentInterviewHistoryRow
 } from '@@/shared/models/teacher'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import type { ApiResponse } from '@@/shared/types/api'
@@ -189,9 +210,11 @@ const props = withDefaults(
     open: boolean
     student: StudentRosterRow | null
     assignments?: AssignmentRow[]
+    courseId?: string | null
   }>(),
   {
-    assignments: () => []
+    assignments: () => [],
+    courseId: null
   }
 )
 
@@ -329,6 +352,26 @@ const fetchRedemptions = async () => {
   }
 }
 
+const interviews = ref<StudentInterviewHistoryRow[]>([])
+const interviewsLoading = ref(false)
+
+const fetchInterviews = async () => {
+  if (!props.student?.userId) return
+  interviewsLoading.value = true
+  try {
+    const url = props.courseId
+      ? `/api/me/students/${props.student.userId}/interviews?courseId=${props.courseId}`
+      : `/api/me/students/${props.student.userId}/interviews`
+    const res = await $fetch<{ data: StudentInterviewHistoryRow[] }>(url)
+    interviews.value = res.data || []
+  } catch (err) {
+    console.error('Failed to fetch student interviews:', err)
+    interviews.value = []
+  } finally {
+    interviewsLoading.value = false
+  }
+}
+
 watch(
   () => [props.open, props.student?.userId],
   ([isOpen, id]) => {
@@ -337,9 +380,11 @@ watch(
     localPassBalances.value = null
     if (isOpen && id) {
       fetchRedemptions()
+      fetchInterviews()
       fetchAssignmentsIfEmpty()
     } else {
       redemptions.value = []
+      interviews.value = []
     }
   },
   { immediate: true }
@@ -410,6 +455,74 @@ const columns: any[] = [
           active ? 'Active' : 'Expired'
         )
       ])
+    }
+  }
+]
+
+const interviewColumns: any[] = [
+  {
+    accessorKey: 'assignmentTitle',
+    header: 'Assignment',
+    cell: ({ row }: { row: any }) => {
+      return h(
+        'span',
+        { class: 'font-medium text-neutral-900 dark:text-neutral-100' },
+        row.getValue('assignmentTitle') || '—'
+      )
+    }
+  },
+  {
+    accessorKey: 'gtaName',
+    header: 'Teaching Assistant',
+    cell: ({ row }: { row: any }) => {
+      const name = row.getValue('gtaName') || '—'
+      const email = row.original.gtaEmail
+      return h('div', { class: 'flex flex-col' }, [
+        h('span', { class: 'font-medium text-neutral-900 dark:text-neutral-100' }, name),
+        email ? h('span', { class: 'text-xs text-neutral-400' }, email) : null
+      ])
+    }
+  },
+  {
+    accessorKey: 'startTime',
+    header: 'Scheduled Time',
+    cell: ({ row }: { row: any }) => formatDate(row.getValue('startTime')) || '—'
+  },
+  {
+    accessorKey: 'checkedOutAt',
+    header: 'Completed At',
+    cell: ({ row }: { row: any }) => formatDate(row.getValue('checkedOutAt')) || '—'
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }: { row: any }) => {
+      const status = row.getValue('status')
+      const color = (() => {
+        switch (status) {
+          case 'COMPLETED':
+          case 'CHECKED_OUT':
+            return 'success'
+          case 'CHECKED_IN':
+            return 'primary'
+          case 'MISSED':
+            return 'error'
+          case 'SCHEDULED':
+            return 'info'
+          default:
+            return 'neutral'
+        }
+      })()
+
+      return h(
+        resolveComponent('UBadge'),
+        {
+          variant: 'subtle',
+          color,
+          size: 'xs'
+        },
+        () => status
+      )
     }
   }
 ]

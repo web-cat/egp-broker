@@ -250,4 +250,86 @@ describe('StudentRedemptionsModal', () => {
     expect(wrapper.emitted('saved')).toBeTruthy()
     expect(wrapper.emitted('saved')?.[0]).toEqual([newBalances])
   })
+
+  it('fetches student interview reservations when modal opens with courseId', async () => {
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/interviews')) {
+        return Promise.resolve({
+          data: [
+            {
+              id: 'res-1',
+              assignmentId: 'asg-1',
+              assignmentTitle: 'Project 1',
+              gtaId: 'gta-1',
+              gtaName: 'Alice Smith',
+              gtaEmail: 'alice@example.com',
+              startTime: '2026-09-25T14:00:00.000Z',
+              endTime: '2026-09-25T14:15:00.000Z',
+              status: 'COMPLETED',
+              checkedInAt: '2026-09-25T14:00:00.000Z',
+              checkedOutAt: '2026-09-25T14:15:00.000Z',
+              notes: 'Passed',
+              createdAt: '2026-09-24T10:00:00.000Z'
+            }
+          ]
+        })
+      }
+      return Promise.resolve({ data: [] })
+    })
+    vi.stubGlobal('$fetch', mockFetch)
+
+    const wrapper = mount(StudentRedemptionsModal, {
+      props: {
+        open: true,
+        student: { ...baseStudent },
+        courseId: 'course-123'
+      },
+      global: {
+        stubs: {
+          UModal: true,
+          UIcon: true,
+          UButton: true,
+          UInput: true,
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
+        }
+      }
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/me/students/user-1/interviews?courseId=course-123')
+    const vm = wrapper.vm as any
+    expect(vm.interviews).toHaveLength(1)
+    expect(vm.interviews[0].id).toBe('res-1')
+    expect(vm.interviews[0].status).toBe('COMPLETED')
+  })
+
+  it('clears redemptions and interviews when modal closes', async () => {
+    const wrapper = mount(StudentRedemptionsModal, {
+      props: {
+        open: true,
+        student: { ...baseStudent }
+      },
+      global: {
+        stubs: {
+          UModal: true,
+          UIcon: true,
+          UButton: true,
+          UInput: true,
+          BaseDataTable: true,
+          FeaturesDashboardTeacherRedeemPassModal: true
+        }
+      }
+    })
+
+    const vm = wrapper.vm as any
+    vm.redemptions = [{ id: 'red-1' }]
+    vm.interviews = [{ id: 'res-1' }]
+
+    await wrapper.setProps({ open: false })
+
+    expect(vm.redemptions).toEqual([])
+    expect(vm.interviews).toEqual([])
+  })
 })

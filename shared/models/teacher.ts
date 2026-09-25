@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { gtaInterviewStatusEnum } from '../schemas/gta-interview.schema'
 
 /**
  * Single student redemption record for a specific assignment (Option B)
@@ -65,6 +66,27 @@ export const studentRedemptionHistoryRowSchema = z.object({
 })
 
 export type StudentRedemptionHistoryRow = z.infer<typeof studentRedemptionHistoryRowSchema>
+
+/**
+ * Individual student's GTA interview reservation history row (for teacher student detail modal)
+ */
+export const studentInterviewHistoryRowSchema = z.object({
+  id: z.string(),
+  assignmentId: z.string(),
+  assignmentTitle: z.string(),
+  gtaId: z.string(),
+  gtaName: z.string(),
+  gtaEmail: z.string().nullable(),
+  startTime: z.string(),
+  endTime: z.string(),
+  status: gtaInterviewStatusEnum,
+  checkedInAt: z.string().nullable().optional(),
+  checkedOutAt: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  createdAt: z.string()
+})
+
+export type StudentInterviewHistoryRow = z.infer<typeof studentInterviewHistoryRowSchema>
 
 /**
  * Schema for teacher updating a student's pass pool balances
