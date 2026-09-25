@@ -21,10 +21,12 @@ export interface SimplePassPool {
 
 export const redemptionRowSchema = z.object({
   id: z.string(),
+  assignmentId: z.string().optional(),
   assignmentTitle: z.string().nullable(),
   createdAt: z.string(),
   cost: z.number(),
   hoursPerPass: z.number(),
+  extensionOnly: z.boolean().optional(),
   availableFrom: z.string().nullable(),
   dueDate: z.string().nullable().optional(),
   acceptUntil: z.string().nullable(),

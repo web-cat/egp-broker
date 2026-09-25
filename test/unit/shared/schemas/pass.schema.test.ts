@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   createPassTypeSchema,
   updatePassTypeSchema,
-  passTypeDataSchema
+  passTypeDataSchema,
+  redemptionRowSchema
 } from '@@/shared/models/pass'
 
 describe('Pass Type Schemas', () => {
@@ -106,6 +107,27 @@ describe('Pass Type Schemas', () => {
         createdAt: new Date().toISOString()
       }
       expect(() => passTypeDataSchema.parse(data)).toThrow()
+    })
+  })
+
+  describe('redemptionRowSchema', () => {
+    it('validates redemption row with optional extensionOnly and assignmentId', () => {
+      const data = {
+        id: 'red-1',
+        assignmentId: 'asg-1',
+        assignmentTitle: 'Project 1',
+        createdAt: new Date().toISOString(),
+        cost: 1,
+        hoursPerPass: 24,
+        extensionOnly: false,
+        availableFrom: null,
+        dueDate: null,
+        acceptUntil: null,
+        isActive: true
+      }
+      const parsed = redemptionRowSchema.parse(data)
+      expect(parsed.assignmentId).toBe('asg-1')
+      expect(parsed.extensionOnly).toBe(false)
     })
   })
 })

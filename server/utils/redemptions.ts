@@ -42,7 +42,7 @@ export async function getStudentRedemptions(
       assignment: { select: { title: true } },
       pool: {
         include: {
-          passType: { select: { hoursPerPass: true } }
+          passType: { select: { hoursPerPass: true, extensionOnly: true } }
         }
       }
     }
@@ -62,11 +62,13 @@ export async function getStudentRedemptions(
 
     return {
       id: r.id,
+      assignmentId: r.assignmentId,
       assignmentTitle: r.assignment.title,
       createdAt: r.createdAt.toISOString(),
       cost: r.cost,
       // hoursPerPass comes from pool.passType
       hoursPerPass: r.pool.passType.hoursPerPass,
+      extensionOnly: Boolean(r.pool?.passType?.extensionOnly),
       availableFrom: r.availableFrom?.toISOString() ?? null,
       dueDate: r.dueDate?.toISOString() ?? null,
       acceptUntil: r.acceptUntil?.toISOString() ?? null,

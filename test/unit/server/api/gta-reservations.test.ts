@@ -23,6 +23,10 @@ vi.mock('@@/server/utils/db', () => ({
       create: vi.fn(),
       update: vi.fn()
     },
+    passRedemption: {
+      findFirst: vi.fn(),
+      findMany: vi.fn()
+    },
     $transaction: vi.fn((cb: any) => (typeof cb === 'function' ? cb(prisma) : Promise.all(cb)))
   }
 }))
@@ -63,6 +67,8 @@ describe('API: Student GTA Interview Reservations', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(prisma.gtaInterviewReservation.findFirst).mockReset()
+    vi.mocked(prisma.passRedemption.findFirst).mockReset()
     vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
       id: 'enr-student',
       userId: 'student-1',
@@ -314,6 +320,123 @@ describe('API: Student GTA Interview Reservations', () => {
         })
       )
     })
+
+    it('rejects booking if student has a COMPLETED interview and no regular pass was redeemed', async () => {
+      const event = mockEvent({ id: 'student-1', globalRole: 'USER' }, { startTime: futureSlot })
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign-1',
+        courseId: 'course-1',
+        hasInterviews: true,
+        course: { id: 'course-1' }
+      } as any)
+
+      // First call for active reservation returns null
+      // Second call for completed reservation returns a COMPLETED interview
+      vi.mocked(prisma.gtaInterviewReservation.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'res-completed',
+          status: 'COMPLETED',
+          checkedOutAt: new Date('2099-10-01T10:00:00.000Z')
+        } as any)
+
+      // No pass redemption found
+      vi.mocked(prisma.passRedemption.findFirst).mockResolvedValue(null)
+
+      await expect(reservationsPost(event)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 400,
+          statusMessage: expect.stringContaining('already completed an interview')
+        })
+      )
+    })
+
+    it('rejects booking if student redeemed only an extensionOnly pass after COMPLETED interview', async () => {
+      const event = mockEvent({ id: 'student-1', globalRole: 'USER' }, { startTime: futureSlot })
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign-1',
+        courseId: 'course-1',
+        hasInterviews: true,
+        course: { id: 'course-1' }
+      } as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'res-completed',
+          status: 'COMPLETED',
+          checkedOutAt: new Date('2099-10-01T10:00:00.000Z')
+        } as any)
+
+      // passRedemption query looks for extensionOnly: false, so it returns null
+      vi.mocked(prisma.passRedemption.findFirst).mockResolvedValue(null)
+
+      await expect(reservationsPost(event)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 400,
+          statusMessage: expect.stringContaining('already completed an interview')
+        })
+      )
+    })
+
+    it('allows booking if student redeemed a regular (non-extension) pass after COMPLETED interview', async () => {
+      const event = mockEvent({ id: 'student-1', globalRole: 'USER' }, { startTime: futureSlot })
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign-1',
+        courseId: 'course-1',
+        hasInterviews: true,
+        course: { id: 'course-1' }
+      } as any)
+
+      // First call: active check (null)
+      // Second call: completed check (res-completed)
+      vi.mocked(prisma.gtaInterviewReservation.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'res-completed',
+          status: 'COMPLETED',
+          checkedOutAt: new Date('2099-10-01T10:00:00.000Z')
+        } as any)
+
+      // Eligible regular pass redemption found after completion
+      vi.mocked(prisma.passRedemption.findFirst).mockResolvedValue({
+        id: 'red-1',
+        assignmentId: 'assign-1',
+        createdAt: new Date('2099-10-02T10:00:00.000Z')
+      } as any)
+
+      vi.mocked(prisma.gtaShift.findMany).mockResolvedValue([
+        {
+          id: 'shift-1',
+          courseId: 'course-1',
+          userId: 'gta-1',
+          date: new Date('2099-10-05T00:00:00.000Z'),
+          startTime: '10:00',
+          endTime: '11:00'
+        }
+      ] as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.findMany).mockResolvedValue([])
+
+      vi.mocked(prisma.gtaInterviewReservation.create).mockResolvedValue({
+        id: 'res-new-2',
+        assignmentId: 'assign-1',
+        studentId: 'student-1',
+        gtaId: 'gta-1',
+        startTime: new Date(futureSlot),
+        endTime: new Date('2099-10-05T14:15:00.000Z'),
+        status: 'SCHEDULED',
+        gta: { id: 'gta-1', firstName: 'Alice', lastName: 'GTA' },
+        assignment: { title: 'Project 1', course: { interviewLocation: 'McBryde 106' } }
+      } as any)
+
+      const res = await reservationsPost(event)
+      expect(res.statusCode).toBe(201)
+      expect(res.data.id).toBe('res-new-2')
+    })
   })
 
   describe('DELETE /api/me/courses/:courseId/assignments/:assignmentId/interview-reservations/:id', () => {
@@ -385,6 +508,83 @@ describe('API: Student GTA Interview Reservations', () => {
       expect(res.statusCode).toBe(200)
       expect(res.data.id).toBe('res-active')
       expect(res.data.status).toBe('SCHEDULED')
+    })
+
+    it('returns historical COMPLETED reservation when student has not redeemed a regular pass', async () => {
+      const event = mockEvent({ id: 'student-1', globalRole: 'USER' })
+
+      // First query (active): null
+      // Second query (historical): COMPLETED reservation
+      vi.mocked(prisma.gtaInterviewReservation.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'res-completed',
+          studentId: 'student-1',
+          status: 'COMPLETED',
+          checkedOutAt: new Date('2099-10-01T10:00:00.000Z'),
+          gta: { firstName: 'Alice', lastName: 'GTA' },
+          assignment: { title: 'Project 1', course: { interviewLocation: 'McBryde 106' } }
+        } as any)
+
+      // No pass redemption found
+      vi.mocked(prisma.passRedemption.findFirst).mockResolvedValue(null)
+
+      const res = await myReservationGet(event)
+      expect(res.statusCode).toBe(200)
+      expect(res.data).not.toBeNull()
+      expect(res.data.id).toBe('res-completed')
+      expect(res.data.status).toBe('COMPLETED')
+    })
+
+    it('returns null when student completed an interview but has redeemed a regular (non-extension) pass', async () => {
+      const event = mockEvent({ id: 'student-1', globalRole: 'USER' })
+
+      // First query (active): null
+      // Second query (historical): COMPLETED reservation
+      vi.mocked(prisma.gtaInterviewReservation.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'res-completed',
+          studentId: 'student-1',
+          status: 'COMPLETED',
+          checkedOutAt: new Date('2099-10-01T10:00:00.000Z'),
+          gta: { firstName: 'Alice', lastName: 'GTA' },
+          assignment: { title: 'Project 1', course: { interviewLocation: 'McBryde 106' } }
+        } as any)
+
+      // Eligible regular pass redemption found after completion
+      vi.mocked(prisma.passRedemption.findFirst).mockResolvedValue({
+        id: 'red-1',
+        assignmentId: 'assign-1',
+        createdAt: new Date('2099-10-02T10:00:00.000Z')
+      } as any)
+
+      const res = await myReservationGet(event)
+      expect(res.statusCode).toBe(200)
+      expect(res.data).toBeNull()
+    })
+
+    it('returns historical COMPLETED reservation if pass redeemed after it was extensionOnly: true', async () => {
+      const event = mockEvent({ id: 'student-1', globalRole: 'USER' })
+
+      vi.mocked(prisma.gtaInterviewReservation.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'res-completed',
+          studentId: 'student-1',
+          status: 'COMPLETED',
+          checkedOutAt: new Date('2099-10-01T10:00:00.000Z'),
+          gta: { firstName: 'Alice', lastName: 'GTA' },
+          assignment: { title: 'Project 1', course: { interviewLocation: 'McBryde 106' } }
+        } as any)
+
+      // Query for extensionOnly: false returns null
+      vi.mocked(prisma.passRedemption.findFirst).mockResolvedValue(null)
+
+      const res = await myReservationGet(event)
+      expect(res.statusCode).toBe(200)
+      expect(res.data).not.toBeNull()
+      expect(res.data.id).toBe('res-completed')
     })
   })
 

@@ -136,6 +136,44 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
+  // Check if student has already completed an interview for this assignment
+  const latestCompleted = await prisma.gtaInterviewReservation.findFirst({
+    where: {
+      assignmentId,
+      studentId: auth.userId,
+      status: { in: ['COMPLETED', 'CHECKED_OUT'] }
+    },
+    orderBy: { startTime: 'desc' }
+  })
+
+  if (latestCompleted) {
+    const completionTime =
+      latestCompleted.checkedOutAt || latestCompleted.updatedAt || latestCompleted.startTime
+
+    // Look for a regular (non-extension) pass redemption after the completed interview
+    const eligibleRedemption = await prisma.passRedemption.findFirst({
+      where: {
+        assignmentId,
+        pool: {
+          userId: auth.userId,
+          passType: {
+            extensionOnly: false
+          }
+        },
+        createdAt: { gte: completionTime }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    if (!eligibleRedemption) {
+      throw createError({
+        statusCode: 400,
+        statusMessage:
+          'You have already completed an interview for this assignment. A regular (non-extension) pass must be redeemed before scheduling another interview.'
+      })
+    }
+  }
+
   // Determine on-duty GTAs for this slot in course local timezone
   const dateStr = getLocalDateString(requestedStartTime, DEFAULT_GTA_TIMEZONE)
   const dateMidnightUtc = new Date(`${dateStr}T00:00:00.000Z`)

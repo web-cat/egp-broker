@@ -83,6 +83,32 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
       },
       orderBy: { createdAt: 'desc' }
     })
+
+    // If the latest historical reservation was completed, check if student redeemed a regular pass after it
+    if (
+      reservation &&
+      (reservation.status === 'COMPLETED' || reservation.status === 'CHECKED_OUT')
+    ) {
+      const completionTime =
+        reservation.checkedOutAt || reservation.updatedAt || reservation.startTime
+
+      const eligibleRedemption = await prisma.passRedemption.findFirst({
+        where: {
+          assignmentId,
+          pool: {
+            userId: auth.userId,
+            passType: {
+              extensionOnly: false
+            }
+          },
+          createdAt: { gte: completionTime }
+        }
+      })
+
+      if (eligibleRedemption) {
+        reservation = null
+      }
+    }
   }
 
   return {

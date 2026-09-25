@@ -8,7 +8,8 @@ const {
   mockAssignments,
   mockRedemptions,
   mockEnrollment,
-  mockGetReservationForAssignment
+  mockGetReservationForAssignment,
+  mockGtaReservations
 } = vi.hoisted(() => {
   return {
     mockPassPools: {
@@ -36,7 +37,12 @@ const {
         data: { courseId: 'c1' }
       }
     },
-    mockGetReservationForAssignment: vi.fn().mockReturnValue(null)
+    mockGetReservationForAssignment: vi.fn().mockReturnValue(null),
+    mockGtaReservations: {
+      value: {
+        data: []
+      }
+    }
   }
 })
 
@@ -48,18 +54,22 @@ vi.stubGlobal('computed', computed)
 vi.stubGlobal('h', h)
 vi.stubGlobal('resolveComponent', (name: string) => name)
 
-vi.stubGlobal('useFetch', (url: string) => {
-  if (url === '/api/me/pass-pools') {
+vi.stubGlobal('useFetch', (url: any) => {
+  const urlVal = typeof url === 'string' ? url : url?.value
+  if (urlVal === '/api/me/pass-pools') {
     return { data: mockPassPools, status: ref('success'), refresh: vi.fn() }
   }
-  if (url === '/api/me/pass-types') {
+  if (urlVal === '/api/me/pass-types') {
     return { data: mockPassTypes, status: ref('success'), refresh: vi.fn() }
   }
-  if (url === '/api/me/assignments') {
+  if (urlVal === '/api/me/assignments') {
     return { data: mockAssignments, status: ref('success'), refresh: vi.fn() }
   }
-  if (url === '/api/me/redemptions') {
+  if (urlVal === '/api/me/redemptions') {
     return { data: mockRedemptions, status: ref('success'), refresh: vi.fn() }
+  }
+  if (urlVal && urlVal.includes('/interview-reservations')) {
+    return { data: mockGtaReservations, status: ref('success'), refresh: vi.fn() }
   }
   return { data: ref({ data: [] }), status: ref('success'), refresh: vi.fn() }
 })
@@ -341,6 +351,98 @@ describe('useStudentDashboard - hasBalance and pass redemption column', () => {
       expect(dashboard.filteredAssignments.value.map((a: any) => a.id)).not.toContain(
         'unpublished-asg'
       )
+    })
+  })
+
+  describe('gtaInterviewSlot rendering and pass redemption gating', () => {
+    const mockAssignment = {
+      id: 'asg-gta',
+      title: 'Project 1',
+      hasInterviews: true
+    }
+
+    it('renders "Completed" static badge if student has completed interview and no regular pass was redeemed', () => {
+      mockGtaReservations.value = {
+        data: [
+          {
+            assignmentId: 'asg-gta',
+            status: 'COMPLETED',
+            checkedOutAt: '2099-10-01T10:00:00.000Z'
+          }
+        ]
+      }
+      mockRedemptions.value = { data: [] }
+
+      const dashboard = useStudentDashboard()
+      const col = dashboard.assignmentColumns.find((c: any) => c.accessorKey === 'gtaInterviewSlot')
+      expect(col).toBeDefined()
+
+      const vnode = col.cell({ row: { original: mockAssignment } })
+      expect(vnode.type).toBe('span')
+      expect(vnode.children).toContain('Completed')
+    })
+
+    it('renders "Completed" badge if pass redeemed after interview was extensionOnly: true', () => {
+      mockGtaReservations.value = {
+        data: [
+          {
+            assignmentId: 'asg-gta',
+            status: 'COMPLETED',
+            checkedOutAt: '2099-10-01T10:00:00.000Z'
+          }
+        ]
+      }
+      mockRedemptions.value = {
+        data: [
+          {
+            assignmentId: 'asg-gta',
+            assignmentTitle: 'Project 1',
+            extensionOnly: true,
+            createdAt: '2099-10-02T10:00:00.000Z'
+          }
+        ]
+      }
+
+      const dashboard = useStudentDashboard()
+      const col = dashboard.assignmentColumns.find((c: any) => c.accessorKey === 'gtaInterviewSlot')
+      const vnode = col.cell({ row: { original: mockAssignment } })
+      expect(vnode.type).toBe('span')
+      expect(vnode.children).toContain('Completed')
+    })
+
+    it('renders "Schedule Interview" button if regular (non-extension) pass was redeemed after completion', () => {
+      mockGtaReservations.value = {
+        data: [
+          {
+            assignmentId: 'asg-gta',
+            status: 'COMPLETED',
+            checkedOutAt: '2099-10-01T10:00:00.000Z'
+          }
+        ]
+      }
+      mockRedemptions.value = {
+        data: [
+          {
+            assignmentId: 'asg-gta',
+            assignmentTitle: 'Project 1',
+            extensionOnly: false,
+            createdAt: '2099-10-02T10:00:00.000Z'
+          }
+        ]
+      }
+
+      const dashboard = useStudentDashboard()
+      const col = dashboard.assignmentColumns.find((c: any) => c.accessorKey === 'gtaInterviewSlot')
+      const vnode = col.cell({ row: { original: mockAssignment } })
+      expect(vnode.type).toBe('button')
+      expect(vnode.children).toContain('Schedule Interview')
+
+      // Clicking opens GTA modal
+      vnode.props.onClick({ stopPropagation: vi.fn() })
+      expect(dashboard.showGtaModal.value).toBe(true)
+      expect(dashboard.selectedGtaAssignment.value?.id).toBe('asg-gta')
+      // And selectedGtaReservation is null so modal starts in booking wizard
+      expect(dashboard.selectedGtaReservation.value).toBeNull()
     })
   })
 })

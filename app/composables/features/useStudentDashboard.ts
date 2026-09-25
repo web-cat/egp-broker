@@ -258,7 +258,21 @@ export const useStudentDashboard = (isPreview = false) => {
   const selectedGtaAssignment = ref<AssignmentRow | null>(null)
   const selectedGtaReservation = computed(() => {
     if (!selectedGtaAssignment.value) return null
-    return getGtaReservationForAssignment(selectedGtaAssignment.value.id) || null
+    const res = getGtaReservationForAssignment(selectedGtaAssignment.value.id)
+    if (res && (res.status === 'COMPLETED' || res.status === 'CHECKED_OUT')) {
+      const completionTime = res.checkedOutAt || res.updatedAt || res.startTime
+      const eligibleRedemption = redemptionsData.value?.data?.find(
+        (r: any) =>
+          (r.assignmentId === selectedGtaAssignment.value!.id ||
+            r.assignmentTitle === selectedGtaAssignment.value!.title) &&
+          !r.extensionOnly &&
+          (!completionTime || new Date(r.createdAt) >= new Date(completionTime))
+      )
+      if (eligibleRedemption) {
+        return null
+      }
+    }
+    return res || null
   })
 
   const openGtaModal = (assignment: AssignmentRow) => {
@@ -690,6 +704,37 @@ export const useStudentDashboard = (isPreview = false) => {
         }
 
         if (res.status === 'COMPLETED' || res.status === 'CHECKED_OUT') {
+          // Check if student has redeemed a regular (non-extension) pass for this assignment
+          const completionTime = res.checkedOutAt || res.updatedAt || res.startTime
+          const eligibleRedemption = redemptionsData.value?.data?.find(
+            (r: any) =>
+              (r.assignmentId === row.original.id || r.assignmentTitle === row.original.title) &&
+              !r.extensionOnly &&
+              (!completionTime || new Date(r.createdAt) >= new Date(completionTime))
+          )
+
+          if (eligibleRedemption) {
+            return h(
+              'button',
+              {
+                type: 'button',
+                class:
+                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-primary-50 text-primary-700 dark:bg-primary-950/50 dark:text-primary-300 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors cursor-pointer',
+                onClick: (e: MouseEvent) => {
+                  e.stopPropagation()
+                  openGtaModal(row.original)
+                }
+              },
+              [
+                h(resolveComponent('UIcon'), {
+                  name: 'i-lucide-calendar-plus',
+                  class: 'w-3.5 h-3.5'
+                }),
+                'Schedule Interview'
+              ]
+            )
+          }
+
           return h(
             'span',
             {
