@@ -58,8 +58,20 @@ All commands must be executed within the `app-dev` container to ensure environme
 
 - **Startup:** `docker compose up` starts Nuxt (port 3000), Postgres, and Adminer (port 8080).
 - **Execution:** `docker compose exec app-dev pnpm <command>`
-- **Testing:** `docker compose exec app-dev pnpm test`
+- **Testing:**
+  - **All Unit Tests:** `docker compose exec app-dev pnpm test:unit`
+  - **Single Test File:** `docker compose exec app-dev pnpm vitest run test/unit/path/to/test.spec.ts`
 - **Migrations:** Never use `db push`. Use: `docker compose exec app-dev pnpm prisma migrate dev --name <description>`
+- **Postgres Advisory Lock Deadlock (Error P1002):**
+  If migration or DB commands timeout waiting on an advisory lock (`SELECT pg_advisory_lock`), terminate idle locking backends:
+  ```bash
+  docker compose exec -T postgres psql -U postgres -d egpbroker -c "
+    SELECT pg_terminate_backend(PSA.pid)
+    FROM pg_locks AS PL
+    INNER JOIN pg_stat_activity AS PSA ON PSA.pid = PL.pid
+    WHERE PSA.state LIKE 'idle' AND PL.objid IN (72707369);
+  "
+  ```
 
 ---
 
@@ -74,6 +86,11 @@ All commands must be executed within the `app-dev` container to ensure environme
 - **Prisma Singleton:** Database connections must be managed via `server/utils/db.ts` to prevent connection exhaustion.
 - **Session Management:** Use `setUserSession(event, { user })` on the server and `useUserSession()` on the client.
 - **LTI 1.3 Handshake:** Validate OIDC tokens in `server/api/lti13/launch.post.ts` before calling `setUserSession`.
+- **Timezone Sovereignty (Mandatory):**
+  - **Storage SSoT:** All database timestamps (Prisma `DateTime`) are strictly stored in UTC.
+  - **Transport SSoT:** Nitro API inputs and outputs must use ISO 8601 strings in UTC. Never accept or return timezone-naive date strings. Validate with Zod.
+  - **Presentation SSoT:** All date formatting for user display and user date input parsing MUST route through `shared/utils/timezone.ts` locked to the course timezone (`America/New_York`). Never call `new Date().toISOString()`, `date.toLocaleDateString()`, or `date.getHours()` directly in components.
+  - **Canvas Sync Idempotence:** Canvas override synchronization routines must be idempotent: NEVER re-apply timezone offsets to dates already stored in UTC.
 
 ---
 
@@ -96,7 +113,7 @@ All commands must be executed within the `app-dev` container to ensure environme
   1. State how you will verify this change works (vitest unit test, playwright e2e test, browser check, etc.).
   2. Write the test or verification step first.
   3. Then implement the code.
-  4. Run lint checks (use "docker compose exec app-dev pnpm lint"), fixing any errors and iterating until they are resolved.
+  4. If debugging lint errors, run targeted checks (e.g. `docker compose exec app-dev pnpm eslint path/to/file.ts`); otherwise rely on Husky's automatic `lint-staged` on commit (do NOT run project-wide lint passes).
   5. Run verification and iterate until it passes.
   6. Run all unit tests to confirm other features have not been affected and iterate until they all pass.
 
