@@ -406,6 +406,10 @@ describe('API: CBTF Student Reservation Endpoints', () => {
           data: expect.objectContaining({ seatNumber: 2 })
         })
       )
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+        maxWait: 5000,
+        timeout: 15000
+      })
       expect(notifyCbtfScheduleSuccess).not.toHaveBeenCalled()
     })
 
@@ -710,6 +714,10 @@ describe('API: CBTF Student Reservation Endpoints', () => {
       expect(response.statusCode).toBe(200)
       expect(response.data.status).toBe('SCHEDULED')
       expect(response.data.startTime).toBe(newStartTime)
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+        maxWait: 5000,
+        timeout: 15000
+      })
       expect(notifyCbtfScheduleSuccess).not.toHaveBeenCalled()
     })
 

@@ -748,6 +748,7 @@ model CbtfReservation {
   notes              CbtfReservationNote[]
 
   @@index([facilityId, startTime])
+  @@index([facilityId, status, startTime, endTime])
   @@index([assignmentId, userId])
   @@index([userId, status])
   @@index([status, startTime])

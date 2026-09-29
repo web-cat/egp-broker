@@ -205,113 +205,107 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     currentStep = 'Retrieving Testing Facility'
     const facility = await getPrimaryCbtfFacility()
 
-    // 7. Transactional booking with throttle check and seat allocation
+    // 7. Verify facility operating hours for slot date
+    currentStep = 'Verifying Facility Operating Hours'
+    const timeZone = facility.timezone || 'America/New_York'
+    const hours = await getFacilityOperatingHoursForDate(facility.id, startTime, prisma, timeZone)
+    if (!hours.isOpen || !hours.openTime || !hours.closeTime) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: hours.reason || 'Testing center is closed on this date'
+      })
+    }
+
+    const openDateTime = combineDateAndTime(startTime, hours.openTime, timeZone)
+    const closeDateTime = combineDateAndTime(startTime, hours.closeTime, timeZone)
+
+    if (startTime < openDateTime || endTime > closeDateTime) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Reservation must finish before closing time (${hours.closeTime})`
+      })
+    }
+
+    // 8. Transactional booking with throttle check and seat allocation
     currentStep = 'Booking Reservation & Allocating Seat'
-    const newReservation = await prisma.$transaction(async (tx) => {
-      // A. Verify facility operating hours for slot date
-      const timeZone = facility.timezone || 'America/New_York'
-      const hours = await getFacilityOperatingHoursForDate(
-        facility.id,
-        startTime,
-        tx as any,
-        timeZone
-      )
-      if (!hours.isOpen || !hours.openTime || !hours.closeTime) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: hours.reason || 'Testing center is closed on this date'
+    const newReservation = await prisma.$transaction(
+      async (tx) => {
+        // A. Enforce arrival throttle limit: ceil(totalSeats / 12)
+        const maxArrivals = calculateMaxArrivalsPerSlot(facility.totalSeats)
+        const concurrentArrivals = await tx.cbtfReservation.count({
+          where: {
+            facilityId: facility.id,
+            startTime,
+            status: { in: ['SCHEDULED', 'CHECKED_IN'] }
+          }
         })
-      }
 
-      const openDateTime = combineDateAndTime(startTime, hours.openTime, timeZone)
-      const closeDateTime = combineDateAndTime(startTime, hours.closeTime, timeZone)
-
-      if (startTime < openDateTime || endTime > closeDateTime) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: `Reservation must finish before closing time (${hours.closeTime})`
-        })
-      }
-
-      // B. Enforce arrival throttle limit: ceil(totalSeats / 12)
-      const maxArrivals = calculateMaxArrivalsPerSlot(facility.totalSeats)
-      const concurrentArrivals = await tx.cbtfReservation.count({
-        where: {
-          facilityId: facility.id,
-          startTime,
-          status: { in: ['SCHEDULED', 'CHECKED_IN'] }
+        if (concurrentArrivals >= maxArrivals) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: `Arrival capacity reached for this 5-minute time slot (maximum ${maxArrivals} arrivals)`
+          })
         }
-      })
 
-      if (concurrentArrivals >= maxArrivals) {
-        throw createError({
-          statusCode: 409,
-          statusMessage: `Arrival capacity reached for this 5-minute time slot (maximum ${maxArrivals} arrivals)`
-        })
-      }
-
-      // C. Enforce room capacity: active reservations overlapping [startTime, endTime)
-      const activeReservations = await tx.cbtfReservation.findMany({
-        where: {
-          facilityId: facility.id,
-          status: { in: ['SCHEDULED', 'CHECKED_IN'] },
-          startTime: { lt: endTime },
-          endTime: { gt: startTime }
-        },
-        select: { seatNumber: true }
-      })
-
-      if (activeReservations.length >= facility.totalSeats) {
-        throw createError({
-          statusCode: 409,
-          statusMessage: 'Testing facility is completely full during this time slot'
-        })
-      }
-
-      // D. Allocate seat based on 5-minute arrival offset
-      const seatOrder: number[] = Array.isArray(facility.seatAllocationOrder)
-        ? (facility.seatAllocationOrder as number[])
-        : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
-
-      const assignedSeat = assignNextSeat(seatOrder, startTime, endTime, activeReservations)
-
-      // E. Create or reuse reservation
-      let created: any
-      if (reusableReservation) {
-        created = await tx.cbtfReservation.update({
-          where: { id: reusableReservation.id },
-          data: {
+        // B. Enforce room capacity: active reservations overlapping [startTime, endTime)
+        const activeReservations = await tx.cbtfReservation.findMany({
+          where: {
             facilityId: facility.id,
-            seatNumber: assignedSeat,
-            startTime,
-            endTime,
-            status: 'SCHEDULED'
+            status: { in: ['SCHEDULED', 'CHECKED_IN'] },
+            startTime: { lt: endTime },
+            endTime: { gt: startTime }
           },
-          include: {
-            assignment: { select: { title: true } },
-            user: { select: { firstName: true, lastName: true, studentId: true, avatarUrl: true } }
-          }
+          select: { seatNumber: true }
         })
-      } else {
-        created = await tx.cbtfReservation.create({
-          data: {
-            facilityId: facility.id,
-            assignmentId,
-            userId: session.user.id,
-            seatNumber: assignedSeat,
-            startTime,
-            endTime,
-            status: 'SCHEDULED'
-          },
-          include: {
-            assignment: { select: { title: true } },
-            user: { select: { firstName: true, lastName: true, studentId: true, avatarUrl: true } }
-          }
-        })
-      }
 
-      return created
-    })
+        if (activeReservations.length >= facility.totalSeats) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Testing facility is completely full during this time slot'
+          })
+        }
+
+        // C. Allocate seat based on 5-minute arrival offset
+        const seatOrder: number[] = Array.isArray(facility.seatAllocationOrder)
+          ? (facility.seatAllocationOrder as number[])
+          : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
+
+        const assignedSeat = assignNextSeat(seatOrder, startTime, endTime, activeReservations)
+
+        // D. Create or reuse reservation
+        let created: any
+        if (reusableReservation) {
+          created = await tx.cbtfReservation.update({
+            where: { id: reusableReservation.id },
+            data: {
+              facilityId: facility.id,
+              seatNumber: assignedSeat,
+              startTime,
+              endTime,
+              status: 'SCHEDULED'
+            }
+          })
+        } else {
+          created = await tx.cbtfReservation.create({
+            data: {
+              facilityId: facility.id,
+              assignmentId,
+              userId: session.user.id,
+              seatNumber: assignedSeat,
+              startTime,
+              endTime,
+              status: 'SCHEDULED'
+            }
+          })
+        }
+
+        return created
+      },
+      {
+        maxWait: 5000,
+        timeout: 15000
+      }
+    )
 
     currentStep = 'Syncing Canvas Override'
     // Synchronize individual Canvas assignment override (Option A: non-blocking)
@@ -322,7 +316,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
 
     return {
       statusCode: 201,
-      data: toCbtfReservationDto(newReservation)
+      data: toCbtfReservationDto({
+        ...newReservation,
+        assignment: newReservation.assignment || assignment,
+        user: newReservation.user || session.user
+      })
     }
   } catch (err: any) {
     const errorType = err.statusCode

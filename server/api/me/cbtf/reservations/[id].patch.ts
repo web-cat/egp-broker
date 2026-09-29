@@ -153,91 +153,94 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     currentStep = 'Retrieving Testing Facility'
     const facility = await getPrimaryCbtfFacility()
 
+    currentStep = 'Verifying Facility Operating Hours'
+    const timeZone = facility.timezone || 'America/New_York'
+    const hours = await getFacilityOperatingHoursForDate(
+      facility.id,
+      newStartTime,
+      prisma,
+      timeZone
+    )
+    if (!hours.isOpen || !hours.openTime || !hours.closeTime) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: hours.reason || 'Testing center is closed on this date'
+      })
+    }
+
+    const openDateTime = combineDateAndTime(newStartTime, hours.openTime, timeZone)
+    const closeDateTime = combineDateAndTime(newStartTime, hours.closeTime, timeZone)
+
+    if (newStartTime < openDateTime || newEndTime > closeDateTime) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Reservation must finish before closing time (${hours.closeTime})`
+      })
+    }
+
     currentStep = 'Rescheduling Reservation & Reallocating Seat'
-    const updatedReservation = await prisma.$transaction(async (tx) => {
-      const timeZone = facility.timezone || 'America/New_York'
-      const hours = await getFacilityOperatingHoursForDate(
-        facility.id,
-        newStartTime,
-        tx as any,
-        timeZone
-      )
-      if (!hours.isOpen || !hours.openTime || !hours.closeTime) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: hours.reason || 'Testing center is closed on this date'
+    const updatedReservation = await prisma.$transaction(
+      async (tx) => {
+        // Check throttle limit at new slot (excluding current reservation)
+        const maxArrivals = calculateMaxArrivalsPerSlot(facility.totalSeats)
+        const concurrentArrivals = await tx.cbtfReservation.count({
+          where: {
+            facilityId: facility.id,
+            id: { not: existing.id },
+            startTime: newStartTime,
+            status: { in: ['SCHEDULED', 'CHECKED_IN'] }
+          }
         })
-      }
 
-      const openDateTime = combineDateAndTime(newStartTime, hours.openTime, timeZone)
-      const closeDateTime = combineDateAndTime(newStartTime, hours.closeTime, timeZone)
-
-      if (newStartTime < openDateTime || newEndTime > closeDateTime) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: `Reservation must finish before closing time (${hours.closeTime})`
-        })
-      }
-
-      // Check throttle limit at new slot (excluding current reservation)
-      const maxArrivals = calculateMaxArrivalsPerSlot(facility.totalSeats)
-      const concurrentArrivals = await tx.cbtfReservation.count({
-        where: {
-          facilityId: facility.id,
-          id: { not: existing.id },
-          startTime: newStartTime,
-          status: { in: ['SCHEDULED', 'CHECKED_IN'] }
+        if (concurrentArrivals >= maxArrivals) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Arrival capacity reached for this time slot'
+          })
         }
-      })
 
-      if (concurrentArrivals >= maxArrivals) {
-        throw createError({
-          statusCode: 409,
-          statusMessage: 'Arrival capacity reached for this time slot'
+        // Check capacity at new slot (excluding current reservation)
+        const activeReservations = await tx.cbtfReservation.findMany({
+          where: {
+            facilityId: facility.id,
+            id: { not: existing.id },
+            status: { in: ['SCHEDULED', 'CHECKED_IN'] },
+            startTime: { lt: newEndTime },
+            endTime: { gt: newStartTime }
+          },
+          select: { seatNumber: true }
         })
-      }
 
-      // Check capacity at new slot (excluding current reservation)
-      const activeReservations = await tx.cbtfReservation.findMany({
-        where: {
-          facilityId: facility.id,
-          id: { not: existing.id },
-          status: { in: ['SCHEDULED', 'CHECKED_IN'] },
-          startTime: { lt: newEndTime },
-          endTime: { gt: newStartTime }
-        },
-        select: { seatNumber: true }
-      })
-
-      if (activeReservations.length >= facility.totalSeats) {
-        throw createError({
-          statusCode: 409,
-          statusMessage: 'Testing facility is completely full during this time slot'
-        })
-      }
-
-      const seatOrder: number[] = Array.isArray(facility.seatAllocationOrder)
-        ? (facility.seatAllocationOrder as number[])
-        : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
-
-      const assignedSeat = assignNextSeat(seatOrder, newStartTime, newEndTime, activeReservations)
-
-      const updated = await tx.cbtfReservation.update({
-        where: { id: existing.id },
-        data: {
-          startTime: newStartTime,
-          endTime: newEndTime,
-          seatNumber: assignedSeat,
-          status: 'SCHEDULED'
-        },
-        include: {
-          assignment: { select: { title: true } },
-          user: { select: { firstName: true, lastName: true, studentId: true, avatarUrl: true } }
+        if (activeReservations.length >= facility.totalSeats) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Testing facility is completely full during this time slot'
+          })
         }
-      })
 
-      return updated
-    })
+        const seatOrder: number[] = Array.isArray(facility.seatAllocationOrder)
+          ? (facility.seatAllocationOrder as number[])
+          : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
+
+        const assignedSeat = assignNextSeat(seatOrder, newStartTime, newEndTime, activeReservations)
+
+        const updated = await tx.cbtfReservation.update({
+          where: { id: existing.id },
+          data: {
+            startTime: newStartTime,
+            endTime: newEndTime,
+            seatNumber: assignedSeat,
+            status: 'SCHEDULED'
+          }
+        })
+
+        return updated
+      },
+      {
+        maxWait: 5000,
+        timeout: 15000
+      }
+    )
 
     currentStep = 'Syncing Canvas Override'
     // Synchronize individual Canvas assignment override (Option A: non-blocking)
@@ -248,7 +251,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
 
     return {
       statusCode: 200,
-      data: toCbtfReservationDto(updatedReservation)
+      data: toCbtfReservationDto({
+        ...updatedReservation,
+        assignment: updatedReservation.assignment || existing.assignment,
+        user: updatedReservation.user || session.user
+      })
     }
   } catch (err: any) {
     const errorType = err.statusCode
