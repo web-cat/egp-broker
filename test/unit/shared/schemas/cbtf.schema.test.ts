@@ -13,6 +13,7 @@ import {
   createReservationNoteInputSchema,
   searchUserByEmailSchema,
   grantProctorRoleInputSchema,
+  createScheduleExceptionInputSchema,
   cbtfBatchGenerateShiftsSchema,
   cbtfUpdateProctorShiftInputSchema,
   cbtfReservationStatusEnum
@@ -444,6 +445,56 @@ describe('CBTF Shared Schemas', () => {
         endTime: '2026-09-15T14:00:00.000Z'
       }
       expect(cbtfUpdateProctorShiftInputSchema.safeParse(invalid).success).toBe(false)
+    })
+  })
+
+  describe('createScheduleExceptionInputSchema', () => {
+    it('accepts and normalizes human-entered alternate times (12h with AM/PM)', () => {
+      const parsed = createScheduleExceptionInputSchema.parse({
+        facilityId: 'fac-1',
+        date: '2026-10-05',
+        isClosed: false,
+        openTime: '9:00 AM',
+        closeTime: '2:00 PM',
+        reason: 'Staff meeting'
+      })
+      expect(parsed.openTime).toBe('09:00')
+      expect(parsed.closeTime).toBe('14:00')
+    })
+
+    it('accepts military time without leading zero', () => {
+      const parsed = createScheduleExceptionInputSchema.parse({
+        facilityId: 'fac-1',
+        date: '2026-10-05',
+        isClosed: false,
+        openTime: '9:00',
+        closeTime: '14:00'
+      })
+      expect(parsed.openTime).toBe('09:00')
+      expect(parsed.closeTime).toBe('14:00')
+    })
+
+    it('accepts closed all day without open/close times', () => {
+      const parsed = createScheduleExceptionInputSchema.parse({
+        facilityId: 'fac-1',
+        date: '2026-10-05',
+        isClosed: true,
+        reason: 'Holiday'
+      })
+      expect(parsed.isClosed).toBe(true)
+      expect(parsed.openTime).toBeNull()
+      expect(parsed.closeTime).toBeNull()
+    })
+
+    it('rejects closeTime <= openTime when center is not closed', () => {
+      const result = createScheduleExceptionInputSchema.safeParse({
+        facilityId: 'fac-1',
+        date: '2026-10-05',
+        isClosed: false,
+        openTime: '2:00 PM',
+        closeTime: '10:00 AM'
+      })
+      expect(result.success).toBe(false)
     })
   })
 })

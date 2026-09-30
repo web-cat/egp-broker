@@ -112,7 +112,7 @@ export function useCbtfAdmin() {
     closeTime?: string | null
     reason?: string | null
   }) => {
-    if (!facility.value?.id) return
+    if (!facility.value?.id) return false
     try {
       await $fetch('/api/admin/cbtf/exceptions', {
         method: 'POST',
@@ -126,13 +126,51 @@ export function useCbtfAdmin() {
         color: 'success'
       })
       await refreshFacility()
+      return true
     } catch (err: any) {
+      const fieldErrors = err.data?.data?.fieldErrors
+        ? Object.values(err.data.data.fieldErrors).flat().join(', ')
+        : null
       toast.add({
         title: 'Failed to Create Exception',
-        description: err.data?.message || err.message,
+        description: fieldErrors || err.data?.statusMessage || err.data?.message || err.message,
         color: 'error'
       })
-      throw err
+      return false
+    }
+  }
+
+  const updateException = async (
+    id: string,
+    payload: {
+      date?: string
+      isClosed?: boolean
+      openTime?: string | null
+      closeTime?: string | null
+      reason?: string | null
+    }
+  ) => {
+    try {
+      await $fetch(`/api/admin/cbtf/exceptions/${id}`, {
+        method: 'PATCH',
+        body: payload
+      })
+      toast.add({
+        title: 'Schedule Exception Updated',
+        color: 'success'
+      })
+      await refreshFacility()
+      return true
+    } catch (err: any) {
+      const fieldErrors = err.data?.data?.fieldErrors
+        ? Object.values(err.data.data.fieldErrors).flat().join(', ')
+        : null
+      toast.add({
+        title: 'Failed to Update Exception',
+        description: fieldErrors || err.data?.statusMessage || err.data?.message || err.message,
+        color: 'error'
+      })
+      return false
     }
   }
 
@@ -347,6 +385,7 @@ export function useCbtfAdmin() {
     upsertOperatingHours,
     deleteOperatingHours,
     createException,
+    updateException,
     deleteException,
     createShift,
     deleteShift,

@@ -153,7 +153,7 @@
           color="primary"
           icon="i-lucide-plus"
           label="Add Exception"
-          @click="showExceptionModal = true"
+          @click="openCreateExceptionModal"
         />
       </div>
 
@@ -269,8 +269,11 @@
       </template>
     </UModal>
 
-    <!-- Modal: Schedule Exception Create -->
-    <UModal v-model:open="showExceptionModal" title="Add Schedule Exception">
+    <!-- Modal: Schedule Exception Create/Edit -->
+    <UModal
+      v-model:open="showExceptionModal"
+      :title="editingExceptionId ? 'Edit Schedule Exception' : 'Add Schedule Exception'"
+    >
       <template #body>
         <div class="space-y-4">
           <BaseFormInput v-model="exceptionForm.date" name="date" label="Date" type="date" />
@@ -290,13 +293,13 @@
               v-model="exceptionForm.openTime"
               name="openTime"
               label="Open Time"
-              placeholder="10:00"
+              placeholder="e.g. 9:00 AM, 09:00"
             />
             <BaseFormInput
               v-model="exceptionForm.closeTime"
               name="closeTime"
               label="Close Time"
-              placeholder="14:00"
+              placeholder="e.g. 2:00 PM, 14:00"
             />
           </div>
           <BaseFormInput
@@ -315,7 +318,11 @@
             label="Cancel"
             @click="showExceptionModal = false"
           />
-          <UButton color="primary" label="Save Exception" @click="handleSaveException" />
+          <UButton
+            color="primary"
+            :label="editingExceptionId ? 'Update Exception' : 'Save Exception'"
+            @click="handleSaveException"
+          />
         </div>
       </template>
     </UModal>
@@ -689,6 +696,7 @@
 
 <script setup lang="ts">
 import { useCbtfAdmin } from '~/composables/features/admin/useCbtfAdmin'
+import { extractCalendarDate } from '@@/shared/utils/timezone'
 import {
   parseProctorShiftString,
   calculateWeeklyShiftHours,
@@ -714,6 +722,7 @@ const {
   upsertOperatingHours,
   deleteOperatingHours,
   createException,
+  updateException,
   deleteException,
   createShift,
   deleteShift,
@@ -721,6 +730,8 @@ const {
   updateShift,
   updateReservation
 } = useCbtfAdmin()
+
+const toast = useToast()
 
 const tabs = [
   { id: 'facility', label: 'Facility Settings', icon: 'i-lucide-sliders' },
@@ -859,6 +870,7 @@ const handleSaveHours = async () => {
 
 // --- Exception State ---
 const showExceptionModal = ref(false)
+const editingExceptionId = ref<string | null>(null)
 const exceptionForm = reactive({
   date: '',
   isClosed: true,
@@ -867,11 +879,31 @@ const exceptionForm = reactive({
   reason: ''
 })
 
+const openCreateExceptionModal = () => {
+  editingExceptionId.value = null
+  exceptionForm.date = ''
+  exceptionForm.isClosed = true
+  exceptionForm.openTime = ''
+  exceptionForm.closeTime = ''
+  exceptionForm.reason = ''
+  showExceptionModal.value = true
+}
+
+const openEditExceptionModal = (exception: any) => {
+  editingExceptionId.value = exception.id
+  exceptionForm.date = extractCalendarDate(exception.date)
+  exceptionForm.isClosed = Boolean(exception.isClosed)
+  exceptionForm.openTime = exception.openTime || ''
+  exceptionForm.closeTime = exception.closeTime || ''
+  exceptionForm.reason = exception.reason || ''
+  showExceptionModal.value = true
+}
+
 const exceptionColumns: any[] = [
   {
     accessorKey: 'date',
     header: 'Date',
-    cell: ({ row }: { row: any }) => new Date(row.original.date).toLocaleDateString()
+    cell: ({ row }: { row: any }) => formatShiftDate(row.original.date)
   },
   {
     accessorKey: 'status',
@@ -886,7 +918,7 @@ const exceptionColumns: any[] = [
         : h(
             resolveComponent('UBadge'),
             { color: 'warning', variant: 'subtle', size: 'xs' },
-            () => `${row.original.openTime} – ${row.original.closeTime}`
+            () => `${formatTimeStr12h(row.original.openTime)} – ${formatTimeStr12h(row.original.closeTime)}`
           )
   },
   {
@@ -898,32 +930,65 @@ const exceptionColumns: any[] = [
     id: 'actions',
     header: 'Actions',
     cell: ({ row }: { row: any }) =>
-      h(resolveComponent('UButton'), {
-        color: 'error',
-        variant: 'ghost',
-        size: 'xs',
-        icon: 'i-lucide-trash-2',
-        onClick: () => {
-          if (confirm('Delete this schedule exception?')) {
-            deleteException(row.original.id)
+      h('div', { class: 'flex items-center gap-1' }, [
+        h(resolveComponent('UButton'), {
+          color: 'neutral',
+          variant: 'ghost',
+          size: 'xs',
+          icon: 'i-lucide-pencil',
+          title: 'Edit Exception',
+          onClick: () => openEditExceptionModal(row.original)
+        }),
+        h(resolveComponent('UButton'), {
+          color: 'error',
+          variant: 'ghost',
+          size: 'xs',
+          icon: 'i-lucide-trash-2',
+          title: 'Delete Exception',
+          onClick: () => {
+            if (confirm('Delete this schedule exception?')) {
+              deleteException(row.original.id)
+            }
           }
-        }
-      })
+        })
+      ])
   }
 ]
 
 const handleSaveException = async () => {
   if (!exceptionForm.date) return
-  await createException({
+  if (!exceptionForm.isClosed) {
+    if (!exceptionForm.openTime || !exceptionForm.closeTime) {
+      toast.add({
+        title: 'Validation Error',
+        description: 'Please provide both open and close times for alternate hours.',
+        color: 'error'
+      })
+      return
+    }
+  }
+
+  const payload = {
     date: exceptionForm.date,
     isClosed: exceptionForm.isClosed,
-    openTime: exceptionForm.openTime || null,
-    closeTime: exceptionForm.closeTime || null,
+    openTime: exceptionForm.isClosed ? null : (exceptionForm.openTime || null),
+    closeTime: exceptionForm.isClosed ? null : (exceptionForm.closeTime || null),
     reason: exceptionForm.reason || null
-  })
-  showExceptionModal.value = false
-  exceptionForm.date = ''
-  exceptionForm.reason = ''
+  }
+
+  const success = editingExceptionId.value
+    ? await updateException(editingExceptionId.value, payload)
+    : await createException(payload)
+
+  if (success) {
+    showExceptionModal.value = false
+    editingExceptionId.value = null
+    exceptionForm.date = ''
+    exceptionForm.reason = ''
+    exceptionForm.openTime = ''
+    exceptionForm.closeTime = ''
+    exceptionForm.isClosed = true
+  }
 }
 
 // --- Shifts State ---

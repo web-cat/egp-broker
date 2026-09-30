@@ -109,16 +109,15 @@ export async function getFacilityOperatingHoursForDate(
   timeZone: string = DEFAULT_CBTF_TIMEZONE
 ): Promise<FacilityOperatingHoursResult> {
   const localDateStr = extractCalendarDate(targetDate, timeZone)
+  const targetMidnightUtc = new Date(`${localDateStr}T00:00:00.000Z`)
   const startOfDay = combineDateAndTime(localDateStr, '00:00', timeZone)
-  const endOfDay = combineDateAndTime(localDateStr, '23:59', timeZone)
 
   // 1. Check schedule exception
   const exception = await (tx as any).cbtfScheduleException.findFirst({
     where: {
       facilityId,
       date: {
-        gte: startOfDay,
-        lte: endOfDay
+        in: [targetMidnightUtc, startOfDay]
       }
     }
   })

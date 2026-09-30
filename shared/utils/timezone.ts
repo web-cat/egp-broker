@@ -133,3 +133,42 @@ export function combineDateAndTime(
   const offsetMs = inTz.getTime() - naiveUtc.getTime()
   return new Date(naiveUtc.getTime() - offsetMs)
 }
+
+/**
+ * Normalizes common variations of human-entered times into a strict 24-hour "HH:mm" string.
+ * Supports:
+ * - 24-hour format: "09:00", "9:00", "14:30"
+ * - 12-hour format with AM/PM: "9:00 AM", "9:00am", "9am", "9 AM", "1:30pm", "1:30 PM", "12:00 AM", "12:00 PM"
+ * - Plain hour: "9", "14"
+ */
+export function normalizeTimeTo24h(input?: string | null): string | null {
+  if (!input) return null
+  const trimmed = input.trim()
+  if (!trimmed) return null
+
+  // Match: (hours)(:minutes)? (optional seconds)? (am/pm)?
+  // e.g. "9", "09:00", "9:00am", "9:00 AM", "1:30pm", "13:45"
+  const match = trimmed.match(/^(\d{1,2})(?::(\d{1,2}))?(?::\d{1,2})?\s*(am|pm)?$/i)
+  if (!match) return null
+
+  let hour = parseInt(match[1], 10)
+  const minute = match[2] !== undefined ? parseInt(match[2], 10) : 0
+  const meridian = match[3]?.toLowerCase()
+
+  if (minute < 0 || minute > 59) return null
+
+  if (meridian === 'pm') {
+    if (hour < 1 || hour > 12) return null
+    if (hour < 12) hour += 12
+  } else if (meridian === 'am') {
+    if (hour < 1 || hour > 12) return null
+    if (hour === 12) hour = 0
+  } else {
+    // No AM/PM: must be valid 24-hour hour (0..23)
+    if (hour < 0 || hour > 23) return null
+  }
+
+  const hh = hour.toString().padStart(2, '0')
+  const mm = minute.toString().padStart(2, '0')
+  return `${hh}:${mm}`
+}

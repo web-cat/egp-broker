@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { createScheduleExceptionInputSchema } from '@@/shared/schemas/cbtf.schema'
+import { extractCalendarDate, DEFAULT_CBTF_TIMEZONE } from '@@/shared/utils/timezone'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
@@ -24,8 +25,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   const { facilityId, date, isClosed, openTime, closeTime, reason } = validation.data
 
-  const exceptionDate = new Date(date)
-  exceptionDate.setUTCHours(0, 0, 0, 0)
+  const calendarDate = extractCalendarDate(date, DEFAULT_CBTF_TIMEZONE)
+  const exceptionDate = new Date(`${calendarDate}T00:00:00.000Z`)
 
   const record = await prisma.cbtfScheduleException.create({
     data: {

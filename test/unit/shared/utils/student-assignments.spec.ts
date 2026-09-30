@@ -9,14 +9,13 @@ describe('filterStudentAssignments', () => {
     title: 'Assignment 1',
     canvasAssignmentId: '101',
     courseLabel: 'CS 101',
-    courseTitle: 'Introduction to Computer Science',
-    dueDate: new Date(Date.now() + 86400000).toISOString(),
-    availableFrom: new Date(Date.now() - 86400000).toISOString(),
-    acceptUntil: new Date(Date.now() + 172800000).toISOString(),
+    dueDate: '2026-10-01T00:00:00Z',
+    availableFrom: '2026-01-01T00:00:00Z',
+    acceptUntil: '2026-10-02T00:00:00Z',
     published: true,
     isSchedulable: true,
     hasInterviews: false,
-    createdAt: new Date().toISOString(),
+    createdAt: '2026-01-01T00:00:00Z',
     eligiblePassTypes: [],
     ...overrides
   })

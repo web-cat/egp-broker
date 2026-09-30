@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod'
+import { normalizeTimeTo24h } from '../utils/timezone'
 
 export const cbtfTimeRegex = /^([01]\d|2[0-3]):[0-5]\d$/
 
@@ -138,14 +139,70 @@ export const upsertOperatingHoursInputSchema = z
     path: ['closeTime']
   })
 
-export const createScheduleExceptionInputSchema = z.object({
-  facilityId: z.string().min(1),
-  date: z.string(),
-  isClosed: z.boolean().optional(),
-  openTime: z.string().regex(cbtfTimeRegex).nullable().optional(),
-  closeTime: z.string().regex(cbtfTimeRegex).nullable().optional(),
-  reason: z.string().max(200).nullable().optional()
-})
+const scheduleExceptionTimeField = z
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((val, ctx) => {
+    if (val === null || val === undefined || (typeof val === 'string' && !val.trim())) {
+      return null
+    }
+    const normalized = normalizeTimeTo24h(val)
+    if (!normalized) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Invalid time format. Examples: 09:00, 9:00, 2:00 PM, 14:00'
+      })
+      return z.NEVER
+    }
+    return normalized
+  })
+  .optional()
+
+export const createScheduleExceptionInputSchema = z
+  .object({
+    facilityId: z.string().min(1),
+    date: z.string(),
+    isClosed: z.boolean().optional(),
+    openTime: scheduleExceptionTimeField,
+    closeTime: scheduleExceptionTimeField,
+    reason: z.string().max(200).nullable().optional()
+  })
+  .refine(
+    (data) => {
+      if (!data.isClosed && data.openTime && data.closeTime) {
+        return data.closeTime > data.openTime
+      }
+      return true
+    },
+    {
+      message: 'closeTime must be after openTime',
+      path: ['closeTime']
+    }
+  )
+
+export type CreateScheduleExceptionInput = z.infer<typeof createScheduleExceptionInputSchema>
+
+export const updateScheduleExceptionInputSchema = z
+  .object({
+    date: z.string().optional(),
+    isClosed: z.boolean().optional(),
+    openTime: scheduleExceptionTimeField,
+    closeTime: scheduleExceptionTimeField,
+    reason: z.string().max(200).nullable().optional()
+  })
+  .refine(
+    (data) => {
+      if (!data.isClosed && data.openTime && data.closeTime) {
+        return data.closeTime > data.openTime
+      }
+      return true
+    },
+    {
+      message: 'closeTime must be after openTime',
+      path: ['closeTime']
+    }
+  )
+
+export type UpdateScheduleExceptionInput = z.infer<typeof updateScheduleExceptionInputSchema>
 
 export const createProctorShiftInputSchema = z.object({
   facilityId: z.string().min(1),

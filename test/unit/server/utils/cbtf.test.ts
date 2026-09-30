@@ -100,6 +100,26 @@ describe('CBTF Server Utilities', () => {
       expect(result.openTime).toBe('10:00')
       expect(result.closeTime).toBe('14:00')
     })
+
+    it('queries exception using calendar date at midnight UTC for facility timezone', async () => {
+      const mockTx: any = {
+        cbtfScheduleException: { findFirst: vi.fn().mockResolvedValue(null) },
+        cbtfOperatingHours: { findUnique: vi.fn().mockResolvedValue(null) }
+      }
+
+      // 14:00 UTC on 2026-10-05 is 10:00 AM EDT on 2026-10-05 in America/New_York
+      const target = new Date('2026-10-05T14:00:00.000Z')
+      await getFacilityOperatingHoursForDate('fac-1', target, mockTx, 'America/New_York')
+
+      expect(mockTx.cbtfScheduleException.findFirst).toHaveBeenCalledWith({
+        where: {
+          facilityId: 'fac-1',
+          date: {
+            in: [new Date('2026-10-05T00:00:00.000Z'), new Date('2026-10-05T04:00:00.000Z')]
+          }
+        }
+      })
+    })
   })
 
   describe('generateAvailableSlotsForDate', () => {

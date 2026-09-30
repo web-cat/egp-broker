@@ -7,7 +7,8 @@ import {
   extractCalendarDate,
   getLocalDayOfWeek,
   getLocalTimeParts,
-  combineDateAndTime
+  combineDateAndTime,
+  normalizeTimeTo24h
 } from '@@/shared/utils/timezone'
 
 describe('Centralized Timezone Utilities', () => {
@@ -104,6 +105,39 @@ describe('Centralized Timezone Utilities', () => {
       const baseDate = new Date('2026-09-21T00:00:00.000Z')
       const result = combineDateAndTime(baseDate, '09:30', 'America/New_York')
       expect(result.toISOString()).toBe('2026-09-21T13:30:00.000Z')
+    })
+  })
+
+  describe('normalizeTimeTo24h', () => {
+    it('normalizes standard 24h formats with and without leading zeros', () => {
+      expect(normalizeTimeTo24h('09:00')).toBe('09:00')
+      expect(normalizeTimeTo24h('9:00')).toBe('09:00')
+      expect(normalizeTimeTo24h('14:30')).toBe('14:30')
+      expect(normalizeTimeTo24h('00:00')).toBe('00:00')
+      expect(normalizeTimeTo24h('23:59')).toBe('23:59')
+    })
+
+    it('normalizes 12h formats with AM / PM', () => {
+      expect(normalizeTimeTo24h('9:00 AM')).toBe('09:00')
+      expect(normalizeTimeTo24h('9:00am')).toBe('09:00')
+      expect(normalizeTimeTo24h('9am')).toBe('09:00')
+      expect(normalizeTimeTo24h('9 AM')).toBe('09:00')
+      expect(normalizeTimeTo24h('12:00 AM')).toBe('00:00')
+      expect(normalizeTimeTo24h('12:00 PM')).toBe('12:00')
+      expect(normalizeTimeTo24h('1:00 PM')).toBe('13:00')
+      expect(normalizeTimeTo24h('1:00pm')).toBe('13:00')
+      expect(normalizeTimeTo24h('1pm')).toBe('13:00')
+      expect(normalizeTimeTo24h('2:30 PM')).toBe('14:30')
+      expect(normalizeTimeTo24h('11:45 pm')).toBe('23:45')
+    })
+
+    it('rejects invalid inputs', () => {
+      expect(normalizeTimeTo24h('')).toBe(null)
+      expect(normalizeTimeTo24h(null)).toBe(null)
+      expect(normalizeTimeTo24h('invalid')).toBe(null)
+      expect(normalizeTimeTo24h('25:00')).toBe(null)
+      expect(normalizeTimeTo24h('13:00 PM')).toBe(null)
+      expect(normalizeTimeTo24h('10:65')).toBe(null)
     })
   })
 })

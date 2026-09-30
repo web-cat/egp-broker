@@ -5,6 +5,7 @@ import operatingHoursPost from '../../../../../server/api/admin/cbtf/operating-h
 import operatingHoursDelete from '../../../../../server/api/admin/cbtf/operating-hours/[id].delete'
 import exceptionsPost from '../../../../../server/api/admin/cbtf/exceptions.post'
 import exceptionsDelete from '../../../../../server/api/admin/cbtf/exceptions/[id].delete'
+import exceptionsPatch from '../../../../../server/api/admin/cbtf/exceptions/[id].patch'
 import shiftsGet from '../../../../../server/api/admin/cbtf/shifts.get'
 import shiftsPost from '../../../../../server/api/admin/cbtf/shifts.post'
 import shiftsDelete from '../../../../../server/api/admin/cbtf/shifts/[id].delete'
@@ -28,6 +29,8 @@ vi.mock('@@/server/utils/db', () => ({
     },
     cbtfScheduleException: {
       create: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
       delete: vi.fn()
     },
     cbtfProctorShift: {
@@ -193,6 +196,58 @@ describe('API: Admin CBTF Endpoints', () => {
       const res = await exceptionsPost(event)
       expect(res.statusCode).toBe(201)
       expect(prisma.cbtfScheduleException.create).toHaveBeenCalled()
+    })
+
+    it('updates schedule exception with alternate hours', async () => {
+      const event = mockEvent(
+        'ADMIN',
+        {
+          openTime: '9:00 AM',
+          closeTime: '2:00 PM',
+          isClosed: false,
+          reason: 'Half day maintenance'
+        },
+        { id: 'ex-1' }
+      )
+
+      vi.mocked(prisma.cbtfScheduleException.findUnique).mockResolvedValue({
+        id: 'ex-1',
+        facilityId: 'fac-1',
+        date: new Date('2026-11-26T00:00:00.000Z'),
+        isClosed: true,
+        reason: 'Thanksgiving'
+      } as any)
+
+      vi.mocked(prisma.cbtfScheduleException.update).mockResolvedValue({
+        id: 'ex-1',
+        facilityId: 'fac-1',
+        date: new Date('2026-11-26T00:00:00.000Z'),
+        isClosed: false,
+        openTime: '09:00',
+        closeTime: '14:00',
+        reason: 'Half day maintenance'
+      } as any)
+
+      const res = await exceptionsPatch(event)
+      expect(res.statusCode).toBe(200)
+      expect(prisma.cbtfScheduleException.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ex-1' },
+          data: expect.objectContaining({
+            isClosed: false,
+            openTime: '09:00',
+            closeTime: '14:00',
+            reason: 'Half day maintenance'
+          })
+        })
+      )
+    })
+
+    it('returns 404 if schedule exception not found on update', async () => {
+      const event = mockEvent('ADMIN', { reason: 'Missing' }, { id: 'nonexistent' })
+      vi.mocked(prisma.cbtfScheduleException.findUnique).mockResolvedValue(null)
+
+      await expect(exceptionsPatch(event)).rejects.toThrow('Schedule exception not found')
     })
 
     it('deletes schedule exception', async () => {
