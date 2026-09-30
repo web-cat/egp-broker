@@ -350,10 +350,10 @@
                 <p class="text-sm font-bold text-neutral-900 dark:text-neutral-100 truncate">
                   {{ formatStudentName(reservation.student) }}
                 </p>
-                <p class="text-xs text-neutral-500 truncate">
+                <p class="text-sm text-neutral-500 truncate">
                   {{ reservation.student?.email }}
                 </p>
-                <p v-if="isInstructorOrAdmin && (reservation.gta || reservation.gtaId)" class="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+                <p v-if="isInstructorOrAdmin && (reservation.gta || reservation.gtaId)" class="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
                   GTA: {{ reservation.gta ? `${reservation.gta.firstName} ${reservation.gta.lastName}` : reservation.gtaId }}
                 </p>
               </div>
