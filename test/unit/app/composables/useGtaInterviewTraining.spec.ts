@@ -171,4 +171,23 @@ describe('useGtaInterviewTraining Composable', () => {
       })
     )
   })
+
+  it('updates interview notes and status with updateInterview', async () => {
+    const training = useGtaInterviewTraining()
+    const target = training.completedList.value[0]
+
+    const updated = await training.updateInterview(target.id, {
+      notes: 'Updated observation notes',
+      status: 'COMPLETED'
+    })
+
+    expect(updated.notes).toBe('Updated observation notes')
+    expect(updated.status).toBe('COMPLETED')
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Interview Updated (Training)',
+        color: 'info'
+      })
+    )
+  })
 })

@@ -160,9 +160,7 @@ export function useGtaInterviewTraining() {
 
   const completedList = computed<FictionalReservation[]>(() =>
     reservations.value
-      .filter(
-        (r) => r.status === 'COMPLETED' || r.status === 'CHECKED_OUT' || r.status === 'MISSED'
-      )
+      .filter((r) => r.status !== 'SCHEDULED' && r.status !== 'CHECKED_IN')
       .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
   )
 
@@ -194,7 +192,10 @@ export function useGtaInterviewTraining() {
     }
   }
 
-  const saveNotes = async (reservationId: string, notes: string): Promise<FictionalReservation> => {
+  const updateInterview = async (
+    reservationId: string,
+    payload: { notes?: string; status?: any }
+  ): Promise<FictionalReservation> => {
     isUpdating.value = true
     try {
       const idx = reservations.value.findIndex((r) => r.id === reservationId)
@@ -202,19 +203,27 @@ export function useGtaInterviewTraining() {
 
       const updated: FictionalReservation = {
         ...reservations.value[idx],
-        notes
+        ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+        ...(payload.status !== undefined ? { status: payload.status } : {})
       }
       reservations.value[idx] = updated
 
+      const isOnlyNotes = payload.notes !== undefined && payload.status === undefined
       toast.add({
-        title: 'Notes Saved (Training)',
-        description: 'Interview observation notes updated in sandbox.',
+        title: isOnlyNotes ? 'Notes Saved (Training)' : 'Interview Updated (Training)',
+        description: isOnlyNotes
+          ? 'Observation notes saved in sandbox.'
+          : 'Interview details have been updated in sandbox.',
         color: 'info'
       })
       return updated
     } finally {
       isUpdating.value = false
     }
+  }
+
+  const saveNotes = async (reservationId: string, notes: string): Promise<FictionalReservation> => {
+    return await updateInterview(reservationId, { notes })
   }
 
   const checkOut = async (reservationId: string, notes?: string): Promise<FictionalReservation> => {
@@ -335,6 +344,7 @@ export function useGtaInterviewTraining() {
     checkIn,
     cancelCheckIn,
     checkOut,
+    updateInterview,
     saveNotes,
     markNoShow,
     reinstateReservation,

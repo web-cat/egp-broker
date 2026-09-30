@@ -31,9 +31,7 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
 
   const completedList = computed<any[]>(() =>
     reservations.value
-      .filter(
-        (r) => r.status === 'COMPLETED' || r.status === 'CHECKED_OUT' || r.status === 'MISSED'
-      )
+      .filter((r) => r.status !== 'SCHEDULED' && r.status !== 'CHECKED_IN')
       .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
   )
 
@@ -103,7 +101,10 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     }
   }
 
-  const saveNotes = async (reservationId: string, notes: string): Promise<any> => {
+  const updateInterview = async (
+    reservationId: string,
+    payload: { notes?: string; status?: string }
+  ): Promise<any> => {
     if (!cId.value) throw new Error('Course ID is required')
     isUpdating.value = true
     try {
@@ -111,26 +112,33 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
         `/api/me/courses/${cId.value}/interviews/${reservationId}`,
         {
           method: 'PATCH',
-          body: { notes }
+          body: payload
         }
       )
+      const isOnlyNotes = payload.notes !== undefined && payload.status === undefined
       toast.add({
-        title: 'Notes Saved',
-        description: 'Interview observation notes updated.',
+        title: isOnlyNotes ? 'Notes Saved' : 'Interview Updated',
+        description: isOnlyNotes
+          ? 'Observation notes saved.'
+          : 'Interview details have been updated.',
         color: 'info'
       })
       await refreshFeed()
       return res.data
     } catch (err: any) {
       toast.add({
-        title: 'Failed to Save Notes',
-        description: err?.data?.statusMessage || err?.message || 'Could not save notes.',
+        title: 'Update Failed',
+        description: err?.data?.statusMessage || err?.message || 'Could not update interview.',
         color: 'error'
       })
       throw err
     } finally {
       isUpdating.value = false
     }
+  }
+
+  const saveNotes = async (reservationId: string, notes: string): Promise<any> => {
+    return await updateInterview(reservationId, { notes })
   }
 
   const markNoShow = async (reservationId: string): Promise<any> => {
@@ -234,6 +242,7 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     checkIn,
     cancelCheckIn,
     checkOut,
+    updateInterview,
     saveNotes,
     markNoShow,
     reinstateReservation

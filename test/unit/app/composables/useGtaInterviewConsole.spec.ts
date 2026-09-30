@@ -36,6 +36,13 @@ const mockFeedData = ref<any>({
       startTime: '2026-10-05T09:30:00.000Z',
       endTime: '2026-10-05T09:40:00.000Z',
       student: { firstName: 'Evan', lastName: 'Student' }
+    },
+    {
+      id: 'res-cancelled-1',
+      status: 'CANCELLED',
+      startTime: '2026-10-05T09:20:00.000Z',
+      endTime: '2026-10-05T09:30:00.000Z',
+      student: { firstName: 'Fiona', lastName: 'Student' }
     }
   ]
 })
@@ -56,7 +63,7 @@ describe('useGtaInterviewConsole Composable', () => {
     vi.clearAllMocks()
   })
 
-  it('categorizes reservations into active, expected, and completed lists', () => {
+  it('categorizes reservations into active, expected, and completed lists including cancelled and missed', () => {
     const courseId = ref('course-1')
     const { activeInterview, expectedArrivals, completedList } = useGtaInterviewConsole(courseId)
 
@@ -66,8 +73,12 @@ describe('useGtaInterviewConsole Composable', () => {
     expect(expectedArrivals.value).toHaveLength(1)
     expect(expectedArrivals.value[0].id).toBe('res-sched-1')
 
-    expect(completedList.value).toHaveLength(2)
-    expect(completedList.value.map((r: any) => r.id)).toEqual(['res-done-1', 'res-missed-1'])
+    expect(completedList.value).toHaveLength(3)
+    expect(completedList.value.map((r: any) => r.id)).toEqual([
+      'res-done-1',
+      'res-missed-1',
+      'res-cancelled-1'
+    ])
   })
 
   it('performs checkIn and refreshes feed', async () => {
@@ -227,5 +238,32 @@ describe('useGtaInterviewConsole Composable', () => {
         color: 'error'
       })
     )
+  })
+
+  it('performs updateInterview with notes and status and refreshes feed', async () => {
+    const courseId = ref('course-1')
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: { id: 'res-done-1', notes: 'Updated notes', status: 'COMPLETED' }
+    })
+
+    const { updateInterview } = useGtaInterviewConsole(courseId)
+    const result = await updateInterview('res-done-1', {
+      notes: 'Updated notes',
+      status: 'COMPLETED'
+    })
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/me/courses/course-1/interviews/res-done-1', {
+      method: 'PATCH',
+      body: { notes: 'Updated notes', status: 'COMPLETED' }
+    })
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Interview Updated',
+        color: 'info'
+      })
+    )
+    expect(mockRefreshFeed).toHaveBeenCalled()
+    expect(result.notes).toBe('Updated notes')
   })
 })

@@ -34,6 +34,7 @@
           :course-title="currentCourse.courseTitle"
           :course-code="currentCourse.courseLabel"
           :interview-location="currentCourse.interviewLocation"
+          :is-instructor="isInstructorRole"
         />
       </UContainer>
     </UPageBody>
@@ -66,5 +67,11 @@ const isAuthorized = computed(() => {
     role === 'ADMIN' ||
     role === 'DESIGNER'
   )
+})
+
+const isInstructorRole = computed(() => {
+  if (user.value?.globalRole === 'ADMIN') return true
+  const role = currentCourse.value?.role?.toUpperCase()
+  return role === 'TEACHER' || role === 'ADMIN' || role === 'INSTRUCTOR'
 })
 </script>
