@@ -132,4 +132,43 @@ describe('useGtaInterviewTraining Composable', () => {
       })
     )
   })
+
+  it('cancels check-in and returns student to expected arrivals', async () => {
+    const training = useGtaInterviewTraining()
+    const target = training.expectedArrivals.value[0]
+    const initialExpectedCount = training.expectedArrivals.value.length
+
+    await training.checkIn(target.id)
+    expect(training.activeInterview.value?.id).toBe(target.id)
+
+    const reverted = await training.cancelCheckIn(target.id)
+    expect(reverted.status).toBe('SCHEDULED')
+    expect(reverted.checkedInAt).toBeNull()
+    expect(training.activeInterview.value).toBeNull()
+    expect(training.expectedArrivals.value.length).toBe(initialExpectedCount)
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Check-In Cancelled (Training)',
+        color: 'info'
+      })
+    )
+  })
+
+  it('reinstates a missed reservation back to expected arrivals', async () => {
+    const training = useGtaInterviewTraining()
+    const target = training.expectedArrivals.value.find((r) => r.student?.firstName === 'Liam')!
+
+    await training.markNoShow(target.id)
+    expect(training.expectedArrivals.value.some((r) => r.id === target.id)).toBe(false)
+
+    const reinstated = await training.reinstateReservation(target.id)
+    expect(reinstated.status).toBe('SCHEDULED')
+    expect(training.expectedArrivals.value.some((r) => r.id === target.id)).toBe(true)
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Appointment Reopened (Training)',
+        color: 'success'
+      })
+    )
+  })
 })

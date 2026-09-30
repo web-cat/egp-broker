@@ -5,6 +5,8 @@ import feedGet from '../../../../../server/api/proctor/feed.get'
 import lookupGet from '../../../../../server/api/proctor/lookup.get'
 import checkInPost from '../../../../../server/api/proctor/check-in.post'
 import checkOutPost from '../../../../../server/api/proctor/check-out.post'
+import cancelCheckInPost from '../../../../../server/api/proctor/cancel-check-in.post'
+import reinstateCheckOutPost from '../../../../../server/api/proctor/reinstate-check-out.post'
 import prisma from '@@/server/utils/db'
 
 vi.mock('@@/server/utils/db', () => ({
@@ -402,6 +404,108 @@ describe('API: Proctor Operations Endpoints', () => {
             checkedOutByUserId: 'proctor-1'
           })
         })
+      )
+    })
+
+    it('cancels check-in, reverting reservation to SCHEDULED and clearing check-in metadata', async () => {
+      vi.mocked(prisma.cbtfReservation.findUnique).mockResolvedValue({
+        id: 'res-1',
+        status: 'CHECKED_IN',
+        seatNumber: 10,
+        assignment: { title: 'Midterm' },
+        user: { firstName: 'Alice', lastName: 'A', studentId: '906000001', avatarUrl: null }
+      } as any)
+
+      vi.mocked(prisma.cbtfReservation.update).mockResolvedValue({
+        id: 'res-1',
+        status: 'SCHEDULED',
+        seatNumber: 10,
+        checkedInAt: null,
+        checkedInByUserId: null,
+        assignment: { title: 'Midterm' },
+        user: { firstName: 'Alice', lastName: 'A', studentId: '906000001', avatarUrl: null }
+      } as any)
+
+      const event = mockEvent('PROCTOR', {}, { reservationId: 'res-1' })
+      const res = await cancelCheckInPost(event)
+
+      expect(res.statusCode).toBe(200)
+      expect(res.data.status).toBe('SCHEDULED')
+      expect(prisma.cbtfReservation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'res-1' },
+          data: expect.objectContaining({
+            status: 'SCHEDULED',
+            checkedInAt: null,
+            checkedInByUserId: null
+          })
+        })
+      )
+    })
+
+    it('rejects cancelling check-in if reservation is not currently CHECKED_IN', async () => {
+      vi.mocked(prisma.cbtfReservation.findUnique).mockResolvedValue({
+        id: 'res-1',
+        status: 'SCHEDULED',
+        seatNumber: 10,
+        assignment: { title: 'Midterm' },
+        user: { firstName: 'Alice', lastName: 'A', studentId: '906000001', avatarUrl: null }
+      } as any)
+
+      const event = mockEvent('PROCTOR', {}, { reservationId: 'res-1' })
+      await expect(cancelCheckInPost(event)).rejects.toThrowError(
+        expect.objectContaining({ statusCode: 400 })
+      )
+    })
+
+    it('reinstates check-out back to CHECKED_IN and clears check-out metadata', async () => {
+      vi.mocked(prisma.cbtfReservation.findUnique).mockResolvedValue({
+        id: 'res-1',
+        status: 'CHECKED_OUT',
+        seatNumber: 10,
+        assignment: { title: 'Midterm' },
+        user: { firstName: 'Alice', lastName: 'A', studentId: '906000001', avatarUrl: null }
+      } as any)
+
+      vi.mocked(prisma.cbtfReservation.update).mockResolvedValue({
+        id: 'res-1',
+        status: 'CHECKED_IN',
+        seatNumber: 10,
+        checkedOutAt: null,
+        checkedOutByUserId: null,
+        assignment: { title: 'Midterm' },
+        user: { firstName: 'Alice', lastName: 'A', studentId: '906000001', avatarUrl: null }
+      } as any)
+
+      const event = mockEvent('PROCTOR', {}, { reservationId: 'res-1' })
+      const res = await reinstateCheckOutPost(event)
+
+      expect(res.statusCode).toBe(200)
+      expect(res.data.status).toBe('CHECKED_IN')
+      expect(prisma.cbtfReservation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'res-1' },
+          data: expect.objectContaining({
+            status: 'CHECKED_IN',
+            checkedOutAt: null,
+            checkedOutByUserId: null
+          })
+        })
+      )
+    })
+
+    it('rejects reinstating check-out if reservation is not currently CHECKED_OUT', async () => {
+      vi.mocked(prisma.cbtfReservation.findUnique).mockResolvedValue({
+        id: 'res-1',
+        status: 'SCHEDULED',
+        seatNumber: 10,
+        assignment: { title: 'Midterm' },
+        user: { firstName: 'Alice', lastName: 'A', studentId: '906000001', avatarUrl: null }
+      } as any)
+
+      const event = mockEvent('PROCTOR', {}, { reservationId: 'res-1' })
+      await expect(reinstateCheckOutPost(event)).rejects.toThrowError(
+        expect.objectContaining({ statusCode: 400 })
       )
     })
   })

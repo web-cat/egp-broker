@@ -58,8 +58,12 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     updateData.status = status
     if (status === 'CHECKED_IN') {
       updateData.checkedInAt = new Date()
+      updateData.checkedOutAt = null
     } else if (status === 'CHECKED_OUT' || status === 'COMPLETED') {
       updateData.checkedOutAt = new Date()
+    } else if (status === 'SCHEDULED' || status === 'MISSED' || status === 'CANCELLED') {
+      updateData.checkedInAt = null
+      updateData.checkedOutAt = null
     }
   }
 

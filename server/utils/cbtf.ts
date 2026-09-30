@@ -1214,6 +1214,112 @@ export async function checkOutReservation(
 }
 
 /**
+ * Cancels a check-in, reverting the reservation to SCHEDULED.
+ */
+export async function cancelCheckInReservation(prisma: PrismaClient, reservationId: string) {
+  const reservation = await prisma.cbtfReservation.findUnique({
+    where: { id: reservationId },
+    include: {
+      assignment: { select: { title: true } },
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          studentId: true,
+          avatarUrl: true
+        }
+      }
+    }
+  })
+
+  if (!reservation) {
+    throw createError({ statusCode: 404, statusMessage: 'Reservation not found' })
+  }
+
+  if (reservation.status !== 'CHECKED_IN') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Reservation is not currently checked in (status: '${reservation.status}')`
+    })
+  }
+
+  const updated = await prisma.cbtfReservation.update({
+    where: { id: reservationId },
+    data: {
+      status: 'SCHEDULED',
+      checkedInAt: null,
+      checkedInByUserId: null
+    },
+    include: {
+      assignment: { select: { title: true } },
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          studentId: true,
+          avatarUrl: true
+        }
+      }
+    }
+  })
+
+  return toCbtfReservationDto(updated)
+}
+
+/**
+ * Reinstates a checked-out reservation back to CHECKED_IN.
+ */
+export async function reinstateCheckoutReservation(prisma: PrismaClient, reservationId: string) {
+  const reservation = await prisma.cbtfReservation.findUnique({
+    where: { id: reservationId },
+    include: {
+      assignment: { select: { title: true } },
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          studentId: true,
+          avatarUrl: true
+        }
+      }
+    }
+  })
+
+  if (!reservation) {
+    throw createError({ statusCode: 404, statusMessage: 'Reservation not found' })
+  }
+
+  if (reservation.status !== 'CHECKED_OUT') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Reservation is not currently checked out (status: '${reservation.status}')`
+    })
+  }
+
+  const updated = await prisma.cbtfReservation.update({
+    where: { id: reservationId },
+    data: {
+      status: 'CHECKED_IN',
+      checkedOutAt: null,
+      checkedOutByUserId: null
+    },
+    include: {
+      assignment: { select: { title: true } },
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          studentId: true,
+          avatarUrl: true
+        }
+      }
+    }
+  })
+
+  return toCbtfReservationDto(updated)
+}
+
+/**
  * Adds a proctor observation note / incident report to a reservation.
  */
 export async function addReservationNote(

@@ -167,6 +167,52 @@ describe('useGtaInterviewConsole Composable', () => {
     expect(mockRefreshFeed).toHaveBeenCalled()
   })
 
+  it('performs cancelCheckIn and reverts status to SCHEDULED', async () => {
+    const courseId = ref('course-1')
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: { id: 'res-active-1', status: 'SCHEDULED' }
+    })
+
+    const { cancelCheckIn } = useGtaInterviewConsole(courseId)
+    await cancelCheckIn('res-active-1')
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/me/courses/course-1/interviews/res-active-1', {
+      method: 'PATCH',
+      body: { status: 'SCHEDULED' }
+    })
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Check-In Cancelled',
+        color: 'info'
+      })
+    )
+    expect(mockRefreshFeed).toHaveBeenCalled()
+  })
+
+  it('performs reinstateReservation and sets status to SCHEDULED', async () => {
+    const courseId = ref('course-1')
+    mockFetch.mockResolvedValueOnce({
+      statusCode: 200,
+      data: { id: 'res-missed-1', status: 'SCHEDULED' }
+    })
+
+    const { reinstateReservation } = useGtaInterviewConsole(courseId)
+    await reinstateReservation('res-missed-1')
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/me/courses/course-1/interviews/res-missed-1', {
+      method: 'PATCH',
+      body: { status: 'SCHEDULED' }
+    })
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Appointment Reopened',
+        color: 'success'
+      })
+    )
+    expect(mockRefreshFeed).toHaveBeenCalled()
+  })
+
   it('handles error in checkIn gracefully', async () => {
     const courseId = ref('course-1')
     mockFetch.mockRejectedValueOnce({

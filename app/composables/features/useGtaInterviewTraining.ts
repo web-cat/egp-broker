@@ -265,6 +265,56 @@ export function useGtaInterviewTraining() {
     }
   }
 
+  const cancelCheckIn = async (reservationId: string): Promise<FictionalReservation> => {
+    isUpdating.value = true
+    try {
+      const idx = reservations.value.findIndex((r) => r.id === reservationId)
+      if (idx === -1) throw new Error('Reservation not found')
+
+      const updated: FictionalReservation = {
+        ...reservations.value[idx],
+        status: 'SCHEDULED',
+        checkedInAt: null,
+        checkedOutAt: null
+      }
+      reservations.value[idx] = updated
+
+      toast.add({
+        title: 'Check-In Cancelled (Training)',
+        description: 'Student returned to expected arrivals queue.',
+        color: 'info'
+      })
+      return updated
+    } finally {
+      isUpdating.value = false
+    }
+  }
+
+  const reinstateReservation = async (reservationId: string): Promise<FictionalReservation> => {
+    isUpdating.value = true
+    try {
+      const idx = reservations.value.findIndex((r) => r.id === reservationId)
+      if (idx === -1) throw new Error('Reservation not found')
+
+      const updated: FictionalReservation = {
+        ...reservations.value[idx],
+        status: 'SCHEDULED',
+        checkedInAt: null,
+        checkedOutAt: null
+      }
+      reservations.value[idx] = updated
+
+      toast.add({
+        title: 'Appointment Reopened (Training)',
+        description: 'Student reinstated to expected arrivals in sandbox.',
+        color: 'success'
+      })
+      return updated
+    } finally {
+      isUpdating.value = false
+    }
+  }
+
   const resetScenario = () => {
     reservations.value = buildInitialScenario()
     toast.add({
@@ -283,9 +333,11 @@ export function useGtaInterviewTraining() {
     isUpdating,
     refreshFeed,
     checkIn,
+    cancelCheckIn,
     checkOut,
     saveNotes,
     markNoShow,
+    reinstateReservation,
     resetScenario
   }
 }

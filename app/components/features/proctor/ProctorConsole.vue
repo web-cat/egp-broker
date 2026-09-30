@@ -214,23 +214,43 @@
       :class="[
         lastAction.type === 'checkin'
           ? 'bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300'
-          : 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300'
+          : lastAction.type === 'cancel-checkin'
+            ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300'
+            : 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300'
       ]"
     >
-      <div class="flex items-center gap-2 font-medium">
+      <div class="flex items-center gap-2 font-medium flex-wrap">
         <UIcon
           :name="
             lastAction.type === 'checkin'
               ? 'i-lucide-check-circle-2'
-              : 'i-lucide-arrow-right-circle'
+              : lastAction.type === 'cancel-checkin'
+                ? 'i-lucide-undo-2'
+                : 'i-lucide-arrow-right-circle'
           "
           class="w-5 h-5 flex-shrink-0"
         />
         <span>{{ lastAction.message }}</span>
+        <UButton
+          v-if="lastAction.type === 'checkin' && lastAction.reservationId"
+          size="xs"
+          color="warning"
+          variant="subtle"
+          icon="i-lucide-undo-2"
+          label="Undo Check-In"
+          class="ml-2"
+          @click="
+            confirmCancelCheckIn({
+              id: lastAction.reservationId,
+              studentName: lastAction.studentName,
+              seatNumber: lastAction.seatNumber
+            })
+          "
+        />
       </div>
-      <span class="text-xs opacity-75">
+      <span v-if="lastAction.time" class="text-xs opacity-75">
         {{
-          lastAction.time.toLocaleTimeString([], {
+          (lastAction.time instanceof Date ? lastAction.time : new Date(lastAction.time)).toLocaleTimeString([], {
             hour: 'numeric',
             minute: '2-digit',
             second: '2-digit'
@@ -434,16 +454,29 @@
                   @click="handleCheckInConfirm"
                 />
 
-                <!-- Check Out Action -->
-                <UButton
-                  v-if="lookupResult.decision === 'READY_FOR_CHECKOUT'"
-                  size="sm"
-                  color="primary"
-                  icon="i-lucide-log-out"
-                  :loading="lookupLoading"
-                  label="Confirm Check-Out (Enter)"
-                  @click="handleCheckOutConfirm"
-                />
+                <!-- Check Out & Cancel Actions -->
+                <div class="flex items-center gap-2">
+                  <UButton
+                    v-if="lookupResult.decision === 'READY_FOR_CHECKOUT'"
+                    size="sm"
+                    color="warning"
+                    variant="ghost"
+                    icon="i-lucide-undo-2"
+                    :loading="lookupLoading"
+                    label="Cancel Check-In"
+                    title="Cancel check-in and return student to Expected Arrivals"
+                    @click="confirmCancelCheckIn(lookupResult.reservation, lookupResult.student)"
+                  />
+                  <UButton
+                    v-if="lookupResult.decision === 'READY_FOR_CHECKOUT'"
+                    size="sm"
+                    color="primary"
+                    icon="i-lucide-log-out"
+                    :loading="lookupLoading"
+                    label="Confirm Check-Out (Enter)"
+                    @click="handleCheckOutConfirm"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -567,6 +600,44 @@
         </div>
       </div>
     </div>
+
+    <!-- Cancel Check-In Confirmation Modal -->
+    <UModal
+      v-model:open="showCancelCheckInModal"
+      title="Cancel Check-In"
+      description="Revert to scheduled status"
+    >
+      <template #body>
+        <div class="space-y-3">
+          <p class="text-sm text-neutral-600 dark:text-neutral-300">
+            Are you sure you want to cancel the check-in for
+            <strong>{{ targetCancelReservation?.studentName || 'this student' }}</strong>
+            <span v-if="targetCancelReservation?.seatNumber">
+              (Seat #{{ targetCancelReservation.seatNumber }})
+            </span>?
+          </p>
+          <p class="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 p-2.5 rounded-lg">
+            The student will be returned to Expected Arrivals and their workstation seat will be freed immediately. Remember to return their student ID.
+          </p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <UButton
+            variant="ghost"
+            color="neutral"
+            label="Keep Checked In"
+            @click="showCancelCheckInModal = false"
+          />
+          <UButton
+            color="warning"
+            label="Yes, Cancel Check-In"
+            :loading="lookupLoading"
+            @click="executeCancelCheckIn"
+          />
+        </div>
+      </template>
+    </UModal>
 
     <!-- Proctor Incident / Observation Note Modal -->
     <FeaturesProctorNoteModal
@@ -704,6 +775,34 @@ const handleCheckOutConfirm = async () => {
   clearAndRefocus()
 }
 
+const showCancelCheckInModal = ref(false)
+const targetCancelReservation = ref<any | null>(null)
+
+const confirmCancelCheckIn = (reservation: any, student?: any) => {
+  if (!reservation) return
+  targetCancelReservation.value = {
+    id: reservation.id || reservation.reservationId,
+    studentName:
+      reservation.studentName ||
+      (student ? `${student.firstName} ${student.lastName}`.trim() : null) ||
+      'Student',
+    seatNumber: reservation.seatNumber
+  }
+  showCancelCheckInModal.value = true
+}
+
+const executeCancelCheckIn = async () => {
+  if (!targetCancelReservation.value?.id) return
+  try {
+    await props.proctorState.cancelCheckIn(targetCancelReservation.value.id)
+    showCancelCheckInModal.value = false
+    targetCancelReservation.value = null
+    clearAndRefocus()
+  } catch {
+    // Handled in composable
+  }
+}
+
 const handleNoteModalUpdate = (val: boolean) => {
   if (!val) {
     props.proctorState.closeNoteModal?.()
@@ -807,6 +906,15 @@ const seatedColumns: any[] = [
               assignmentTitle: row.original.assignmentTitle,
               notes: row.original.notes
             })
+        }),
+        h(resolveComponent('UButton'), {
+          size: 'xs',
+          color: 'warning',
+          variant: 'ghost',
+          icon: 'i-lucide-undo-2',
+          label: 'Cancel',
+          title: 'Cancel check-in and return student to Expected Arrivals',
+          onClick: () => confirmCancelCheckIn(row.original)
         }),
         h(resolveComponent('UButton'), {
           size: 'xs',
@@ -955,7 +1063,17 @@ const departureColumns: any[] = [
               assignmentTitle: row.original.assignmentTitle,
               notes: row.original.notes
             })
-        })
+        }),
+        row.original.status === 'CHECKED_OUT' &&
+          h(resolveComponent('UButton'), {
+            size: 'xs',
+            color: 'warning',
+            variant: 'ghost',
+            icon: 'i-lucide-rotate-ccw',
+            label: 'Reinstate',
+            title: 'Reinstate student back to Currently Seated roster',
+            onClick: () => props.proctorState.reinstateCheckOut(row.original.id)
+          })
       ])
   }
 ]

@@ -278,8 +278,89 @@ describe('API: GTA Interview Console Endpoints', () => {
         expect.objectContaining({
           where: { id: 'res-1' },
           data: expect.objectContaining({
-            status: 'MISSED'
+            status: 'MISSED',
+            checkedInAt: null,
+            checkedOutAt: null
           })
+        })
+      )
+    })
+
+    it('cancels check-in and resets status to SCHEDULED with null timestamps', async () => {
+      const event = mockEvent(
+        { id: 'gta-1', globalRole: 'USER' },
+        { status: 'SCHEDULED' },
+        { courseId: 'course-1', id: 'res-1' }
+      )
+
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'enr-ta',
+        userId: 'gta-1',
+        courseId: 'course-1',
+        role: 'TA'
+      } as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.findFirst).mockResolvedValue({
+        id: 'res-1',
+        gtaId: 'gta-1',
+        status: 'CHECKED_IN'
+      } as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.update).mockResolvedValue({
+        id: 'res-1',
+        status: 'SCHEDULED',
+        checkedInAt: null,
+        checkedOutAt: null
+      } as any)
+
+      const res = await interviewPatch(event)
+      expect(res.statusCode).toBe(200)
+      expect(prisma.gtaInterviewReservation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'res-1' },
+          data: expect.objectContaining({
+            status: 'SCHEDULED',
+            checkedInAt: null,
+            checkedOutAt: null
+          })
+        })
+      )
+    })
+
+    it('updates notes without changing status', async () => {
+      const event = mockEvent(
+        { id: 'gta-1', globalRole: 'USER' },
+        { notes: 'Updated rubric feedback.' },
+        { courseId: 'course-1', id: 'res-1' }
+      )
+
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'enr-ta',
+        userId: 'gta-1',
+        courseId: 'course-1',
+        role: 'TA'
+      } as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.findFirst).mockResolvedValue({
+        id: 'res-1',
+        gtaId: 'gta-1',
+        status: 'COMPLETED'
+      } as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.update).mockResolvedValue({
+        id: 'res-1',
+        status: 'COMPLETED',
+        notes: 'Updated rubric feedback.'
+      } as any)
+
+      const res = await interviewPatch(event)
+      expect(res.statusCode).toBe(200)
+      expect(prisma.gtaInterviewReservation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'res-1' },
+          data: {
+            notes: 'Updated rubric feedback.'
+          }
         })
       )
     })

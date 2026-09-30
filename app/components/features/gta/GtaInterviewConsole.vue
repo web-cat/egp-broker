@@ -179,15 +179,26 @@
           </div>
 
           <div class="flex items-center justify-between flex-wrap gap-3 pt-2">
-            <UButton
-              variant="outline"
-              color="neutral"
-              size="sm"
-              icon="i-lucide-save"
-              label="Save Notes"
-              :loading="isUpdating"
-              @click="handleSaveNotes"
-            />
+            <div class="flex items-center gap-2">
+              <UButton
+                variant="outline"
+                color="neutral"
+                size="sm"
+                icon="i-lucide-save"
+                label="Save Notes"
+                :loading="isUpdating"
+                @click="handleSaveNotes"
+              />
+              <UButton
+                variant="ghost"
+                color="warning"
+                size="sm"
+                icon="i-lucide-undo-2"
+                label="Cancel Check-In"
+                :disabled="isUpdating"
+                @click="confirmCancelCheckIn"
+              />
+            </div>
             <UButton
               color="primary"
               size="md"
@@ -295,6 +306,7 @@
               <th class="px-4 py-3">Time</th>
               <th class="px-4 py-3">Status</th>
               <th class="px-4 py-3">Notes</th>
+              <th class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800 bg-white dark:bg-neutral-900">
@@ -317,11 +329,107 @@
               <td class="px-4 py-3 text-neutral-600 dark:text-neutral-400 max-w-xs truncate">
                 {{ res.notes || '—' }}
               </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap">
+                <UButton
+                  v-if="res.status === 'MISSED'"
+                  color="warning"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-rotate-ccw"
+                  label="Reinstate"
+                  title="Return student to Expected Arrivals queue"
+                  :disabled="isUpdating"
+                  @click="handleReinstate(res.id)"
+                />
+                <UButton
+                  v-else-if="res.status === 'COMPLETED' || res.status === 'CHECKED_OUT'"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-pencil"
+                  label="Edit Notes"
+                  title="Edit observation notes"
+                  :disabled="isUpdating"
+                  @click="openEditNotesModal(res)"
+                />
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- Cancel Check-In Confirmation Modal -->
+    <UModal
+      v-model:open="showCancelCheckInModal"
+      title="Cancel Check-In"
+      description="Revert to scheduled status"
+    >
+      <template #body>
+        <div class="space-y-3">
+          <p class="text-sm text-neutral-600 dark:text-neutral-300">
+            Are you sure you want to cancel the check-in for
+            <strong>{{ formatStudentName(activeInterview?.student) }}</strong>?
+          </p>
+          <p class="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 p-2.5 rounded-lg">
+            The student will be returned to Expected Arrivals and the active session will be cleared so you can check in the correct student.
+          </p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <UButton
+            variant="ghost"
+            color="neutral"
+            label="Keep Checked In"
+            @click="showCancelCheckInModal = false"
+          />
+          <UButton
+            color="warning"
+            label="Yes, Cancel Check-In"
+            :loading="isUpdating"
+            @click="executeCancelCheckIn"
+          />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Edit Notes Modal -->
+    <UModal
+      v-model:open="showEditNotesModal"
+      title="Edit Observation Notes"
+      description="Update notes for completed interview"
+    >
+      <template #body>
+        <div class="space-y-3">
+          <div class="text-xs text-neutral-500">
+            Editing notes for <strong>{{ formatStudentName(targetEditNotes?.student) }}</strong> ({{ targetEditNotes?.assignment?.title || 'Assignment' }})
+          </div>
+          <UTextarea
+            v-model="editNotesDraft"
+            placeholder="Observation and grading notes..."
+            :rows="4"
+            class="w-full"
+          />
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <UButton
+            variant="ghost"
+            color="neutral"
+            label="Cancel"
+            @click="showEditNotesModal = false"
+          />
+          <UButton
+            color="primary"
+            label="Save Changes"
+            :loading="isUpdating"
+            @click="executeSaveEditNotes"
+          />
+        </div>
+      </template>
+    </UModal>
 
     <!-- No-Show Confirmation Modal -->
     <UModal v-model:open="showNoShowModal" title="Mark Student as No-Show" description="Confirm absent status">
@@ -392,9 +500,11 @@ const {
   isUpdating,
   refreshFeed,
   checkIn,
+  cancelCheckIn,
   checkOut,
   saveNotes,
-  markNoShow
+  markNoShow,
+  reinstateReservation
 } = consoleState
 
 const handleResetScenario = () => {
@@ -417,6 +527,23 @@ const handleCheckIn = async (reservationId: string) => {
   await checkIn(reservationId)
 }
 
+const showCancelCheckInModal = ref(false)
+
+const confirmCancelCheckIn = () => {
+  showCancelCheckInModal.value = true
+}
+
+const executeCancelCheckIn = async () => {
+  if (!activeInterview.value) return
+  try {
+    await cancelCheckIn(activeInterview.value.id)
+    showCancelCheckInModal.value = false
+    notesDraft.value = ''
+  } catch {
+    // Handled in composable
+  }
+}
+
 const handleCheckOut = async () => {
   if (!activeInterview.value) return
   await checkOut(activeInterview.value.id, notesDraft.value)
@@ -425,6 +552,31 @@ const handleCheckOut = async () => {
 const handleSaveNotes = async () => {
   if (!activeInterview.value) return
   await saveNotes(activeInterview.value.id, notesDraft.value)
+}
+
+const showEditNotesModal = ref(false)
+const targetEditNotes = ref<any | null>(null)
+const editNotesDraft = ref('')
+
+const openEditNotesModal = (reservation: any) => {
+  targetEditNotes.value = reservation
+  editNotesDraft.value = reservation.notes || ''
+  showEditNotesModal.value = true
+}
+
+const executeSaveEditNotes = async () => {
+  if (!targetEditNotes.value) return
+  try {
+    await saveNotes(targetEditNotes.value.id, editNotesDraft.value)
+    showEditNotesModal.value = false
+    targetEditNotes.value = null
+  } catch {
+    // Handled in composable
+  }
+}
+
+const handleReinstate = async (reservationId: string) => {
+  await reinstateReservation(reservationId)
 }
 
 const showNoShowModal = ref(false)

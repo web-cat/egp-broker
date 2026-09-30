@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { ref } from 'vue'
+import { ref, h } from 'vue'
 import ProctorConsole from '~/components/features/proctor/ProctorConsole.vue'
 
 describe('ProctorConsole Component', () => {
@@ -49,6 +49,8 @@ describe('ProctorConsole Component', () => {
       lookupStudent: vi.fn(),
       confirmCheckIn: vi.fn(),
       confirmCheckOut: vi.fn(),
+      cancelCheckIn: vi.fn(),
+      reinstateCheckOut: vi.fn(),
       clearLookup: vi.fn(),
       isNoteModalOpen: ref(false),
       selectedNoteTarget: ref(null),
@@ -389,6 +391,8 @@ describe('ProctorConsole Component', () => {
       isNoteModalOpen: false,
       selectedNoteTarget: null,
       clearLookup: vi.fn(),
+      cancelCheckIn: vi.fn(),
+      reinstateCheckOut: vi.fn(),
       openNoteModal: vi.fn(),
       toggleDuty: vi.fn()
     }
@@ -447,5 +451,262 @@ describe('ProctorConsole Component', () => {
     await resTabButton!.trigger('click')
 
     expect(wrapper.find('.reservations-table-stub').exists()).toBe(true)
+  })
+
+  it('renders Undo Check-In button in lastAction banner and triggers cancel confirmation modal', async () => {
+    mockState.lastAction.value = {
+      type: 'checkin',
+      message: 'Checked in Alice to Seat #10. RETAIN student ID.',
+      reservationId: 'res-1',
+      studentName: 'Alice',
+      seatNumber: 10,
+      time: new Date()
+    }
+
+    const wrapper = mount(ProctorConsole, {
+      props: {
+        isTraining: false,
+        proctorState: mockState
+      },
+      global: {
+        stubs: {
+          UIcon: true,
+          UBadge: true,
+          UButton: {
+            props: ['label', 'disabled'],
+            template:
+              '<button :disabled="disabled" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>'
+          },
+          UModal: {
+            props: ['open', 'title'],
+            template:
+              '<div v-if="open" data-testid="cancel-modal"><slot name="body" /><slot name="footer" /><slot /></div>'
+          },
+          USwitch: true,
+          UInput: true,
+          BaseCard: { template: '<div><slot /></div>' },
+          BaseDataTable: true,
+          FeaturesProctorNoteModal: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    const buttons = wrapper.findAll('button')
+    const undoButton = buttons.find((b) => b.text().includes('Undo Check-In'))
+    expect(undoButton).toBeDefined()
+
+    await undoButton!.trigger('click')
+
+    const modal = wrapper.find('[data-testid="cancel-modal"]')
+    expect(modal.exists()).toBe(true)
+    expect(modal.text()).toContain('Alice')
+    expect(modal.text()).toContain('Seat #10')
+
+    const modalButtons = modal.findAll('button')
+    const confirmButton = modalButtons.find((b) => b.text().includes('Yes, Cancel Check-In'))
+    expect(confirmButton).toBeDefined()
+    await confirmButton!.trigger('click')
+
+    expect(mockState.cancelCheckIn).toHaveBeenCalledWith('res-1')
+  })
+
+  it('renders Cancel button in seated roster row and triggers cancel check-in modal', async () => {
+    const wrapper = mount(ProctorConsole, {
+      props: {
+        isTraining: false,
+        proctorState: mockState
+      },
+      global: {
+        stubs: {
+          UIcon: true,
+          UBadge: true,
+          UButton: {
+            props: ['label', 'disabled'],
+            template:
+              '<button :disabled="disabled" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>'
+          },
+          UModal: {
+            props: ['open', 'title'],
+            template:
+              '<div v-if="open" data-testid="cancel-modal"><slot name="body" /><slot name="footer" /><slot /></div>'
+          },
+          USwitch: true,
+          UInput: true,
+          BaseCard: { template: '<div><slot /></div>' },
+          BaseDataTable: {
+            props: ['data', 'columns'],
+            setup(props: any) {
+              return () =>
+                h(
+                  'div',
+                  { class: 'data-table-stub' },
+                  props.data?.map((row: any) =>
+                    h(
+                      'div',
+                      { class: 'row-stub' },
+                      props.columns?.map((col: any) =>
+                        col.cell ? col.cell({ row: { original: row } }) : null
+                      )
+                    )
+                  )
+                )
+            }
+          },
+          FeaturesProctorNoteModal: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    // Switch to seated tab
+    const tabs = wrapper.findAll('button')
+    const seatedTab = tabs.find((b) => b.text().includes('Currently Seated'))
+    expect(seatedTab).toBeDefined()
+    await seatedTab!.trigger('click')
+
+    // Find the Cancel button in the row
+    const seatedButtons = wrapper.findAll('.row-stub button')
+    const cancelBtn = seatedButtons.find((b) => b.text().includes('Cancel'))
+    expect(cancelBtn).toBeDefined()
+
+    await cancelBtn!.trigger('click')
+
+    const modal = wrapper.find('[data-testid="cancel-modal"]')
+    expect(modal.exists()).toBe(true)
+    expect(modal.text()).toContain('David Chen')
+    expect(modal.text()).toContain('Seat #4')
+
+    const modalButtons = modal.findAll('button')
+    const confirmButton = modalButtons.find((b) => b.text().includes('Yes, Cancel Check-In'))
+    expect(confirmButton).toBeDefined()
+    await confirmButton!.trigger('click')
+
+    expect(mockState.cancelCheckIn).toHaveBeenCalledWith('seat-1')
+  })
+
+  it('renders Reinstate button in departures roster and calls reinstateCheckOut directly', async () => {
+    mockState.departures.value = [
+      {
+        id: 'dep-1',
+        seatNumber: 15,
+        studentName: 'Aaliyah Patel',
+        assignmentTitle: 'CHEM 101',
+        status: 'CHECKED_OUT'
+      }
+    ]
+
+    const wrapper = mount(ProctorConsole, {
+      props: {
+        isTraining: false,
+        proctorState: mockState
+      },
+      global: {
+        stubs: {
+          UIcon: true,
+          UBadge: true,
+          UButton: {
+            props: ['label', 'disabled'],
+            template:
+              '<button :disabled="disabled" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>'
+          },
+          USwitch: true,
+          UInput: true,
+          BaseCard: { template: '<div><slot /></div>' },
+          BaseDataTable: {
+            props: ['data', 'columns'],
+            setup(props: any) {
+              return () =>
+                h(
+                  'div',
+                  { class: 'data-table-stub' },
+                  props.data?.map((row: any) =>
+                    h(
+                      'div',
+                      { class: 'row-stub' },
+                      props.columns?.map((col: any) =>
+                        col.cell ? col.cell({ row: { original: row } }) : null
+                      )
+                    )
+                  )
+                )
+            }
+          },
+          FeaturesProctorNoteModal: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    // Switch to departures tab
+    const tabs = wrapper.findAll('button')
+    const departuresTab = tabs.find((b) => b.text().includes('Departures'))
+    expect(departuresTab).toBeDefined()
+    await departuresTab!.trigger('click')
+
+    // Find the Reinstate button
+    const depButtons = wrapper.findAll('.row-stub button')
+    const reinstateBtn = depButtons.find((b) => b.text().includes('Reinstate'))
+    expect(reinstateBtn).toBeDefined()
+
+    await reinstateBtn!.trigger('click')
+
+    expect(mockState.reinstateCheckOut).toHaveBeenCalledWith('dep-1')
+  })
+
+  it('renders Cancel Check-In button in student verification card when READY_FOR_CHECKOUT', async () => {
+    mockState.lookupResult.value = {
+      found: true,
+      decision: 'READY_FOR_CHECKOUT',
+      student: { firstName: 'Alice', lastName: 'A', studentId: '906000001' },
+      reservation: { id: 'res-99', seatNumber: 15, assignment: { title: 'Midterm' } }
+    }
+
+    const wrapper = mount(ProctorConsole, {
+      props: {
+        isTraining: false,
+        proctorState: mockState
+      },
+      global: {
+        stubs: {
+          UIcon: true,
+          UBadge: true,
+          UButton: {
+            props: ['label', 'disabled'],
+            template:
+              '<button :disabled="disabled" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>'
+          },
+          UModal: {
+            props: ['open', 'title'],
+            template:
+              '<div v-if="open" data-testid="cancel-modal"><slot name="body" /><slot name="footer" /><slot /></div>'
+          },
+          USwitch: true,
+          UInput: true,
+          BaseCard: { template: '<div><slot /></div>' },
+          BaseDataTable: true,
+          FeaturesProctorNoteModal: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    const buttons = wrapper.findAll('button')
+    const cancelCheckInBtn = buttons.find((b) => b.text().includes('Cancel Check-In'))
+    expect(cancelCheckInBtn).toBeDefined()
+
+    await cancelCheckInBtn!.trigger('click')
+
+    const modal = wrapper.find('[data-testid="cancel-modal"]')
+    expect(modal.exists()).toBe(true)
+    expect(modal.text()).toContain('Alice A')
+    expect(modal.text()).toContain('Seat #15')
+
+    const modalButtons = modal.findAll('button')
+    const confirmButton = modalButtons.find((b) => b.text().includes('Yes, Cancel Check-In'))
+    expect(confirmButton).toBeDefined()
+    await confirmButton!.trigger('click')
+
+    expect(mockState.cancelCheckIn).toHaveBeenCalledWith('res-99')
   })
 })

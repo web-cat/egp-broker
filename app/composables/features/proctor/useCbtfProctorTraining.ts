@@ -443,6 +443,9 @@ export function useCbtfProctorTraining() {
       lastAction.value = {
         message: `Checked in ${target.studentName} to Seat #${allocatedSeat}. RETAIN student ID while testing.`,
         type: 'checkin',
+        reservationId,
+        studentName: target.studentName,
+        seatNumber: allocatedSeat,
         time: new Date()
       }
 
@@ -480,6 +483,8 @@ export function useCbtfProctorTraining() {
       lastAction.value = {
         message: `Checked out ${target.studentName}. RETURN student ID to student.`,
         type: 'checkout',
+        reservationId,
+        studentName: target.studentName,
         time: new Date()
       }
 
@@ -491,6 +496,85 @@ export function useCbtfProctorTraining() {
 
       lookupResult.value = null
       return departedReservation
+    } finally {
+      lookupLoading.value = false
+    }
+  }
+
+  const cancelCheckIn = async (reservationId: string) => {
+    lookupLoading.value = true
+    try {
+      const seatedIdx = seated.value.findIndex((r) => r.id === reservationId)
+      if (seatedIdx === -1) {
+        throw new Error('Student not found in seated roster')
+      }
+
+      const target = seated.value[seatedIdx]
+      const scheduledReservation: FictionalReservation = {
+        ...target,
+        status: 'SCHEDULED'
+      }
+
+      // Remove from seated, add back to arriving
+      seated.value.splice(seatedIdx, 1)
+      arriving.value.push(scheduledReservation)
+
+      lastAction.value = {
+        message: `Cancelled check-in for ${target.studentName}. Returned to Expected Arrivals.`,
+        type: 'cancel-checkin',
+        reservationId,
+        studentName: target.studentName,
+        time: new Date()
+      }
+
+      toast.add({
+        title: `Check-In Cancelled: ${target.studentName}`,
+        description: 'Student returned to Expected Arrivals queue.',
+        color: 'info'
+      })
+
+      lookupResult.value = null
+      return scheduledReservation
+    } finally {
+      lookupLoading.value = false
+    }
+  }
+
+  const reinstateCheckOut = async (reservationId: string) => {
+    lookupLoading.value = true
+    try {
+      const outIdx = checkedOutList.value.findIndex((r) => r.id === reservationId)
+      if (outIdx === -1) {
+        throw new Error('Student not found in departures list')
+      }
+
+      const target = checkedOutList.value[outIdx]
+      const reinstatedReservation: FictionalReservation = {
+        ...target,
+        status: 'CHECKED_IN'
+      }
+
+      // Remove from checkedOutList, add back to seated
+      checkedOutList.value.splice(outIdx, 1)
+      seated.value.push(reinstatedReservation)
+
+      lastAction.value = {
+        message: `Reinstated ${target.studentName} to Seat #${target.seatNumber}. Returned to Seated Roster.`,
+        type: 'checkin',
+        reservationId,
+        studentName: target.studentName,
+        seatNumber: target.seatNumber,
+        time: new Date()
+      }
+
+      toast.add({
+        title: `Reinstated: ${target.studentName}`,
+        description: `Student returned to Workstation Seat #${target.seatNumber}.`,
+        color: 'success'
+      })
+
+      lookupResult.value = null
+      return reinstatedReservation
     } finally {
       lookupLoading.value = false
     }
@@ -587,7 +671,9 @@ export function useCbtfProctorTraining() {
     lastAction,
     lookupStudent,
     confirmCheckIn,
+    cancelCheckIn,
     confirmCheckOut,
+    reinstateCheckOut,
     clearLookup,
     isNoteModalOpen,
     selectedNoteTarget,

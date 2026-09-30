@@ -114,6 +114,9 @@ export function useCbtfProctor() {
       lastAction.value = {
         message: `Checked in ${studentName} to Seat #${seat}. RETAIN student ID while testing.`,
         type: 'checkin',
+        reservationId,
+        studentName,
+        seatNumber: seat,
         time: new Date()
       }
 
@@ -151,6 +154,8 @@ export function useCbtfProctor() {
       lastAction.value = {
         message: `Checked out ${studentName}. RETURN student ID to student.`,
         type: 'checkout',
+        reservationId,
+        studentName,
         time: new Date()
       }
 
@@ -166,6 +171,84 @@ export function useCbtfProctor() {
     } catch (err: any) {
       toast.add({
         title: 'Check-out Failed',
+        description: err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    } finally {
+      lookupLoading.value = false
+    }
+  }
+
+  const cancelCheckIn = async (reservationId: string) => {
+    lookupLoading.value = true
+    try {
+      const res = await $fetch<ApiResponse<any>>('/api/proctor/cancel-check-in', {
+        method: 'POST',
+        body: { reservationId }
+      })
+
+      const studentName = res.data.studentName || 'Student'
+
+      lastAction.value = {
+        message: `Cancelled check-in for ${studentName}. Returned to Expected Arrivals.`,
+        type: 'cancel-checkin',
+        time: new Date()
+      }
+
+      toast.add({
+        title: `Check-In Cancelled: ${studentName}`,
+        description: 'Student returned to Expected Arrivals queue.',
+        color: 'info'
+      })
+
+      lookupResult.value = null
+      await refreshFeed()
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Cancel Check-In',
+        description: err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    } finally {
+      lookupLoading.value = false
+    }
+  }
+
+  const reinstateCheckOut = async (reservationId: string) => {
+    lookupLoading.value = true
+    try {
+      const res = await $fetch<ApiResponse<any>>('/api/proctor/reinstate-check-out', {
+        method: 'POST',
+        body: { reservationId }
+      })
+
+      const studentName = res.data.studentName || 'Student'
+      const seat = res.data.seatNumber
+
+      lastAction.value = {
+        message: `Reinstated ${studentName} to Seat #${seat}. Returned to Seated Roster.`,
+        type: 'checkin',
+        reservationId,
+        studentName,
+        seatNumber: seat,
+        time: new Date()
+      }
+
+      toast.add({
+        title: `Reinstated: ${studentName}`,
+        description: `Student returned to Workstation Seat #${seat}.`,
+        color: 'success'
+      })
+
+      lookupResult.value = null
+      await refreshFeed()
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Reinstate Student',
         description: err.data?.message || err.message,
         color: 'error'
       })
@@ -264,7 +347,9 @@ export function useCbtfProctor() {
     lastAction,
     lookupStudent,
     confirmCheckIn,
+    cancelCheckIn,
     confirmCheckOut,
+    reinstateCheckOut,
     clearLookup,
     isNoteModalOpen,
     selectedNoteTarget,

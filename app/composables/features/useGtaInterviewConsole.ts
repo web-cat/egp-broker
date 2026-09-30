@@ -163,6 +163,66 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     }
   }
 
+  const cancelCheckIn = async (reservationId: string): Promise<any> => {
+    if (!cId.value) throw new Error('Course ID is required')
+    isUpdating.value = true
+    try {
+      const res = await $fetch<ApiResponse<any>>(
+        `/api/me/courses/${cId.value}/interviews/${reservationId}`,
+        {
+          method: 'PATCH',
+          body: { status: 'SCHEDULED' }
+        }
+      )
+      toast.add({
+        title: 'Check-In Cancelled',
+        description: 'Student returned to expected arrivals queue.',
+        color: 'info'
+      })
+      await refreshFeed()
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Cancel Check-In',
+        description: err?.data?.statusMessage || err?.message || 'Could not cancel check-in.',
+        color: 'error'
+      })
+      throw err
+    } finally {
+      isUpdating.value = false
+    }
+  }
+
+  const reinstateReservation = async (reservationId: string): Promise<any> => {
+    if (!cId.value) throw new Error('Course ID is required')
+    isUpdating.value = true
+    try {
+      const res = await $fetch<ApiResponse<any>>(
+        `/api/me/courses/${cId.value}/interviews/${reservationId}`,
+        {
+          method: 'PATCH',
+          body: { status: 'SCHEDULED' }
+        }
+      )
+      toast.add({
+        title: 'Appointment Reopened',
+        description: 'Student reinstated and returned to expected arrivals queue.',
+        color: 'success'
+      })
+      await refreshFeed()
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Reinstate Appointment',
+        description: err?.data?.statusMessage || err?.message || 'Could not reinstate appointment.',
+        color: 'error'
+      })
+      throw err
+    } finally {
+      isUpdating.value = false
+    }
+  }
+
   return {
     reservations,
     activeInterview,
@@ -172,8 +232,10 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     isUpdating,
     refreshFeed,
     checkIn,
+    cancelCheckIn,
     checkOut,
     saveNotes,
-    markNoShow
+    markNoShow,
+    reinstateReservation
   }
 }

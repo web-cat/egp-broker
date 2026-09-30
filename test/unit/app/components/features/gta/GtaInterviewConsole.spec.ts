@@ -11,9 +11,11 @@ const mockIsUpdating = ref(false)
 
 const mockRefreshFeed = vi.fn()
 const mockCheckIn = vi.fn()
+const mockCancelCheckIn = vi.fn()
 const mockCheckOut = vi.fn()
 const mockSaveNotes = vi.fn()
 const mockMarkNoShow = vi.fn()
+const mockReinstateReservation = vi.fn()
 
 vi.mock('~/composables/features/useGtaInterviewConsole', () => ({
   useGtaInterviewConsole: () => ({
@@ -24,9 +26,11 @@ vi.mock('~/composables/features/useGtaInterviewConsole', () => ({
     isUpdating: mockIsUpdating,
     refreshFeed: mockRefreshFeed,
     checkIn: mockCheckIn,
+    cancelCheckIn: mockCancelCheckIn,
     checkOut: mockCheckOut,
     saveNotes: mockSaveNotes,
-    markNoShow: mockMarkNoShow
+    markNoShow: mockMarkNoShow,
+    reinstateReservation: mockReinstateReservation
   })
 }))
 
@@ -227,9 +231,11 @@ describe('GtaInterviewConsole Component', () => {
       isUpdating: ref(false),
       refreshFeed: vi.fn(),
       checkIn: vi.fn(),
+      cancelCheckIn: vi.fn(),
       checkOut: vi.fn(),
       saveNotes: vi.fn(),
       markNoShow: vi.fn(),
+      reinstateReservation: vi.fn(),
       resetScenario: mockResetScenario
     }
 
@@ -265,5 +271,97 @@ describe('GtaInterviewConsole Component', () => {
     expect(wrapper.find('[data-testid="training-banner"]').exists()).toBe(false)
     const trainingBtn = wrapper.findAll('button').find((b) => b.text().includes('Training Mode'))
     expect(trainingBtn).toBeDefined()
+  })
+
+  it('opens cancel check-in modal and confirms cancellation', async () => {
+    mockActiveInterview.value = {
+      id: 'res-active-1',
+      status: 'CHECKED_IN',
+      startTime: '2026-10-05T10:00:00.000Z',
+      endTime: '2026-10-05T10:10:00.000Z',
+      student: { firstName: 'Alice', lastName: 'Smith', email: 'alice@vt.edu' }
+    }
+
+    const wrapper = mount(GtaInterviewConsole, {
+      props: { courseId: 'course-1' },
+      global: { stubs }
+    })
+
+    const cancelCheckInBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Cancel Check-In'))
+    expect(cancelCheckInBtn).toBeDefined()
+
+    await cancelCheckInBtn!.trigger('click')
+
+    expect(wrapper.text()).toContain('Cancel Check-In')
+    const confirmBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Yes, Cancel Check-In'))
+    expect(confirmBtn).toBeDefined()
+
+    await confirmBtn!.trigger('click')
+    expect(mockCancelCheckIn).toHaveBeenCalledWith('res-active-1')
+  })
+
+  it('reinstates a missed appointment from shift history', async () => {
+    mockCompletedList.value = [
+      {
+        id: 'res-missed-1',
+        status: 'MISSED',
+        startTime: '2026-10-05T09:00:00.000Z',
+        endTime: '2026-10-05T09:10:00.000Z',
+        student: { firstName: 'Evan', lastName: 'Wright', email: 'evan@vt.edu' },
+        assignment: { title: 'Project 1' }
+      }
+    ]
+
+    const wrapper = mount(GtaInterviewConsole, {
+      props: { courseId: 'course-1' },
+      global: { stubs }
+    })
+
+    const reinstateBtn = wrapper.findAll('button').find((b) => b.text().includes('Reinstate'))
+    expect(reinstateBtn).toBeDefined()
+
+    await reinstateBtn!.trigger('click')
+    expect(mockReinstateReservation).toHaveBeenCalledWith('res-missed-1')
+  })
+
+  it('opens edit notes modal and saves updated notes for completed appointment', async () => {
+    mockCompletedList.value = [
+      {
+        id: 'res-comp-1',
+        status: 'COMPLETED',
+        startTime: '2026-10-05T09:30:00.000Z',
+        endTime: '2026-10-05T09:40:00.000Z',
+        notes: 'Initial feedback note.',
+        student: { firstName: 'Diana', lastName: 'Prince', email: 'diana@vt.edu' },
+        assignment: { title: 'Project 1' }
+      }
+    ]
+
+    const wrapper = mount(GtaInterviewConsole, {
+      props: { courseId: 'course-1' },
+      global: { stubs }
+    })
+
+    const editNotesBtn = wrapper.findAll('button').find((b) => b.text().includes('Edit Notes'))
+    expect(editNotesBtn).toBeDefined()
+
+    await editNotesBtn!.trigger('click')
+
+    expect(wrapper.text()).toContain('Edit Observation Notes')
+    const textarea = wrapper
+      .findAll('textarea')
+      .find((t) => t.element.value.includes('Initial feedback note.'))
+    expect(textarea).toBeDefined()
+
+    await textarea!.setValue('Updated rubric details.')
+    const saveChangesBtn = wrapper.findAll('button').find((b) => b.text().includes('Save Changes'))
+    expect(saveChangesBtn).toBeDefined()
+
+    await saveChangesBtn!.trigger('click')
+    expect(mockSaveNotes).toHaveBeenCalledWith('res-comp-1', 'Updated rubric details.')
   })
 })

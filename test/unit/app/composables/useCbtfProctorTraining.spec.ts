@@ -211,4 +211,46 @@ describe('useCbtfProctorTraining Composable', () => {
       expect.objectContaining({ title: 'Training Scenario Reset' })
     )
   })
+
+  it('cancels check-in, returning seated student back to arriving roster', async () => {
+    const training = useCbtfProctorTraining()
+    const target = training.seated.value[0]
+    const initialSeatedCount = training.seated.value.length
+    const initialArrivingCount = training.arriving.value.length
+
+    const res = await training.cancelCheckIn(target.id)
+
+    expect(res.status).toBe('SCHEDULED')
+    expect(training.seated.value.some((s) => s.id === target.id)).toBe(false)
+    expect(training.arriving.value.some((s) => s.id === target.id)).toBe(true)
+    expect(training.seated.value.length).toBe(initialSeatedCount - 1)
+    expect(training.arriving.value.length).toBe(initialArrivingCount + 1)
+    expect(training.lastAction.value?.type).toBe('cancel-checkin')
+    expect(training.lastAction.value?.message).toContain(
+      `Cancelled check-in for ${target.studentName}`
+    )
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: `Check-In Cancelled: ${target.studentName}`, color: 'info' })
+    )
+  })
+
+  it('reinstates check-out, returning checked out student back to seated roster', async () => {
+    const training = useCbtfProctorTraining()
+    // First check out a seated student
+    const target = training.seated.value[0]
+    await training.confirmCheckOut(target.id)
+
+    expect(training.seated.value.some((s) => s.id === target.id)).toBe(false)
+
+    // Now reinstate
+    const reinstated = await training.reinstateCheckOut(target.id)
+
+    expect(reinstated.status).toBe('CHECKED_IN')
+    expect(training.seated.value.some((s) => s.id === target.id)).toBe(true)
+    expect(training.lastAction.value?.type).toBe('checkin')
+    expect(training.lastAction.value?.message).toContain(`Reinstated ${target.studentName}`)
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: `Reinstated: ${target.studentName}`, color: 'success' })
+    )
+  })
 })

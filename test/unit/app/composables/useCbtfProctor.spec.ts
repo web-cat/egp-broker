@@ -174,4 +174,52 @@ describe('useCbtfProctor Composable', () => {
     closeNoteModal()
     expect(isNoteModalOpen.value).toBe(false)
   })
+
+  it('cancels check-in and updates lastAction and feed', async () => {
+    mockFetch.mockResolvedValueOnce({
+      data: { id: 'res-1', studentName: 'Alice', seatNumber: 10, status: 'SCHEDULED' }
+    })
+
+    const { cancelCheckIn, lastAction, lookupResult } = useCbtfProctor()
+    lookupResult.value = { reservation: { id: 'res-1' } }
+
+    const result = await cancelCheckIn('res-1')
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/proctor/cancel-check-in', {
+      method: 'POST',
+      body: { reservationId: 'res-1' }
+    })
+    expect(result.status).toBe('SCHEDULED')
+    expect(lastAction.value?.type).toBe('cancel-checkin')
+    expect(lastAction.value?.message).toContain('Cancelled check-in for Alice')
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Check-In Cancelled: Alice', color: 'info' })
+    )
+    expect(lookupResult.value).toBeNull()
+    expect(mockRefreshFeed).toHaveBeenCalled()
+  })
+
+  it('reinstates check-out and updates lastAction and feed', async () => {
+    mockFetch.mockResolvedValueOnce({
+      data: { id: 'res-1', studentName: 'Alice', seatNumber: 10, status: 'CHECKED_IN' }
+    })
+
+    const { reinstateCheckOut, lastAction, lookupResult } = useCbtfProctor()
+    lookupResult.value = { reservation: { id: 'res-1' } }
+
+    const result = await reinstateCheckOut('res-1')
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/proctor/reinstate-check-out', {
+      method: 'POST',
+      body: { reservationId: 'res-1' }
+    })
+    expect(result.status).toBe('CHECKED_IN')
+    expect(lastAction.value?.type).toBe('checkin')
+    expect(lastAction.value?.message).toContain('Reinstated Alice to Seat #10')
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Reinstated: Alice', color: 'success' })
+    )
+    expect(lookupResult.value).toBeNull()
+    expect(mockRefreshFeed).toHaveBeenCalled()
+  })
 })
