@@ -105,77 +105,6 @@
       </div>
     </div>
 
-    <!-- Filter Bar Card (Date, Shift, GTA, Status) -->
-    <UCard :ui="{ body: 'p-4 sm:p-4' }">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Date Filter -->
-        <div>
-          <label class="block text-xs font-semibold text-neutral-500 mb-1">Date</label>
-          <UInput
-            v-model="filterDate"
-            type="date"
-            class="w-full"
-            aria-label="Filter by date"
-          />
-        </div>
-
-        <!-- Shift Filter -->
-        <div>
-          <label class="block text-xs font-semibold text-neutral-500 mb-1">Shift</label>
-          <USelect
-            v-model="filterShift"
-            :items="shiftFilterOptions"
-            class="w-full"
-            aria-label="Filter by shift"
-          />
-        </div>
-
-        <!-- GTA Filter -->
-        <div>
-          <label class="block text-xs font-semibold text-neutral-500 mb-1">Teaching Assistant</label>
-          <USelect
-            v-model="filterGta"
-            :items="gtaFilterOptions"
-            class="w-full"
-            aria-label="Filter by teaching assistant"
-          />
-        </div>
-
-        <!-- Status Filter -->
-        <div>
-          <label class="block text-xs font-semibold text-neutral-500 mb-1">Status</label>
-          <USelect
-            v-model="filterStatus"
-            :items="statusFilterOptions"
-            class="w-full"
-            aria-label="Filter by status"
-          />
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-between gap-4 mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800 text-xs">
-        <div class="flex items-center gap-2 text-neutral-500">
-          <span v-if="activeFilterCount > 0" class="flex items-center gap-1.5 font-medium text-primary-600 dark:text-primary-400">
-            <UIcon name="i-lucide-filter" class="w-3.5 h-3.5" />
-            {{ activeFilterCount }} active filter{{ activeFilterCount === 1 ? '' : 's' }}
-          </span>
-          <span v-else>All appointments shown (no filters applied)</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <UButton
-            variant="outline"
-            color="neutral"
-            size="xs"
-            icon="i-lucide-rotate-ccw"
-            label="Reset Filters"
-            :disabled="activeFilterCount === 0"
-            @click="resetFilters"
-          />
-        </div>
-      </div>
-    </UCard>
-
     <!-- Active In-Progress Interview Hero Panel -->
     <div
       v-if="activeInterview"
@@ -285,20 +214,106 @@
 
     <!-- Expected Arrivals Queue -->
     <div class="space-y-4">
-      <div class="flex items-center justify-between px-1">
-        <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-          <UIcon name="i-lucide-clock" class="w-5 h-5 text-neutral-500" />
-          Expected Arrivals
+      <div class="flex items-center justify-between px-1 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+            <UIcon name="i-lucide-clock" class="w-5 h-5 text-neutral-500" />
+            Expected Arrivals
+            <UBadge
+              v-if="filteredExpectedArrivals.length > 0"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+            >
+              {{ filteredExpectedArrivals.length }}
+            </UBadge>
+          </h3>
+
+          <!-- Shift indicator badge -->
           <UBadge
-            v-if="filteredExpectedArrivals.length > 0"
-            color="neutral"
+            v-if="currentOrNextShiftWindow?.isCurrent && filterExpectedShift === 'CURRENT_OR_NEXT'"
+            color="success"
             variant="subtle"
-            size="sm"
+            size="xs"
+            class="flex items-center gap-1.5"
           >
-            {{ filteredExpectedArrivals.length }}
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Current Shift
           </UBadge>
-        </h3>
+          <UBadge
+            v-else-if="currentOrNextShiftWindow && !currentOrNextShiftWindow.isCurrent && filterExpectedShift === 'CURRENT_OR_NEXT'"
+            color="primary"
+            variant="subtle"
+            size="xs"
+          >
+            Next Shift
+          </UBadge>
+        </div>
+
+        <p v-if="currentOrNextShiftWindow && filterExpectedShift === 'CURRENT_OR_NEXT'" class="text-xs text-neutral-500">
+          Shift window: {{ formatSlotRange(currentOrNextShiftWindow.start.toISOString(), currentOrNextShiftWindow.end.toISOString()) }}
+        </p>
       </div>
+
+      <!-- Filter Bar for Expected Arrivals (GTA, Shift Scope, Date) -->
+      <UCard :ui="{ body: 'p-4 sm:p-4' }">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- GTA Filter (for Instructors/Admins or viewing specific GTA) -->
+          <div>
+            <label class="block text-xs font-semibold text-neutral-500 mb-1">Teaching Assistant</label>
+            <USelect
+              v-model="filterExpectedGta"
+              :items="gtaFilterOptions"
+              class="w-full"
+              aria-label="Filter expected arrivals by teaching assistant"
+            />
+          </div>
+
+          <!-- Shift Scope -->
+          <div>
+            <label class="block text-xs font-semibold text-neutral-500 mb-1">Shift / Scope</label>
+            <USelect
+              v-model="filterExpectedShift"
+              :items="expectedShiftFilterOptions"
+              class="w-full"
+              aria-label="Filter expected arrivals by shift"
+            />
+          </div>
+
+          <!-- Specific Date Filter -->
+          <div>
+            <label class="block text-xs font-semibold text-neutral-500 mb-1">Specific Date (Optional)</label>
+            <UInput
+              v-model="filterExpectedDate"
+              type="date"
+              class="w-full"
+              aria-label="Filter expected arrivals by date"
+            />
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-4 mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800 text-xs">
+          <div class="flex items-center gap-2 text-neutral-500">
+            <span v-if="activeExpectedFilterCount > 0" class="flex items-center gap-1.5 font-medium text-primary-600 dark:text-primary-400">
+              <UIcon name="i-lucide-filter" class="w-3.5 h-3.5" />
+              {{ activeExpectedFilterCount }} active filter{{ activeExpectedFilterCount === 1 ? '' : 's' }}
+            </span>
+            <span v-else>Showing current/next shift for GTA</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <UButton
+              variant="outline"
+              color="neutral"
+              size="xs"
+              icon="i-lucide-rotate-ccw"
+              label="Reset"
+              :disabled="activeExpectedFilterCount === 0"
+              @click="resetExpectedFilters"
+            />
+          </div>
+        </div>
+      </UCard>
 
       <div
         v-if="filteredExpectedArrivals.length === 0"
@@ -306,16 +321,16 @@
       >
         <UIcon name="i-lucide-calendar-check" class="w-8 h-8 mx-auto text-neutral-400 mb-2" />
         <p class="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-          {{ activeFilterCount > 0 ? 'No upcoming arrivals match your active filters.' : 'No upcoming arrivals scheduled for your shift today.' }}
+          {{ activeExpectedFilterCount > 0 ? 'No upcoming arrivals match your active filters.' : 'No upcoming arrivals scheduled for this shift.' }}
         </p>
         <UButton
-          v-if="activeFilterCount > 0"
+          v-if="activeExpectedFilterCount > 0"
           size="xs"
           variant="outline"
           color="neutral"
           label="Clear Filters"
           class="mt-3"
-          @click="resetFilters"
+          @click="resetExpectedFilters"
         />
       </div>
 
@@ -342,7 +357,7 @@
                   GTA: {{ reservation.gta ? `${reservation.gta.firstName} ${reservation.gta.lastName}` : reservation.gtaId }}
                 </p>
               </div>
-              <UBadge color="neutral" variant="outline" size="xs">
+              <UBadge color="neutral" variant="outline" size="sm">
                 {{ reservation.assignment?.title || 'Assignment' }}
               </UBadge>
             </div>
@@ -407,22 +422,104 @@
         </h3>
       </div>
 
+      <!-- Filter Bar for Completed Interviews (GTA, Date Range, Status, Shift) -->
+      <UCard :ui="{ body: 'p-4 sm:p-4' }">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <!-- GTA Filter -->
+          <div>
+            <label class="block text-xs font-semibold text-neutral-500 mb-1">Teaching Assistant</label>
+            <USelect
+              v-model="filterCompletedGta"
+              :items="gtaFilterOptions"
+              class="w-full"
+              aria-label="Filter completed by teaching assistant"
+            />
+          </div>
+
+          <!-- Date Range: From -->
+          <div>
+            <label class="block text-xs font-semibold text-neutral-500 mb-1">Date From</label>
+            <UInput
+              v-model="filterCompletedStartDate"
+              type="date"
+              class="w-full"
+              aria-label="Filter completed from date"
+            />
+          </div>
+
+          <!-- Date Range: To -->
+          <div>
+            <label class="block text-xs font-semibold text-neutral-500 mb-1">Date To</label>
+            <UInput
+              v-model="filterCompletedEndDate"
+              type="date"
+              class="w-full"
+              aria-label="Filter completed to date"
+            />
+          </div>
+
+          <!-- Status Filter (defaults to COMPLETED) -->
+          <div>
+            <label class="block text-xs font-semibold text-neutral-500 mb-1">Status</label>
+            <USelect
+              v-model="filterCompletedStatus"
+              :items="completedStatusFilterOptions"
+              class="w-full"
+              aria-label="Filter completed by status"
+            />
+          </div>
+
+          <!-- Shift Filter -->
+          <div>
+            <label class="block text-xs font-semibold text-neutral-500 mb-1">Shift</label>
+            <USelect
+              v-model="filterCompletedShift"
+              :items="shiftFilterOptions"
+              class="w-full"
+              aria-label="Filter completed by shift"
+            />
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-4 mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800 text-xs">
+          <div class="flex items-center gap-2 text-neutral-500">
+            <span v-if="activeCompletedFilterCount > 0" class="flex items-center gap-1.5 font-medium text-primary-600 dark:text-primary-400">
+              <UIcon name="i-lucide-filter" class="w-3.5 h-3.5" />
+              {{ activeCompletedFilterCount }} active filter{{ activeCompletedFilterCount === 1 ? '' : 's' }}
+            </span>
+            <span v-else>Defaulting to Completed status (no custom filters applied)</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <UButton
+              variant="outline"
+              color="neutral"
+              size="xs"
+              icon="i-lucide-rotate-ccw"
+              label="Reset Filters"
+              :disabled="activeCompletedFilterCount === 0"
+              @click="resetCompletedFilters"
+            />
+          </div>
+        </div>
+      </UCard>
+
       <div
         v-if="filteredCompletedList.length === 0"
         class="p-8 text-center rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/30"
       >
         <UIcon name="i-lucide-clipboard-check" class="w-8 h-8 mx-auto text-neutral-400 mb-2" />
         <p class="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-          {{ activeFilterCount > 0 ? 'No completed interviews match your active filters.' : 'No completed, cancelled, or missed appointments recorded yet.' }}
+          {{ activeCompletedFilterCount > 0 ? 'No completed interviews match your active filters.' : 'No completed appointments recorded yet.' }}
         </p>
         <UButton
-          v-if="activeFilterCount > 0"
+          v-if="activeCompletedFilterCount > 0"
           size="xs"
           variant="outline"
           color="neutral"
           label="Clear Filters"
           class="mt-3"
-          @click="resetFilters"
+          @click="resetCompletedFilters"
         />
       </div>
 
@@ -644,7 +741,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useGtaInterviewConsole } from '~/composables/features/useGtaInterviewConsole'
+import { combineDateAndTime, DEFAULT_GTA_TIMEZONE } from '@@/shared/utils/timezone'
 import type { ApiResponse } from '@@/shared/types/api'
+
+interface ShiftCandidate {
+  start: Date
+  end: Date
+  gtaId?: string
+  label?: string
+}
 
 const props = withDefaults(
   defineProps<{
@@ -704,37 +809,26 @@ const canEditInterview = (res: any) => {
   return Boolean((res.gtaId && res.gtaId === curId) || (res.gta?.id && res.gta?.id === curId))
 }
 
-// Filter States
-const filterDate = ref('')
-const filterShift = ref('ALL')
-const filterGta = ref('ALL')
-const filterStatus = ref('ALL')
+// ─────────────────────────────────────────────────────────
+// Common Filter Options & Data
+// ─────────────────────────────────────────────────────────
 
-// Pagination States
-const expectedPage = ref(1)
-const expectedPageSize = 25
-const completedPage = ref(1)
-const completedPageSize = 25
-
-// Filter Options
 const shiftFilterOptions = [
   { label: 'All Shifts', value: 'ALL' },
   { label: 'Morning (< 12:30 PM)', value: 'MORNING' },
   { label: 'Afternoon / Evening (12:30 PM+)', value: 'AFTERNOON' }
 ]
 
-const statusFilterOptions = [
-  { label: 'All Statuses', value: 'ALL' },
-  { label: 'Completed', value: 'COMPLETED' },
-  { label: 'Missed (No-Show)', value: 'MISSED' },
-  { label: 'Cancelled', value: 'CANCELLED' },
-  { label: 'Checked Out', value: 'CHECKED_OUT' },
-  { label: 'Scheduled', value: 'SCHEDULED' }
-]
-
 const { data: courseGtasData } = useFetch<ApiResponse<any[]>>(
   computed(() =>
     !props.isTraining && props.courseId ? `/api/me/courses/${props.courseId}/gtas` : null
+  ),
+  { lazy: true }
+)
+
+const { data: courseShiftsData } = useFetch<ApiResponse<any[]>>(
+  computed(() =>
+    !props.isTraining && props.courseId ? `/api/me/courses/${props.courseId}/gta-shifts` : null
   ),
   { lazy: true }
 )
@@ -768,29 +862,6 @@ const gtaFilterOptions = computed(() => {
   return opts
 })
 
-const activeFilterCount = computed(() => {
-  let count = 0
-  if (filterDate.value) count++
-  if (filterShift.value !== 'ALL') count++
-  if (filterGta.value !== 'ALL') count++
-  if (filterStatus.value !== 'ALL') count++
-  return count
-})
-
-const resetFilters = () => {
-  filterDate.value = ''
-  filterShift.value = 'ALL'
-  filterGta.value = 'ALL'
-  filterStatus.value = 'ALL'
-  expectedPage.value = 1
-  completedPage.value = 1
-}
-
-watch([filterDate, filterShift, filterGta, filterStatus], () => {
-  expectedPage.value = 1
-  completedPage.value = 1
-})
-
 const getLocalDateStr = (dateInput: string | Date) => {
   const d = new Date(dateInput)
   const year = d.getFullYear()
@@ -799,30 +870,186 @@ const getLocalDateStr = (dateInput: string | Date) => {
   return `${year}-${month}-${day}`
 }
 
-const matchesCommonFilters = (res: any) => {
-  if (filterDate.value) {
-    const resDate = getLocalDateStr(res.startTime)
-    if (resDate !== filterDate.value) return false
-  }
-  if (filterShift.value !== 'ALL') {
-    const d = new Date(res.startTime)
-    const isMorning = d.getHours() < 12 || (d.getHours() === 12 && d.getMinutes() < 30)
-    if (filterShift.value === 'MORNING' && !isMorning) return false
-    if (filterShift.value === 'AFTERNOON' && isMorning) return false
-  }
-  if (filterGta.value !== 'ALL') {
-    const resGtaId = res.gtaId || res.gta?.id
-    if (resGtaId !== filterGta.value) return false
-  }
-  return true
+// ─────────────────────────────────────────────────────────
+// Expected Arrivals: Shift & Filter States
+// ─────────────────────────────────────────────────────────
+
+const filterExpectedGta = ref('ALL')
+const filterExpectedShift = ref('CURRENT_OR_NEXT')
+const filterExpectedDate = ref('')
+const expectedPage = ref(1)
+const expectedPageSize = 25
+
+const expectedShiftFilterOptions = [
+  { label: 'Current / Next Shift (Default)', value: 'CURRENT_OR_NEXT' },
+  { label: 'All Upcoming Shifts', value: 'ALL' },
+  { label: 'Morning (< 12:30 PM)', value: 'MORNING' },
+  { label: 'Afternoon / Evening (12:30 PM+)', value: 'AFTERNOON' }
+]
+
+const resetExpectedFilters = () => {
+  filterExpectedGta.value = 'ALL'
+  filterExpectedShift.value = 'CURRENT_OR_NEXT'
+  filterExpectedDate.value = ''
+  expectedPage.value = 1
 }
+
+const activeExpectedFilterCount = computed(() => {
+  let count = 0
+  if (filterExpectedGta.value !== 'ALL') count++
+  if (filterExpectedShift.value !== 'CURRENT_OR_NEXT') count++
+  if (filterExpectedDate.value) count++
+  return count
+})
+
+watch([filterExpectedGta, filterExpectedShift, filterExpectedDate], () => {
+  expectedPage.value = 1
+})
+
+const targetExpectedGta = computed(() => {
+  if (!isInstructorOrAdmin.value) {
+    return user.value?.id || null
+  }
+  return filterExpectedGta.value === 'ALL' ? null : filterExpectedGta.value
+})
+
+const allReservationsForShifts = computed(() => [
+  ...(consoleState.reservations?.value || []),
+  ...(expectedArrivals.value || []),
+  ...(activeInterview.value ? [activeInterview.value] : []),
+  ...(completedList.value || [])
+])
+
+const candidateShifts = computed<ShiftCandidate[]>(() => {
+  const result: ShiftCandidate[] = []
+  const gtaFilter = targetExpectedGta.value
+
+  // 1. From database GtaShift records if available
+  if (courseShiftsData.value?.data && courseShiftsData.value.data.length > 0) {
+    for (const s of courseShiftsData.value.data) {
+      if (gtaFilter && s.userId !== gtaFilter) continue
+      try {
+        const start = combineDateAndTime(s.date, s.startTime, DEFAULT_GTA_TIMEZONE)
+        const end = combineDateAndTime(s.date, s.endTime, DEFAULT_GTA_TIMEZONE)
+        result.push({
+          start,
+          end,
+          gtaId: s.userId,
+          label: `${s.startTime} – ${s.endTime}`
+        })
+      } catch {
+        // Skip invalid date
+      }
+    }
+  }
+
+  // 2. Fallback / supplement from reservations if no formal shifts matched
+  if (result.length === 0) {
+    const clusterMap = new Map<string, { gtaId?: string; times: number[] }>()
+    for (const r of allReservationsForShifts.value) {
+      const gId = r.gtaId || r.gta?.id
+      if (gtaFilter && gId && gId !== gtaFilter) continue
+      const d = new Date(r.startTime)
+      const dateStr = getLocalDateStr(d)
+      const isMorning = d.getHours() < 12 || (d.getHours() === 12 && d.getMinutes() < 30)
+      const key = `${gId || 'any'}_${dateStr}_${isMorning ? 'am' : 'pm'}`
+      if (!clusterMap.has(key)) {
+        clusterMap.set(key, { gtaId: gId, times: [] })
+      }
+      clusterMap.get(key)!.times.push(d.getTime())
+    }
+
+    for (const cluster of clusterMap.values()) {
+      if (cluster.times.length === 0) continue
+      const minTime = Math.min(...cluster.times)
+      const maxTime = Math.max(...cluster.times)
+      result.push({
+        start: new Date(minTime - 5 * 60000),
+        end: new Date(maxTime + 15 * 60000),
+        gtaId: cluster.gtaId
+      })
+    }
+  }
+
+  result.sort((a, b) => a.start.getTime() - b.start.getTime())
+  return result
+})
+
+const currentOrNextShiftWindow = computed<{
+  start: Date
+  end: Date
+  isCurrent: boolean
+} | null>(() => {
+  const shifts = candidateShifts.value
+  if (!shifts.length) return null
+
+  const nowMs = Date.now()
+
+  // 1. Check for currently active shift(s)
+  const active = shifts.filter((s) => s.start.getTime() <= nowMs && nowMs <= s.end.getTime())
+  if (active.length > 0) {
+    const minStart = new Date(Math.min(...active.map((s) => s.start.getTime())))
+    const maxEnd = new Date(Math.max(...active.map((s) => s.end.getTime())))
+    return {
+      start: minStart,
+      end: maxEnd,
+      isCurrent: true
+    }
+  }
+
+  // 2. If none active, find upcoming shifts (end in future)
+  const upcoming = shifts.filter((s) => s.end.getTime() > nowMs)
+  if (upcoming.length > 0) {
+    const nextStart = upcoming[0].start.getTime()
+    const nextBatch = upcoming.filter((s) => Math.abs(s.start.getTime() - nextStart) < 30 * 60000)
+    const minStart = new Date(Math.min(...nextBatch.map((s) => s.start.getTime())))
+    const maxEnd = new Date(Math.max(...nextBatch.map((s) => s.end.getTime())))
+    return {
+      start: minStart,
+      end: maxEnd,
+      isCurrent: false
+    }
+  }
+
+  return null
+})
 
 const filteredExpectedArrivals = computed(() => {
   return expectedArrivals.value.filter((res: any) => {
-    if (!matchesCommonFilters(res)) return false
-    if (filterStatus.value !== 'ALL' && filterStatus.value !== 'SCHEDULED') {
-      return false
+    // GTA filter
+    if (filterExpectedGta.value !== 'ALL') {
+      const resGtaId = res.gtaId || res.gta?.id
+      if (resGtaId !== filterExpectedGta.value) return false
+    } else if (!isInstructorOrAdmin.value && user.value?.id) {
+      const resGtaId = res.gtaId || res.gta?.id
+      if (resGtaId && resGtaId !== user.value.id) return false
     }
+
+    // Specific Date filter
+    if (filterExpectedDate.value) {
+      const resDate = getLocalDateStr(res.startTime)
+      if (resDate !== filterExpectedDate.value) return false
+    }
+
+    // Shift filter
+    const resTime = new Date(res.startTime).getTime()
+    if (filterExpectedShift.value === 'CURRENT_OR_NEXT') {
+      const window = currentOrNextShiftWindow.value
+      if (window) {
+        if (resTime < window.start.getTime() - 60000 || resTime > window.end.getTime() + 60000) {
+          return false
+        }
+      }
+    } else if (filterExpectedShift.value === 'MORNING') {
+      const d = new Date(res.startTime)
+      const isMorning = d.getHours() < 12 || (d.getHours() === 12 && d.getMinutes() < 30)
+      if (!isMorning) return false
+    } else if (filterExpectedShift.value === 'AFTERNOON') {
+      const d = new Date(res.startTime)
+      const isMorning = d.getHours() < 12 || (d.getHours() === 12 && d.getMinutes() < 30)
+      if (isMorning) return false
+    }
+
     return true
   })
 })
@@ -832,12 +1059,93 @@ const paginatedExpectedArrivals = computed(() => {
   return filteredExpectedArrivals.value.slice(start, start + expectedPageSize)
 })
 
+// ─────────────────────────────────────────────────────────
+// Completed Interviews: Filter & Pagination States
+// ─────────────────────────────────────────────────────────
+
+const filterCompletedGta = ref('ALL')
+const filterCompletedStartDate = ref('')
+const filterCompletedEndDate = ref('')
+const filterCompletedStatus = ref('COMPLETED')
+const filterCompletedShift = ref('ALL')
+const completedPage = ref(1)
+const completedPageSize = 25
+
+const completedStatusFilterOptions = [
+  { label: 'Completed (Default)', value: 'COMPLETED' },
+  { label: 'Missed (No-Show)', value: 'MISSED' },
+  { label: 'Cancelled', value: 'CANCELLED' },
+  { label: 'Checked Out', value: 'CHECKED_OUT' },
+  { label: 'All Statuses', value: 'ALL' }
+]
+
+const resetCompletedFilters = () => {
+  filterCompletedGta.value = 'ALL'
+  filterCompletedStartDate.value = ''
+  filterCompletedEndDate.value = ''
+  filterCompletedStatus.value = 'COMPLETED'
+  filterCompletedShift.value = 'ALL'
+  completedPage.value = 1
+}
+
+const activeCompletedFilterCount = computed(() => {
+  let count = 0
+  if (filterCompletedGta.value !== 'ALL') count++
+  if (filterCompletedStartDate.value) count++
+  if (filterCompletedEndDate.value) count++
+  if (filterCompletedStatus.value !== 'COMPLETED') count++
+  if (filterCompletedShift.value !== 'ALL') count++
+  return count
+})
+
+watch(
+  [
+    filterCompletedGta,
+    filterCompletedStartDate,
+    filterCompletedEndDate,
+    filterCompletedStatus,
+    filterCompletedShift
+  ],
+  () => {
+    completedPage.value = 1
+  }
+)
+
 const filteredCompletedList = computed(() => {
   return completedList.value.filter((res: any) => {
-    if (!matchesCommonFilters(res)) return false
-    if (filterStatus.value !== 'ALL' && res.status !== filterStatus.value) {
+    // 1. GTA Filter
+    if (filterCompletedGta.value !== 'ALL') {
+      const resGtaId = res.gtaId || res.gta?.id
+      if (resGtaId !== filterCompletedGta.value) return false
+    } else if (!isInstructorOrAdmin.value && user.value?.id) {
+      const resGtaId = res.gtaId || res.gta?.id
+      if (resGtaId && resGtaId !== user.value.id) return false
+    }
+
+    // 2. Date Range: Start Date From
+    const resDate = getLocalDateStr(res.startTime)
+    if (filterCompletedStartDate.value && resDate < filterCompletedStartDate.value) {
       return false
     }
+
+    // 3. Date Range: Start Date To
+    if (filterCompletedEndDate.value && resDate > filterCompletedEndDate.value) {
+      return false
+    }
+
+    // 4. Shift Filter
+    if (filterCompletedShift.value !== 'ALL') {
+      const d = new Date(res.startTime)
+      const isMorning = d.getHours() < 12 || (d.getHours() === 12 && d.getMinutes() < 30)
+      if (filterCompletedShift.value === 'MORNING' && !isMorning) return false
+      if (filterCompletedShift.value === 'AFTERNOON' && isMorning) return false
+    }
+
+    // 5. Status Filter (default: COMPLETED)
+    if (filterCompletedStatus.value !== 'ALL') {
+      if (res.status !== filterCompletedStatus.value) return false
+    }
+
     return true
   })
 })
@@ -846,6 +1154,10 @@ const paginatedCompletedList = computed(() => {
   const start = (completedPage.value - 1) * completedPageSize
   return filteredCompletedList.value.slice(start, start + completedPageSize)
 })
+
+// ─────────────────────────────────────────────────────────
+// Scenario & Interview Actions
+// ─────────────────────────────────────────────────────────
 
 const handleResetScenario = () => {
   if (consoleState.resetScenario) {

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { ref } from 'vue'
+import { ref, unref } from 'vue'
 import GtaInterviewConsole from '~/components/features/gta/GtaInterviewConsole.vue'
+import { combineDateAndTime, DEFAULT_GTA_TIMEZONE } from '@@/shared/utils/timezone'
 
 const mockUser = ref<any>({
   id: 'gta-current',
@@ -18,9 +19,18 @@ const mockCourseGtas = ref<any[]>([
   { id: 'gta-other', firstName: 'Other', lastName: 'GTA' }
 ])
 
-vi.stubGlobal('useFetch', () => ({
-  data: ref({ data: mockCourseGtas.value })
-}))
+const mockCourseShifts = ref<any[]>([])
+
+vi.stubGlobal('useFetch', (urlRef: any) => {
+  const url = typeof urlRef === 'function' ? urlRef() : unref(urlRef)
+  if (url && String(url).includes('gtas')) {
+    return { data: ref({ data: mockCourseGtas.value }) }
+  }
+  if (url && String(url).includes('gta-shifts')) {
+    return { data: ref({ data: mockCourseShifts.value }) }
+  }
+  return { data: ref({ data: [] }) }
+})
 
 const mockActiveInterview = ref<any>(null)
 const mockExpectedArrivals = ref<any[]>([])
@@ -107,6 +117,7 @@ describe('GtaInterviewConsole Component', () => {
       email: 'gta@vt.edu',
       globalRole: 'USER'
     }
+    mockCourseShifts.value = []
     mockActiveInterview.value = null
     mockExpectedArrivals.value = []
     mockCompletedList.value = []
@@ -177,7 +188,8 @@ describe('GtaInterviewConsole Component', () => {
         startTime: '2026-10-05T10:10:00.000Z',
         endTime: '2026-10-05T10:20:00.000Z',
         student: { firstName: 'Bob', lastName: 'Jones', email: 'bob@vt.edu' },
-        assignment: { id: 'asg-1', title: 'Project 1' }
+        assignment: { id: 'asg-1', title: 'Project 1' },
+        gtaId: 'gta-current'
       }
     ]
 
@@ -205,7 +217,8 @@ describe('GtaInterviewConsole Component', () => {
         startTime: '2026-10-05T10:10:00.000Z',
         endTime: '2026-10-05T10:20:00.000Z',
         student: { firstName: 'Charlie', lastName: 'Brown', email: 'cbrown@vt.edu' },
-        assignment: { id: 'asg-1', title: 'Project 1' }
+        assignment: { id: 'asg-1', title: 'Project 1' },
+        gtaId: 'gta-current'
       }
     ]
 
@@ -228,7 +241,7 @@ describe('GtaInterviewConsole Component', () => {
     expect(mockMarkNoShow).toHaveBeenCalledWith('res-sched-1')
   })
 
-  it('renders completed appointments in history section with full wrapped notes', () => {
+  it('renders completed appointments in history section with full wrapped notes and status default', async () => {
     mockCompletedList.value = [
       {
         id: 'res-done-1',
@@ -269,17 +282,27 @@ describe('GtaInterviewConsole Component', () => {
     })
 
     expect(wrapper.text()).toContain('Completed Interviews')
+    // Defaults to COMPLETED: Diana is visible, Evan and Fiona are filtered out initially
     expect(wrapper.text()).toContain('Diana Prince')
-    expect(wrapper.text()).toContain('Evan Wright')
-    expect(wrapper.text()).toContain('Fiona Gallagher')
-    expect(wrapper.text()).toContain('MISSED')
-    expect(wrapper.text()).toContain('CANCELLED')
+    expect(wrapper.text()).not.toContain('Evan Wright')
+    expect(wrapper.text()).not.toContain('Fiona Gallagher')
 
     // Verify notes column is wrapped and not truncated
     const notesCell = wrapper.findAll('td').find((td) => td.text().includes('Graded: full credit.'))
     expect(notesCell).toBeDefined()
     expect(notesCell!.classes()).toContain('whitespace-pre-wrap')
     expect(notesCell!.classes()).toContain('break-words')
+
+    // Switch status filter to ALL to see missed and cancelled appointments
+    const statusSelect = wrapper.find('select[aria-label="Filter completed by status"]')
+    expect(statusSelect.exists()).toBe(true)
+    await statusSelect.setValue('ALL')
+
+    expect(wrapper.text()).toContain('Diana Prince')
+    expect(wrapper.text()).toContain('Evan Wright')
+    expect(wrapper.text()).toContain('Fiona Gallagher')
+    expect(wrapper.text()).toContain('MISSED')
+    expect(wrapper.text()).toContain('CANCELLED')
   })
 
   it('renders training mode banner and handles reset scenario', async () => {
@@ -393,6 +416,10 @@ describe('GtaInterviewConsole Component', () => {
       global: { stubs }
     })
 
+    // To see MISSED appointments, set filter to MISSED or ALL
+    const statusSelect = wrapper.find('select[aria-label="Filter completed by status"]')
+    await statusSelect.setValue('MISSED')
+
     const reinstateBtn = wrapper.findAll('button').find((b) => b.text().includes('Reinstate'))
     expect(reinstateBtn).toBeDefined()
 
@@ -482,23 +509,21 @@ describe('GtaInterviewConsole Component', () => {
     })
 
     const rows = wrapperRegular.findAll('tbody tr')
-    expect(rows.length).toBe(2)
-    // Row 1 (gta-other, mine): has Edit button
+    expect(rows.length).toBe(1) // Only own interview visible by default for regular GTA
     expect(rows[0].text()).toContain('Edit')
-    // Row 2 (gta-current, different): does not have Edit button
-    expect(rows[1].text()).not.toContain('Edit')
 
-    // 2. As instructor: can edit all interviews
+    // 2. As instructor: can view and edit all interviews
     const wrapperInstructor = mount(GtaInterviewConsole, {
       props: { courseId: 'course-1', isInstructor: true },
       global: { stubs }
     })
     const rowsInstructor = wrapperInstructor.findAll('tbody tr')
+    expect(rowsInstructor.length).toBe(2)
     expect(rowsInstructor[0].text()).toContain('Edit')
     expect(rowsInstructor[1].text()).toContain('Edit')
   })
 
-  it('paginates expected arrivals and completed interviews when count exceeds 25', () => {
+  it('paginates expected arrivals and completed interviews when count exceeds 25', async () => {
     // Generate 30 expected arrivals
     mockExpectedArrivals.value = Array.from({ length: 30 }, (_, i) => ({
       id: `exp-${i + 1}`,
@@ -506,13 +531,14 @@ describe('GtaInterviewConsole Component', () => {
       startTime: `2026-10-05T${String(10 + Math.floor(i / 6)).padStart(2, '0')}:${String((i % 6) * 10).padStart(2, '0')}:00.000Z`,
       endTime: `2026-10-05T${String(10 + Math.floor(i / 6)).padStart(2, '0')}:${String((i % 6) * 10 + 9).padStart(2, '0')}:00.000Z`,
       student: { firstName: `Student${i + 1}`, lastName: 'Test', email: `test${i + 1}@vt.edu` },
-      assignment: { title: 'Project 1' }
+      assignment: { title: 'Project 1' },
+      gtaId: 'gta-current'
     }))
 
-    // Generate 30 completed interviews
+    // Generate 30 completed interviews (all COMPLETED so visible under default filter)
     mockCompletedList.value = Array.from({ length: 30 }, (_, i) => ({
       id: `comp-${i + 1}`,
-      status: i % 2 === 0 ? 'COMPLETED' : 'MISSED',
+      status: 'COMPLETED',
       startTime: `2026-10-05T${String(8 + Math.floor(i / 6)).padStart(2, '0')}:${String((i % 6) * 10).padStart(2, '0')}:00.000Z`,
       endTime: `2026-10-05T${String(8 + Math.floor(i / 6)).padStart(2, '0')}:${String((i % 6) * 10 + 9).padStart(2, '0')}:00.000Z`,
       student: { firstName: `PastStudent${i + 1}`, lastName: 'Test', email: `past${i + 1}@vt.edu` },
@@ -524,6 +550,13 @@ describe('GtaInterviewConsole Component', () => {
       props: { courseId: 'course-1' },
       global: { stubs }
     })
+
+    // Set expected shift filter to ALL so all 30 upcoming arrivals are displayed
+    const expectedShiftSelect = wrapper.find(
+      'select[aria-label="Filter expected arrivals by shift"]'
+    )
+    expect(expectedShiftSelect.exists()).toBe(true)
+    await expectedShiftSelect.setValue('ALL')
 
     // Both tables should show pagination stubs
     const paginationStubs = wrapper.findAll('[data-testid="pagination-stub"]')
@@ -538,22 +571,30 @@ describe('GtaInterviewConsole Component', () => {
     expect(wrapper.text()).toContain('Showing 1 to 25 of 30 completed interviews')
   })
 
-  it('filters interviews by date, shift, gta, and status', async () => {
+  it('filters completed interviews by date range, shift, gta, and status', async () => {
     mockCompletedList.value = [
       {
-        id: 'res-morning',
+        id: 'res-morning-1',
         status: 'COMPLETED',
         startTime: '2026-10-05T09:00:00.000Z',
         endTime: '2026-10-05T09:15:00.000Z',
-        student: { firstName: 'Morning', lastName: 'Student', email: 'morning@vt.edu' },
+        student: { firstName: 'Morning', lastName: 'Alpha', email: 'alpha@vt.edu' },
         gtaId: 'gta-current'
       },
       {
-        id: 'res-afternoon',
+        id: 'res-morning-2',
         status: 'MISSED',
-        startTime: '2026-10-05T14:00:00.000Z',
-        endTime: '2026-10-05T14:15:00.000Z',
-        student: { firstName: 'Afternoon', lastName: 'Student', email: 'afternoon@vt.edu' },
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T10:15:00.000Z',
+        student: { firstName: 'Morning', lastName: 'Beta', email: 'beta@vt.edu' },
+        gtaId: 'gta-current'
+      },
+      {
+        id: 'res-afternoon-1',
+        status: 'COMPLETED',
+        startTime: '2026-10-06T14:00:00.000Z',
+        endTime: '2026-10-06T14:15:00.000Z',
+        student: { firstName: 'Afternoon', lastName: 'Gamma', email: 'gamma@vt.edu' },
         gtaId: 'gta-other'
       }
     ]
@@ -563,27 +604,113 @@ describe('GtaInterviewConsole Component', () => {
       global: { stubs }
     })
 
+    // 1. By default, status is COMPLETED: res-morning-1 and res-afternoon-1 are shown
     expect(wrapper.findAll('tbody tr').length).toBe(2)
+    expect(wrapper.text()).toContain('Morning Alpha')
+    expect(wrapper.text()).toContain('Afternoon Gamma')
+    expect(wrapper.text()).not.toContain('Morning Beta')
 
-    // Filter by Status: MISSED
-    const statusSelect = wrapper.find('select[aria-label="Filter by status"]')
+    // 2. Filter by status: MISSED
+    const statusSelect = wrapper.find('select[aria-label="Filter completed by status"]')
     expect(statusSelect.exists()).toBe(true)
     await statusSelect.setValue('MISSED')
     expect(wrapper.findAll('tbody tr').length).toBe(1)
-    expect(wrapper.text()).toContain('Afternoon Student')
-    expect(wrapper.text()).not.toContain('Morning Student')
+    expect(wrapper.text()).toContain('Morning Beta')
 
-    // Reset filters
-    const resetBtn = wrapper.findAll('button').find((b) => b.text().includes('Reset Filters'))
-    expect(resetBtn).toBeDefined()
-    await resetBtn!.trigger('click')
-    expect(wrapper.findAll('tbody tr').length).toBe(2)
+    // 3. Filter by status: ALL
+    await statusSelect.setValue('ALL')
+    expect(wrapper.findAll('tbody tr').length).toBe(3)
 
-    // Filter by Teaching Assistant: gta-current
-    const gtaSelect = wrapper.find('select[aria-label="Filter by teaching assistant"]')
+    // 4. Filter by Teaching Assistant: gta-current
+    const gtaSelect = wrapper.find('select[aria-label="Filter completed by teaching assistant"]')
     expect(gtaSelect.exists()).toBe(true)
     await gtaSelect.setValue('gta-current')
+    expect(wrapper.findAll('tbody tr').length).toBe(2)
+    expect(wrapper.text()).toContain('Morning Alpha')
+    expect(wrapper.text()).toContain('Morning Beta')
+    expect(wrapper.text()).not.toContain('Afternoon Gamma')
+
+    // 5. Filter by Date Range: 2026-10-06 to 2026-10-06
+    await gtaSelect.setValue('ALL')
+    const fromInput = wrapper.find('input[aria-label="Filter completed from date"]')
+    const toInput = wrapper.find('input[aria-label="Filter completed to date"]')
+    await fromInput.setValue('2026-10-06')
+    await toInput.setValue('2026-10-06')
     expect(wrapper.findAll('tbody tr').length).toBe(1)
-    expect(wrapper.text()).toContain('Morning Student')
+    expect(wrapper.text()).toContain('Afternoon Gamma')
+
+    // 6. Reset Filters on Completed Interviews
+    const resetCompletedBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Reset Filters'))
+    expect(resetCompletedBtn).toBeDefined()
+    await resetCompletedBtn!.trigger('click')
+    // Resets back to COMPLETED status (2 completed items)
+    expect(wrapper.findAll('tbody tr').length).toBe(2)
+  })
+
+  it('defaults expected arrivals to current shift (or next shift) and supports GTA selection for instructors', async () => {
+    // Current shift: 10:00 to 12:00 for gta-current
+    // Next shift: 14:00 to 16:00 for gta-other
+    mockCourseShifts.value = [
+      {
+        id: 'shift-1',
+        userId: 'gta-current',
+        date: '2026-10-05T00:00:00.000Z',
+        startTime: '10:00',
+        endTime: '12:00'
+      },
+      {
+        id: 'shift-2',
+        userId: 'gta-other',
+        date: '2026-10-05T00:00:00.000Z',
+        startTime: '14:00',
+        endTime: '16:00'
+      }
+    ]
+
+    const mornStart = combineDateAndTime('2026-10-05', '10:15', DEFAULT_GTA_TIMEZONE).toISOString()
+    const mornEnd = combineDateAndTime('2026-10-05', '10:25', DEFAULT_GTA_TIMEZONE).toISOString()
+    const afterStart = combineDateAndTime('2026-10-05', '14:30', DEFAULT_GTA_TIMEZONE).toISOString()
+    const afterEnd = combineDateAndTime('2026-10-05', '14:40', DEFAULT_GTA_TIMEZONE).toISOString()
+
+    mockExpectedArrivals.value = [
+      {
+        id: 'exp-morning-1',
+        status: 'SCHEDULED',
+        startTime: mornStart,
+        endTime: mornEnd,
+        student: { firstName: 'Morning', lastName: 'Arrival', email: 'morn@vt.edu' },
+        gtaId: 'gta-current'
+      },
+      {
+        id: 'exp-afternoon-1',
+        status: 'SCHEDULED',
+        startTime: afterStart,
+        endTime: afterEnd,
+        student: { firstName: 'Afternoon', lastName: 'Arrival', email: 'after@vt.edu' },
+        gtaId: 'gta-other'
+      }
+    ]
+
+    const wrapper = mount(GtaInterviewConsole, {
+      props: { courseId: 'course-1', isInstructor: true },
+      global: { stubs }
+    })
+
+    // By default for instructor with 'ALL' GTAs, it scopes to the active/earliest next shift
+    const expectedCards = wrapper.findAll('.space-y-4 .grid-cols-1.md\\:grid-cols-2 > div')
+    expect(expectedCards.length).toBeGreaterThanOrEqual(1)
+
+    // Select gta-other specifically in Expected Arrivals GTA filter
+    const expectedGtaSelect = wrapper.find(
+      'select[aria-label="Filter expected arrivals by teaching assistant"]'
+    )
+    expect(expectedGtaSelect.exists()).toBe(true)
+    await expectedGtaSelect.setValue('gta-other')
+
+    // Now it should show arrivals for gta-other's shift
+    expect(wrapper.text()).toContain('Afternoon Arrival')
+    expect(wrapper.text()).not.toContain('Morning Arrival')
   })
 })
