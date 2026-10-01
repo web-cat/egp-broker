@@ -223,7 +223,7 @@
                       v-if="block.isCurrentBlock"
                       color="success"
                       variant="subtle"
-                      size="xs"
+                      size="sm"
                       class="animate-pulse"
                     >
                       In Progress
@@ -239,13 +239,13 @@
                   v-if="block.isHighDemand"
                   color="warning"
                   variant="subtle"
-                  size="xs"
+                  size="sm"
                   class="shrink-0 flex items-center gap-1 font-semibold"
                 >
                   <UIcon name="i-lucide-flame" class="w-3.5 h-3.5 text-amber-500" />
                   <span>High Demand</span>
                 </UBadge>
-                <UBadge v-else color="neutral" variant="subtle" size="xs" class="shrink-0">
+                <UBadge v-else color="neutral" variant="subtle" size="sm" class="shrink-0">
                   {{ block.openSlotsCount }} slots open
                 </UBadge>
               </div>
@@ -303,7 +303,7 @@
             <UButton
               color="neutral"
               variant="ghost"
-              size="xs"
+              size="sm"
               icon="i-lucide-x"
               @click="slotUnavailableMessage = null"
             />
@@ -353,7 +353,7 @@
               <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 Reservation Summary
               </span>
-              <UBadge color="neutral" variant="subtle" size="xs"> 60 Minutes Duration </UBadge>
+              <UBadge color="neutral" variant="subtle" size="sm"> 60 Minutes Duration </UBadge>
             </div>
 
             <div class="space-y-1">

@@ -118,7 +118,7 @@
               <UButton
                 v-if="state.passportRegistrationUrl"
                 type="button"
-                size="xs"
+                size="sm"
                 color="primary"
                 variant="outline"
                 icon="i-lucide-send"

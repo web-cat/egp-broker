@@ -13,7 +13,7 @@
             </h2>
           </div>
           <UButton
-            size="xs"
+            size="sm"
             color="neutral"
             variant="ghost"
             icon="i-lucide-x"
@@ -44,7 +44,7 @@
           </div>
           <UButton
             v-if="allowTargetChange"
-            size="xs"
+            size="sm"
             variant="ghost"
             color="neutral"
             label="Change"

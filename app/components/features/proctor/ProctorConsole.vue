@@ -16,7 +16,7 @@
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-base font-bold">PROCTOR TRAINING SANDBOX</h2>
-              <UBadge color="warning" variant="solid" size="xs"> In-Memory Mode </UBadge>
+              <UBadge color="warning" variant="solid" size="sm"> In-Memory Mode </UBadge>
             </div>
             <p class="text-xs opacity-85">
               Practice ID card scanning, check-ins, early/late overrides, incident notes, and
@@ -28,7 +28,7 @@
         <div class="flex items-center gap-2">
           <UButton
             data-testid="reset-scenario-btn"
-            size="xs"
+            size="sm"
             color="neutral"
             variant="soft"
             icon="i-lucide-rotate-ccw"
@@ -36,7 +36,7 @@
             @click="proctorState.resetScenario && proctorState.resetScenario()"
           />
           <UButton
-            size="xs"
+            size="sm"
             color="neutral"
             variant="solid"
             icon="i-lucide-arrow-left"
@@ -59,7 +59,7 @@
         <!-- Mismatch Toggle Pill -->
         <UButton
           data-testid="mismatch-toggle-btn"
-          size="xs"
+          size="sm"
           :color="isMismatchNext ? 'error' : 'neutral'"
           :variant="isMismatchNext ? 'solid' : 'soft'"
           icon="i-lucide-user-x"
@@ -74,7 +74,7 @@
         <!-- Advance Queue Pill -->
         <UButton
           data-testid="advance-arrival-btn"
-          size="xs"
+          size="sm"
           color="primary"
           variant="soft"
           icon="i-lucide-step-forward"
@@ -125,10 +125,10 @@
             <h1 class="text-xl font-bold text-neutral-900 dark:text-neutral-100">
               {{ facilityName }}
             </h1>
-            <UBadge :color="isOnDuty ? 'success' : 'neutral'" variant="subtle" size="xs">
+            <UBadge :color="isOnDuty ? 'success' : 'neutral'" variant="subtle" size="sm">
               {{ isOnDuty ? 'ON DUTY' : 'OFF DUTY' }}
             </UBadge>
-            <UBadge v-if="isTraining" color="warning" variant="subtle" size="xs"> TRAINING </UBadge>
+            <UBadge v-if="isTraining" color="warning" variant="subtle" size="sm"> TRAINING </UBadge>
           </div>
           <p class="text-xs text-neutral-500 font-mono">
             {{ liveClock }} • {{ totalSeats }} Total Workstations
@@ -233,7 +233,7 @@
         <span>{{ lastAction.message }}</span>
         <UButton
           v-if="lastAction.type === 'checkin' && lastAction.reservationId"
-          size="xs"
+          size="sm"
           color="warning"
           variant="subtle"
           icon="i-lucide-undo-2"
@@ -272,7 +272,7 @@
                 <UIcon name="i-lucide-credit-card" class="w-5 h-5 text-primary-500" />
                 <span>ID Card Swipe Station</span>
               </h2>
-              <UBadge color="primary" variant="subtle" size="xs"> Auto-Focus </UBadge>
+              <UBadge color="primary" variant="subtle" size="sm"> Auto-Focus </UBadge>
             </div>
 
             <p class="text-xs text-neutral-500">
@@ -294,7 +294,7 @@
                 />
                 <div class="absolute right-2.5 top-2.5">
                   <UButton
-                    size="xs"
+                    size="sm"
                     color="primary"
                     variant="soft"
                     type="submit"
@@ -892,7 +892,7 @@ const seatedColumns: any[] = [
     cell: ({ row }: { row: any }) =>
       h('div', { class: 'flex items-center gap-1.5' }, [
         h(resolveComponent('UButton'), {
-          size: 'xs',
+          size: 'sm',
           color: row.original.noteCount ? 'warning' : 'neutral',
           variant: row.original.noteCount ? 'solid' : 'ghost',
           icon: row.original.noteCount ? 'i-lucide-file-warning' : 'i-lucide-file-plus-2',
@@ -908,7 +908,7 @@ const seatedColumns: any[] = [
             })
         }),
         h(resolveComponent('UButton'), {
-          size: 'xs',
+          size: 'sm',
           color: 'warning',
           variant: 'ghost',
           icon: 'i-lucide-undo-2',
@@ -917,7 +917,7 @@ const seatedColumns: any[] = [
           onClick: () => confirmCancelCheckIn(row.original)
         }),
         h(resolveComponent('UButton'), {
-          size: 'xs',
+          size: 'sm',
           color: 'primary',
           variant: 'soft',
           icon: 'i-lucide-log-out',
@@ -979,7 +979,7 @@ const arrivingColumns: any[] = [
     cell: ({ row }: { row: any }) =>
       h('div', { class: 'flex items-center gap-1.5' }, [
         h(resolveComponent('UButton'), {
-          size: 'xs',
+          size: 'sm',
           color: row.original.noteCount ? 'warning' : 'neutral',
           variant: row.original.noteCount ? 'solid' : 'ghost',
           icon: row.original.noteCount ? 'i-lucide-file-warning' : 'i-lucide-file-plus-2',
@@ -995,7 +995,7 @@ const arrivingColumns: any[] = [
             })
         }),
         h(resolveComponent('UButton'), {
-          size: 'xs',
+          size: 'sm',
           color: 'success',
           variant: 'soft',
           icon: 'i-lucide-check',
@@ -1036,7 +1036,7 @@ const departureColumns: any[] = [
       h(
         resolveComponent('UBadge'),
         {
-          size: 'xs',
+          size: 'sm',
           variant: 'subtle',
           color: row.original.status === 'CHECKED_OUT' ? 'neutral' : 'amber'
         },
@@ -1049,7 +1049,7 @@ const departureColumns: any[] = [
     cell: ({ row }: { row: any }) =>
       h('div', { class: 'flex items-center gap-1.5' }, [
         h(resolveComponent('UButton'), {
-          size: 'xs',
+          size: 'sm',
           color: row.original.noteCount ? 'warning' : 'neutral',
           variant: row.original.noteCount ? 'solid' : 'ghost',
           icon: row.original.noteCount ? 'i-lucide-file-warning' : 'i-lucide-file-plus-2',
@@ -1066,7 +1066,7 @@ const departureColumns: any[] = [
         }),
         row.original.status === 'CHECKED_OUT' &&
           h(resolveComponent('UButton'), {
-            size: 'xs',
+            size: 'sm',
             color: 'warning',
             variant: 'ghost',
             icon: 'i-lucide-rotate-ccw',

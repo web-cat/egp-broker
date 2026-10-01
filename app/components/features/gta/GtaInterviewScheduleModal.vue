@@ -258,7 +258,7 @@
                       v-if="block.isCurrentBlock"
                       color="success"
                       variant="subtle"
-                      size="xs"
+                      size="sm"
                       class="animate-pulse"
                     >
                       In Progress
@@ -274,13 +274,13 @@
                   v-if="isBlockHighDemand(block)"
                   color="warning"
                   variant="subtle"
-                  size="xs"
+                  size="sm"
                   class="shrink-0 flex items-center gap-1 font-semibold"
                 >
                   <UIcon name="i-lucide-flame" class="w-3.5 h-3.5 text-amber-500" />
                   <span>High Demand</span>
                 </UBadge>
-                <UBadge v-else color="neutral" variant="subtle" size="xs" class="shrink-0">
+                <UBadge v-else color="neutral" variant="subtle" size="sm" class="shrink-0">
                   {{ getOpenSlotsCount(block) }} slot{{ getOpenSlotsCount(block) === 1 ? '' : 's' }}
                   open
                 </UBadge>
@@ -334,7 +334,7 @@
               </p>
             </div>
             <UButton
-              size="xs"
+              size="sm"
               variant="ghost"
               color="neutral"
               label="Change Period"
@@ -444,7 +444,7 @@
           <UButton
             variant="ghost"
             color="neutral"
-            size="xs"
+            size="sm"
             label="Cancel Rescheduling & View Existing Appointment"
             @click="isRescheduling = false"
           />

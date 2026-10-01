@@ -68,14 +68,14 @@
             />
             <UButton
               data-testid="save-location-btn"
-              size="xs"
+              size="sm"
               color="primary"
               label="Save"
               :loading="isSavingLocation"
               @click="handleSaveLocation"
             />
             <UButton
-              size="xs"
+              size="sm"
               color="neutral"
               variant="ghost"
               label="Cancel"
@@ -88,7 +88,7 @@
       <div v-if="!isEditingLocation">
         <UButton
           data-testid="edit-location-btn"
-          size="xs"
+          size="sm"
           variant="outline"
           color="neutral"
           icon="i-lucide-pencil"
@@ -149,7 +149,7 @@
           <UButton
             variant="outline"
             color="neutral"
-            size="xs"
+            size="sm"
             icon="i-lucide-rotate-ccw"
             label="Reset Filters"
             :disabled="activeFilterCount === 0"
@@ -159,7 +159,7 @@
             icon="i-lucide-refresh-cw"
             variant="ghost"
             color="neutral"
-            size="xs"
+            size="sm"
             title="Refresh shifts"
             aria-label="Refresh shifts"
             :loading="shiftsStatus === 'pending'"
@@ -212,7 +212,7 @@
             />
             <div class="flex justify-end pt-1">
               <UButton
-                size="xs"
+                size="sm"
                 variant="subtle"
                 color="primary"
                 icon="i-lucide-wand-2"
@@ -234,7 +234,7 @@
                   Total: {{ weeklyTotalHours }} hrs / week
                 </UBadge>
                 <UButton
-                  size="xs"
+                  size="sm"
                   variant="outline"
                   color="primary"
                   icon="i-lucide-plus"
@@ -272,13 +272,13 @@
                   <UInput v-model="slot.endTime" type="time" class="w-28 text-xs font-mono" />
                 </div>
                 <div class="flex items-center gap-2">
-                  <UBadge color="neutral" variant="subtle" size="xs">
+                  <UBadge color="neutral" variant="subtle" size="sm">
                     {{ calculateSlotDuration(slot.startTime, slot.endTime) }}h
                   </UBadge>
                   <UButton
                     color="error"
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     icon="i-lucide-trash-2"
                     @click="removeWeeklySlot(idx)"
                   />
@@ -295,14 +295,14 @@
               </label>
               <div class="flex items-center gap-1">
                 <UButton
-                  size="xs"
+                  size="sm"
                   variant="ghost"
                   color="neutral"
                   label="Next 4 Weeks"
                   @click="setPresetWeeks(4)"
                 />
                 <UButton
-                  size="xs"
+                  size="sm"
                   variant="ghost"
                   color="neutral"
                   label="Full Term (15 Wks)"
@@ -917,7 +917,7 @@ const shiftColumns = [
         h(resolveComponent('UButton'), {
           color: 'neutral',
           variant: 'ghost',
-          size: 'xs',
+          size: 'sm',
           icon: 'i-lucide-info',
           title: 'Shift Details & Slots',
           onClick: () => openDetailsModal(row.original)
@@ -925,7 +925,7 @@ const shiftColumns = [
         h(resolveComponent('UButton'), {
           color: 'neutral',
           variant: 'ghost',
-          size: 'xs',
+          size: 'sm',
           icon: 'i-lucide-pencil',
           title: 'Edit Shift',
           onClick: () => openEditShiftModal(row.original)
@@ -933,7 +933,7 @@ const shiftColumns = [
         h(resolveComponent('UButton'), {
           color: 'error',
           variant: 'ghost',
-          size: 'xs',
+          size: 'sm',
           icon: 'i-lucide-trash-2',
           title: 'Delete Shift',
           onClick: () => startDeleteShift(row.original.id)

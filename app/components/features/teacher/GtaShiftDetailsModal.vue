@@ -138,10 +138,10 @@ const formatDate = (dateStr?: string) => {
               </p>
             </div>
             <div class="flex items-center gap-1.5 pl-2 border-l border-neutral-200 dark:border-neutral-700">
-              <UBadge color="primary" variant="subtle" size="xs">
+              <UBadge color="primary" variant="subtle" size="sm">
                 {{ details.reservedCount }} Reserved
               </UBadge>
-              <UBadge color="neutral" variant="subtle" size="xs">
+              <UBadge color="neutral" variant="subtle" size="sm">
                 {{ details.vacantCount }} Vacant
               </UBadge>
             </div>
@@ -171,7 +171,7 @@ const formatDate = (dateStr?: string) => {
 
                 <!-- Vacant Slot -->
                 <div v-if="!slot.isReserved" class="flex items-center gap-2">
-                  <UBadge color="neutral" variant="subtle" size="xs">
+                  <UBadge color="neutral" variant="subtle" size="sm">
                     Vacant
                   </UBadge>
                   <span class="text-neutral-400 text-xs italic">Available for booking</span>
@@ -210,7 +210,7 @@ const formatDate = (dateStr?: string) => {
                   "
                 >
                   <UButton
-                    size="xs"
+                    size="sm"
                     color="primary"
                     variant="subtle"
                     icon="i-lucide-arrow-right-left"
@@ -223,7 +223,7 @@ const formatDate = (dateStr?: string) => {
 
                 <!-- Cancel Button -->
                 <UButton
-                  size="xs"
+                  size="sm"
                   color="error"
                   variant="ghost"
                   icon="i-lucide-x-circle"

@@ -93,7 +93,7 @@
               variant="ghost"
               color="secondary"
               icon="i-lucide-rotate-cw"
-              size="xs"
+              size="sm"
               class="transition-all duration-200 hover:scale-105"
               @click="resetPreferences"
             >

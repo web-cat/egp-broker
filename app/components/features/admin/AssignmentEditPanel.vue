@@ -122,7 +122,7 @@
                   <UBadge
                     v-if="autoPassTypeIds.has(item.id)"
                     label="pattern match"
-                    size="xs"
+                    size="sm"
                     color="neutral"
                     variant="subtle"
                   />

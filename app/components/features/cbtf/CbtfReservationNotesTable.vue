@@ -71,13 +71,13 @@
           <UButton
             variant="outline"
             color="neutral"
-            size="xs"
+            size="sm"
             icon="i-lucide-rotate-ccw"
             label="Reset"
             @click="resetFilters"
           />
           <UButton
-            size="xs"
+            size="sm"
             color="primary"
             icon="i-lucide-filter"
             label="Apply Filters"
@@ -86,7 +86,7 @@
           <UButton
             variant="ghost"
             color="neutral"
-            size="xs"
+            size="sm"
             icon="i-lucide-refresh-cw"
             label="Refresh"
             :loading="loading"
@@ -174,14 +174,14 @@
               <td class="px-4 py-3 align-top whitespace-nowrap">
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-1.5">
-                    <UBadge variant="subtle" color="primary" size="xs" class="font-mono font-bold">
+                    <UBadge variant="subtle" color="primary" size="sm" class="font-mono font-bold">
                       Seat #{{ note.reservation?.seatNumber }}
                     </UBadge>
                     <UBadge
                       v-if="note.reservation?.status"
                       :color="statusBadgeColor(note.reservation.status)"
                       variant="subtle"
-                      size="xs"
+                      size="sm"
                     >
                       {{ note.reservation.status }}
                     </UBadge>
@@ -199,7 +199,7 @@
                     {{ note.content }}
                   </p>
                   <div v-if="note.hasPhotos">
-                    <UBadge color="warning" variant="subtle" size="xs" class="gap-1 inline-flex items-center">
+                    <UBadge color="warning" variant="subtle" size="sm" class="gap-1 inline-flex items-center">
                       <UIcon name="i-lucide-camera" class="w-3 h-3" />
                       <span>Photos Captured</span>
                     </UBadge>

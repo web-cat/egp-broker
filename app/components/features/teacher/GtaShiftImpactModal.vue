@@ -111,7 +111,7 @@ const formatTime = (isoString: string) => {
               <UIcon name="i-lucide-arrow-right-left" class="w-4 h-4" />
               Will Be Automatically Rescheduled ({{ rescheduled.length }})
             </h4>
-            <UBadge color="primary" variant="subtle" size="xs">Same appointment time</UBadge>
+            <UBadge color="primary" variant="subtle" size="sm">Same appointment time</UBadge>
           </div>
           <p class="text-xs text-neutral-500">
             These students will be reassigned to another concurrent on-duty GTA at their exact same appointment time.
@@ -150,7 +150,7 @@ const formatTime = (isoString: string) => {
               <UIcon name="i-lucide-calendar-x" class="w-4 h-4" />
               Will Be Cancelled ({{ cancelled.length }})
             </h4>
-            <UBadge color="error" variant="subtle" size="xs">Needs Rebooking</UBadge>
+            <UBadge color="error" variant="subtle" size="sm">Needs Rebooking</UBadge>
           </div>
           <p class="text-xs text-neutral-500">
             No other concurrent on-duty GTA is available at these timeslots. These appointments will be marked as cancelled so students can reschedule.
@@ -173,7 +173,7 @@ const formatTime = (isoString: string) => {
                 </p>
               </div>
 
-              <UBadge color="error" variant="soft" size="xs">
+              <UBadge color="error" variant="soft" size="sm">
                 To Be Cancelled
               </UBadge>
             </div>

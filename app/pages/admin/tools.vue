@@ -80,7 +80,7 @@ const toolColumns: TableColumn<ToolRow>[] = [
         badges.push(
           h(
             resolveComponent('UBadge'),
-            { variant: 'subtle', color: 'neutral', size: 'xs' },
+            { variant: 'subtle', color: 'neutral', size: 'sm' },
             () => 'Proxy'
           )
         )
@@ -89,7 +89,7 @@ const toolColumns: TableColumn<ToolRow>[] = [
         badges.push(
           h(
             resolveComponent('UBadge'),
-            { variant: 'subtle', color: 'primary', size: 'xs' },
+            { variant: 'subtle', color: 'primary', size: 'sm' },
             () => 'PassPort'
           )
         )

@@ -4,6 +4,50 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
+/* ==========================================================================
+   WCAG 2.2 Theme Overrides (SC 1.4.11 Non-text Contrast & 1.4.3 Text Contrast)
+   Separates warning color tokens for text vs borders/focus rings:
+   - Light:
+     * Focus rings / borders / DEFAULT: amber-600 (#d97706, >= 3:1 contrast against white)
+     * Text foreground: amber-950 (#451a03, >= 14:1 contrast against white)
+   - Dark:
+     * Focus rings / borders / DEFAULT: amber-500 (#f59e0b, >= 7:1 contrast against dark bg)
+     * Text foreground: amber-200 (#fde68a, >= 13:1 contrast against dark bg)
+     * Solid badge/button text: black (#000000, >= 9:1 contrast against amber-500)
+   ========================================================================== */
+
+@theme {
+  --color-warning-DEFAULT: var(--ui-warning);
+  --color-warning-foreground: var(--ui-warning-foreground);
+}
+
+:root,
+.light {
+  --ui-warning: #d97706;
+  --ui-warning-foreground: #451a03;
+}
+
+.dark {
+  --ui-warning: #f59e0b;
+  --ui-warning-foreground: #fde68a;
+}
+
+/* Ensure text-warning uses the high-contrast foreground token */
+.text-warning {
+  color: var(--ui-warning-foreground) !important;
+}
+
+/* Solid warning badges and buttons: ensure high-contrast text on bright amber */
+.bg-warning.text-inverted,
+.bg-warning .text-inverted {
+  color: var(--color-amber-950, #451a03) !important;
+}
+
+.dark .bg-warning.text-inverted,
+.dark .bg-warning .text-inverted {
+  color: #000000 !important;
+}
+
 :root {
   font-family: 'Outfit', sans-serif;
 }

@@ -21,7 +21,7 @@
             </p>
             <div v-if="!isEditingBalances">
               <UButton
-                size="xs"
+                size="sm"
                 variant="ghost"
                 color="primary"
                 icon="i-lucide-pencil"
@@ -31,7 +31,7 @@
             </div>
             <div v-else class="flex items-center gap-2">
               <UButton
-                size="xs"
+                size="sm"
                 variant="ghost"
                 color="neutral"
                 label="Cancel"
@@ -39,7 +39,7 @@
                 @click="cancelEditingBalances"
               />
               <UButton
-                size="xs"
+                size="sm"
                 color="primary"
                 label="Save"
                 icon="i-lucide-check"
@@ -88,14 +88,14 @@
               </div>
               <div class="flex items-center gap-1">
                 <UButton
-                  size="xs"
+                  size="sm"
                   variant="soft"
                   color="neutral"
                   icon="i-lucide-minus"
                   :disabled="savingBalances || (editableBalances[pb.passTypeId] ?? 0) <= 0"
                   @click="
                     editableBalances[pb.passTypeId] = Math.max(
-                      0,
+                       0,
                       (editableBalances[pb.passTypeId] ?? 0) - 1
                     )
                   "
@@ -110,7 +110,7 @@
                   :disabled="savingBalances"
                 />
                 <UButton
-                  size="xs"
+                  size="sm"
                   variant="soft"
                   color="neutral"
                   icon="i-lucide-plus"
@@ -133,7 +133,7 @@
               Redemption Log
             </p>
             <UButton
-              size="xs"
+              size="sm"
               color="primary"
               icon="i-lucide-ticket-plus"
               label="Redeem Pass"
@@ -640,7 +640,7 @@ const interviewColumns: any[] = [
         {
           variant: 'subtle',
           color,
-          size: 'xs'
+          size: 'sm'
         },
         () => status
       )

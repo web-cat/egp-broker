@@ -16,7 +16,7 @@
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-base font-bold">GRADUATE TA TRAINING SANDBOX</h2>
-              <UBadge color="warning" variant="solid" size="xs"> In-Memory Mode </UBadge>
+              <UBadge color="warning" variant="solid" size="sm"> In-Memory Mode </UBadge>
             </div>
             <p class="text-xs opacity-85">
               Practice student check-ins, active interview observation notes, checkouts, and no-shows. Zero database writes.
@@ -29,7 +29,7 @@
             data-testid="reset-scenario-btn"
             variant="outline"
             color="warning"
-            size="xs"
+            size="sm"
             icon="i-lucide-rotate-ccw"
             label="Reset Scenario"
             @click="handleResetScenario"
@@ -37,7 +37,7 @@
           <UButton
             variant="ghost"
             color="neutral"
-            size="xs"
+            size="sm"
             icon="i-lucide-log-out"
             label="Exit Training"
             to="/interviews"
@@ -55,14 +55,14 @@
           <UButton
             variant="ghost"
             color="neutral"
-            size="xs"
+            size="sm"
             icon="i-lucide-arrow-left"
             :to="isTraining ? '/interviews' : '/'"
           />
           <h1 class="text-xl font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
             <UIcon name="i-lucide-user-check" class="w-6 h-6 text-primary-500" />
             Graduate TA Interview Console
-            <UBadge v-if="isTraining" color="warning" variant="subtle" size="xs">
+            <UBadge v-if="isTraining" color="warning" variant="subtle" size="sm">
               TRAINING
             </UBadge>
           </h1>
@@ -234,7 +234,7 @@
             v-if="currentOrNextShiftWindow?.isCurrent && filterExpectedShift === 'CURRENT_OR_NEXT'"
             color="success"
             variant="subtle"
-            size="xs"
+            size="sm"
             class="flex items-center gap-1.5"
           >
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -244,7 +244,7 @@
             v-else-if="currentOrNextShiftWindow && !currentOrNextShiftWindow.isCurrent && filterExpectedShift === 'CURRENT_OR_NEXT'"
             color="primary"
             variant="subtle"
-            size="xs"
+            size="sm"
           >
             Next Shift
           </UBadge>
@@ -305,7 +305,7 @@
             <UButton
               variant="outline"
               color="neutral"
-              size="xs"
+              size="sm"
               icon="i-lucide-rotate-ccw"
               label="Reset"
               :disabled="activeExpectedFilterCount === 0"
@@ -325,7 +325,7 @@
         </p>
         <UButton
           v-if="activeExpectedFilterCount > 0"
-          size="xs"
+          size="sm"
           variant="outline"
           color="neutral"
           label="Clear Filters"
@@ -366,7 +366,7 @@
               <UButton
                 color="error"
                 variant="ghost"
-                size="xs"
+                size="sm"
                 label="No-Show"
                 icon="i-lucide-user-x"
                 :disabled="isUpdating"
@@ -375,7 +375,7 @@
               <UButton
                 color="primary"
                 variant="solid"
-                size="xs"
+                size="sm"
                 label="Check In"
                 icon="i-lucide-user-check"
                 :disabled="activeInterview !== null || isUpdating"
@@ -494,7 +494,7 @@
             <UButton
               variant="outline"
               color="neutral"
-              size="xs"
+              size="sm"
               icon="i-lucide-rotate-ccw"
               label="Reset Filters"
               :disabled="activeCompletedFilterCount === 0"
@@ -514,7 +514,7 @@
         </p>
         <UButton
           v-if="activeCompletedFilterCount > 0"
-          size="xs"
+          size="sm"
           variant="outline"
           color="neutral"
           label="Clear Filters"
@@ -553,7 +553,7 @@
                   {{ res.gta ? `${res.gta.firstName} ${res.gta.lastName}` : (res.gtaId || '—') }}
                 </td>
                 <td class="px-4 py-3">
-                  <UBadge :color="statusColor(res.status)" variant="subtle" size="xs">
+                  <UBadge :color="statusColor(res.status)" variant="subtle" size="sm">
                     {{ res.status }}
                   </UBadge>
                 </td>
@@ -567,7 +567,7 @@
                       v-if="canEditInterview(res)"
                       color="neutral"
                       variant="ghost"
-                      size="xs"
+                      size="sm"
                       icon="i-lucide-pencil"
                       label="Edit"
                       title="Edit observation notes and status"
@@ -578,7 +578,7 @@
                       v-if="res.status === 'MISSED'"
                       color="warning"
                       variant="ghost"
-                      size="xs"
+                      size="sm"
                       icon="i-lucide-rotate-ccw"
                       label="Reinstate"
                       title="Return student to Expected Arrivals queue"

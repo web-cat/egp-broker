@@ -59,7 +59,7 @@
             <div class="flex items-center justify-between">
               <label class="text-sm font-semibold">Threshold Mapping</label>
               <UButton
-                size="xs"
+                size="sm"
                 variant="soft"
                 icon="i-lucide-plus"
                 label="Add Threshold"

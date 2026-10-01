@@ -98,7 +98,7 @@
                 Parsed seats: {{ parsedSeatsCount }} seat numbers
               </span>
               <UButton
-                size="xs"
+                size="sm"
                 variant="ghost"
                 color="neutral"
                 label="Reset to 1..N"
@@ -384,7 +384,7 @@
                     <span class="font-semibold">{{ foundUser.globalRole }}</span>
                   </p>
                 </div>
-                <UBadge v-if="foundUser.globalRole === 'PROCTOR'" color="success" size="xs">
+                <UBadge v-if="foundUser.globalRole === 'PROCTOR'" color="success" size="sm">
                   Already Proctor
                 </UBadge>
               </div>
@@ -392,7 +392,7 @@
               <!-- Already a proctor -->
               <div v-if="foundUser.globalRole === 'PROCTOR'" class="pt-2 flex justify-end">
                 <UButton
-                  size="xs"
+                  size="sm"
                   color="primary"
                   label="Select This Proctor"
                   @click="handleSelectFoundProctor"
@@ -413,13 +413,13 @@
                     label="Cancel"
                     color="neutral"
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     @click="resetProctorSearch"
                   />
                   <UButton
                     label="Grant Proctor Role"
                     color="primary"
-                    size="xs"
+                    size="sm"
                     :loading="isGrantingRole"
                     @click="handleConfirmGrantProctor"
                   />
@@ -504,7 +504,7 @@
             />
             <div class="flex justify-end">
               <UButton
-                size="xs"
+                size="sm"
                 variant="subtle"
                 color="neutral"
                 icon="i-lucide-sparkles"
@@ -525,7 +525,7 @@
                   Total: {{ weeklyTotalHours }} hrs / week
                 </UBadge>
                 <UButton
-                  size="xs"
+                  size="sm"
                   variant="outline"
                   color="primary"
                   icon="i-lucide-plus"
@@ -564,13 +564,13 @@
                   <UInput v-model="slot.endTime" type="time" class="w-28 text-xs font-mono" />
                 </div>
                 <div class="flex items-center gap-2">
-                  <UBadge color="neutral" variant="subtle" size="xs">
+                  <UBadge color="neutral" variant="subtle" size="sm">
                     {{ calculateSlotDuration(slot.startTime, slot.endTime) }}h
                   </UBadge>
                   <UButton
                     color="error"
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     icon="i-lucide-trash-2"
                     @click="removeWeeklySlot(idx)"
                   />
@@ -587,14 +587,14 @@
               </label>
               <div class="flex items-center gap-1">
                 <UButton
-                  size="xs"
+                  size="sm"
                   variant="ghost"
                   color="neutral"
                   label="Next 4 Weeks"
                   @click="setPresetWeeks(4)"
                 />
                 <UButton
-                  size="xs"
+                  size="sm"
                   variant="ghost"
                   color="neutral"
                   label="Full Term (15 Wks)"
@@ -843,7 +843,7 @@ const hoursColumns: any[] = [
       h(resolveComponent('UButton'), {
         color: 'error',
         variant: 'ghost',
-        size: 'xs',
+        size: 'sm',
         icon: 'i-lucide-trash-2',
         onClick: () => {
           if (confirm('Delete operating hours for this day?')) {
@@ -912,12 +912,12 @@ const exceptionColumns: any[] = [
       row.original.isClosed
         ? h(
             resolveComponent('UBadge'),
-            { color: 'error', variant: 'subtle', size: 'xs' },
+            { color: 'error', variant: 'subtle', size: 'sm' },
             () => 'Closed All Day'
           )
         : h(
             resolveComponent('UBadge'),
-            { color: 'warning', variant: 'subtle', size: 'xs' },
+            { color: 'warning', variant: 'subtle', size: 'sm' },
             () => `${formatTimeStr12h(row.original.openTime)} – ${formatTimeStr12h(row.original.closeTime)}`
           )
   },
@@ -934,7 +934,7 @@ const exceptionColumns: any[] = [
         h(resolveComponent('UButton'), {
           color: 'neutral',
           variant: 'ghost',
-          size: 'xs',
+          size: 'sm',
           icon: 'i-lucide-pencil',
           title: 'Edit Exception',
           onClick: () => openEditExceptionModal(row.original)
@@ -942,7 +942,7 @@ const exceptionColumns: any[] = [
         h(resolveComponent('UButton'), {
           color: 'error',
           variant: 'ghost',
-          size: 'xs',
+          size: 'sm',
           icon: 'i-lucide-trash-2',
           title: 'Delete Exception',
           onClick: () => {
@@ -1117,7 +1117,7 @@ const shiftColumns: any[] = [
         h(resolveComponent('UButton'), {
           color: 'neutral',
           variant: 'ghost',
-          size: 'xs',
+          size: 'sm',
           icon: 'i-lucide-pencil',
           title: 'Edit Shift',
           onClick: () => openEditShiftModal(row.original)
@@ -1125,7 +1125,7 @@ const shiftColumns: any[] = [
         h(resolveComponent('UButton'), {
           color: 'error',
           variant: 'ghost',
-          size: 'xs',
+          size: 'sm',
           icon: 'i-lucide-trash-2',
           title: 'Delete Shift',
           onClick: () => {
@@ -1336,7 +1336,7 @@ const reservationColumns: any[] = [
               : 'neutral'
       return h(
         resolveComponent('UBadge'),
-        { color, variant: 'subtle', size: 'xs' },
+        { color, variant: 'subtle', size: 'sm' },
         () => row.original.status
       )
     }
@@ -1349,7 +1349,7 @@ const reservationColumns: any[] = [
         return h(resolveComponent('UButton'), {
           color: 'error',
           variant: 'ghost',
-          size: 'xs',
+          size: 'sm',
           label: 'Cancel',
           onClick: () => {
             if (confirm('Cancel this reservation?')) {

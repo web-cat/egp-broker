@@ -26,7 +26,7 @@
           <div class="flex items-center gap-2">
             <UButton
               v-if="assignment?.toolSupportsPassport"
-              size="xs"
+              size="sm"
               color="primary"
               variant="soft"
               icon="i-lucide-refresh-cw"
@@ -36,11 +36,11 @@
             >
               Sync PassPort
             </UButton>
-            <UBadge v-if="assignment?.toolName" color="primary" variant="subtle" size="xs">
+            <UBadge v-if="assignment?.toolName" color="primary" variant="subtle" size="sm">
               <UIcon name="i-lucide-link" class="w-3 h-3 mr-1" />
               Connected
             </UBadge>
-            <UBadge v-else color="neutral" variant="subtle" size="xs"> Not Configured </UBadge>
+            <UBadge v-else color="neutral" variant="subtle" size="sm"> Not Configured </UBadge>
           </div>
         </div>
 
@@ -58,12 +58,12 @@
               v-if="assignment?.published === false"
               color="neutral"
               variant="subtle"
-              size="xs"
+              size="sm"
             >
               <UIcon name="i-lucide-eye-off" class="w-3 h-3 mr-1 text-neutral-500" />
               Unpublished
             </UBadge>
-            <UBadge v-else color="success" variant="subtle" size="xs">
+            <UBadge v-else color="success" variant="subtle" size="sm">
               <UIcon name="i-lucide-check" class="w-3 h-3 mr-1" />
               Published
             </UBadge>

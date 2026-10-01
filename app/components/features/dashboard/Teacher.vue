@@ -50,7 +50,7 @@
       <span>GTA Interview Location: <strong class="text-neutral-800 dark:text-neutral-200">{{ currentInterviewLocation }}</strong></span>
     </div>
     <UButton
-      size="xs"
+      size="sm"
       variant="ghost"
       color="neutral"
       label="Change"
@@ -547,7 +547,7 @@ const assignmentColumns: any[] = [
             {
               color: 'neutral',
               variant: 'subtle',
-              size: 'xs',
+              size: 'sm',
               class: 'font-normal'
             },
             () => [
@@ -576,7 +576,7 @@ const assignmentColumns: any[] = [
             {
               color: 'primary',
               variant: 'subtle',
-              size: 'xs',
+              size: 'sm',
               class: 'font-normal'
             },
             () => [

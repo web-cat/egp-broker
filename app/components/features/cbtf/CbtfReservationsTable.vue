@@ -61,7 +61,7 @@
             <span>Upcoming Reservations Only (from current time)</span>
           </label>
 
-          <UBadge v-if="upcomingOnly" color="primary" variant="subtle" size="xs">
+          <UBadge v-if="upcomingOnly" color="primary" variant="subtle" size="sm">
             Showing Next Upcoming
           </UBadge>
         </div>
@@ -70,13 +70,13 @@
           <UButton
             variant="outline"
             color="neutral"
-            size="xs"
+            size="sm"
             icon="i-lucide-rotate-ccw"
             label="Reset"
             @click="resetFilters"
           />
           <UButton
-            size="xs"
+            size="sm"
             color="primary"
             icon="i-lucide-filter"
             label="Apply Filters"
@@ -104,7 +104,7 @@
           No records match your active search or date filters. Try broadening the date range or clearing filters.
         </p>
         <UButton
-          size="xs"
+          size="sm"
           variant="outline"
           color="neutral"
           label="Clear Filters"
@@ -175,7 +175,7 @@
 
               <!-- Status -->
               <td class="px-4 py-3">
-                <UBadge :color="statusBadgeColor(res.status)" variant="subtle" size="xs">
+                <UBadge :color="statusBadgeColor(res.status)" variant="subtle" size="sm">
                   {{ res.status }}
                 </UBadge>
               </td>
@@ -200,7 +200,7 @@
                     icon="i-lucide-refresh-cw"
                     variant="ghost"
                     color="neutral"
-                    size="xs"
+                    size="sm"
                     :loading="resyncingId === res.id"
                     title="Resync Canvas Override"
                     aria-label="Resync Canvas Override"
@@ -213,7 +213,7 @@
                     icon="i-lucide-pencil"
                     variant="ghost"
                     color="neutral"
-                    size="xs"
+                    size="sm"
                     aria-label="Edit reservation"
                     @click="$emit('edit', res)"
                   />
@@ -224,7 +224,7 @@
                     icon="i-lucide-trash-2"
                     variant="ghost"
                     color="error"
-                    size="xs"
+                    size="sm"
                     aria-label="Delete reservation"
                     @click="$emit('delete', res)"
                   />
