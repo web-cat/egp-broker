@@ -290,6 +290,14 @@
               </div>
             </div>
           </div>
+
+          <!-- Fallback when summary is unavailable -->
+          <div
+            v-else
+            class="py-4 text-center text-xs text-neutral-500 dark:text-neutral-400"
+          >
+            No reservation metrics available for this assignment.
+          </div>
         </div>
 
         <!-- Canvas Overrides Table -->
@@ -446,7 +454,10 @@ const fetchData = async () => {
       props.assignment.isSchedulable
         ? $fetch<{ data: CbtfAssignmentReservationSummary }>(
             `/api/me/assignments/${props.assignment.id}/cbtf-reservation-summary`
-          ).catch(() => ({ data: null }))
+          ).catch((err) => {
+            console.error('Failed to fetch CBTF reservation summary:', err)
+            return { data: null }
+          })
         : Promise.resolve({ data: null })
     ])
     redemptions.value = redemptionRes.data || []

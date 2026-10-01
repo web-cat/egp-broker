@@ -108,6 +108,13 @@ describe('GET /api/me/assignments/:id/cbtf-reservation-summary', () => {
     const res = await handler(event)
 
     expect(res.statusCode).toBe(200)
+    expect(prisma.enrollment.findMany).toHaveBeenCalledWith({
+      where: {
+        courseId: 'course-1',
+        role: 'STUDENT'
+      },
+      select: { userId: true }
+    })
     expect(res.data).toEqual({
       totalEnrolledCount: 4,
       completedCount: 1,

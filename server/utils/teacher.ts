@@ -399,8 +399,7 @@ export async function getCbtfAssignmentReservationSummary(
     prisma.enrollment.findMany({
       where: {
         courseId,
-        courseRole: 'STUDENT',
-        dropped: false
+        role: 'STUDENT'
       },
       select: { userId: true }
     }),
