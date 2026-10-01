@@ -163,3 +163,16 @@ export interface CbtfAdminReservationNoteDto {
     }
   }
 }
+
+export interface CbtfAssignmentReservationSummary {
+  totalEnrolledCount: number
+  completedCount: number
+  scheduledCount: number
+  unscheduledCount: number
+  completedPct: number
+  scheduledPct: number
+  unscheduledPct: number
+  remainingOpenSlots: number
+  remainingOpenSeats: number
+  reservationWindowEnd: string | null
+}
