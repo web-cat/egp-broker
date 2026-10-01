@@ -121,6 +121,22 @@
       empty-icon="i-lucide-clipboard-list"
       empty-text="No assignments found."
     >
+      <template #filters>
+        <UDropdownMenu :items="assignmentFilterMenuItems" :content="{ align: 'start' }">
+          <UButton
+            icon="i-lucide-filter"
+            :label="isDefaultFilters ? 'Filter' : 'Filter (custom)'"
+            :color="isDefaultFilters ? 'neutral' : 'primary'"
+            variant="outline"
+            size="sm"
+          >
+            <template v-if="!isDefaultFilters" #trailing>
+              <span class="w-1.5 h-1.5 rounded-full bg-primary-500" />
+            </template>
+          </UButton>
+        </UDropdownMenu>
+      </template>
+
       <template #toolbar>
         <UButton
           v-if="canSync"
@@ -313,10 +329,16 @@ import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import type { StudentRosterRow, StudentPassBalance } from '@@/shared/models/teacher'
 
+import type { DropdownMenuItem } from '@nuxt/ui'
 import FeaturesCourseSettingsModal from '~/components/features/course/CourseSettingsModal.vue'
 import FeaturesTeacherTeacherGtaShiftsSection from '~/components/features/teacher/TeacherGtaShiftsSection.vue'
 
 import { formatDate } from '~/utils/date'
+import {
+  filterTeacherAssignments,
+  DEFAULT_ASSIGNMENT_FILTERS,
+  type AssignmentFilterCriteria
+} from '@@/shared/utils/assignment-filters'
 // Feature Composables
 import { useTeacherDashboard } from '~/composables/features/useTeacherDashboard'
 import { useStudentView } from '~/composables/features/useStudentView'
@@ -499,10 +521,121 @@ const passTypeColumns: any[] = [
   ])
 ]
 
+const assignmentFilters = ref<AssignmentFilterCriteria>({
+  ...DEFAULT_ASSIGNMENT_FILTERS
+})
+
+const isDefaultFilters = computed(() => {
+  return (
+    assignmentFilters.value.published === DEFAULT_ASSIGNMENT_FILTERS.published &&
+    assignmentFilters.value.unpublished === DEFAULT_ASSIGNMENT_FILTERS.unpublished &&
+    assignmentFilters.value.active === DEFAULT_ASSIGNMENT_FILTERS.active &&
+    assignmentFilters.value.expired === DEFAULT_ASSIGNMENT_FILTERS.expired &&
+    assignmentFilters.value.cbtf === DEFAULT_ASSIGNMENT_FILTERS.cbtf &&
+    assignmentFilters.value.interviews === DEFAULT_ASSIGNMENT_FILTERS.interviews &&
+    assignmentFilters.value.standard === DEFAULT_ASSIGNMENT_FILTERS.standard
+  )
+})
+
+const resetAssignmentFilters = () => {
+  assignmentFilters.value = { ...DEFAULT_ASSIGNMENT_FILTERS }
+}
+
+const assignmentFilterMenuItems = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: 'Lifecycle & Status',
+      type: 'label' as const
+    },
+    {
+      label: 'Published',
+      type: 'checkbox' as const,
+      checked: assignmentFilters.value.published ?? true,
+      onUpdateChecked: (val: boolean) => {
+        assignmentFilters.value.published = val
+      },
+      onSelect: (e: Event) => e.preventDefault()
+    },
+    {
+      label: 'Unpublished',
+      type: 'checkbox' as const,
+      checked: assignmentFilters.value.unpublished ?? false,
+      onUpdateChecked: (val: boolean) => {
+        assignmentFilters.value.unpublished = val
+      },
+      onSelect: (e: Event) => e.preventDefault()
+    },
+    {
+      label: 'Active (Current)',
+      type: 'checkbox' as const,
+      checked: assignmentFilters.value.active ?? true,
+      onUpdateChecked: (val: boolean) => {
+        assignmentFilters.value.active = val
+      },
+      onSelect: (e: Event) => e.preventDefault()
+    },
+    {
+      label: 'Expired (Past Cutoff)',
+      type: 'checkbox' as const,
+      checked: assignmentFilters.value.expired ?? false,
+      onUpdateChecked: (val: boolean) => {
+        assignmentFilters.value.expired = val
+      },
+      onSelect: (e: Event) => e.preventDefault()
+    }
+  ],
+  [
+    {
+      label: 'Modality',
+      type: 'label' as const
+    },
+    {
+      label: 'CBTF Exams',
+      type: 'checkbox' as const,
+      checked: assignmentFilters.value.cbtf ?? true,
+      onUpdateChecked: (val: boolean) => {
+        assignmentFilters.value.cbtf = val
+      },
+      onSelect: (e: Event) => e.preventDefault()
+    },
+    {
+      label: 'GTA Interviews',
+      type: 'checkbox' as const,
+      checked: assignmentFilters.value.interviews ?? true,
+      onUpdateChecked: (val: boolean) => {
+        assignmentFilters.value.interviews = val
+      },
+      onSelect: (e: Event) => e.preventDefault()
+    },
+    {
+      label: 'Standard Coursework',
+      type: 'checkbox' as const,
+      checked: assignmentFilters.value.standard ?? true,
+      onUpdateChecked: (val: boolean) => {
+        assignmentFilters.value.standard = val
+      },
+      onSelect: (e: Event) => e.preventDefault()
+    }
+  ],
+  [
+    {
+      label: 'Reset to default',
+      icon: 'i-lucide-rotate-ccw',
+      disabled: isDefaultFilters.value,
+      onSelect: () => resetAssignmentFilters()
+    }
+  ]
+])
+
 const sortedAssignments = computed(() => {
   if (!assignmentsData.value?.data) return []
 
-  return [...assignmentsData.value.data]
+  const filtered = filterTeacherAssignments(
+    assignmentsData.value.data,
+    assignmentFilters.value
+  )
+
+  return [...filtered]
     .sort((a, b) => {
       // Priority 1: Eligible for redemption first
       const aEligible = (a.eligiblePassTypeNames?.length ?? 0) > 0

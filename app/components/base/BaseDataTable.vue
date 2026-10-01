@@ -85,16 +85,18 @@ const tableMeta = computed(() => {
 <template>
   <UCard :ui="{ body: 'p-2 sm:p-2' }">
     <!-- Toolbar -->
-    <template v-if="searchable || $slots.toolbar" #header>
+    <template v-if="searchable || $slots.toolbar || $slots.filters" #header>
       <div class="flex items-center justify-between gap-4">
-        <UInput
-          v-if="searchable"
-          v-model="globalFilter"
-          icon="i-lucide-search"
-          :placeholder="searchPlaceholder"
-          class="max-w-sm"
-        />
-        <div v-else />
+        <div class="flex items-center gap-2 flex-1 max-w-lg">
+          <UInput
+            v-if="searchable"
+            v-model="globalFilter"
+            icon="i-lucide-search"
+            :placeholder="searchPlaceholder"
+            class="w-full max-w-sm"
+          />
+          <slot name="filters" />
+        </div>
         <div class="flex items-center gap-2">
           <slot name="toolbar" />
         </div>
