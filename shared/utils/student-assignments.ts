@@ -41,7 +41,13 @@ export function filterStudentAssignments(
       if (a.published === false) return false
 
       // 1. Availability check: Hide if not yet unlocked
-      if (a.availableFrom && new Date(a.availableFrom) > now) return false
+      // Exception: Schedulable assignments (CBTF or GTA interviews) remain visible prior to availableFrom
+      // so students can pre-book testing center reservations or GTA appointments in advance.
+      if (a.availableFrom && new Date(a.availableFrom) > now) {
+        if (!a.isSchedulable && !a.hasInterviews) {
+          return false
+        }
+      }
 
       // 2. Actionability check:
       // Must either be schedulable (CBTF/GTA) or have eligible pass types
@@ -94,6 +100,16 @@ export function filterStudentAssignments(
         return true
       }
       if (a.hasInterviews && a.interviewWindowEnd && new Date(a.interviewWindowEnd) > now) {
+        return true
+      }
+      // If schedulable (CBTF/GTA) without an explicit cutoff date, keep visible
+      if (
+        (a.isSchedulable || a.hasInterviews) &&
+        !a.scheduleWindowEnd &&
+        !a.interviewWindowEnd &&
+        !a.acceptUntil &&
+        !a.dueDate
+      ) {
         return true
       }
 

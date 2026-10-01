@@ -29,14 +29,54 @@ describe('filterStudentAssignments', () => {
     expect(filtered.map((a) => a.id)).toEqual(['pub'])
   })
 
-  it('filters out assignments where availableFrom is in the future', () => {
+  it('filters out assignments where availableFrom is in the future for non-schedulable assignments', () => {
     const now = new Date('2026-09-25T12:00:00Z')
     const assignments = [
-      createAssignment({ id: 'unlocked', availableFrom: '2026-09-24T12:00:00Z' }),
-      createAssignment({ id: 'locked', availableFrom: '2026-09-26T12:00:00Z' })
+      createAssignment({
+        id: 'unlocked',
+        availableFrom: '2026-09-24T12:00:00Z',
+        isSchedulable: false,
+        eligiblePassTypes: [{ id: 'pt-1', name: 'Late Pass' }]
+      }),
+      createAssignment({
+        id: 'locked',
+        availableFrom: '2026-09-26T12:00:00Z',
+        isSchedulable: false,
+        eligiblePassTypes: [{ id: 'pt-1', name: 'Late Pass' }]
+      })
     ]
     const filtered = filterStudentAssignments({ assignments, now })
     expect(filtered.map((a) => a.id)).toEqual(['unlocked'])
+  })
+
+  it('keeps schedulable assignments visible prior to availableFrom for CBTF and GTA pre-booking', () => {
+    const now = new Date('2026-09-25T12:00:00Z')
+    const assignments = [
+      createAssignment({
+        id: 'cbtf-locked',
+        isSchedulable: true,
+        hasInterviews: false,
+        availableFrom: '2026-09-28T09:00:00Z',
+        dueDate: '2026-09-30T23:59:00Z'
+      }),
+      createAssignment({
+        id: 'gta-locked',
+        isSchedulable: false,
+        hasInterviews: true,
+        availableFrom: '2026-09-28T09:00:00Z',
+        dueDate: '2026-09-30T23:59:00Z'
+      }),
+      createAssignment({
+        id: 'regular-locked',
+        isSchedulable: false,
+        hasInterviews: false,
+        availableFrom: '2026-09-28T09:00:00Z',
+        dueDate: '2026-09-30T23:59:00Z',
+        eligiblePassTypes: [{ id: 'pt-1', name: 'Late Pass' }]
+      })
+    ]
+    const filtered = filterStudentAssignments({ assignments, now })
+    expect(filtered.map((a) => a.id)).toEqual(['cbtf-locked', 'gta-locked'])
   })
 
   it('filters out assignments that are not schedulable, have no interviews, and have no pass types', () => {
