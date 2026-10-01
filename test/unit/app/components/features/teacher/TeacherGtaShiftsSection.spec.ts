@@ -26,6 +26,21 @@ const mockShifts = ref([
       email: 'alice@example.edu',
       avatarUrl: null
     }
+  },
+  {
+    id: 'shift-2',
+    courseId: 'course-1',
+    userId: 'ta-2',
+    date: '2026-09-25T00:00:00.000Z',
+    startTime: '13:00',
+    endTime: '15:00',
+    user: {
+      id: 'ta-2',
+      firstName: 'Bob',
+      lastName: 'Jones',
+      email: 'bob@example.edu',
+      avatarUrl: null
+    }
   }
 ])
 
@@ -35,6 +50,13 @@ const mockGtas = ref([
     firstName: 'Alice',
     lastName: 'Smith',
     email: 'alice@example.edu',
+    avatarUrl: null
+  },
+  {
+    id: 'ta-2',
+    firstName: 'Bob',
+    lastName: 'Jones',
+    email: 'bob@example.edu',
     avatarUrl: null
   }
 ])
@@ -258,5 +280,103 @@ describe('TeacherGtaShiftsSection component', () => {
 
     // Now deleteShift is called
     expect(mockDeleteShift).toHaveBeenCalledWith('shift-1')
+  })
+
+  it('filters shifts by GTA selection, date from, and date to, and supports resetting filters', async () => {
+    let capturedData: any = []
+    const wrapper = mount(TeacherGtaShiftsSection, {
+      props: {
+        courseId: 'course-1',
+        interviewLocation: 'McBryde 106'
+      },
+      global: {
+        stubs: {
+          BaseDataTable: {
+            props: ['data', 'columns', 'emptyText'],
+            setup(props) {
+              return () => {
+                capturedData = props.data
+                return h('div', { 'data-testid': 'shifts-table', 'data-count': props.data?.length })
+              }
+            }
+          },
+          UCard: {
+            template: '<div data-testid="card"><slot /></div>'
+          },
+          UButton: {
+            props: ['label', 'disabled', 'icon'],
+            template:
+              '<button :disabled="disabled" :data-label="label" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>'
+          },
+          USelect: {
+            props: ['modelValue', 'items', 'ariaLabel'],
+            emits: ['update:modelValue'],
+            template: `
+              <select
+                :data-testid="ariaLabel"
+                :value="modelValue"
+                @change="$emit('update:modelValue', $event.target.value)"
+              >
+                <option v-for="item in items" :key="item.value" :value="item.value">
+                  {{ item.label }}
+                </option>
+              </select>
+            `
+          },
+          UInput: {
+            props: ['modelValue', 'type', 'ariaLabel'],
+            emits: ['update:modelValue'],
+            template: `
+              <input
+                :data-testid="ariaLabel"
+                :type="type"
+                :value="modelValue"
+                @input="$emit('update:modelValue', $event.target.value)"
+              />
+            `
+          },
+          UBadge: true,
+          UIcon: true,
+          UModal: true,
+          UFormField: true,
+          BaseFormInput: true
+        }
+      }
+    })
+
+    // Initially all 2 shifts are shown
+    expect(capturedData.length).toBe(2)
+    const resetBtn = wrapper.find('[data-label="Reset Filters"]')
+    expect(resetBtn.attributes('disabled')).toBeDefined()
+
+    // Filter by GTA: ta-1
+    const gtaSelect = wrapper.find('[data-testid="Filter shifts by teaching assistant"]')
+    expect(gtaSelect.exists()).toBe(true)
+    await gtaSelect.setValue('ta-1')
+    expect(capturedData.length).toBe(1)
+    expect(capturedData[0].id).toBe('shift-1')
+    expect(resetBtn.attributes('disabled')).toBeUndefined()
+
+    // Reset GTA filter
+    await gtaSelect.setValue('all')
+    expect(capturedData.length).toBe(2)
+
+    // Filter by Date From: 2026-09-20
+    const fromInput = wrapper.find('[data-testid="Filter shifts from date"]')
+    expect(fromInput.exists()).toBe(true)
+    await fromInput.setValue('2026-09-20')
+    expect(capturedData.length).toBe(1)
+    expect(capturedData[0].id).toBe('shift-2')
+
+    // Filter by Date To: 2026-09-22 (shift-2 is 2026-09-25, so 0 shifts match)
+    const toInput = wrapper.find('[data-testid="Filter shifts to date"]')
+    expect(toInput.exists()).toBe(true)
+    await toInput.setValue('2026-09-22')
+    expect(capturedData.length).toBe(0)
+
+    // Click Reset Filters
+    await resetBtn.trigger('click')
+    expect(capturedData.length).toBe(2)
+    expect(resetBtn.attributes('disabled')).toBeDefined()
   })
 })

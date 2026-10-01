@@ -98,37 +98,84 @@
       </div>
     </div>
 
-    <!-- Shifts Table Controls & Filters -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
-      <div class="flex items-center gap-2">
-        <span class="text-xs text-neutral-500">Filter by GTA:</span>
-        <USelect
-          v-model="selectedGtaFilter"
-          :items="gtaFilterOptions"
-          class="w-48 text-xs"
-        />
+    <!-- Shifts Filter Bar (GTA, Date Range: From / To) -->
+    <UCard :ui="{ body: 'p-4 sm:p-4' }">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- GTA Filter -->
+        <div>
+          <label class="block text-xs font-semibold text-neutral-500 mb-1">Teaching Assistant</label>
+          <USelect
+            v-model="filterGta"
+            :items="gtaFilterOptions"
+            value-key="value"
+            class="w-full"
+            aria-label="Filter shifts by teaching assistant"
+          />
+        </div>
+
+        <!-- Date Range: From -->
+        <div>
+          <label class="block text-xs font-semibold text-neutral-500 mb-1">Date From</label>
+          <UInput
+            v-model="filterStartDate"
+            type="date"
+            class="w-full"
+            aria-label="Filter shifts from date"
+          />
+        </div>
+
+        <!-- Date Range: To -->
+        <div>
+          <label class="block text-xs font-semibold text-neutral-500 mb-1">Date To</label>
+          <UInput
+            v-model="filterEndDate"
+            type="date"
+            class="w-full"
+            aria-label="Filter shifts to date"
+          />
+        </div>
       </div>
-      <div class="flex items-center gap-2">
-        <UButton
-          icon="i-lucide-refresh-cw"
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          :loading="shiftsStatus === 'pending'"
-          @click="() => refreshShifts()"
-        />
+
+      <div class="flex flex-wrap items-center justify-between gap-4 mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800 text-xs">
+        <div class="flex items-center gap-2 text-neutral-500">
+          <span v-if="activeFilterCount > 0" class="flex items-center gap-1.5 font-medium text-primary-600 dark:text-primary-400">
+            <UIcon name="i-lucide-filter" class="w-3.5 h-3.5" />
+            {{ activeFilterCount }} active filter{{ activeFilterCount === 1 ? '' : 's' }}
+          </span>
+          <span v-else>No filters applied</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <UButton
+            variant="outline"
+            color="neutral"
+            size="xs"
+            icon="i-lucide-rotate-ccw"
+            label="Reset Filters"
+            :disabled="activeFilterCount === 0"
+            @click="resetFilters"
+          />
+          <UButton
+            icon="i-lucide-refresh-cw"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            title="Refresh shifts"
+            aria-label="Refresh shifts"
+            :loading="shiftsStatus === 'pending'"
+            @click="() => refreshShifts()"
+          />
+        </div>
       </div>
-    </div>
+    </UCard>
 
     <!-- Shifts BaseDataTable -->
     <BaseDataTable
       :data="filteredShifts"
       :columns="shiftColumns"
       :loading="shiftsStatus === 'pending'"
-      searchable
-      search-placeholder="Search shifts by GTA name or email…"
       empty-icon="i-lucide-calendar-x"
-      empty-text="No GTA shifts scheduled yet. Use the Weekly Schedule Builder or Add Shift."
+      :empty-text="activeFilterCount > 0 ? 'No GTA shifts match your active filters.' : 'No GTA shifts scheduled yet. Use the Weekly Schedule Builder or Add Shift.'"
     />
 
     <!-- Modal: Weekly Schedule Builder -->
@@ -448,6 +495,7 @@ import {
   formatShiftDate,
   type ParsedShiftSlot
 } from '@@/shared/utils/proctor-schedule-parser'
+import { extractCalendarDate } from '@@/shared/utils/timezone'
 import GtaShiftDetailsModal from '~/components/features/teacher/GtaShiftDetailsModal.vue'
 import GtaShiftImpactModal from '~/components/features/teacher/GtaShiftImpactModal.vue'
 import type { ShiftImpactSummary } from '@@/shared/schemas/gta-interview.schema'
@@ -517,17 +565,83 @@ const gtaSelectOptions = computed(() => {
 })
 
 const gtaFilterOptions = computed(() => {
-  return [
-    { label: 'All GTAs', value: 'all' },
-    ...gtaSelectOptions.value
-  ]
+  const opts = [{ label: 'All GTAs', value: 'all' }]
+  const map = new Map<string, string>()
+
+  if (gtas.value) {
+    for (const g of gtas.value) {
+      const name = `${g.firstName || ''} ${g.lastName || ''}`.trim()
+      map.set(g.id, name ? `${name} (${g.email})` : g.email)
+    }
+  }
+
+  if (shifts.value) {
+    for (const s of shifts.value) {
+      if (s.user && s.user.id && !map.has(s.user.id)) {
+        const name = `${s.user.firstName || ''} ${s.user.lastName || ''}`.trim()
+        map.set(s.user.id, name ? `${name} (${s.user.email})` : s.user.email || s.user.id)
+      } else if (s.userId && !map.has(s.userId)) {
+        map.set(s.userId, `GTA (${s.userId})`)
+      }
+    }
+  }
+
+  for (const [id, label] of map.entries()) {
+    opts.push({ label, value: id })
+  }
+  return opts
 })
 
-const selectedGtaFilter = ref('all')
+// --- Shift Filter States ---
+const filterGta = ref('all')
+const filterStartDate = ref('')
+const filterEndDate = ref('')
+
+const selectedGtaId = computed(() => {
+  const val = filterGta.value
+  if (!val || val === 'all' || val === 'ALL') return 'all'
+  if (typeof val === 'object' && val !== null && 'value' in val) {
+    return (val as { value: string }).value
+  }
+  return String(val)
+})
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (selectedGtaId.value !== 'all') count++
+  if (filterStartDate.value) count++
+  if (filterEndDate.value) count++
+  return count
+})
+
+const resetFilters = () => {
+  filterGta.value = 'all'
+  filterStartDate.value = ''
+  filterEndDate.value = ''
+}
 
 const filteredShifts = computed(() => {
-  if (selectedGtaFilter.value === 'all') return shifts.value
-  return shifts.value.filter((s) => s.userId === selectedGtaFilter.value)
+  return shifts.value.filter((s) => {
+    // 1. GTA Filter
+    const targetGta = selectedGtaId.value
+    if (targetGta !== 'all') {
+      const shiftGtaId = s.userId || s.user?.id
+      if (shiftGtaId !== targetGta) return false
+    }
+
+    // 2. Date Range: From
+    const shiftDateStr = s.date ? extractCalendarDate(s.date) : ''
+    if (filterStartDate.value) {
+      if (!shiftDateStr || shiftDateStr < filterStartDate.value) return false
+    }
+
+    // 3. Date Range: To
+    if (filterEndDate.value) {
+      if (!shiftDateStr || shiftDateStr > filterEndDate.value) return false
+    }
+
+    return true
+  })
 })
 
 // --- Day of Week Options ---
