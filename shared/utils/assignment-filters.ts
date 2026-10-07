@@ -12,9 +12,9 @@ export interface AssignmentFilterCriteria {
 
 export const DEFAULT_ASSIGNMENT_FILTERS: Required<AssignmentFilterCriteria> = {
   published: true,
-  unpublished: false,
+  unpublished: true,
   active: true,
-  expired: false,
+  expired: true,
   cbtf: true,
   interviews: true,
   standard: true

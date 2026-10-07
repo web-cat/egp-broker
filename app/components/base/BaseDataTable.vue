@@ -68,6 +68,21 @@ const hasData = computed(() => (props.data?.length ?? 0) > 0)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalRows.value / props.pageSize)))
 
+watch(totalPages, (newTotal) => {
+  if (pagination.value.pageIndex >= newTotal) {
+    pagination.value.pageIndex = Math.max(0, newTotal - 1)
+  }
+})
+
+const tableKey = ref(0)
+watch(
+  () => props.data,
+  () => {
+    tableKey.value++
+  },
+  { deep: true }
+)
+
 const paginationOptions = {
   getPaginationRowModel: getPaginationRowModel()
 }
@@ -106,6 +121,7 @@ const tableMeta = computed(() => {
     <!-- Table -->
     <UTable
       v-if="hasData"
+      :key="tableKey"
       ref="tableRef"
       v-model:global-filter="globalFilter"
       v-model:pagination="pagination"

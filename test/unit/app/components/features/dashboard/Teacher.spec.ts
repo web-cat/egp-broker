@@ -24,9 +24,11 @@ vi.mock('~/composables/features/useStudentView', () => ({
   })
 }))
 
+const mockAssignmentsData = ref<{ data: any[] }>({ data: [] })
+
 vi.mock('~/composables/features/useTeacherDashboard', () => ({
   useTeacherDashboard: () => ({
-    assignmentsData: ref({ data: [] }),
+    assignmentsData: mockAssignmentsData,
     assignmentsStatus: ref('success'),
     assignmentsEditOpen: ref(false),
     editingAssignmentItem: ref(null),
@@ -341,5 +343,191 @@ describe('TeacherDashboard Assignment Actions', () => {
     await settingsBtn!.trigger('click')
 
     expect(capturedModalOpen).toBe(true)
+  })
+})
+
+describe('TeacherDashboard Assignment Table Filters', () => {
+  const sampleAssignments = [
+    {
+      id: 'asg-pub-active-standard',
+      title: 'Active Standard HW',
+      published: true,
+      dueDate: new Date(Date.now() + 86400000).toISOString(),
+      acceptUntil: new Date(Date.now() + 86400000).toISOString(),
+      isSchedulable: false,
+      hasInterviews: false,
+      eligiblePassTypeNames: []
+    },
+    {
+      id: 'asg-unpub-active-standard',
+      title: 'Unpublished HW',
+      published: false,
+      dueDate: new Date(Date.now() + 86400000).toISOString(),
+      acceptUntil: new Date(Date.now() + 86400000).toISOString(),
+      isSchedulable: false,
+      hasInterviews: false,
+      eligiblePassTypeNames: []
+    },
+    {
+      id: 'asg-pub-expired-standard',
+      title: 'Past Expired HW',
+      published: true,
+      dueDate: new Date(Date.now() - 86400000).toISOString(),
+      acceptUntil: new Date(Date.now() - 86400000).toISOString(),
+      isSchedulable: false,
+      hasInterviews: false,
+      eligiblePassTypeNames: []
+    },
+    {
+      id: 'asg-pub-active-cbtf',
+      title: 'Active CBTF Quiz',
+      published: true,
+      dueDate: new Date(Date.now() + 86400000).toISOString(),
+      acceptUntil: new Date(Date.now() + 86400000).toISOString(),
+      isSchedulable: true,
+      hasInterviews: false,
+      eligiblePassTypeNames: []
+    },
+    {
+      id: 'asg-pub-active-gta',
+      title: 'Active GTA Interview',
+      published: true,
+      dueDate: new Date(Date.now() + 86400000).toISOString(),
+      acceptUntil: new Date(Date.now() + 86400000).toISOString(),
+      isSchedulable: false,
+      hasInterviews: true,
+      eligiblePassTypeNames: []
+    }
+  ]
+
+  beforeEach(() => {
+    mockAssignmentsData.value = { data: sampleAssignments }
+  })
+
+  it('shows all assignments by default and updates dynamically when toggling filters', async () => {
+    let capturedAssignmentData: any[] = []
+    let capturedMenuItems: any = null
+
+    const wrapper = mount(TeacherDashboard, {
+      global: {
+        stubs: {
+          BaseDataTable: {
+            props: ['columns', 'data'],
+            setup(props, { slots }) {
+              return () => {
+                if (props.columns && props.columns.some((c: any) => c.accessorKey === 'title')) {
+                  capturedAssignmentData = props.data
+                }
+                return h('div', { class: 'data-table-stub' }, [
+                  slots.filters ? slots.filters() : null,
+                  slots.toolbar ? slots.toolbar() : null
+                ])
+              }
+            }
+          },
+          UDropdownMenu: {
+            props: ['items'],
+            setup(props, { slots }) {
+              return () => {
+                capturedMenuItems = props.items
+                return h(
+                  'div',
+                  { class: 'dropdown-menu-stub' },
+                  slots.default ? slots.default() : null
+                )
+              }
+            }
+          },
+          UButton: {
+            props: ['label', 'color'],
+            template: '<button :data-color="color">{{ label }}<slot /></button>'
+          },
+          BaseButton: true,
+          UPageHeader: { template: '<div><slot name="links" /><slot /></div>' },
+          UCard: true,
+          FeaturesAdminAssignmentEditPanel: true,
+          FeaturesAdminPassTypeEditPanel: true,
+          FeaturesDashboardAssignmentRedemptionsModal: true,
+          FeaturesDashboardStudentRedemptionsModal: true,
+          FeaturesDashboardPlatformApiKeyModal: true,
+          FeaturesDashboardRosterSyncModal: true,
+          FeaturesTeacherTeacherGtaShiftsSection: true,
+          FeaturesCourseSettingsModal: true
+        }
+      }
+    })
+
+    // 1. All assignments shown by default (no filters applied)
+    expect(capturedAssignmentData).toHaveLength(5)
+    expect(capturedAssignmentData.map((a) => a.id)).toEqual([
+      'asg-pub-expired-standard',
+      'asg-pub-active-standard',
+      'asg-unpub-active-standard',
+      'asg-pub-active-cbtf',
+      'asg-pub-active-gta'
+    ])
+
+    // Filter button shows default "Filter" label
+    const filterBtn = () => wrapper.findAll('button').find((b) => b.text().includes('Filter'))!
+    expect(filterBtn().text()).toBe('Filter')
+
+    // Find filter menu items
+    expect(capturedMenuItems).toBeDefined()
+    const allItems = capturedMenuItems.flat()
+
+    const unpubItem = allItems.find((i: any) => i.label === 'Unpublished')
+    expect(unpubItem).toBeDefined()
+    expect(unpubItem.checked).toBe(true)
+
+    const expiredItem = allItems.find((i: any) => i.label === 'Expired (Past Cutoff)')
+    expect(expiredItem).toBeDefined()
+    expect(expiredItem.checked).toBe(true)
+
+    const cbtfItem = allItems.find((i: any) => i.label === 'CBTF Exams')
+    expect(cbtfItem).toBeDefined()
+    expect(cbtfItem.checked).toBe(true)
+
+    // 2. Toggle Unpublished off -> dynamically excludes unpublished assignments
+    unpubItem.onUpdateChecked(false)
+    await wrapper.vm.$nextTick()
+
+    expect(capturedAssignmentData).toHaveLength(4)
+    expect(capturedAssignmentData.map((a) => a.id)).not.toContain('asg-unpub-active-standard')
+    expect(filterBtn().text()).toContain('Filter (custom)')
+
+    // 3. Toggle Expired off -> dynamically excludes expired assignments
+    expiredItem.onUpdateChecked(false)
+    await wrapper.vm.$nextTick()
+
+    expect(capturedAssignmentData).toHaveLength(3)
+    expect(capturedAssignmentData.map((a) => a.id)).not.toContain('asg-pub-expired-standard')
+
+    // 4. Toggle CBTF off -> dynamically excludes CBTF assignments
+    cbtfItem.onUpdateChecked(false)
+    await wrapper.vm.$nextTick()
+
+    expect(capturedAssignmentData).toHaveLength(2)
+    expect(capturedAssignmentData.map((a) => a.id)).toEqual([
+      'asg-pub-active-standard',
+      'asg-pub-active-gta'
+    ])
+
+    // 5. Reset to default -> restores all assignments and reverts button label
+    const resetItem = capturedMenuItems.flat().find((i: any) => i.label === 'Reset to default')
+    expect(resetItem).toBeDefined()
+    expect(resetItem.disabled).toBe(false)
+
+    resetItem.onSelect()
+    await wrapper.vm.$nextTick()
+
+    expect(capturedAssignmentData).toHaveLength(5)
+    expect(capturedAssignmentData.map((a) => a.id)).toEqual([
+      'asg-pub-expired-standard',
+      'asg-pub-active-standard',
+      'asg-unpub-active-standard',
+      'asg-pub-active-cbtf',
+      'asg-pub-active-gta'
+    ])
+    expect(filterBtn().text()).toBe('Filter')
   })
 })

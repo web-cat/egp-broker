@@ -559,7 +559,7 @@ const assignmentFilterMenuItems = computed<DropdownMenuItem[][]>(() => [
     {
       label: 'Unpublished',
       type: 'checkbox' as const,
-      checked: assignmentFilters.value.unpublished ?? false,
+      checked: assignmentFilters.value.unpublished ?? true,
       onUpdateChecked: (val: boolean) => {
         assignmentFilters.value.unpublished = val
       },
@@ -577,7 +577,7 @@ const assignmentFilterMenuItems = computed<DropdownMenuItem[][]>(() => [
     {
       label: 'Expired (Past Cutoff)',
       type: 'checkbox' as const,
-      checked: assignmentFilters.value.expired ?? false,
+      checked: assignmentFilters.value.expired ?? true,
       onUpdateChecked: (val: boolean) => {
         assignmentFilters.value.expired = val
       },

@@ -63,4 +63,33 @@ describe('BaseDataTable', () => {
     expect(uTable.props('paginationOptions')).toBeDefined()
     expect(typeof uTable.props('paginationOptions').getPaginationRowModel).toBe('function')
   })
+
+  it('dynamically updates UTable data and re-renders when data prop changes', async () => {
+    const initialData = [{ id: '1', name: 'Alice' }]
+    const wrapper = mount(BaseDataTable, {
+      props: {
+        data: initialData,
+        columns: [{ accessorKey: 'name', header: 'Name' }]
+      }
+    })
+
+    let uTable = wrapper.findComponent({ name: 'UTable' })
+    expect(uTable.props('data')).toEqual(initialData)
+
+    // Update data with new items
+    const updatedData = [
+      { id: '1', name: 'Alice' },
+      { id: '2', name: 'Bob' }
+    ]
+    await wrapper.setProps({ data: updatedData })
+
+    uTable = wrapper.findComponent({ name: 'UTable' })
+    expect(uTable.exists()).toBe(true)
+    expect(uTable.props('data')).toEqual(updatedData)
+
+    // Update data to empty
+    await wrapper.setProps({ data: [] })
+    expect(wrapper.findComponent({ name: 'UTable' }).exists()).toBe(false)
+    expect(wrapper.text()).toContain('No data found.')
+  })
 })

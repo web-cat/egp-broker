@@ -125,31 +125,61 @@ describe('assignment-filters', () => {
       })
     ]
 
-    it('omits unpublished and expired assignments by default', () => {
+    it('shows all assignments by default (no filters applied)', () => {
       const result = filterTeacherAssignments(assignments, DEFAULT_ASSIGNMENT_FILTERS, now)
       expect(result.map((a) => a.id)).toEqual([
         'pub-active-standard',
+        'unpub-active-standard',
+        'pub-expired-standard',
         'pub-active-cbtf',
         'pub-active-gta'
       ])
     })
 
-    it('includes unpublished assignments when enabled', () => {
+    it('omits unpublished assignments when unpublished is false', () => {
       const result = filterTeacherAssignments(
         assignments,
-        { ...DEFAULT_ASSIGNMENT_FILTERS, unpublished: true },
+        { ...DEFAULT_ASSIGNMENT_FILTERS, unpublished: false },
         now
       )
-      expect(result.map((a) => a.id)).toContain('unpub-active-standard')
+      expect(result.map((a) => a.id)).toEqual([
+        'pub-active-standard',
+        'pub-expired-standard',
+        'pub-active-cbtf',
+        'pub-active-gta'
+      ])
     })
 
-    it('includes expired assignments when enabled', () => {
+    it('omits expired assignments when expired is false', () => {
       const result = filterTeacherAssignments(
         assignments,
-        { ...DEFAULT_ASSIGNMENT_FILTERS, expired: true },
+        { ...DEFAULT_ASSIGNMENT_FILTERS, expired: false },
         now
       )
-      expect(result.map((a) => a.id)).toContain('pub-expired-standard')
+      expect(result.map((a) => a.id)).toEqual([
+        'pub-active-standard',
+        'unpub-active-standard',
+        'pub-active-cbtf',
+        'pub-active-gta'
+      ])
+    })
+
+    it('omits published assignments when published is false', () => {
+      const result = filterTeacherAssignments(
+        assignments,
+        { ...DEFAULT_ASSIGNMENT_FILTERS, published: false },
+        now
+      )
+      expect(result.map((a) => a.id)).toEqual(['unpub-active-standard'])
+    })
+
+    it('omits active assignments when active is false', () => {
+      const result = filterTeacherAssignments(
+        assignments,
+        { ...DEFAULT_ASSIGNMENT_FILTERS, active: false },
+        now
+      )
+      expect(result.map((a) => a.id)).toEqual(['pub-expired-standard'])
     })
 
     it('filters strictly by modality (e.g. CBTF only)', () => {
@@ -178,6 +208,19 @@ describe('assignment-filters', () => {
         now
       )
       expect(result.map((a) => a.id)).toEqual(['pub-active-gta'])
+    })
+
+    it('omits CBTF exams when cbtf is false', () => {
+      const result = filterTeacherAssignments(
+        assignments,
+        {
+          ...DEFAULT_ASSIGNMENT_FILTERS,
+          cbtf: false
+        },
+        now
+      )
+      expect(result.map((a) => a.id)).not.toContain('pub-active-cbtf')
+      expect(result).toHaveLength(4)
     })
 
     it('shows everything when all flags are enabled', () => {
