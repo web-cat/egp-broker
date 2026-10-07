@@ -422,9 +422,21 @@
         </h3>
       </div>
 
-      <!-- Filter Bar for Completed Interviews (GTA, Date Range, Status, Shift) -->
+      <!-- Filter Bar for Completed Interviews (Student, GTA, Date Range, Status) -->
       <UCard :ui="{ body: 'p-4 sm:p-4' }">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <!-- Student Filter -->
+          <div>
+            <label class="block text-xs font-semibold text-neutral-500 mb-1">Search Student</label>
+            <UInput
+              v-model="filterCompletedStudent"
+              icon="i-lucide-search"
+              placeholder="Search students…"
+              class="w-full"
+              aria-label="Filter completed by student"
+            />
+          </div>
+
           <!-- GTA Filter -->
           <div>
             <label class="block text-xs font-semibold text-neutral-500 mb-1">Teaching Assistant</label>
@@ -466,17 +478,6 @@
               :items="completedStatusFilterOptions"
               class="w-full"
               aria-label="Filter completed by status"
-            />
-          </div>
-
-          <!-- Shift Filter -->
-          <div>
-            <label class="block text-xs font-semibold text-neutral-500 mb-1">Shift</label>
-            <USelect
-              v-model="filterCompletedShift"
-              :items="shiftFilterOptions"
-              class="w-full"
-              aria-label="Filter completed by shift"
             />
           </div>
         </div>
@@ -813,12 +814,6 @@ const canEditInterview = (res: any) => {
 // Common Filter Options & Data
 // ─────────────────────────────────────────────────────────
 
-const shiftFilterOptions = [
-  { label: 'All Shifts', value: 'ALL' },
-  { label: 'Morning (< 12:30 PM)', value: 'MORNING' },
-  { label: 'Afternoon / Evening (12:30 PM+)', value: 'AFTERNOON' }
-]
-
 const { data: courseGtasData } = useFetch<ApiResponse<any[]>>(
   computed(() =>
     !props.isTraining && props.courseId ? `/api/me/courses/${props.courseId}/gtas` : null
@@ -1063,11 +1058,11 @@ const paginatedExpectedArrivals = computed(() => {
 // Completed Interviews: Filter & Pagination States
 // ─────────────────────────────────────────────────────────
 
+const filterCompletedStudent = ref('')
 const filterCompletedGta = ref('ALL')
 const filterCompletedStartDate = ref('')
 const filterCompletedEndDate = ref('')
 const filterCompletedStatus = ref('COMPLETED')
-const filterCompletedShift = ref('ALL')
 const completedPage = ref(1)
 const completedPageSize = 25
 
@@ -1080,31 +1075,31 @@ const completedStatusFilterOptions = [
 ]
 
 const resetCompletedFilters = () => {
+  filterCompletedStudent.value = ''
   filterCompletedGta.value = 'ALL'
   filterCompletedStartDate.value = ''
   filterCompletedEndDate.value = ''
   filterCompletedStatus.value = 'COMPLETED'
-  filterCompletedShift.value = 'ALL'
   completedPage.value = 1
 }
 
 const activeCompletedFilterCount = computed(() => {
   let count = 0
+  if (filterCompletedStudent.value.trim()) count++
   if (filterCompletedGta.value !== 'ALL') count++
   if (filterCompletedStartDate.value) count++
   if (filterCompletedEndDate.value) count++
   if (filterCompletedStatus.value !== 'COMPLETED') count++
-  if (filterCompletedShift.value !== 'ALL') count++
   return count
 })
 
 watch(
   [
+    filterCompletedStudent,
     filterCompletedGta,
     filterCompletedStartDate,
     filterCompletedEndDate,
-    filterCompletedStatus,
-    filterCompletedShift
+    filterCompletedStatus
   ],
   () => {
     completedPage.value = 1
@@ -1113,7 +1108,25 @@ watch(
 
 const filteredCompletedList = computed(() => {
   return completedList.value.filter((res: any) => {
-    // 1. GTA Filter
+    // 1. Student Search Filter (name, email, student ID)
+    if (filterCompletedStudent.value.trim()) {
+      const q = filterCompletedStudent.value.trim().toLowerCase()
+      const student = res.student
+      const name = formatStudentName(student).toLowerCase()
+      const firstName = (student?.firstName || '').toLowerCase()
+      const lastName = (student?.lastName || '').toLowerCase()
+      const email = (student?.email || '').toLowerCase()
+      const studentId = (student?.studentId || '').toLowerCase()
+      const matches =
+        name.includes(q) ||
+        firstName.includes(q) ||
+        lastName.includes(q) ||
+        email.includes(q) ||
+        studentId.includes(q)
+      if (!matches) return false
+    }
+
+    // 2. GTA Filter
     if (filterCompletedGta.value !== 'ALL') {
       const resGtaId = res.gtaId || res.gta?.id
       if (resGtaId !== filterCompletedGta.value) return false
@@ -1122,23 +1135,15 @@ const filteredCompletedList = computed(() => {
       if (resGtaId && resGtaId !== user.value.id) return false
     }
 
-    // 2. Date Range: Start Date From
+    // 3. Date Range: Start Date From
     const resDate = getLocalDateStr(res.startTime)
     if (filterCompletedStartDate.value && resDate < filterCompletedStartDate.value) {
       return false
     }
 
-    // 3. Date Range: Start Date To
+    // 4. Date Range: Start Date To
     if (filterCompletedEndDate.value && resDate > filterCompletedEndDate.value) {
       return false
-    }
-
-    // 4. Shift Filter
-    if (filterCompletedShift.value !== 'ALL') {
-      const d = new Date(res.startTime)
-      const isMorning = d.getHours() < 12 || (d.getHours() === 12 && d.getMinutes() < 30)
-      if (filterCompletedShift.value === 'MORNING' && !isMorning) return false
-      if (filterCompletedShift.value === 'AFTERNOON' && isMorning) return false
     }
 
     // 5. Status Filter (default: COMPLETED)

@@ -571,7 +571,7 @@ describe('GtaInterviewConsole Component', () => {
     expect(wrapper.text()).toContain('Showing 1 to 25 of 30 completed interviews')
   })
 
-  it('filters completed interviews by date range, shift, gta, and status', async () => {
+  it('filters completed interviews by student, date range, gta, and status', async () => {
     mockCompletedList.value = [
       {
         id: 'res-morning-1',
@@ -630,8 +630,24 @@ describe('GtaInterviewConsole Component', () => {
     expect(wrapper.text()).toContain('Morning Beta')
     expect(wrapper.text()).not.toContain('Afternoon Gamma')
 
-    // 5. Filter by Date Range: 2026-10-06 to 2026-10-06
+    // 5. Filter by Student search (name or email)
     await gtaSelect.setValue('ALL')
+    const studentInput = wrapper.find('input[aria-label="Filter completed by student"]')
+    expect(studentInput.exists()).toBe(true)
+    await studentInput.setValue('alpha@vt.edu')
+    expect(wrapper.findAll('tbody tr').length).toBe(1)
+    expect(wrapper.text()).toContain('Morning Alpha')
+    expect(wrapper.text()).not.toContain('Afternoon Gamma')
+
+    await studentInput.setValue('Gamma')
+    expect(wrapper.findAll('tbody tr').length).toBe(1)
+    expect(wrapper.text()).toContain('Afternoon Gamma')
+    expect(wrapper.text()).not.toContain('Morning Alpha')
+
+    await studentInput.setValue('')
+    expect(wrapper.findAll('tbody tr').length).toBe(3)
+
+    // 6. Filter by Date Range: 2026-10-06 to 2026-10-06
     const fromInput = wrapper.find('input[aria-label="Filter completed from date"]')
     const toInput = wrapper.find('input[aria-label="Filter completed to date"]')
     await fromInput.setValue('2026-10-06')
@@ -639,7 +655,7 @@ describe('GtaInterviewConsole Component', () => {
     expect(wrapper.findAll('tbody tr').length).toBe(1)
     expect(wrapper.text()).toContain('Afternoon Gamma')
 
-    // 6. Reset Filters on Completed Interviews
+    // 7. Reset Filters on Completed Interviews
     const resetCompletedBtn = wrapper
       .findAll('button')
       .find((b) => b.text().includes('Reset Filters'))
