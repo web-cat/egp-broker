@@ -10,7 +10,7 @@ describe('PassPort Sync Failure Alerting (ntfy)', () => {
     vi.stubGlobal('useRuntimeConfig', () => ({
       ntfy: {
         serverUrl: 'https://ntfy.sh',
-        topic: 'egp-broker-admin',
+        topic: 'egp-broker-dev',
         token: '',
         priority: 'default',
         alertOnRedemption: false
@@ -36,11 +36,12 @@ describe('PassPort Sync Failure Alerting (ntfy)', () => {
     })
 
     expect(result).toBe(true)
-    expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-admin', {
+    expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-dev', {
       method: 'POST',
       body:
         'PassPort extension sync failed for Jane Doe (jdoe@vt.edu) in CS 2114 on assignment "Project 2" with external tool "CodeRunner".\n' +
-        'Error: HTTP 500: Internal Server Error on extension endpoint (Request ID: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d)',
+        'Error: HTTP 500: Internal Server Error on extension endpoint (Request ID: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d)\n' +
+        'site: http://localhost:3000',
       headers: {
         Title: 'PassPort Sync Failure: CodeRunner',
         Priority: 'urgent',
@@ -59,11 +60,12 @@ describe('PassPort Sync Failure Alerting (ntfy)', () => {
     })
 
     expect(result).toBe(true)
-    expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-admin', {
+    expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-dev', {
       method: 'POST',
       body:
         'PassPort extension sync failed for A student on assignment "Lab 1" with external tool "Web-CAT".\n' +
-        'Error: Connection timed out after 10000ms',
+        'Error: Connection timed out after 10000ms\n' +
+        'site: http://localhost:3000',
       headers: {
         Title: 'PassPort Sync Failure: Web-CAT',
         Priority: 'urgent',

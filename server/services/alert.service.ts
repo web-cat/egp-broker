@@ -34,6 +34,17 @@ export interface PassPortSyncFailureAlertData {
 }
 
 /**
+ * Resolves the site URL for appending to push notifications.
+ */
+export function getAlertSiteUrl(): string {
+  const config = typeof useRuntimeConfig === 'function' ? useRuntimeConfig() : {}
+  const publicConfig = (config as any)?.public || {}
+  const candidate =
+    publicConfig.siteUrl || process.env.NUXT_PUBLIC_SITE_URL || process.env.NUXT_SITE_URL || ''
+  return typeof candidate === 'string' ? candidate.trim().replace(/\/+$/, '') : ''
+}
+
+/**
  * Send an administrative alert to the configured ntfy topic.
  */
 export async function sendAdminAlert(alert: AdminAlert): Promise<boolean> {
@@ -70,9 +81,15 @@ export async function sendAdminAlert(alert: AdminAlert): Promise<boolean> {
       headers.Authorization = `Bearer ${token}`
     }
 
+    const siteUrl = getAlertSiteUrl()
+    const messageWithSite =
+      siteUrl && !alert.message.includes('site:')
+        ? `${alert.message.trimEnd()}\nsite: ${siteUrl}`
+        : alert.message
+
     await $fetch(url, {
       method: 'POST',
-      body: alert.message,
+      body: messageWithSite,
       headers
     })
 

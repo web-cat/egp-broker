@@ -295,7 +295,7 @@ export default defineNuxtConfig({
     // Push Alerts Configuration (ntfy)
     ntfy: {
       serverUrl: 'https://ntfy.sh', // NUXT_NTFY_SERVER_URL
-      topic: 'egp-broker-admin', // NUXT_NTFY_TOPIC
+      topic: 'egp-broker-dev', // NUXT_NTFY_TOPIC
       token: '', // NUXT_NTFY_TOKEN
       priority: 'default', // NUXT_NTFY_PRIORITY
       alertOnRedemption: false // NUXT_NTFY_ALERT_ON_REDEMPTION

@@ -37,11 +37,11 @@ describe('Alert Service (ntfy)', () => {
       expect(mockFetch).not.toHaveBeenCalled()
     })
 
-    it('sends alert with default headers to configured topic', async () => {
+    it('sends alert with default headers and site url to configured topic', async () => {
       vi.stubGlobal('useRuntimeConfig', () => ({
         ntfy: {
           serverUrl: 'https://ntfy.sh',
-          topic: 'egp-broker-admin',
+          topic: 'egp-broker-dev',
           token: '',
           priority: 'default',
           alertOnRedemption: false
@@ -56,9 +56,9 @@ describe('Alert Service (ntfy)', () => {
       })
 
       expect(result).toBe(true)
-      expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-admin', {
+      expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-dev', {
         method: 'POST',
-        body: 'Something happened',
+        body: 'Something happened\nsite: http://localhost:3000',
         headers: {
           Title: 'System Alert',
           Priority: 'default'
@@ -90,13 +90,77 @@ describe('Alert Service (ntfy)', () => {
       expect(result).toBe(true)
       expect(mockFetch).toHaveBeenCalledWith('https://ntfy.example.com/alerts-topic', {
         method: 'POST',
-        body: 'Database disk full',
+        body: 'Database disk full\nsite: http://localhost:3000',
         headers: {
           Title: 'Critical Issue',
           Priority: 'urgent',
           Tags: 'warning,skull',
           Click: 'https://broker.example.com/admin',
           Authorization: 'Bearer secret-token-123'
+        }
+      })
+    })
+
+    it('appends configured siteUrl from runtimeConfig public', async () => {
+      vi.stubGlobal('useRuntimeConfig', () => ({
+        public: {
+          siteUrl: 'https://egp-broker.cs.vt.edu'
+        },
+        ntfy: {
+          serverUrl: 'https://ntfy.sh',
+          topic: 'egp-broker-dev',
+          token: '',
+          priority: 'default',
+          alertOnRedemption: false
+        }
+      }))
+
+      mockFetch.mockResolvedValueOnce({ id: '999' })
+
+      const result = await sendAdminAlert({
+        title: 'System Alert',
+        message: 'Something happened'
+      })
+
+      expect(result).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-dev', {
+        method: 'POST',
+        body: 'Something happened\nsite: https://egp-broker.cs.vt.edu',
+        headers: {
+          Title: 'System Alert',
+          Priority: 'default'
+        }
+      })
+    })
+
+    it('does not duplicate site url if message already includes site:', async () => {
+      vi.stubGlobal('useRuntimeConfig', () => ({
+        public: {
+          siteUrl: 'https://egp-broker.cs.vt.edu'
+        },
+        ntfy: {
+          serverUrl: 'https://ntfy.sh',
+          topic: 'egp-broker-dev',
+          token: '',
+          priority: 'default',
+          alertOnRedemption: false
+        }
+      }))
+
+      mockFetch.mockResolvedValueOnce({ id: '999' })
+
+      const result = await sendAdminAlert({
+        title: 'System Alert',
+        message: 'Something happened\nsite: https://custom.example.com'
+      })
+
+      expect(result).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith('https://ntfy.sh/egp-broker-dev', {
+        method: 'POST',
+        body: 'Something happened\nsite: https://custom.example.com',
+        headers: {
+          Title: 'System Alert',
+          Priority: 'default'
         }
       })
     })
