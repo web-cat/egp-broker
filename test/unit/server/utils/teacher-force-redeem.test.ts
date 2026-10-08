@@ -31,6 +31,9 @@ vi.mock('@@/server/utils/canvas', () => ({
 
 vi.mock('@@/server/utils/cbtf-canvas', () => ({
   findInstructorCanvasApiKey: vi.fn().mockResolvedValue('canvas-instructor-key'),
+  findInstructorCanvasIdentity: vi.fn().mockResolvedValue({
+    apiKey: 'canvas-instructor-key'
+  }),
   isPlainCanvasOrNewQuizzes: vi.fn().mockReturnValue(true)
 }))
 

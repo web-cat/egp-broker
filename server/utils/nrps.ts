@@ -552,7 +552,8 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
             const canvasSections = await fetchCanvasSections(
               domain,
               canvasCourseId,
-              teacherIdentity.platformApiKey
+              teacherIdentity.platformApiKey,
+              ...(teacherIdentity.id ? [{ identityId: teacherIdentity.id }] : [])
             )
 
             const sectionMap = new Map<string, string>()
@@ -628,7 +629,8 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
               const courseEnrollments = await fetchCanvasCourseEnrollments(
                 domain,
                 canvasCourseId,
-                teacherIdentity.platformApiKey
+                teacherIdentity.platformApiKey,
+                ...(teacherIdentity.id ? [{ identityId: teacherIdentity.id }] : [])
               )
               for (const en of courseEnrollments) {
                 if (en.course_section_id) {
@@ -651,7 +653,8 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
                 const secEnrollments = await fetchCanvasSectionEnrollments(
                   domain,
                   cs.id,
-                  teacherIdentity.platformApiKey
+                  teacherIdentity.platformApiKey,
+                  { identityId: teacherIdentity.id }
                 )
                 for (const en of secEnrollments) {
                   studentAssignments.push({

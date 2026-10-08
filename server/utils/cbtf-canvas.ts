@@ -47,12 +47,17 @@ export function isPlainCanvasOrNewQuizzes(assignment: {
  * Finds an instructor Canvas API token for a course, prioritizing teachers
  * in the student's specific section before falling back to the course.
  */
-export async function findInstructorCanvasApiKey(
+export interface InstructorCanvasIdentityResult {
+  apiKey: string
+  identityId: string
+}
+
+export async function findInstructorCanvasIdentity(
   courseId: string,
   courseSectionId: string | null | undefined,
   platformId: string,
   preferredUserId?: string | null
-): Promise<string | null> {
+): Promise<InstructorCanvasIdentityResult | null> {
   // 0. Try preferred user if provided
   if (preferredUserId) {
     const preferredUser = await prisma.user.findUnique({
@@ -66,9 +71,9 @@ export async function findInstructorCanvasApiKey(
         }
       }
     })
-    const preferredKey = preferredUser?.ltiIdentities?.[0]?.platformApiKey
-    if (preferredKey) {
-      return preferredKey
+    const identity = preferredUser?.ltiIdentities?.[0]
+    if (identity?.platformApiKey) {
+      return { apiKey: identity.platformApiKey, identityId: identity.id }
     }
   }
   // 1. Try finding an instructor with an API key enrolled in the student's specific section
@@ -100,9 +105,9 @@ export async function findInstructorCanvasApiKey(
       }
     })
 
-    const key = sectionTeacher?.user?.ltiIdentities?.[0]?.platformApiKey
-    if (key) {
-      return key
+    const identity = sectionTeacher?.user?.ltiIdentities?.[0]
+    if (identity?.platformApiKey) {
+      return { apiKey: identity.platformApiKey, identityId: identity.id }
     }
   }
 
@@ -134,7 +139,27 @@ export async function findInstructorCanvasApiKey(
     }
   })
 
-  return courseTeacher?.user?.ltiIdentities?.[0]?.platformApiKey || null
+  const identity = courseTeacher?.user?.ltiIdentities?.[0]
+  if (identity?.platformApiKey) {
+    return { apiKey: identity.platformApiKey, identityId: identity.id }
+  }
+
+  return null
+}
+
+export async function findInstructorCanvasApiKey(
+  courseId: string,
+  courseSectionId: string | null | undefined,
+  platformId: string,
+  preferredUserId?: string | null
+): Promise<string | null> {
+  const result = await findInstructorCanvasIdentity(
+    courseId,
+    courseSectionId,
+    platformId,
+    preferredUserId
+  )
+  return result?.apiKey || null
 }
 
 export interface SyncCbtfCanvasOverrideResult {
@@ -229,10 +254,12 @@ export async function syncCbtfReservationCanvasOverride(
   const studentEnrollment = reservation.user.enrollments.find((e) => e.courseId === course.id)
   const courseSectionId = studentEnrollment?.courseSectionId
 
-  const apiKey = await findInstructorCanvasApiKey(course.id, courseSectionId, platform.id)
-  if (!apiKey) {
+  const instructor = await findInstructorCanvasIdentity(course.id, courseSectionId, platform.id)
+  if (!instructor?.apiKey) {
     return { status: 'skipped', reason: 'no_instructor_key' }
   }
+  const apiKey = instructor.apiKey
+  const identityId = instructor.identityId
 
   // 5. Build override payload: available from start, due & lock at end
   const unlock_at =
@@ -309,7 +336,8 @@ export async function syncCbtfReservationCanvasOverride(
           canvasAssignmentId,
           overrideIdToUpdate,
           { unlock_at, due_at, lock_at },
-          apiKey
+          apiKey,
+          ...(identityId ? [{ identityId }] : [])
         )
 
         const overrideIdStr = updated.id.toString()
@@ -384,7 +412,8 @@ export async function syncCbtfReservationCanvasOverride(
           due_at,
           lock_at
         },
-        apiKey
+        apiKey,
+        ...(identityId ? [{ identityId }] : [])
       )
     } catch (createErr: any) {
       // Fallback: If Canvas rejects because override already exists for student, fetch and update it
@@ -398,7 +427,8 @@ export async function syncCbtfReservationCanvasOverride(
           domain,
           canvasCourseId,
           canvasAssignmentId,
-          apiKey
+          apiKey,
+          ...(identityId ? [{ identityId }] : [])
         )
         const matched = existingOverrides.find(
           (o) => Array.isArray(o.student_ids) && o.student_ids.includes(studentCanvasId)
@@ -410,7 +440,8 @@ export async function syncCbtfReservationCanvasOverride(
             canvasAssignmentId,
             matched.id.toString(),
             { unlock_at, due_at, lock_at },
-            apiKey
+            apiKey,
+            ...(identityId ? [{ identityId }] : [])
           )
           const overrideIdStr = updated.id.toString()
           await prisma.cbtfReservation.update({
@@ -544,17 +575,18 @@ export async function deleteCbtfReservationCanvasOverride(reservationId: string)
   const studentEnrollment = reservation.user.enrollments.find((e) => e.courseId === course.id)
   const courseSectionId = studentEnrollment?.courseSectionId
 
-  const apiKey = await findInstructorCanvasApiKey(course.id, courseSectionId, platform.id)
+  const instructor = await findInstructorCanvasIdentity(course.id, courseSectionId, platform.id)
   const overrideId = reservation.canvasOverrideId
 
-  if (apiKey) {
+  if (instructor?.apiKey) {
     try {
       await deleteCanvasAssignmentOverride(
         domain,
         canvasCourseId,
         canvasAssignmentId,
         overrideId,
-        apiKey
+        instructor.apiKey,
+        ...(instructor.identityId ? [{ identityId: instructor.identityId }] : [])
       )
     } catch (err: any) {
       console.warn(
@@ -693,23 +725,32 @@ export async function resyncAssignmentCbtfOverrides(
     }
   }
 
-  const apiKey = await findInstructorCanvasApiKey(
+  const instructor = await findInstructorCanvasIdentity(
     course.id,
     null,
     platform.id,
     preferredInstructorUserId
   )
 
-  if (!apiKey) {
+  if (!instructor?.apiKey) {
     throw createError({
       statusCode: 400,
       statusMessage: 'No instructor Canvas API key available to sync overrides'
     })
   }
 
+  const apiKey = instructor.apiKey
+  const identityId = instructor.identityId
+
   // Fetch all current Canvas overrides for this assignment in one request (with retry on throttling)
   const existingOverrides = await withCanvasRetry(() =>
-    fetchCanvasAssignmentOverrides(domain, canvasCourseId, canvasAssignmentId, apiKey)
+    fetchCanvasAssignmentOverrides(
+      domain,
+      canvasCourseId,
+      canvasAssignmentId,
+      apiKey,
+      ...(identityId ? [{ identityId }] : [])
+    )
   )
 
   let matched = 0
@@ -878,7 +919,8 @@ export async function resyncAssignmentCbtfOverrides(
               due_at: targetDueAt,
               lock_at: targetLockAt
             },
-            apiKey
+            apiKey,
+            ...(identityId ? [{ identityId }] : [])
           )
         )
 
@@ -949,7 +991,8 @@ export async function resyncAssignmentCbtfOverrides(
               due_at: targetDueAt,
               lock_at: targetLockAt
             },
-            apiKey
+            apiKey,
+            ...(identityId ? [{ identityId }] : [])
           )
         )
 

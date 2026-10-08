@@ -16,7 +16,10 @@ import {
   updateCanvasAssignmentOverride,
   fetchCanvasAssignmentOverrides
 } from '@@/server/utils/canvas'
-import { findInstructorCanvasApiKey, isPlainCanvasOrNewQuizzes } from '@@/server/utils/cbtf-canvas'
+import {
+  findInstructorCanvasIdentity,
+  isPlainCanvasOrNewQuizzes
+} from '@@/server/utils/cbtf-canvas'
 import type {
   TeacherForceRedeemPassInput,
   TeacherForceRedeemPassResponse,
@@ -704,6 +707,7 @@ export async function syncPassRedemptionCanvasOverride(
 
   // Resolve instructor Canvas API key
   let apiKey: string | null = null
+  let identityId: string | undefined
   if (instructorUserId) {
     const instructorIdentity = await prisma.ltiIdentity.findFirst({
       where: {
@@ -713,12 +717,15 @@ export async function syncPassRedemptionCanvasOverride(
       }
     })
     apiKey = instructorIdentity?.platformApiKey || null
+    identityId = instructorIdentity?.id
   }
 
   if (!apiKey) {
     const studentEnrollment = student.enrollments?.find((e) => e.courseId === course.id)
     const courseSectionId = studentEnrollment?.courseSectionId
-    apiKey = await findInstructorCanvasApiKey(course.id, courseSectionId, platform.id)
+    const instructor = await findInstructorCanvasIdentity(course.id, courseSectionId, platform.id)
+    apiKey = instructor?.apiKey || null
+    identityId = instructor?.identityId
   }
 
   if (!apiKey) {
@@ -755,7 +762,8 @@ export async function syncPassRedemptionCanvasOverride(
           domain,
           canvasCourseId,
           canvasAssignmentId,
-          apiKey
+          apiKey,
+          ...(identityId ? [{ identityId }] : [])
         )
         const matchedOverride = existingCanvasOverrides.find(
           (o) => Array.isArray(o.student_ids) && o.student_ids.includes(studentCanvasId)
@@ -774,7 +782,8 @@ export async function syncPassRedemptionCanvasOverride(
           canvasAssignmentId,
           overrideIdToUpdate,
           { unlock_at, due_at, lock_at },
-          apiKey
+          apiKey,
+          ...(identityId ? [{ identityId }] : [])
         )
 
         const overrideIdStr = updated.id.toString()
@@ -844,7 +853,8 @@ export async function syncPassRedemptionCanvasOverride(
           due_at,
           lock_at
         },
-        apiKey
+        apiKey,
+        ...(identityId ? [{ identityId }] : [])
       )
     } catch (createErr: any) {
       // If student already has an override in Canvas, find and update it
@@ -852,7 +862,8 @@ export async function syncPassRedemptionCanvasOverride(
         domain,
         canvasCourseId,
         canvasAssignmentId,
-        apiKey
+        apiKey,
+        ...(identityId ? [{ identityId }] : [])
       )
       const matched = existingCanvasOverrides.find(
         (o) => Array.isArray(o.student_ids) && o.student_ids.includes(studentCanvasId)
@@ -864,7 +875,8 @@ export async function syncPassRedemptionCanvasOverride(
           canvasAssignmentId,
           matched.id.toString(),
           { unlock_at, due_at, lock_at },
-          apiKey
+          apiKey,
+          ...(identityId ? [{ identityId }] : [])
         )
       } else {
         throw createErr

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import availabilityGet from '../../../../../server/api/me/cbtf/availability.get'
 import reservationsGet from '../../../../../server/api/me/cbtf/reservations.get'
 import reservationsPost from '../../../../../server/api/me/cbtf/reservations.post'
@@ -72,8 +72,13 @@ describe('API: CBTF Student Reservation Endpoints', () => {
   })
 
   beforeEach(() => {
+    vi.setSystemTime(new Date('2026-10-05T08:00:00.000Z'))
     vi.clearAllMocks()
     vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValue(null)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   describe('GET /api/me/cbtf/availability', () => {

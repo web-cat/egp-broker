@@ -1,4 +1,8 @@
 import { createError } from 'h3'
+import {
+  executeWithCanvasRateLimiter,
+  CANVAS_INTER_PAGE_DELAY_MS
+} from '@@/server/utils/canvas-rate-limiter'
 
 export interface CanvasAssignmentOverride {
   id: number
@@ -189,29 +193,94 @@ export function getPlatformCanvasDomain(
   }
 }
 
+export interface CanvasRequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  headers?: Record<string, string>
+  body?: any
+  query?: Record<string, any>
+  identityId?: string
+  maxRetries?: number
+  initialDelayMs?: number
+  maxConcurrent?: number
+}
+
+export interface CanvasFetchResponse<T> {
+  data: T
+  status: number
+  headers: Headers
+}
+
+/**
+ * Centralized Canvas API Fetch Dispatcher (Technique B).
+ * Routes all outbound requests through the in-memory rate limiter,
+ * enforcing concurrency limits, proactive throttling, and exponential backoff.
+ */
+export async function canvasFetch<T = any>(
+  url: string,
+  accessToken: string,
+  options: CanvasRequestOptions = {}
+): Promise<CanvasFetchResponse<T>> {
+  const rateLimitKey = options.identityId || accessToken
+
+  return await executeWithCanvasRateLimiter(
+    rateLimitKey,
+    async () => {
+      const response = await $fetch.raw<T>(url, {
+        method: options.method || 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+          ...(options.headers || {})
+        },
+        body: options.body,
+        query: options.query
+      })
+
+      return {
+        response: {
+          data: response._data as T,
+          status: response.status,
+          headers: response.headers
+        },
+        headers: response.headers
+      }
+    },
+    {
+      maxRetries: options.maxRetries,
+      initialDelayMs: options.initialDelayMs,
+      maxConcurrent: options.maxConcurrent
+    }
+  )
+}
+
 /**
  * Fetches assignments from the Canvas API for a specific course.
- * Handles pagination handling to get all assignments.
+ * Handles pagination handling to get all assignments with inter-page pacing (Technique D).
  */
 export async function fetchCanvasAssignments(
   domain: string,
   courseId: string,
-  accessToken: string
+  accessToken: string,
+  options?: { identityId?: string }
 ): Promise<CanvasAssignment[]> {
   const assignments: CanvasAssignment[] = []
   let url = `https://${domain}/api/v1/courses/${courseId}/assignments?include[]=all_dates&include[]=overrides&override_assignment_dates=false&per_page=100`
 
   try {
+    let isFirstPage = true
     while (url) {
+      if (!isFirstPage) {
+        await new Promise((resolve) => setTimeout(resolve, CANVAS_INTER_PAGE_DELAY_MS))
+      }
+      isFirstPage = false
+
       console.info(`[Canvas API] GET ${url}`)
-      const response = await $fetch.raw<CanvasAssignment[]>(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/json'
-        }
+      const response = await canvasFetch<CanvasAssignment[]>(url, accessToken, {
+        identityId: options?.identityId
       })
 
-      const records = response._data
+      const records = response.data
       console.info(
         `[Canvas API] Status ${response.status}, received: ${Array.isArray(records) ? `${records.length} items` : typeof records}`
       )
@@ -254,17 +323,15 @@ export async function fetchCanvasAssignmentOverrides(
   domain: string,
   courseId: string,
   assignmentId: number | string,
-  accessToken: string
+  accessToken: string,
+  options?: { identityId?: string }
 ): Promise<CanvasAssignmentOverride[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/assignments/${assignmentId}/overrides`
   try {
-    const res = await $fetch<CanvasAssignmentOverride[]>(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/json'
-      }
+    const res = await canvasFetch<CanvasAssignmentOverride[]>(url, accessToken, {
+      identityId: options?.identityId
     })
-    return Array.isArray(res) ? res : []
+    return Array.isArray(res.data) ? res.data : []
   } catch (err: any) {
     console.warn(
       `[Canvas API] Could not fetch individual overrides for assignment ${assignmentId}:`,
@@ -276,26 +343,31 @@ export async function fetchCanvasAssignmentOverrides(
 
 /**
  * Fetches sections (with enrollments) from the Canvas API for a specific course.
+ * Uses pagination with inter-page pacing (Technique D).
  */
 export async function fetchCanvasSections(
   domain: string,
   courseId: string,
-  accessToken: string
+  accessToken: string,
+  options?: { identityId?: string }
 ): Promise<CanvasSection[]> {
   const sections: CanvasSection[] = []
   let url = `https://${domain}/api/v1/courses/${courseId}/sections?include[]=students&include[]=enrollments&per_page=100`
 
   try {
+    let isFirstPage = true
     while (url) {
+      if (!isFirstPage) {
+        await new Promise((resolve) => setTimeout(resolve, CANVAS_INTER_PAGE_DELAY_MS))
+      }
+      isFirstPage = false
+
       console.info(`[Canvas API] GET ${url}`)
-      const response = await $fetch.raw<CanvasSection[]>(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/json'
-        }
+      const response = await canvasFetch<CanvasSection[]>(url, accessToken, {
+        identityId: options?.identityId
       })
 
-      const records = response._data
+      const records = response.data
       console.info(
         `[Canvas API] Status ${response.status}, received: ${Array.isArray(records) ? `${records.length} sections` : typeof records}`
       )
@@ -343,27 +415,31 @@ export async function fetchCanvasSections(
 
 /**
  * Fetches course enrollments directly from the Canvas API.
- * Uses pagination to retrieve all student enrollments.
+ * Uses pagination with inter-page pacing (Technique D).
  */
 export async function fetchCanvasCourseEnrollments(
   domain: string,
   courseId: string,
-  accessToken: string
+  accessToken: string,
+  options?: { identityId?: string }
 ): Promise<CanvasEnrollment[]> {
   const enrollments: CanvasEnrollment[] = []
   let url = `https://${domain}/api/v1/courses/${courseId}/enrollments?type[]=StudentEnrollment&include[]=user&per_page=100`
 
   try {
+    let isFirstPage = true
     while (url) {
+      if (!isFirstPage) {
+        await new Promise((resolve) => setTimeout(resolve, CANVAS_INTER_PAGE_DELAY_MS))
+      }
+      isFirstPage = false
+
       console.info(`[Canvas API] GET ${url}`)
-      const response = await $fetch.raw<CanvasEnrollment[]>(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/json'
-        }
+      const response = await canvasFetch<CanvasEnrollment[]>(url, accessToken, {
+        identityId: options?.identityId
       })
 
-      const records = response._data
+      const records = response.data
       console.info(
         `[Canvas API] Status ${response.status}, received: ${Array.isArray(records) ? `${records.length} enrollments` : typeof records}`
       )
@@ -395,26 +471,31 @@ export async function fetchCanvasCourseEnrollments(
 
 /**
  * Fetches enrollments for a specific section directly from the Canvas API.
+ * Uses pagination with inter-page pacing (Technique D).
  */
 export async function fetchCanvasSectionEnrollments(
   domain: string,
   sectionId: number | string,
-  accessToken: string
+  accessToken: string,
+  options?: { identityId?: string }
 ): Promise<CanvasEnrollment[]> {
   const enrollments: CanvasEnrollment[] = []
   let url = `https://${domain}/api/v1/sections/${sectionId}/enrollments?type[]=StudentEnrollment&include[]=user&per_page=100`
 
   try {
+    let isFirstPage = true
     while (url) {
+      if (!isFirstPage) {
+        await new Promise((resolve) => setTimeout(resolve, CANVAS_INTER_PAGE_DELAY_MS))
+      }
+      isFirstPage = false
+
       console.info(`[Canvas API] GET ${url}`)
-      const response = await $fetch.raw<CanvasEnrollment[]>(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/json'
-        }
+      const response = await canvasFetch<CanvasEnrollment[]>(url, accessToken, {
+        identityId: options?.identityId
       })
 
-      const records = response._data
+      const records = response.data
       if (records && Array.isArray(records)) {
         enrollments.push(...records)
       }
@@ -460,21 +541,19 @@ export async function createCanvasAssignmentOverride(
   courseId: number | string,
   assignmentId: number | string,
   overrideData: CreateCanvasAssignmentOverrideInput,
-  accessToken: string
+  accessToken: string,
+  options?: { identityId?: string }
 ): Promise<CanvasAssignmentOverride> {
   const url = `https://${domain}/api/v1/courses/${courseId}/assignments/${assignmentId}/overrides`
   console.info(`[Canvas API] POST ${url}`)
-  return await $fetch<CanvasAssignmentOverride>(url, {
+  const response = await canvasFetch<CanvasAssignmentOverride>(url, accessToken, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
     body: {
       assignment_override: overrideData
-    }
+    },
+    identityId: options?.identityId
   })
+  return response.data
 }
 
 /**
@@ -486,21 +565,19 @@ export async function updateCanvasAssignmentOverride(
   assignmentId: number | string,
   overrideId: number | string,
   overrideData: Partial<CreateCanvasAssignmentOverrideInput>,
-  accessToken: string
+  accessToken: string,
+  options?: { identityId?: string }
 ): Promise<CanvasAssignmentOverride> {
   const url = `https://${domain}/api/v1/courses/${courseId}/assignments/${assignmentId}/overrides/${overrideId}`
   console.info(`[Canvas API] PUT ${url}`)
-  return await $fetch<CanvasAssignmentOverride>(url, {
+  const response = await canvasFetch<CanvasAssignmentOverride>(url, accessToken, {
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
     body: {
       assignment_override: overrideData
-    }
+    },
+    identityId: options?.identityId
   })
+  return response.data
 }
 
 /**
@@ -511,16 +588,14 @@ export async function deleteCanvasAssignmentOverride(
   courseId: number | string,
   assignmentId: number | string,
   overrideId: number | string,
-  accessToken: string
+  accessToken: string,
+  options?: { identityId?: string }
 ): Promise<void> {
   const url = `https://${domain}/api/v1/courses/${courseId}/assignments/${assignmentId}/overrides/${overrideId}`
   console.info(`[Canvas API] DELETE ${url}`)
-  await $fetch(url, {
+  await canvasFetch(url, accessToken, {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: 'application/json'
-    }
+    identityId: options?.identityId
   })
 }
 

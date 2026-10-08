@@ -64,7 +64,13 @@ export default _defineTask({
         await syncCourseRosterFromNrps(course.id)
 
         // 2. Sync Assignments (including published status, overrides, and eligibilities)
-        await syncCourseAssignmentsFromCanvas(course.id, teacherIdentity.platformApiKey)
+        if (teacherIdentity.id) {
+          await syncCourseAssignmentsFromCanvas(course.id, teacherIdentity.platformApiKey, {
+            identityId: teacherIdentity.id
+          })
+        } else {
+          await syncCourseAssignmentsFromCanvas(course.id, teacherIdentity.platformApiKey)
+        }
 
         syncedCount++
       } catch (err: any) {

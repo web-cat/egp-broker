@@ -1,8 +1,16 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { filterStudentAssignments } from '@@/shared/utils/student-assignments'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 
 describe('filterStudentAssignments', () => {
+  beforeEach(() => {
+    vi.setSystemTime(new Date('2026-09-20T12:00:00.000Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   const createAssignment = (overrides: Partial<AssignmentRow> = {}): AssignmentRow => ({
     id: 'assign-1',
     resourceLinkId: 'rl-1',

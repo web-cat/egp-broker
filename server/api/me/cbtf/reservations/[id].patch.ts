@@ -11,7 +11,7 @@ import {
   toCbtfReservationDto
 } from '@@/server/utils/cbtf'
 import { combineDateAndTime } from '@@/shared/utils/timezone'
-import { syncCbtfReservationCanvasOverride } from '@@/server/utils/cbtf-canvas'
+import { enqueueCanvasOverrideSync } from '@@/server/utils/canvas-override-queue'
 import { notifyCbtfScheduleFailure } from '@@/server/services/alert.service'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
@@ -242,12 +242,12 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       }
     )
 
-    currentStep = 'Syncing Canvas Override'
-    // Synchronize individual Canvas assignment override (Option A: non-blocking)
-    const syncResult = await syncCbtfReservationCanvasOverride(updatedReservation.id)
-    if (syncResult.overrideId) {
-      updatedReservation.canvasOverrideId = syncResult.overrideId
-    }
+    currentStep = 'Enqueuing Canvas Override Sync'
+    // Synchronize individual Canvas assignment override asynchronously (Technique C: write-behind)
+    enqueueCanvasOverrideSync({
+      type: 'cbtf_reservation',
+      id: updatedReservation.id
+    })
 
     return {
       statusCode: 200,

@@ -84,7 +84,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
   }
 
   // 2. Delegate synchronization to headless utility
-  await syncCourseAssignmentsFromCanvas(course.id, platformIdentity.platformApiKey)
+  await syncCourseAssignmentsFromCanvas(course.id, platformIdentity.platformApiKey, {
+    identityId: platformIdentity.id
+  })
 
   // 3. Return updated assignment list with complete projection including published status
   const assignments = await getCourseAssignments(course.id, user.id)

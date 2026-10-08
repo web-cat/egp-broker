@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { combineDateAndTime } from '../../../../shared/utils/timezone'
 import {
   calculateMaxArrivalsPerSlot,
@@ -362,6 +362,14 @@ describe('CBTF Server Utilities', () => {
   })
 
   describe('getRecommendedDaysAndSlots', () => {
+    beforeEach(() => {
+      vi.setSystemTime(new Date('2026-10-05T08:00:00.000Z'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     const facility: any = {
       id: 'fac-1',
       totalSeats: 48,

@@ -20,7 +20,8 @@ export interface CanvasSyncResult {
  */
 export async function syncCourseAssignmentsFromCanvas(
   courseId: string,
-  apiKey: string
+  apiKey: string,
+  options?: { identityId?: string }
 ): Promise<CanvasSyncResult> {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -63,7 +64,7 @@ export async function syncCourseAssignmentsFromCanvas(
   )
 
   // 1. Fetch and sync sections
-  const canvasSections = await fetchCanvasSections(domain, course.canvasCourseId, apiKey)
+  const canvasSections = await fetchCanvasSections(domain, course.canvasCourseId, apiKey, options)
 
   const sectionMap = new Map<string, string>() // canvasSectionId -> db Section id
   for (const cs of canvasSections) {
@@ -114,7 +115,12 @@ export async function syncCourseAssignmentsFromCanvas(
   }
 
   // 2. Fetch and sync assignments with overrides
-  const canvasAssignments = await fetchCanvasAssignments(domain, course.canvasCourseId, apiKey)
+  const canvasAssignments = await fetchCanvasAssignments(
+    domain,
+    course.canvasCourseId,
+    apiKey,
+    options
+  )
 
   console.info(
     `[Canvas Sync] Retrieved ${canvasAssignments.length} assignment(s) from Canvas. Processing DB upserts...`
@@ -211,7 +217,8 @@ export async function syncCourseAssignmentsFromCanvas(
         domain,
         course.canvasCourseId,
         ca.id,
-        apiKey
+        apiKey,
+        options
       )
     }
 

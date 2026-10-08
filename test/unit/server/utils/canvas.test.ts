@@ -150,4 +150,123 @@ describe('Canvas sections and enrollments API fetchers', () => {
     expect(enrollments).toHaveLength(1)
     expect(enrollments[0].user_id).toBe(992)
   })
+
+  it('canvasFetch routes through rate limiter and passes identityId', async () => {
+    const { canvasFetch } = await import('@@/server/utils/canvas')
+    const { getCanvasQuotaState } = await import('@@/server/utils/canvas-rate-limiter')
+
+    const responseHeaders = new Headers()
+    responseHeaders.set('x-rate-limit-remaining', '675.0')
+
+    const mockRaw = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: responseHeaders,
+      _data: { success: true }
+    })
+    vi.stubGlobal('$fetch', Object.assign(vi.fn(), { raw: mockRaw }))
+
+    const result = await canvasFetch('https://canvas.vt.edu/api/v1/test', 'secret-token', {
+      identityId: 'ident-custom-77'
+    })
+
+    expect(result.data).toEqual({ success: true })
+    expect(result.status).toBe(200)
+
+    const state = getCanvasQuotaState('ident-custom-77')
+    expect(state.remaining).toBe(675.0)
+  })
+
+  it('createCanvasAssignmentOverride and deleteCanvasAssignmentOverride pass identityId', async () => {
+    const { createCanvasAssignmentOverride, deleteCanvasAssignmentOverride } = await import(
+      '@@/server/utils/canvas'
+    )
+
+    const mockRaw = vi.fn().mockResolvedValue({
+      status: 201,
+      headers: new Headers(),
+      _data: { id: 888, title: 'Exam Override' }
+    })
+    vi.stubGlobal('$fetch', Object.assign(vi.fn(), { raw: mockRaw }))
+
+    const created = await createCanvasAssignmentOverride(
+      'canvas.vt.edu',
+      'course-1',
+      'assign-1',
+      { title: 'Exam Override' },
+      'test-token',
+      { identityId: 'instructor-ident' }
+    )
+
+    expect(created.id).toBe(888)
+    expect(mockRaw).toHaveBeenCalledWith(
+      'https://canvas.vt.edu/api/v1/courses/course-1/assignments/assign-1/overrides',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer test-token'
+        })
+      })
+    )
+
+    mockRaw.mockResolvedValueOnce({
+      status: 200,
+      headers: new Headers(),
+      _data: {}
+    })
+
+    await deleteCanvasAssignmentOverride(
+      'canvas.vt.edu',
+      'course-1',
+      'assign-1',
+      888,
+      'test-token',
+      { identityId: 'instructor-ident' }
+    )
+
+    expect(mockRaw).toHaveBeenCalledWith(
+      'https://canvas.vt.edu/api/v1/courses/course-1/assignments/assign-1/overrides/888',
+      expect.objectContaining({
+        method: 'DELETE'
+      })
+    )
+  })
+
+  it('fetchCanvasAssignments paces pagination across multiple pages (Technique D)', async () => {
+    const { fetchCanvasAssignments } = await import('@@/server/utils/canvas')
+
+    const page1Headers = new Headers()
+    page1Headers.set(
+      'link',
+      '<https://canvas.vt.edu/api/v1/courses/123/assignments?page=2>; rel="next"'
+    )
+
+    const page2Headers = new Headers()
+
+    const mockRaw = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 200,
+        headers: page1Headers,
+        _data: [{ id: 1, name: 'A1' }]
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        headers: page2Headers,
+        _data: [{ id: 2, name: 'A2' }]
+      })
+
+    vi.stubGlobal('$fetch', Object.assign(vi.fn(), { raw: mockRaw }))
+
+    const startTime = Date.now()
+    const assignments = await fetchCanvasAssignments('canvas.vt.edu', '123', 'test-token', {
+      identityId: 'id-pages'
+    })
+    const elapsed = Date.now() - startTime
+
+    expect(assignments).toHaveLength(2)
+    expect(assignments[0].id).toBe(1)
+    expect(assignments[1].id).toBe(2)
+    // Technique D asserts a minimum sequential pacing delay between pages
+    expect(elapsed).toBeGreaterThanOrEqual(80)
+  })
 })
