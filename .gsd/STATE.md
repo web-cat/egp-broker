@@ -8,9 +8,9 @@ updated: 2026-10-09T19:35:00-04:00
 
 **Milestone:** v6.0 — CBTF Phased Capacity & Duration Engine  
 **Phase:** Phase 1: Domain Modeling & Allocation Mathematics  
-**Status:** ⬜ Ready to plan / execute Phase 1  
+**Status:** 📋 Planning complete (2 plans across 2 waves)  
 **Roadmap:** [.gsd/ROADMAP.md](file:///Users/edwards/git/egp-broker/.gsd/ROADMAP.md)  
-**Next Step:** /plan 1 or /execute Phase 1
+**Next Step:** /execute 1
 
 ## Completed Milestones
 
