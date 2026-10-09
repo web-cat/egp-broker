@@ -170,9 +170,70 @@ export async function getFacilityOperatingHoursForDate(
 }
 
 /**
- * Calculates arrival throttling capacity: ceil(totalSeats / 12).
+ * Calculates number of phased seats available for scheduled appointments,
+ * reserving elasticSeatCount seats as hot spares for proctor failovers.
  */
-export function calculateMaxArrivalsPerSlot(totalSeats: number): number {
+export function calculatePhasedSeats(totalSeats: number, elasticSeatCount: number = 2): number {
+  if (totalSeats <= 0) return 0
+  return Math.max(0, totalSeats - Math.max(0, elasticSeatCount))
+}
+
+/**
+ * Calculates arrival quota for a specific 5-minute arrival offset (0..11).
+ * For 60-minute duration: 18 phased seats partition across 12 offsets in an alternating 2-1 pattern.
+ * For 30-minute duration: 18 phased seats partition across 6 offsets (offset % 6) with 3 seats each.
+ */
+export function getMaxArrivalsForOffset(
+  phasedSeatsCount: number,
+  offset: number,
+  durationMinutes: number = 60
+): number {
+  if (phasedSeatsCount <= 0) return 0
+
+  if (durationMinutes === 30) {
+    const numOffsets = 6
+    const normalized = ((offset % numOffsets) + numOffsets) % numOffsets
+    const base = Math.floor(phasedSeatsCount / numOffsets)
+    const rem = phasedSeatsCount % numOffsets
+    return base + (normalized < rem ? 1 : 0)
+  }
+
+  // Default: 60-minute duration across 12 offsets
+  const numOffsets = 12
+  const normalized = ((offset % numOffsets) + numOffsets) % numOffsets
+  const base = Math.floor(phasedSeatsCount / numOffsets)
+  const rem = phasedSeatsCount % numOffsets
+
+  if (rem === 0) return base
+
+  // When phasedSeatsCount < 12 (e.g. test mocks with small arrays),
+  // distribute the few available seats to the earliest offsets.
+  if (phasedSeatsCount < 12) {
+    return normalized < rem ? 1 : 0
+  }
+
+  // When phasedSeatsCount >= 12: alternating distribution.
+  // Even offsets (0, 2, 4, 6, 8, 10) get remainder first,
+  // then odd offsets (1, 3, 5, 7, 9, 11).
+  const rank = normalized % 2 === 0 ? normalized / 2 : 6 + Math.floor(normalized / 2)
+  return base + (rank < rem ? 1 : 0)
+}
+
+/**
+ * Calculates arrival throttling capacity.
+ * If offset is provided, calculates the precise offset-specific quota.
+ * Otherwise, falls back to legacy ceiling(totalSeats / 12).
+ */
+export function calculateMaxArrivalsPerSlot(
+  totalSeats: number,
+  offset?: number,
+  durationMinutes: number = 60,
+  elasticSeatCount: number = 2
+): number {
+  if (offset !== undefined) {
+    const phasedSeats = calculatePhasedSeats(totalSeats, elasticSeatCount)
+    return getMaxArrivalsForOffset(phasedSeats, offset, durationMinutes)
+  }
   return Math.ceil(totalSeats / 12)
 }
 
@@ -241,37 +302,53 @@ export function generateAvailableSlotsForDate(
 }
 
 /**
- * Calculates the slice of seat indices in seatAllocationOrder for a 5-minute arrival offset (0..11).
- * Partitions totalSeats into 12 contiguous blocks, distributing remainder seats to the earliest offsets.
+ * Calculates the slice of seat indices in seatAllocationOrder for an arrival offset.
+ * Partitions seats cleanly based on offset quota, protecting elastic seats if totalOrPhasedSeats is phased count.
  */
 export function getOffsetSeatIndices(
-  totalSeats: number,
-  offset: number
+  totalOrPhasedSeats: number,
+  offset: number,
+  durationMinutes: number = 60
 ): { startIndex: number; count: number } {
-  if (totalSeats <= 0) {
+  if (totalOrPhasedSeats <= 0) {
     return { startIndex: 0, count: 0 }
   }
-  const baseCount = Math.floor(totalSeats / 12)
-  const remainder = totalSeats % 12
-  const normalizedOffset = Math.max(0, Math.min(11, offset))
 
-  const startIndex = normalizedOffset * baseCount + Math.min(normalizedOffset, remainder)
-  const count = baseCount + (normalizedOffset < remainder ? 1 : 0)
+  if (durationMinutes === 30) {
+    const numOffsets = 6
+    const normalized = ((offset % numOffsets) + numOffsets) % numOffsets
+    let startIndex = 0
+    for (let i = 0; i < normalized; i++) {
+      startIndex += getMaxArrivalsForOffset(totalOrPhasedSeats, i, 30)
+    }
+    const count = getMaxArrivalsForOffset(totalOrPhasedSeats, normalized, 30)
+    return { startIndex, count }
+  }
 
+  // 60-minute duration across 12 offsets
+  const numOffsets = 12
+  const normalized = ((offset % numOffsets) + numOffsets) % numOffsets
+  let startIndex = 0
+  for (let i = 0; i < normalized; i++) {
+    startIndex += getMaxArrivalsForOffset(totalOrPhasedSeats, i, 60)
+  }
+  const count = getMaxArrivalsForOffset(totalOrPhasedSeats, normalized, 60)
   return { startIndex, count }
 }
 
 /**
  * Assigns the next available seat number based on the student's 5-minute arrival time offset.
  * Maps the 5-minute offset (:00, :05, ..., :55) to contiguous slices of seatAllocationOrder.
- * If all primary seats for the offset are occupied, gracefully overflows in circular order.
+ * If all primary seats for the offset are occupied, gracefully overflows within phased seats.
  */
 export function assignNextSeat(
   seatAllocationOrder: number[],
   slotStart: Date,
   slotEnd: Date,
   activeReservationsInWindow: { seatNumber: number }[],
-  _lastAssignedSeat?: number | null
+  _lastAssignedSeat?: number | null,
+  durationMinutes: number = 60,
+  elasticSeatCount: number = 0
 ): number {
   if (!seatAllocationOrder || seatAllocationOrder.length === 0) {
     throw createError({
@@ -282,12 +359,16 @@ export function assignNextSeat(
 
   const occupiedSeats = new Set(activeReservationsInWindow.map((r) => r.seatNumber))
   const totalSeats = seatAllocationOrder.length
+  const phasedSeats =
+    elasticSeatCount > 0 && totalSeats > elasticSeatCount
+      ? calculatePhasedSeats(totalSeats, elasticSeatCount)
+      : totalSeats
 
   // Calculate 5-minute arrival offset (0 for :00, 1 for :05, ..., 11 for :55)
   const minute = slotStart.getUTCMinutes()
   const offset = Math.floor(minute / 5)
 
-  const { startIndex, count } = getOffsetSeatIndices(totalSeats, offset)
+  const { startIndex, count } = getOffsetSeatIndices(phasedSeats, offset, durationMinutes)
 
   // 1. First priority: Check primary candidate seats assigned to this 5-minute offset
   for (let i = 0; i < count; i++) {
@@ -297,9 +378,9 @@ export function assignNextSeat(
     }
   }
 
-  // 2. Fallback: If all primary seats for this offset are occupied, check remaining seats in circular order
-  for (let i = 0; i < totalSeats; i++) {
-    const candidateSeat = seatAllocationOrder[(startIndex + count + i) % totalSeats]
+  // 2. Fallback: If all primary seats for this offset are occupied, check remaining phased seats in circular order
+  for (let i = 0; i < phasedSeats; i++) {
+    const candidateSeat = seatAllocationOrder[(startIndex + count + i) % phasedSeats]
     if (!occupiedSeats.has(candidateSeat)) {
       return candidateSeat
     }

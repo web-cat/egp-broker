@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { combineDateAndTime } from '../../../../shared/utils/timezone'
 import {
+  calculatePhasedSeats,
+  getMaxArrivalsForOffset,
   calculateMaxArrivalsPerSlot,
   generateAvailableSlotsForDate,
   getOffsetSeatIndices,
@@ -13,13 +15,67 @@ import {
 } from '../../../../server/utils/cbtf'
 
 describe('CBTF Server Utilities', () => {
+  describe('calculatePhasedSeats', () => {
+    it('subtracts elasticSeatCount from totalSeats', () => {
+      expect(calculatePhasedSeats(20, 2)).toBe(18)
+      expect(calculatePhasedSeats(20, 0)).toBe(20)
+      expect(calculatePhasedSeats(50, 5)).toBe(45)
+    })
+
+    it('defaults elasticSeatCount to 2', () => {
+      expect(calculatePhasedSeats(20)).toBe(18)
+    })
+
+    it('handles non-positive seats and large elastic count safely', () => {
+      expect(calculatePhasedSeats(0, 2)).toBe(0)
+      expect(calculatePhasedSeats(-5, 2)).toBe(0)
+      expect(calculatePhasedSeats(2, 5)).toBe(0)
+    })
+  })
+
+  describe('getMaxArrivalsForOffset', () => {
+    it('partitions 18 seats across 12 offsets in an alternating 2-1 pattern for 60m duration', () => {
+      const expected = [2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1]
+      let total = 0
+      for (let offset = 0; offset < 12; offset++) {
+        const quota = getMaxArrivalsForOffset(18, offset, 60)
+        expect(quota).toBe(expected[offset])
+        total += quota
+      }
+      expect(total).toBe(18)
+    })
+
+    it('partitions 18 seats across 6 offsets with 3 seats each for 30m duration', () => {
+      for (let offset = 0; offset < 12; offset++) {
+        expect(getMaxArrivalsForOffset(18, offset, 30)).toBe(3)
+      }
+    })
+
+    it('handles 0 or negative seats safely', () => {
+      expect(getMaxArrivalsForOffset(0, 0)).toBe(0)
+      expect(getMaxArrivalsForOffset(-10, 0)).toBe(0)
+    })
+  })
+
   describe('calculateMaxArrivalsPerSlot', () => {
-    it('computes ceiling(totalSeats / 12)', () => {
+    it('computes ceiling(totalSeats / 12) when offset is omitted (legacy compatibility)', () => {
       expect(calculateMaxArrivalsPerSlot(48)).toBe(4) // 48 / 12 = 4
       expect(calculateMaxArrivalsPerSlot(49)).toBe(5) // ceil(4.08) = 5
       expect(calculateMaxArrivalsPerSlot(50)).toBe(5) // ceil(4.16) = 5
       expect(calculateMaxArrivalsPerSlot(12)).toBe(1)
       expect(calculateMaxArrivalsPerSlot(1)).toBe(1)
+    })
+
+    it('computes offset-specific quota when offset is provided', () => {
+      // 20 total seats with 2 elastic seats => 18 phased seats (2-1 alternating)
+      expect(calculateMaxArrivalsPerSlot(20, 0, 60, 2)).toBe(2)
+      expect(calculateMaxArrivalsPerSlot(20, 1, 60, 2)).toBe(1)
+      expect(calculateMaxArrivalsPerSlot(20, 2, 60, 2)).toBe(2)
+      expect(calculateMaxArrivalsPerSlot(20, 3, 60, 2)).toBe(1)
+
+      // 30-minute mode => 3 per slot
+      expect(calculateMaxArrivalsPerSlot(20, 0, 30, 2)).toBe(3)
+      expect(calculateMaxArrivalsPerSlot(20, 1, 30, 2)).toBe(3)
     })
   })
 
@@ -191,12 +247,33 @@ describe('CBTF Server Utilities', () => {
       expect(getOffsetSeatIndices(24, 11)).toEqual({ startIndex: 22, count: 2 })
     })
 
-    it('partitions 50 seats distributing remainder to first offsets', () => {
-      // 50 = 12 * 4 + 2 remainder => offsets 0 and 1 get 5 seats, rest get 4 seats
-      expect(getOffsetSeatIndices(50, 0)).toEqual({ startIndex: 0, count: 5 })
-      expect(getOffsetSeatIndices(50, 1)).toEqual({ startIndex: 5, count: 5 })
-      expect(getOffsetSeatIndices(50, 2)).toEqual({ startIndex: 10, count: 4 })
-      expect(getOffsetSeatIndices(50, 11)).toEqual({ startIndex: 46, count: 4 })
+    it('partitions 18 phased seats into alternating 2-1 slices for 60m duration', () => {
+      expect(getOffsetSeatIndices(18, 0, 60)).toEqual({ startIndex: 0, count: 2 }) // :00 -> indices 0, 1
+      expect(getOffsetSeatIndices(18, 1, 60)).toEqual({ startIndex: 2, count: 1 }) // :05 -> index 2
+      expect(getOffsetSeatIndices(18, 2, 60)).toEqual({ startIndex: 3, count: 2 }) // :10 -> indices 3, 4
+      expect(getOffsetSeatIndices(18, 3, 60)).toEqual({ startIndex: 5, count: 1 }) // :15 -> index 5
+      expect(getOffsetSeatIndices(18, 4, 60)).toEqual({ startIndex: 6, count: 2 }) // :20 -> indices 6, 7
+      expect(getOffsetSeatIndices(18, 5, 60)).toEqual({ startIndex: 8, count: 1 }) // :25 -> index 8
+      expect(getOffsetSeatIndices(18, 6, 60)).toEqual({ startIndex: 9, count: 2 }) // :30 -> indices 9, 10
+      expect(getOffsetSeatIndices(18, 7, 60)).toEqual({ startIndex: 11, count: 1 }) // :35 -> index 11
+      expect(getOffsetSeatIndices(18, 8, 60)).toEqual({ startIndex: 12, count: 2 }) // :40 -> indices 12, 13
+      expect(getOffsetSeatIndices(18, 9, 60)).toEqual({ startIndex: 14, count: 1 }) // :45 -> index 14
+      expect(getOffsetSeatIndices(18, 10, 60)).toEqual({ startIndex: 15, count: 2 }) // :50 -> indices 15, 16
+      expect(getOffsetSeatIndices(18, 11, 60)).toEqual({ startIndex: 17, count: 1 }) // :55 -> index 17
+    })
+
+    it('partitions 18 phased seats into 3-seat blocks for 30m duration', () => {
+      expect(getOffsetSeatIndices(18, 0, 30)).toEqual({ startIndex: 0, count: 3 })
+      expect(getOffsetSeatIndices(18, 1, 30)).toEqual({ startIndex: 3, count: 3 })
+      expect(getOffsetSeatIndices(18, 5, 30)).toEqual({ startIndex: 15, count: 3 })
+      // Repeats in second half-hour
+      expect(getOffsetSeatIndices(18, 6, 30)).toEqual({ startIndex: 0, count: 3 })
+      expect(getOffsetSeatIndices(18, 11, 30)).toEqual({ startIndex: 15, count: 3 })
+    })
+
+    it('handles 0 or negative seats safely', () => {
+      expect(getOffsetSeatIndices(0, 0)).toEqual({ startIndex: 0, count: 0 })
+      expect(getOffsetSeatIndices(-5, 0)).toEqual({ startIndex: 0, count: 0 })
     })
   })
 
@@ -251,13 +328,29 @@ describe('CBTF Server Utilities', () => {
       expect(seat).toBe(16)
     })
 
-    it('throws 409 if all seats in the facility are occupied', () => {
+    it('protects elastic hot-spare seats from automated allocation', () => {
+      // 20 total seats: 18 phased (1..18) and 2 elastic hot spares (19, 20)
+      const facilitySeats = Array.from({ length: 20 }, (_, i) => i + 1)
       const slotStart = new Date('2026-09-14T09:00:00.000Z')
       const slotEnd = new Date('2026-09-14T10:00:00.000Z')
-      const allOccupied = seatOrder.map((s) => ({ seatNumber: s }))
-      expect(() => assignNextSeat(seatOrder, slotStart, slotEnd, allOccupied)).toThrow(
-        'No unallocated seats available at this time slot'
-      )
+
+      // Occupy all 18 phased seats (1..18). Elastic seats 19 and 20 are completely free.
+      const phasedOccupied = Array.from({ length: 18 }, (_, i) => ({ seatNumber: i + 1 }))
+
+      // With elasticSeatCount = 2, assignNextSeat must NOT assign seats 19 or 20; it must throw 409
+      expect(() =>
+        assignNextSeat(facilitySeats, slotStart, slotEnd, phasedOccupied, null, 60, 2)
+      ).toThrow('No unallocated seats available at this time slot')
+    })
+
+    it('allocates within 30-minute phased slices when durationMinutes is 30', () => {
+      const facilitySeats = Array.from({ length: 20 }, (_, i) => i + 1)
+      const slotStart = new Date('2026-09-14T09:05:00.000Z') // offset 1
+      const slotEnd = new Date('2026-09-14T09:35:00.000Z')
+
+      // Offset 1 in 30m gets indices 3, 4, 5 (seats 4, 5, 6)
+      const seat = assignNextSeat(facilitySeats, slotStart, slotEnd, [], null, 30, 2)
+      expect(seat).toBe(4) // First seat in offset 1 slice
     })
   })
 
