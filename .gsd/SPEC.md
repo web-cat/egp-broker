@@ -1,61 +1,55 @@
 # SPEC.md — Project Specification
 
 > **Status**: `FINALIZED`
-> **Project**: 1-on-1 Graduate TA Grading Interview Scheduling System
-> **Milestone**: v5.0 — Graduate TA Grading Interviews
+> **Project**: CBTF Phased Capacity & Duration Engine
+> **Milestone**: v6.0 — CBTF Phased Capacity & Duration Engine
 
 ## Vision
 
-Provide a streamlined, course-integrated 1-on-1 grading interview scheduling system for assignments where students meet with Graduate Teaching Assistants (GTAs) to explain their work as part of the grading process. By adapting the battle-tested scheduling and shift management architecture from the CBTF, this feature allows course staff to define recurring disconnected GTA shifts, calculate overlapping 10-minute appointment slots (5-minute interview + 5-minute prep), enable students to book interviews within a designated assignment window, prevent resubmission pass redemption until interviews are completed, and furnish GTAs with a dedicated check-in, checkout, and grading notes console.
+Overhaul the CBTF scheduling engine to replace the flawed 115-minute rolling-window concurrency filter with a high-throughput **Periodic Phased Seat Allocation** architecture. By partitioning facility seats into 18 phased seats and a 2-seat elastic pool (with an alternating 2–1 arrival quota per 5-minute offset), the facility eliminates "schedule holes" and phantom capacity lockouts. The system supports both 30-minute reservation blocks (for $\le 25$-minute quizzes) and 60-minute blocks (for $\le 50$-minute exams), providing built-in transition buffers, smooth proctor check-in rates ($\le 2$ arrivals/5 min for 60m; $\le 3$ arrivals/5 min for 30m), and doubling daily throughput for quiz cohorts up to 280 students/day.
 
 ## Goals
 
-1. **Course-Level Configuration & Assignment Integration**:
-   - Add a course-level setting for the single interview meeting location (e.g. `Course.interviewLocation`, room number or link).
-   - Add assignment-level controls: `hasInterviews` (boolean toggle), `interviewWindowStart` (DateTime), and `interviewWindowEnd` (DateTime).
-2. **Course-Scoped GTA Shift Management**:
-   - Model GTA shifts tied to a course and a user with the Canvas TA course role (`CourseRole.TA`).
-   - Enable both instructors (for all course GTAs) and GTAs (for their own schedules) to enter and batch-generate recurring weekly disconnected shifts (1–2 hour blocks scattered across days) using the natural language schedule parser.
-3. **Overlapping Capacity & Automatic GTA Assignment**:
-   - Dynamically generate 10-minute interview slots (e.g. 10:00, 10:10, 10:20... with 5-minute student meeting and 5-minute GTA buffer).
-   - For overlapping GTA shifts, calculate net capacity per slot across all GTAs on duty.
-   - Display half-day blocks only when open GTA interview slots exist.
-   - Allow students to select timeslots purely based on time; upon booking, automatically assign the student to an available GTA for that slot and present the assigned GTA name and course interview location in the confirmation.
-4. **Student Scheduling & Rescheduling Rules**:
-   - Limit students to at most one scheduled interview per assignment at a time.
-   - Permit rescheduling once an interview is marked completed, checked out, missed/no-show, or cancelled.
-   - Enforce pass redemption gating: if an assignment requires interviews (`hasInterviews = true`), prohibit students from redeeming resubmission passes (`extensionOnly = false`) until their interview has been completed.
-5. **GTA Interview Dashboard & Console**:
-   - Provide a dedicated, streamlined dashboard for GTAs on duty showing expected student arrivals assigned to them for their shift.
-   - Allow manual check-in (no physical ID card swipe required), active interview view with grading notes input, a checkout button, and a save notes button.
-   - Support marking absent students as "No-Show" (`MISSED`), immediately freeing the student to reschedule.
+1. **Phased Seat Partitioning & Quota-Matched Arrival Throttles**:
+   - Partition facility seats into **18 phased seats** and **2 elastic pool seats** (for a 20-seat lab).
+   - In 60-minute mode, distribute the 18 seats across the 12 five-minute arrival offsets (:00 through :55) in a balanced 2–1 alternating pattern.
+   - Enforce offset-specific arrival quotas matching seat allocations (preventing cross-offset seat stealing).
+2. **Dual Duration Support (30-Minute and 60-Minute Tiers)**:
+   - Support assignment-level reservation duration configuration: 30 minutes or 60 minutes.
+   - Enforce business invariants for student test time: at most 25 minutes for 30-minute slots ($\ge 5$ min buffer) and at most 50 minutes for 60-minute slots ($\ge 10$ min buffer).
+   - In 30-minute mode, cycle 18 phased seats twice per hour with 3 seats per 5-minute offset across the 6 half-hour offsets (:00, :05, :10, :15, :20, :25, and repeated :30..:55).
+3. **Elimination of Phantom Concurrency & Schedule Holes**:
+   - Replace the rolling 115-minute `activeReservations.length < totalSeats` window filter with true seat-specific interval availability (`isSeatFreeInWindow`).
+   - Eliminate circular fallback cannibalization so primary channels remain orthogonal and contiguous.
+4. **Elastic Pool Reservation & Hot Spares**:
+   - Preserve Seats 19 and 20 as hot spares for hardware failure failover and proctor emergency reassignments.
+5. **Teacher Configuration & Student Scheduling UI**:
+   - Allow teachers to set CBTF exam duration (30 min vs 60 min) per assignment.
+   - Render student scheduling slots at the assignment's configured duration intervals.
 
 ## Non-Goals (Out of Scope)
 
-- Physical barcode/magnetic ID swipe scanner workflows (CBTF-only hardware).
-- Physical seat allocation or facility floor-plan seating order (all students meet GTAs at the single designated course location or one-on-one).
-- Cross-course GTA pooling (shifts and interviews are strictly course-scoped).
-- Automatic grade synchronization into Canvas gradebook based on interview completion (grading is entered in Canvas/LMS separately).
+- Handling extra-time accommodations inside the CBTF (disability services operates a separate dedicated testing center).
+- Dynamic arbitrary non-standard durations (e.g., 47 minutes or 75 minutes); assignments are classified as either 30-minute or 60-minute tiers.
+- Physical room floor-plan reconfiguration.
 
 ## Users
 
-- **Students**: View available interview slots during the assignment window, schedule an appointment, view assigned GTA and meeting location, reschedule if needed, and unlock resubmission passes upon interview completion.
-- **Graduate TAs (GTAs)**: Enter recurring weekly shift availability, view expected arrivals for their active shifts, manually check in students, conduct 1-on-1 interviews, record observation notes, check out students, and flag no-shows.
-- **Instructors / Course Teachers**: Toggle interview requirements on assignments, set interview date windows, configure course meeting location, and view/manage GTA shifts and interview logs.
+- **Students**: Experience abundant, hole-free appointment slots with clear 30-minute or 60-minute reservation windows.
+- **Instructors**: Configure assignment test duration (30m quiz or 60m exam) with confidence that cohort capacity matches student numbers.
+- **Proctors**: Experience smooth, predictable check-in pacing ($\le 2$ or $\le 3$ arrivals every 5 minutes) and have 2 hot-spare workstations available for emergency swaps.
 
 ## Constraints
 
-- **Strict Nuxt 4 Architecture**: Pure presenter base components, feature-specific composables, Zod validation on API endpoints, and projected Prisma queries.
-- **Environment Parity**: Execute all migrations and tests in Docker `app-dev`.
-- **Zero Regressions**: Maintain 100% test pass rate across all existing CBTF, PassPort, and LMS sync test suites.
-- **Defensive TypeScript**: Derived types from Zod schemas and explicit interfaces; no `any`.
+- **Strict Nuxt 4 Architecture**: Layered sovereignty, pure presenter base components, feature-specific composables, Zod validation.
+- **Timezone Sovereignty**: UTC database storage; `America/New_York` offset math.
+- **Docker Parity**: All tests and commands run via `docker compose exec app-dev`.
+- **Zero Regressions**: Maintain 100% test pass rate across all test suites.
 
 ## Success Criteria
 
-- [ ] Database migrations successfully add `Course.interviewLocation`, `Assignment.hasInterviews`, `Assignment.interviewWindowStart/End`, `GtaShift`, `GtaInterviewReservation`, and note relations.
-- [ ] Instructors and GTAs can enter and batch-generate recurring weekly shifts using the schedule parser.
-- [ ] Available 10-minute slots are correctly calculated from overlapping GTA schedules with accurate capacity tracking.
-- [ ] Students can schedule interviews, see assigned GTA on confirmation, and are limited to one active appointment.
-- [ ] Students cannot redeem non-extension resubmission passes until their interview is marked `COMPLETED` or `CHECKED_OUT`.
-- [ ] GTAs can check in students, enter notes, check them out, or mark no-shows from their dashboard.
-- [ ] Vitest unit tests achieve 100% behavioral coverage for all new schemas, utilities, composables, and endpoints.
+- [ ] 18 phased seats and 2 elastic pool seats correctly partitioned in `cbtf.ts`.
+- [ ] Arrival quotas strictly enforced per offset (no slot accepts more arrivals than its assigned seats).
+- [ ] 30-minute and 60-minute reservation durations supported end-to-end.
+- [ ] Phantom capacity lockup completely resolved: slots remain available whenever assigned seats are unreserved.
+- [ ] 100% Vitest unit test coverage for new allocation logic, slot generation, and booking endpoints.

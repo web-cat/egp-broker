@@ -1,16 +1,16 @@
 ---
-updated: 2026-09-16T03:51:00-04:00
+updated: 2026-10-09T19:35:00-04:00
 ---
 
 # Project State
 
 ## Current Position
 
-**Milestone:** v5.0 — Graduate TA Grading Interviews  
-**Phase:** Phase 4: GTA Interview Dashboard, Notes Console & Full Verification  
-**Status:** ✅ Milestone v5.0 Complete (All 4 phases delivered & verified)  
-**Plan:** [.gsd/phases/4/2-PLAN.md](file:///Users/edwards/git/egp-broker/.gsd/phases/4/2-PLAN.md)  
-**Next Step:** /audit-milestone or /complete-milestone
+**Milestone:** v6.0 — CBTF Phased Capacity & Duration Engine  
+**Phase:** Phase 1: Domain Modeling & Allocation Mathematics  
+**Status:** ⬜ Ready to plan / execute Phase 1  
+**Roadmap:** [.gsd/ROADMAP.md](file:///Users/edwards/git/egp-broker/.gsd/ROADMAP.md)  
+**Next Step:** /plan 1 or /execute Phase 1
 
 ## Completed Milestones
 
@@ -18,16 +18,16 @@ updated: 2026-09-16T03:51:00-04:00
 - **v2.0 — PassPort Integration** (Completed 2026-09-06)
 - **v3.0 — LTI 1.3 NRPS Roster & Section Sync** (Completed 2026-09-08)
 - **v4.0 — Proctor Training Mode** (Completed 2026-09-11)
+- **v5.0 — Graduate TA Grading Interviews** (Completed 2026-09-16)
 
 ## Active Decisions
 
-| Decision                                                               | Choice                                                                                           | Made       | Affects                   |
-| :--------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- | :--------- | :------------------------ |
-| [DECISION-010](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Course-level meeting location (`Course.interviewLocation`) for all GTA interviews in course      | 2026-09-15 | Phase 1, Phase 3          |
-| [DECISION-011](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Timeslot-only student selection with automatic GTA assignment upon booking                       | 2026-09-15 | Phase 2, Phase 3, Phase 4 |
-| [DECISION-012](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | 10-minute slot intervals (5 min interview + 5 min GTA prep buffer) with overlapping GTA capacity | 2026-09-15 | Phase 2                   |
-| [DECISION-013](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Resubmission pass redemption gated on interview status (`COMPLETED` or `CHECKED_OUT`)            | 2026-09-15 | Phase 2                   |
-| [DECISION-014](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Dual shift management permissions (instructors manage all course GTAs; GTAs manage their own)    | 2026-09-15 | Phase 1, Phase 3          |
+| Decision                                                               | Choice                                                                              | Made       | Affects          |
+| :--------------------------------------------------------------------- | :---------------------------------------------------------------------------------- | :--------- | :--------------- |
+| [DECISION-015](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | 18 Phased Seats + 2 Elastic Pool Seats (for a 20-seat lab)                          | 2026-10-09 | Phase 1, Phase 2 |
+| [DECISION-016](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Alternating 2–1 arrival quota distribution across 12 offsets for 60m exams          | 2026-10-09 | Phase 1, Phase 2 |
+| [DECISION-017](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | 3-per-offset distribution across 6 offsets for 30m quizzes                          | 2026-10-09 | Phase 1, Phase 2 |
+| [DECISION-018](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | True seat-specific interval availability replacing 115-minute rolling window filter | 2026-10-09 | Phase 2          |
 
 ## Blockers
 

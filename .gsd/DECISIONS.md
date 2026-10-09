@@ -270,3 +270,71 @@ Course instructors can view, create, edit, and delete shifts for any user enroll
 ### Rationale
 
 Empowers GTAs to manage their own availability while maintaining full administrative oversight for course instructors.
+
+---
+
+## DECISION-015: 18 Phased Seats + 2 Elastic Pool Seats Partition
+
+### Context
+
+In a 20-seat CBTF facility, students with disability accommodations are served by a separate testing center. The facility requires maximum non-accommodated throughput without false capacity lockouts, while maintaining hot spares for hardware failures.
+
+### Decision
+
+Partition a 20-seat facility into 18 Phased Seats and 2 Elastic Pool Seats (`elasticSeatCount = 2`). Phased seats are systematically scheduled across arrival offsets. The 2 elastic seats remain reserved for proctor manual override, emergency hardware swaps, and technical failovers.
+
+### Rationale
+
+A 10% reserve (2 seats) is standard engineering tolerance for lab equipment failures without sacrificing scheduled appointment capacity.
+
+---
+
+## DECISION-016: Alternating 2–1 Arrival Quotas Across 12 Offsets for 60-Minute Exams
+
+### Context
+
+Under 60-minute reservation blocks, 18 phased seats divided by 12 five-minute offsets leaves a remainder of 6 ($18 / 12 = 1$ remainder $6$).
+
+### Decision
+
+Distribute the remainder evenly in an alternating 2–1 pattern:
+
+- `:00`, `:10`, `:20`, `:30`, `:40`, `:50` receive 2 seats each.
+- `:05`, `:15`, `:25`, `:35`, `:45`, `:55` receive 1 seat each.
+  Set arrival throttles to match each offset's seat quota exactly.
+
+### Rationale
+
+Guarantees proctor reception load never exceeds 2 arrivals in any 5-minute interval (averaging 3 arrivals every 10 minutes), smoothing check-in traffic while avoiding cross-offset seat theft.
+
+---
+
+## DECISION-017: 3 Seats Per Offset Distribution for 30-Minute Quizzes
+
+### Context
+
+Current semester assignments are 25-minute quizzes. Supporting 30-minute reservation blocks doubles seat turnover frequency.
+
+### Decision
+
+For assignments configured with 30-minute duration, partition the 18 phased seats across the 6 five-minute offsets of each half-hour block ($18 / 6 = 3$ seats per offset), repeating at `:30` through `:55`. Test duration is enforced at $\le 25$ minutes, guaranteeing a 5-minute transition buffer.
+
+### Rationale
+
+Expands facility throughput to 36–40 students/hour (up to 280 students/day), allowing an entire 250-student cohort to complete testing in a single 7-hour day.
+
+---
+
+## DECISION-018: Seat-Specific Interval Availability Verification
+
+### Context
+
+The existing algorithm checked if `activeReservations.length < totalSeats` across `[startTime, endTime)`. This created a 115-minute rolling window capturing non-concurrent reservations and locking out valid slots at ~55%–64% capacity.
+
+### Decision
+
+Replace the rolling window union filter with true seat-specific interval availability: a candidate slot at time $T$ is available if any assigned phased seat for that arrival offset has no overlapping reservation during $[T, T + \text{durationMinutes})$.
+
+### Rationale
+
+Completely eliminates phantom concurrency lockups while executing in $O(1)$ seat lookups.
