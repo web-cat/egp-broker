@@ -238,6 +238,87 @@ describe('CBTF Server Utilities', () => {
       const has900 = slots.some((s) => s.startTime.toISOString() === '2026-09-14T13:00:00.000Z')
       expect(has900).toBe(true)
     })
+
+    it('generates 30-minute slots with latest start 30 minutes before close', () => {
+      const slots = generateAvailableSlotsForDate(
+        facility,
+        targetDate,
+        hours,
+        [],
+        'America/New_York',
+        30
+      )
+
+      expect(slots.length).toBeGreaterThan(0)
+      // Duration is 30 minutes
+      const first = slots[0]
+      expect(first.endTime.getTime() - first.startTime.getTime()).toBe(30 * 60 * 1000)
+
+      // Closes at 10:00 EDT (14:00 UTC), so latest start for 30m is 09:30 EDT (13:30 UTC)
+      const last = slots[slots.length - 1]
+      expect(last.startTime.toISOString()).toBe('2026-09-14T13:30:00.000Z')
+      expect(last.endTime.toISOString()).toBe('2026-09-14T14:00:00.000Z')
+    })
+
+    it('eliminates 115-minute phantom concurrency trap: keeps slot open when physical seat is free despite high overlapping count', () => {
+      // 20-seat facility (18 phased seats, 2 elastic)
+      const fac20 = {
+        totalSeats: 20,
+        elasticSeatCount: 2,
+        timezone: 'America/New_York'
+      }
+
+      // Simulate heavy staggered afternoon arrivals (Thursday afternoon problem):
+      // Staggered reservations starting between 13:05 EDT (17:05 UTC) and 13:55 EDT (17:55 UTC)
+      // occupying seats 1..10, ending between 14:05 and 14:55 EDT.
+      // Another batch from 14:05 to 14:55 EDT occupying seats 11..18.
+      // Total reservations touching [14:00, 15:00) EDT is 18 + 10 = 28 (> 20 total seats).
+      // Under the old algorithm, [14:00, 15:00) was marked 100% FULL.
+      // Under the new algorithm, Seat 1 is free for 14:00-15:00, and arrival offset 0 (:00) has 0 arrivals.
+      const reservations: { startTime: Date; endTime: Date; seatNumber: number }[] = []
+
+      // Batch 1: 13:05 - 13:50 on seats 3..10
+      for (let m = 5; m <= 50; m += 5) {
+        const s = new Date(`2026-09-17T17:${m < 10 ? '0' + m : m}:00.000Z`)
+        reservations.push({
+          startTime: s,
+          endTime: new Date(s.getTime() + 60 * 60 * 1000),
+          seatNumber: m / 5 + 2
+        })
+      }
+
+      // Batch 2: 14:05 - 14:50 on seats 11..18
+      for (let m = 5; m <= 40; m += 5) {
+        const s = new Date(`2026-09-17T18:${m < 10 ? '0' + m : m}:00.000Z`)
+        reservations.push({
+          startTime: s,
+          endTime: new Date(s.getTime() + 60 * 60 * 1000),
+          seatNumber: 10 + m / 5
+        })
+      }
+
+      // Seats 1 and 2 (assigned to :00) are completely free for the entire 14:00-15:00 window!
+      const afternoonHours = {
+        isOpen: true,
+        openTime: '13:00',
+        closeTime: '17:00',
+        reason: null
+      }
+      const slots = generateAvailableSlotsForDate(
+        fac20,
+        new Date('2026-09-17T00:00:00.000Z'),
+        afternoonHours,
+        reservations,
+        'America/New_York',
+        60
+      )
+
+      // 14:00 EDT is 18:00 UTC
+      const slot1400 = slots.find((s) => s.startTime.toISOString() === '2026-09-17T18:00:00.000Z')
+      expect(slot1400).toBeDefined()
+      expect(slot1400?.arrivalsCount).toBe(0)
+      expect(slot1400?.maxArrivals).toBe(2)
+    })
   })
 
   describe('getOffsetSeatIndices', () => {
@@ -650,8 +731,8 @@ describe('CBTF Server Utilities', () => {
         // Populate reservations so <= 20% slots are open (>80% utilization)
         for (let h = 12; h < 22; h++) {
           for (let m = 0; m < 60; m += 5) {
-            // Fill 4 seats at each 5-min slot
-            if (m % 20 !== 0) {
+            // Fill 4 seats at most 5-min slots, leaving only :00 and :30 open (83% utilization)
+            if (m % 30 !== 0) {
               const startStr = `${day}T${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00.000Z`
               for (let seat = 1; seat <= 4; seat++) {
                 mockReservations.push({

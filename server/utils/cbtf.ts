@@ -240,14 +240,21 @@ export function calculateMaxArrivalsPerSlot(
 /**
  * Generates available 5-minute boundary slots for a given date,
  * filtering out throttled slots and capacity-exceeded slots.
+ * Evaluates true physical seat interval availability instead of rolling window counts.
  * Open and close times are interpreted in the facility's local timezone.
  */
 export function generateAvailableSlotsForDate(
-  facility: { totalSeats: number; timezone?: string },
+  facility: {
+    totalSeats: number
+    timezone?: string
+    elasticSeatCount?: number
+    seatAllocationOrder?: number[] | any
+  },
   targetDate: Date,
   hours: FacilityOperatingHoursResult,
   existingReservations: { startTime: Date; endTime: Date; seatNumber: number }[],
-  timeZone: string = facility.timezone || DEFAULT_CBTF_TIMEZONE
+  timeZone: string = facility.timezone || DEFAULT_CBTF_TIMEZONE,
+  durationMinutes: number = 60
 ): SlotAvailability[] {
   if (!hours.isOpen || !hours.openTime || !hours.closeTime) {
     return []
@@ -256,14 +263,26 @@ export function generateAvailableSlotsForDate(
   const openDateTime = combineDateAndTime(targetDate, hours.openTime, timeZone)
   const closeDateTime = combineDateAndTime(targetDate, hours.closeTime, timeZone)
 
-  const maxArrivals = calculateMaxArrivalsPerSlot(facility.totalSeats)
   const availableSlots: SlotAvailability[] = []
 
   const stepMs = 5 * 60 * 1000 // 5 minutes
-  const durationMs = 60 * 60 * 1000 // 1 hour (60 minutes)
+  const durationMs = durationMinutes * 60 * 1000
 
-  // Facility must remain open for at least 1 hour after slot start time
+  // Facility must remain open for at least durationMinutes after slot start time
   const latestStartMs = closeDateTime.getTime() - durationMs
+
+  const elasticCount = facility.elasticSeatCount ?? 0
+  const phasedSeats =
+    elasticCount > 0 && facility.totalSeats > elasticCount
+      ? calculatePhasedSeats(facility.totalSeats, elasticCount)
+      : facility.totalSeats
+
+  const fullSeatOrder: number[] =
+    Array.isArray(facility.seatAllocationOrder) && facility.seatAllocationOrder.length > 0
+      ? (facility.seatAllocationOrder as number[])
+      : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
+
+  const phasedSeatOrder = fullSeatOrder.slice(0, phasedSeats)
 
   let currentMs = openDateTime.getTime()
 
@@ -271,18 +290,28 @@ export function generateAvailableSlotsForDate(
     const slotStart = new Date(currentMs)
     const slotEnd = new Date(currentMs + durationMs)
 
+    const minute = slotStart.getUTCMinutes()
+    const offset = Math.floor(minute / 5)
+
     // 1. Arrival throttle: count reservations starting at exact slotStart
     const arrivalsCount = existingReservations.filter(
       (r) => r.startTime.getTime() === slotStart.getTime()
     ).length
+    const maxArrivals = calculateMaxArrivalsPerSlot(
+      facility.totalSeats,
+      offset,
+      durationMinutes,
+      elasticCount
+    )
 
-    // 2. Active seat occupancy: count reservations overlapping [slotStart, slotEnd)
+    // 2. Active seat occupancy: test physical seat availability in [slotStart, slotEnd)
     const activeReservations = existingReservations.filter(
       (r) => r.startTime.getTime() < slotEnd.getTime() && r.endTime.getTime() > slotStart.getTime()
     )
+    const occupiedSeats = new Set(activeReservations.map((r) => r.seatNumber))
 
     const isThrottleOk = arrivalsCount < maxArrivals
-    const isCapacityOk = activeReservations.length < facility.totalSeats
+    const isCapacityOk = phasedSeatOrder.some((seat) => !occupiedSeats.has(seat))
 
     if (isThrottleOk && isCapacityOk) {
       availableSlots.push({
@@ -290,8 +319,9 @@ export function generateAvailableSlotsForDate(
         endTime: slotEnd,
         arrivalsCount,
         maxArrivals,
-        occupiedSeatsCount: activeReservations.length,
-        totalSeats: facility.totalSeats
+        occupiedSeatsCount: activeReservations.filter((r) => phasedSeatOrder.includes(r.seatNumber))
+          .length,
+        totalSeats: phasedSeats
       })
     }
 
@@ -502,7 +532,8 @@ export async function getRecommendedDaysAndSlots(
   studentWindow: StudentSchedulingWindow,
   preferenceOrBlockId?: string,
   selectedDateStr?: string,
-  tx: PrismaClient | typeof prisma = prisma
+  tx: PrismaClient | typeof prisma = prisma,
+  durationMinutes: number = 60
 ): Promise<{
   blocks: CbtfHalfDayBlock[]
   recommendedDays: CbtfRecommendedDay[]
@@ -578,14 +609,16 @@ export async function getRecommendedDaysAndSlots(
         dayStartUtc,
         hours,
         [],
-        timeZone
+        timeZone,
+        durationMinutes
       )
       const allSlots = generateAvailableSlotsForDate(
         facility,
         dayStartUtc,
         hours,
         dayReservations,
-        timeZone
+        timeZone,
+        durationMinutes
       )
 
       const dayOfWeek = getLocalDayOfWeek(dayStartUtc, timeZone)

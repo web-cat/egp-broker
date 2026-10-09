@@ -17,6 +17,7 @@ import type {
 
 export interface CbtfAvailabilityResponse {
   assignmentTitle: string | null
+  cbtfDurationMinutes?: number
   studentWindow: {
     start: string
     end: string
@@ -52,6 +53,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfAvailab
       courseId: true,
       title: true,
       isSchedulable: true,
+      cbtfDurationMinutes: true,
       scheduleWindowStart: true,
       scheduleWindowEnd: true,
       availableFrom: true,
@@ -96,17 +98,21 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfAvailab
   const facility = await getPrimaryCbtfFacility()
   const studentWindow = await getStudentSchedulingWindow(session.user.id, assignment)
 
+  const durationMinutes = assignment.cbtfDurationMinutes ?? 60
   const { blocks, recommendedDays, hourlySlots } = await getRecommendedDaysAndSlots(
     facility,
     studentWindow,
     query.blockId || query.timeOfDayPreference,
-    query.selectedDate
+    query.selectedDate,
+    prisma,
+    durationMinutes
   )
 
   return {
     statusCode: 200,
     data: {
       assignmentTitle: assignment.title,
+      cbtfDurationMinutes: durationMinutes,
       studentWindow: {
         start: studentWindow.start.toISOString(),
         end: studentWindow.end.toISOString(),
