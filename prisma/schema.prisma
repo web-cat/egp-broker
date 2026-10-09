@@ -383,6 +383,8 @@ model Assignment {
   isSchedulable       Boolean   @default(false)
   scheduleWindowStart DateTime?
   scheduleWindowEnd   DateTime?
+  /// Duration of CBTF reservation block in minutes (e.g. 60 for 50-min exam, 30 for 25-min quiz)
+  cbtfDurationMinutes Int       @default(60)
   cbtfReservations    CbtfReservation[]
 
   // GTA Interview Scheduling properties
@@ -624,6 +626,8 @@ model CbtfFacility {
   id                  String   @id @default(cuid())
   name                String   @default("Main CBTF")
   totalSeats          Int      @default(50)
+  /// Number of seats reserved for hardware failover and emergency proctor swaps (default: 2)
+  elasticSeatCount    Int      @default(2)
   /// Definable sequence order for allocating seats across consecutive slots (e.g. [1, 15, 29, 2, ...])
   seatAllocationOrder Json
 
