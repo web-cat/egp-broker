@@ -16,9 +16,9 @@
 
 ## Must-Haves (Milestone v6.0)
 
-- [ ] Database support for assignment CBTF reservation duration (`Assignment.cbtfDurationMinutes`, default 60) and facility elastic reserve (`CbtfFacility.elasticSeatCount`, default 2)
-- [ ] Phased seat partitioning algorithm supporting 18 phased seats with alternating 2–1 distribution (60m) and 3-per-offset distribution (30m)
-- [ ] Offset-specific arrival quota enforcement replacing global `ceil(totalSeats / 12)`
+- [x] Database support for assignment CBTF reservation duration (`Assignment.cbtfDurationMinutes`, default 60) and facility elastic reserve (`CbtfFacility.elasticSeatCount`, default 2)
+- [x] Phased seat partitioning algorithm supporting 18 phased seats with alternating 2–1 distribution (60m) and 3-per-offset distribution (30m)
+- [x] Offset-specific arrival quota enforcement replacing global `ceil(totalSeats / 12)`
 - [ ] True seat-specific interval availability algorithm eliminating the 115-minute phantom concurrency trap
 - [ ] Seat allocation preserving primary channels without circular cross-channel cannibalization
 - [ ] Student reservation API (`/api/me/cbtf/reservations`) supporting 30m and 60m durations and offset quota checks
@@ -32,7 +32,7 @@
 
 ### Phase 1: Domain Modeling & Allocation Mathematics
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Update Prisma schema to add `Assignment.cbtfDurationMinutes` and `CbtfFacility.elasticSeatCount`. Implement core allocation math in `server/utils/cbtf.ts`: partitioned seat indices, offset arrival quotas (`getMaxArrivalsForOffset`), and dedicated channel mapping for both 30-minute and 60-minute durations with comprehensive Vitest tests.  
 **Requirements**: REQ-601, REQ-602, REQ-603, REQ-604, REQ-605
 
