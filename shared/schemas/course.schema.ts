@@ -11,3 +11,9 @@ export const updateCourseSettingsSchema = z.object({
 })
 
 export type UpdateCourseSettingsInput = z.infer<typeof updateCourseSettingsSchema>
+
+export const studentContextQuerySchema = z.object({
+  courseId: z.string().optional()
+})
+
+export type StudentContextQuery = z.infer<typeof studentContextQuerySchema>

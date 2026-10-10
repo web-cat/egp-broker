@@ -25,6 +25,11 @@ vi.mock('h3', async () => {
   return {
     ...actual,
     readBody: vi.fn(),
+    readValidatedBody: vi.fn(async (event, validator) => {
+      const { readBody } = await import('h3')
+      const body = await readBody(event)
+      return validator(body)
+    }),
     getRouterParam: vi.fn(),
     createError: (opts: any) => opts
   }

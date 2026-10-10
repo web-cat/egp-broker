@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { reassignReservationSeat } from '@@/server/utils/cbtf'
 import { syncCbtfReservationCanvasOverride } from '@@/server/utils/cbtf-canvas'
@@ -17,8 +17,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const rawBody = await readBody(event)
-  const body = cbtfProctorReassignSeatSchema.parse(rawBody)
+  const body = await readValidatedBody(event, cbtfProctorReassignSeatSchema.parse)
 
   const updated = await reassignReservationSeat(
     prisma,

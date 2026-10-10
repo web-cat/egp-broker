@@ -1,4 +1,4 @@
-import { defineEventHandler, getQuery, createError } from 'h3'
+import { defineEventHandler, getValidatedQuery, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { cbtfAvailabilityQuerySchema } from '@@/shared/schemas/cbtf.schema'
 import {
@@ -35,16 +35,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfAvailab
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  const rawQuery = getQuery(event)
-  const queryResult = cbtfAvailabilityQuerySchema.safeParse(rawQuery)
-  if (!queryResult.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid availability query',
-      data: queryResult.error.flatten()
-    })
-  }
-  const query = queryResult.data
+  const query = await getValidatedQuery(event, cbtfAvailabilityQuerySchema.parse)
 
   const assignment = await prisma.assignment.findUnique({
     where: { id: query.assignmentId },

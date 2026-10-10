@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseInstructorOrSelfGta } from '@@/server/utils/gta-interview'
 import { gtaBatchGenerateShiftsSchema } from '@@/shared/schemas/gta-interview.schema'
@@ -10,21 +10,12 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 400, statusMessage: 'Course ID is required' })
   }
 
-  const body = await readBody(event)
-  const validation = gtaBatchGenerateShiftsSchema.safeParse({
-    courseId,
-    ...body
-  })
-
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid batch shift parameters',
-      data: validation.error.flatten()
+  const { userId, startDate, endDate, shifts } = await readValidatedBody(event, (body) =>
+    gtaBatchGenerateShiftsSchema.parse({
+      courseId,
+      ...body
     })
-  }
-
-  const { userId, startDate, endDate, shifts } = validation.data
+  )
 
   await assertCourseInstructorOrSelfGta(event, courseId, userId)
 

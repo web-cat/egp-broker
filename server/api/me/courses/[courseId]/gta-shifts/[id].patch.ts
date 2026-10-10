@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import {
   assertCourseInstructorOrSelfGta,
@@ -24,20 +24,12 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 404, statusMessage: 'GTA shift not found' })
   }
 
-  const body = await readBody(event)
-  const validation = updateGtaShiftInputSchema.safeParse(body)
-
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid shift update parameters',
-      data: validation.error.flatten()
-    })
-  }
+  const { userId, date, startTime, endTime } = await readValidatedBody(
+    event,
+    updateGtaShiftInputSchema.parse
+  )
 
   await assertCourseInstructorOrSelfGta(event, courseId, existing.userId)
-
-  const { userId, date, startTime, endTime } = validation.data
 
   if (userId && userId !== existing.userId) {
     await assertUserIsCourseGta(courseId, userId)

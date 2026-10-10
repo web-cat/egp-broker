@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { upsertOperatingHoursInputSchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
@@ -12,17 +12,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const body = await readBody(event)
-  const validation = upsertOperatingHoursInputSchema.safeParse(body)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid operating hours',
-      data: validation.error.flatten()
-    })
-  }
-
-  const { facilityId, dayOfWeek, openTime, closeTime } = validation.data
+  const { facilityId, dayOfWeek, openTime, closeTime } = await readValidatedBody(
+    event,
+    upsertOperatingHoursInputSchema.parse
+  )
 
   const record = await prisma.cbtfOperatingHours.upsert({
     where: {

@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseInstructorOrSelfGta } from '@@/server/utils/gta-interview'
 import { reconcileShiftReservations } from '@@/server/utils/gta-shift-rescheduling'
@@ -25,18 +25,9 @@ export default defineEventHandler(async (event): Promise<ShiftImpactSummary> => 
 
   await assertCourseInstructorOrSelfGta(event, courseId, existing.userId)
 
-  const body = (await readBody(event)) || {}
-  const validation = previewShiftImpactInputSchema.safeParse(body)
-
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid shift preview parameters',
-      data: validation.error.flatten()
-    })
-  }
-
-  const { isDelete, userId, date, startTime, endTime } = validation.data
+  const { isDelete, userId, date, startTime, endTime } = await readValidatedBody(event, (body) =>
+    previewShiftImpactInputSchema.parse(body || {})
+  )
 
   if (isDelete) {
     return reconcileShiftReservations(courseId, id, null, undefined, true)

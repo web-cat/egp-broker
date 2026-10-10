@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { createScheduleExceptionInputSchema } from '@@/shared/schemas/cbtf.schema'
 import { extractCalendarDate, DEFAULT_CBTF_TIMEZONE } from '@@/shared/utils/timezone'
@@ -13,17 +13,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const body = await readBody(event)
-  const validation = createScheduleExceptionInputSchema.safeParse(body)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid schedule exception',
-      data: validation.error.flatten()
-    })
-  }
-
-  const { facilityId, date, isClosed, openTime, closeTime, reason } = validation.data
+  const { facilityId, date, isClosed, openTime, closeTime, reason } = await readValidatedBody(
+    event,
+    createScheduleExceptionInputSchema.parse
+  )
 
   const calendarDate = extractCalendarDate(date, DEFAULT_CBTF_TIMEZONE)
   const exceptionDate = new Date(`${calendarDate}T00:00:00.000Z`)

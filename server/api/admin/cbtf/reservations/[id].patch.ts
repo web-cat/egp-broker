@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { toCbtfReservationDto } from '@@/server/utils/cbtf'
 import {
@@ -30,8 +30,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     throw createError({ statusCode: 404, statusMessage: 'Reservation not found' })
   }
 
-  const rawBody = await readBody(event)
-  const body = cbtfAdminUpdateReservationSchema.parse(rawBody)
+  const body = await readValidatedBody(event, cbtfAdminUpdateReservationSchema.parse)
 
   const data: Record<string, any> = {}
 

@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { createProctorShiftInputSchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
@@ -12,17 +12,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const body = await readBody(event)
-  const validation = createProctorShiftInputSchema.safeParse(body)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid proctor shift data',
-      data: validation.error.flatten()
-    })
-  }
-
-  const { facilityId, userId, startTime, endTime } = validation.data
+  const { facilityId, userId, startTime, endTime } = await readValidatedBody(
+    event,
+    createProctorShiftInputSchema.parse
+  )
 
   const start = new Date(startTime)
   const end = new Date(endTime)

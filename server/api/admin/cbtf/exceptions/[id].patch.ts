@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, getRouterParam, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, getRouterParam, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { updateScheduleExceptionInputSchema } from '@@/shared/schemas/cbtf.schema'
 import { extractCalendarDate, DEFAULT_CBTF_TIMEZONE } from '@@/shared/utils/timezone'
@@ -18,15 +18,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 400, statusMessage: 'Exception ID is required' })
   }
 
-  const body = await readBody(event)
-  const validation = updateScheduleExceptionInputSchema.safeParse(body)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid schedule exception update parameters',
-      data: validation.error.flatten()
-    })
-  }
+  const validationData = await readValidatedBody(event, updateScheduleExceptionInputSchema.parse)
 
   const existing = await prisma.cbtfScheduleException.findUnique({
     where: { id }
@@ -37,25 +29,25 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   const data: Record<string, any> = {}
 
-  if (validation.data.date !== undefined) {
-    const calendarDate = extractCalendarDate(validation.data.date, DEFAULT_CBTF_TIMEZONE)
+  if (validationData.date !== undefined) {
+    const calendarDate = extractCalendarDate(validationData.date, DEFAULT_CBTF_TIMEZONE)
     data.date = new Date(`${calendarDate}T00:00:00.000Z`)
   }
 
-  if (validation.data.isClosed !== undefined) {
-    data.isClosed = validation.data.isClosed
+  if (validationData.isClosed !== undefined) {
+    data.isClosed = validationData.isClosed
   }
 
-  if (validation.data.openTime !== undefined) {
-    data.openTime = validation.data.openTime || null
+  if (validationData.openTime !== undefined) {
+    data.openTime = validationData.openTime || null
   }
 
-  if (validation.data.closeTime !== undefined) {
-    data.closeTime = validation.data.closeTime || null
+  if (validationData.closeTime !== undefined) {
+    data.closeTime = validationData.closeTime || null
   }
 
-  if (validation.data.reason !== undefined) {
-    data.reason = validation.data.reason || null
+  if (validationData.reason !== undefined) {
+    data.reason = validationData.reason || null
   }
 
   const updated = await prisma.cbtfScheduleException.update({

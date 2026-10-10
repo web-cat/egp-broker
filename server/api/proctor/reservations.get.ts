@@ -1,4 +1,4 @@
-import { defineEventHandler, getQuery, createError } from 'h3'
+import { defineEventHandler, getValidatedQuery, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { toCbtfReservationDto } from '@@/server/utils/cbtf'
 import { cbtfReservationQuerySchema } from '@@/shared/schemas/cbtf.schema'
@@ -17,9 +17,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const rawQuery = getQuery(event)
-  const parsed = cbtfReservationQuerySchema.safeParse(rawQuery)
-  const query = parsed.success ? parsed.data : { page: 1, pageSize: 50, upcomingOnly: true }
+  const query = await getValidatedQuery(event, cbtfReservationQuerySchema.parse)
 
   const where: Prisma.CbtfReservationWhereInput = {}
 

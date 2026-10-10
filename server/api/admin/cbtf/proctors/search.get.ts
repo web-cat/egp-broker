@@ -1,4 +1,4 @@
-import { defineEventHandler, getQuery, createError } from 'h3'
+import { defineEventHandler, getValidatedQuery, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { searchUserByEmailSchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
@@ -12,17 +12,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const query = getQuery(event)
-  const validation = searchUserByEmailSchema.safeParse(query)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid email query parameter',
-      data: validation.error.flatten()
-    })
-  }
-
-  const { email } = validation.data
+  const { email } = await getValidatedQuery(event, searchUserByEmailSchema.parse)
   const user = await prisma.user.findUnique({
     where: { email },
     select: {

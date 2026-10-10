@@ -53,7 +53,9 @@ describe('API: Course GTA Shifts Endpoints', () => {
       ...actual,
       defineEventHandler: (handler: any) => handler,
       readBody: (event: any) => Promise.resolve(event._body || {}),
+      readValidatedBody: (event: any, validator: any) => validator(event._body || {}),
       getQuery: (event: any) => event._query || {},
+      getValidatedQuery: (event: any, validator: any) => validator(event._query || {}),
       getRouterParam: (event: any, name: string) => event.context?.params?.[name] || null,
       createError: (opts: any) => {
         const err = new Error(opts.statusMessage || 'Error')

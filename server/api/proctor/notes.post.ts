@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { createReservationNoteInputSchema } from '@@/shared/schemas/cbtf.schema'
 import { addReservationNote } from '@@/server/utils/cbtf'
@@ -15,22 +15,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const body = await readBody(event)
-  const validation = createReservationNoteInputSchema.safeParse(body)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid note data',
-      data: validation.error.flatten()
-    })
-  }
+  const noteInput = await readValidatedBody(event, createReservationNoteInputSchema.parse)
 
   const note = await addReservationNote(prisma as any, {
-    reservationId: validation.data.reservationId,
-    seatNumber: validation.data.seatNumber,
+    reservationId: noteInput.reservationId,
+    seatNumber: noteInput.seatNumber,
     authorId: session.user.id,
-    content: validation.data.content,
-    hasPhotos: validation.data.hasPhotos
+    content: noteInput.content,
+    hasPhotos: noteInput.hasPhotos
   })
 
   return {

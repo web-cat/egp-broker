@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { cbtfBatchGenerateShiftsSchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
@@ -12,17 +12,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const body = await readBody(event)
-  const validation = cbtfBatchGenerateShiftsSchema.safeParse(body)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid batch shift parameters',
-      data: validation.error.flatten()
-    })
-  }
-
-  const { facilityId, userId, startDate, endDate, shifts } = validation.data
+  const { facilityId, userId, startDate, endDate, shifts } = await readValidatedBody(
+    event,
+    cbtfBatchGenerateShiftsSchema.parse
+  )
 
   const start = new Date(`${startDate}T00:00:00Z`)
   const end = new Date(`${endDate}T23:59:59Z`)

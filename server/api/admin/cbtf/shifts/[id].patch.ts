@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, getRouterParam, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, getRouterParam, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { cbtfUpdateProctorShiftInputSchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
@@ -17,17 +17,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 400, statusMessage: 'Shift ID is required' })
   }
 
-  const body = await readBody(event)
-  const validation = cbtfUpdateProctorShiftInputSchema.safeParse(body)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid shift update parameters',
-      data: validation.error.flatten()
-    })
-  }
-
-  const { userId, startTime, endTime } = validation.data
+  const { userId, startTime, endTime } = await readValidatedBody(
+    event,
+    cbtfUpdateProctorShiftInputSchema.parse
+  )
 
   const existing = await prisma.cbtfProctorShift.findUnique({
     where: { id }

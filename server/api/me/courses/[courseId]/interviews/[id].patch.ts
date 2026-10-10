@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseMember } from '@@/server/utils/gta-interview'
 import { updateGtaInterviewReservationInputSchema } from '@@/shared/schemas/gta-interview.schema'
@@ -23,14 +23,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
-  const body = await readBody(event)
-  const validation = updateGtaInterviewReservationInputSchema.safeParse(body)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: validation.error.issues[0]?.message || 'Invalid input data'
-    })
-  }
+  const { status, notes } = await readValidatedBody(
+    event,
+    updateGtaInterviewReservationInputSchema.parse
+  )
 
   const reservation = await prisma.gtaInterviewReservation.findFirst({
     where: {
@@ -52,7 +48,6 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   }
 
   const updateData: any = {}
-  const { status, notes } = validation.data
 
   if (status) {
     updateData.status = status

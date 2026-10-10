@@ -68,6 +68,12 @@ export const passPortPhase2CredentialsSchema = z.object({
 
 export type PassPortPhase2Credentials = z.infer<typeof passPortPhase2CredentialsSchema>
 
+export const passPortCredentialsQuerySchema = z.object({
+  token: z.string().min(1, 'Registration token is required')
+})
+
+export type PassPortCredentialsQuery = z.infer<typeof passPortCredentialsQuerySchema>
+
 // =============================================================================
 // EXTENSION DISPATCH SCHEMAS
 // =============================================================================

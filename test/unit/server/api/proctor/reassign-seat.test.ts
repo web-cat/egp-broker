@@ -40,6 +40,7 @@ describe('API: Proctor Reassign Seat Endpoint', () => {
       ...actual,
       defineEventHandler: (handler: any) => handler,
       readBody: (event: any) => Promise.resolve(event._body || {}),
+      readValidatedBody: (event: any, validator: any) => validator(event._body || {}),
       createError: (opts: any) => {
         const err = new Error(opts.statusMessage || 'Error')
         Object.assign(err, opts)
@@ -147,7 +148,7 @@ describe('API: Proctor Reassign Seat Endpoint', () => {
       await expect(reassignSeatPost(event)).rejects.toThrowError(
         expect.objectContaining({
           statusCode: 400,
-          statusMessage: 'Cannot reassign seat for reservation with status \'CHECKED_OUT\''
+          statusMessage: "Cannot reassign seat for reservation with status 'CHECKED_OUT'"
         })
       )
     })

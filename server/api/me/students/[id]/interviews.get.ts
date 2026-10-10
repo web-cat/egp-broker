@@ -1,7 +1,8 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3'
+import { defineEventHandler, createError, getRouterParam, getValidatedQuery } from 'h3'
 import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { StudentInterviewHistoryRow } from '@@/shared/models/teacher'
+import { studentContextQuerySchema } from '@@/shared/schemas/course.schema'
 import { getCurrentEnrollment } from '@@/server/utils/enrollments'
 import { getStudentInterviewHistory } from '@@/server/utils/teacher'
 import { assertCourseMember } from '@@/server/utils/gta-interview'
@@ -44,9 +45,8 @@ export default defineEventHandler(
       })
     }
 
-    const query = getQuery(event)
-    const courseId =
-      (query.courseId as string) || (enrollment ? enrollment.courseId : user?.currentCourseId)
+    const query = await getValidatedQuery(event, studentContextQuerySchema.parse)
+    const courseId = query.courseId || (enrollment ? enrollment.courseId : user?.currentCourseId)
     if (!courseId) {
       throw createError({
         statusCode: 400,

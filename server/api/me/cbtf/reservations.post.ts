@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { createReservationInputSchema } from '@@/shared/schemas/cbtf.schema'
 import {
@@ -36,21 +36,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
   let targetCourseLabel: string | null = null
 
   try {
-    const body = await readBody(event)
-    if (body?.startTime && typeof body.startTime === 'string') {
-      targetSlot = body.startTime
-    }
-
     currentStep = 'Validating Input Schema'
-    const validation = createReservationInputSchema.safeParse(body)
-    if (!validation.success) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid reservation request',
-        data: validation.error.flatten()
-      })
-    }
-    const { assignmentId, startTime: startTimeStr } = validation.data
+    const { assignmentId, startTime: startTimeStr } = await readValidatedBody(
+      event,
+      createReservationInputSchema.parse
+    )
     targetSlot = startTimeStr
 
     currentStep = 'Checking 5-Minute Boundary Alignment'

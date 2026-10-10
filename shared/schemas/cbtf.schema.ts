@@ -420,3 +420,21 @@ export const cbtfProctorReassignSeatSchema = z.object({
 })
 
 export type CbtfProctorReassignSeatInput = z.infer<typeof cbtfProctorReassignSeatSchema>
+
+export const proctorReservationActionSchema = z.object({
+  reservationId: z.string().trim().min(1, 'Reservation ID is required')
+})
+
+export type ProctorReservationActionInput = z.infer<typeof proctorReservationActionSchema>
+
+export const proctorStatusInputSchema = z.object({
+  isOnDuty: z.boolean().default(false)
+})
+
+export type ProctorStatusInput = z.infer<typeof proctorStatusInputSchema>
+
+export const proctorLookupQuerySchema = z.object({
+  studentId: z.string().trim().min(1, 'Student ID query parameter is required')
+})
+
+export type ProctorLookupQuery = z.infer<typeof proctorLookupQuerySchema>

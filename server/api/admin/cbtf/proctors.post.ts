@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { grantProctorRoleInputSchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
@@ -12,17 +12,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const body = await readBody(event)
-  const validation = grantProctorRoleInputSchema.safeParse(body)
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid input data',
-      data: validation.error.flatten()
-    })
-  }
-
-  const { userId } = validation.data
+  const { userId } = await readValidatedBody(event, grantProctorRoleInputSchema.parse)
   const user = await prisma.user.update({
     where: { id: userId },
     data: {

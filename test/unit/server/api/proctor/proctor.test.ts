@@ -60,6 +60,8 @@ describe('API: Proctor Operations Endpoints', () => {
       defineEventHandler: (handler: any) => handler,
       getQuery: (event: any) => event._query || {},
       readBody: (event: any) => Promise.resolve(event._body || {}),
+      getValidatedQuery: (event: any, validator: any) => validator(event._query || {}),
+      readValidatedBody: (event: any, validator: any) => validator(event._body || {}),
       createError: (opts: any) => {
         const err = new Error(opts.statusMessage || 'Error')
         Object.assign(err, opts)

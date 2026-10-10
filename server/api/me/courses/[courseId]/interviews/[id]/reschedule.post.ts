@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseMember } from '@@/server/utils/gta-interview'
 import { rescheduleInterviewReservationInputSchema } from '@@/shared/schemas/gta-interview.schema'
@@ -76,9 +76,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
-  const body = await readBody(event).catch(() => ({}))
-  const parsed = rescheduleInterviewReservationInputSchema.safeParse(body)
-  const targetGtaId = parsed.success ? parsed.data.targetGtaId : undefined
+  const { targetGtaId } = await readValidatedBody(event, (b) =>
+    rescheduleInterviewReservationInputSchema.parse(b || {})
+  )
 
   // Determine local date string and time of this reservation
   const resDateStr = getLocalDateString(reservation.startTime, DEFAULT_GTA_TIMEZONE)

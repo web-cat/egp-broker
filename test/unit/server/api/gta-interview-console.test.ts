@@ -43,7 +43,29 @@ describe('API: GTA Interview Console Endpoints', () => {
       ...actual,
       defineEventHandler: (handler: any) => handler,
       readBody: (event: any) => Promise.resolve(event._body || {}),
+      readValidatedBody: (event: any, validator: any) => {
+        try {
+          return validator(event._body || {})
+        } catch (err: any) {
+          throw Object.assign(new Error(err.message || 'Validation error'), {
+            statusCode: 400,
+            statusMessage: err.message || 'Bad Request',
+            data: err
+          })
+        }
+      },
       getQuery: (event: any) => event._query || {},
+      getValidatedQuery: (event: any, validator: any) => {
+        try {
+          return validator(event._query || {})
+        } catch (err: any) {
+          throw Object.assign(new Error(err.message || 'Validation error'), {
+            statusCode: 400,
+            statusMessage: err.message || 'Bad Request',
+            data: err
+          })
+        }
+      },
       getRouterParam: (event: any, name: string) => event.context?.params?.[name] || null,
       createError: (opts: any) => {
         const err = new Error(opts.statusMessage || 'Error')

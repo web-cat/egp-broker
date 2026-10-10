@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseMember } from '@@/server/utils/gta-interview'
 import { createGtaInterviewReservationInputSchema } from '@@/shared/schemas/gta-interview.schema'
@@ -27,21 +27,12 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   const auth = await assertCourseMember(event, courseId)
 
-  const body = await readBody(event)
-  const validation = createGtaInterviewReservationInputSchema.safeParse({
-    assignmentId,
-    ...body
-  })
-
-  if (!validation.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid interview reservation parameters',
-      data: validation.error.flatten()
+  const { startTime, rescheduleReservationId } = await readValidatedBody(event, (body) =>
+    createGtaInterviewReservationInputSchema.parse({
+      assignmentId,
+      ...body
     })
-  }
-
-  const { startTime, rescheduleReservationId } = validation.data
+  )
   const requestedStartTime = new Date(startTime)
 
   // Enforce minimum lead time (2 hours in advance of now)

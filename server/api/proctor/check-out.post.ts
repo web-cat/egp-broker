@@ -1,6 +1,7 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { checkOutReservation } from '@@/server/utils/cbtf'
+import { proctorReservationActionSchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
@@ -14,12 +15,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const body = await readBody(event)
-  const reservationId = body?.reservationId
-
-  if (!reservationId || typeof reservationId !== 'string') {
-    throw createError({ statusCode: 400, statusMessage: 'Reservation ID is required' })
-  }
+  const { reservationId } = await readValidatedBody(event, proctorReservationActionSchema.parse)
 
   const updated = await checkOutReservation(prisma as any, reservationId, session.user.id)
 

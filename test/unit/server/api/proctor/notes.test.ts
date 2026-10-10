@@ -47,6 +47,18 @@ describe('API: Proctor Notes Endpoints', () => {
       defineEventHandler: (handler: any) => handler,
       getQuery: (event: any) => event._query || {},
       readBody: (event: any) => Promise.resolve(event._body || {}),
+      getValidatedQuery: (event: any, validator: any) => validator(event._query || {}),
+      readValidatedBody: (event: any, validator: any) => {
+        try {
+          return validator(event._body || {})
+        } catch (err: any) {
+          throw Object.assign(new Error(err.message || 'Validation error'), {
+            statusCode: 400,
+            statusMessage: err.message || 'Bad Request',
+            data: err
+          })
+        }
+      },
       createError: (opts: any) => {
         const err = new Error(opts.statusMessage || 'Error')
         Object.assign(err, opts)

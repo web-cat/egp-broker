@@ -14,6 +14,8 @@ vi.mock('h3', async (importOriginal) => {
     defineEventHandler: (handler: (event: any) => any) => handler,
     getQuery: vi.fn((event) => event.query || {}),
     readBody: vi.fn((event) => Promise.resolve(event.body || {})),
+    getValidatedQuery: vi.fn((event, validator) => validator(event.query || {})),
+    readValidatedBody: vi.fn((event, validator) => validator(event.body || {})),
     createError: (opts: any) => opts
   }
 })
@@ -51,7 +53,10 @@ describe('API: POST /api/passport/v1/credentials', () => {
 
     const result = await credentialsPost(event)
 
-    expect(handlePassPortCredentialsDelivery).toHaveBeenCalledWith('test-token-123', payload)
+    expect(handlePassPortCredentialsDelivery).toHaveBeenCalledWith(
+      'test-token-123',
+      expect.objectContaining(payload)
+    )
     expect(result).toEqual({
       statusCode: 200,
       data: mockToolRow

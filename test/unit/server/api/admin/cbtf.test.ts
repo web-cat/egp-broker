@@ -75,6 +75,7 @@ describe('API: Admin CBTF Endpoints', () => {
       ...actual,
       defineEventHandler: (handler: any) => handler,
       readBody: (event: any) => Promise.resolve(event._body || {}),
+      readValidatedBody: (event: any, validator: any) => validator(event._body || {}),
       getRouterParam: (event: any, name: string) => event.context?.params?.[name] || null,
       createError: (opts: any) => {
         const err = new Error(opts.statusMessage || 'Error')

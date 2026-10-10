@@ -1,6 +1,7 @@
-import { defineEventHandler, getQuery, createError } from 'h3'
+import { defineEventHandler, getValidatedQuery, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { lookupStudentForProctor } from '@@/server/utils/cbtf'
+import { proctorLookupQuerySchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
@@ -14,12 +15,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const query = getQuery(event)
-  const studentId = typeof query.studentId === 'string' ? query.studentId : ''
-
-  if (!studentId.trim()) {
-    throw createError({ statusCode: 400, statusMessage: 'Student ID query parameter is required' })
-  }
+  const { studentId } = await getValidatedQuery(event, proctorLookupQuerySchema.parse)
 
   const result = await lookupStudentForProctor(prisma as any, studentId)
 

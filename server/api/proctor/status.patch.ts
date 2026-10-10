@@ -1,4 +1,5 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
+import { proctorStatusInputSchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<{ isOnDuty: boolean }>> => {
@@ -12,8 +13,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<{ isOnDuty:
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const body = await readBody(event)
-  const isOnDuty = Boolean(body?.isOnDuty)
+  const { isOnDuty } = await readValidatedBody(event, proctorStatusInputSchema.parse)
 
   await setUserSession(event, {
     ...session,

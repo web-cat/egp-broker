@@ -73,7 +73,7 @@ The refactoring items below are grouped by priority:
 
 ---
 
-#### TASK-02: Universal Server-Side Input Validation (Zod Fail-Fast)
+#### TASK-02: Universal Server-Side Input Validation (Zod Fail-Fast) [COMPLETED]
 
 - **Constitution Rule:** GEMINI.md § I & § IV (_"Fail Fast: Validation must occur at the earliest possible boundary (API entry or Form submission) using Zod. All server/api entries must validate input using Zod. We do not trust the client."_)
 - **Current Violations:** Over 35 endpoints use unvalidated `readBody(event)` or `getQuery(event)` without Zod schemas:

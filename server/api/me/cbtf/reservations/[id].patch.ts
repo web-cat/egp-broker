@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { rescheduleReservationInputSchema } from '@@/shared/schemas/cbtf.schema'
 import {
@@ -41,21 +41,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       throw createError({ statusCode: 400, statusMessage: 'Reservation ID is required' })
     }
 
-    const body = await readBody(event)
-    if (body?.startTime && typeof body.startTime === 'string') {
-      targetSlot = body.startTime
-    }
-
     currentStep = 'Validating Input Schema'
-    const validation = rescheduleReservationInputSchema.safeParse(body)
-    if (!validation.success) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid reschedule request',
-        data: validation.error.flatten()
-      })
-    }
-    const { startTime: newStartTimeStr } = validation.data
+    const { startTime: newStartTimeStr } = await readValidatedBody(
+      event,
+      rescheduleReservationInputSchema.parse
+    )
     targetSlot = newStartTimeStr
 
     currentStep = 'Checking 5-Minute Boundary Alignment'
