@@ -55,20 +55,71 @@
 
             <div
               v-if="state.isSchedulable"
-              class="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-4 border-l-2 border-primary-500/50"
+              class="space-y-4 pl-4 border-l-2 border-primary-500/50"
             >
-              <BaseFormInput
-                v-model="state.scheduleWindowStart"
-                name="scheduleWindowStart"
-                label="Reservation Window Start"
-                type="datetime-local"
-              />
-              <BaseFormInput
-                v-model="state.scheduleWindowEnd"
-                name="scheduleWindowEnd"
-                label="Reservation Window End"
-                type="datetime-local"
-              />
+              <div>
+                <label class="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                  Reservation Block Duration
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    class="p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between"
+                    :class="[
+                      state.cbtfDurationMinutes === 60
+                        ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 font-medium ring-1 ring-primary-500'
+                        : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 text-neutral-700 dark:text-neutral-300'
+                    ]"
+                    @click="state.cbtfDurationMinutes = 60"
+                  >
+                    <div>
+                      <div class="text-xs font-semibold">60 Minutes</div>
+                      <div class="text-[11px] text-neutral-500">Standard Exam (≤ 50 min)</div>
+                    </div>
+                    <UIcon
+                      v-if="state.cbtfDurationMinutes === 60"
+                      name="i-lucide-check-circle-2"
+                      class="w-4 h-4 text-primary-500 shrink-0"
+                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    class="p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between"
+                    :class="[
+                      state.cbtfDurationMinutes === 30
+                        ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 font-medium ring-1 ring-primary-500'
+                        : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 text-neutral-700 dark:text-neutral-300'
+                    ]"
+                    @click="state.cbtfDurationMinutes = 30"
+                  >
+                    <div>
+                      <div class="text-xs font-semibold">30 Minutes</div>
+                      <div class="text-[11px] text-neutral-500">Quiz / Short Test (≤ 25 min)</div>
+                    </div>
+                    <UIcon
+                      v-if="state.cbtfDurationMinutes === 30"
+                      name="i-lucide-check-circle-2"
+                      class="w-4 h-4 text-primary-500 shrink-0"
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <BaseFormInput
+                  v-model="state.scheduleWindowStart"
+                  name="scheduleWindowStart"
+                  label="Reservation Window Start"
+                  type="datetime-local"
+                />
+                <BaseFormInput
+                  v-model="state.scheduleWindowEnd"
+                  name="scheduleWindowEnd"
+                  label="Reservation Window End"
+                  type="datetime-local"
+                />
+              </div>
             </div>
           </div>
 
@@ -205,6 +256,7 @@ const emit = defineEmits<{
       availableFrom: string | null
       acceptUntil: string | null
       isSchedulable?: boolean | null
+      cbtfDurationMinutes?: number | null
       scheduleWindowStart?: string | null
       scheduleWindowEnd?: string | null
       hasInterviews?: boolean | null
@@ -233,6 +285,7 @@ const state = reactive({
   availableFrom: '',
   acceptUntil: '',
   isSchedulable: false,
+  cbtfDurationMinutes: 60,
   scheduleWindowStart: '',
   scheduleWindowEnd: '',
   hasInterviews: false,
@@ -281,6 +334,7 @@ watch(
       state.availableFrom = toLocalDatetime(assignment.availableFrom)
       state.acceptUntil = toLocalDatetime(assignment.acceptUntil)
       state.isSchedulable = !!assignment.isSchedulable
+      state.cbtfDurationMinutes = assignment.cbtfDurationMinutes ?? 60
       state.scheduleWindowStart = toLocalDatetime(assignment.scheduleWindowStart ?? null)
       state.scheduleWindowEnd = toLocalDatetime(assignment.scheduleWindowEnd ?? null)
       state.hasInterviews = !!assignment.hasInterviews
@@ -300,6 +354,7 @@ watch(
       state.availableFrom = ''
       state.acceptUntil = ''
       state.isSchedulable = false
+      state.cbtfDurationMinutes = 60
       state.scheduleWindowStart = ''
       state.scheduleWindowEnd = ''
       state.hasInterviews = false
@@ -321,6 +376,7 @@ const handleSubmit = async () => {
       availableFrom: state.availableFrom ? new Date(state.availableFrom).toISOString() : null,
       acceptUntil: state.acceptUntil ? new Date(state.acceptUntil).toISOString() : null,
       isSchedulable: state.isSchedulable,
+      cbtfDurationMinutes: state.isSchedulable ? (state.cbtfDurationMinutes || 60) : 60,
       scheduleWindowStart:
         state.isSchedulable && state.scheduleWindowStart
           ? new Date(state.scheduleWindowStart).toISOString()

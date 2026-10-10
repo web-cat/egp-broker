@@ -64,6 +64,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
           : undefined,
       published: body.published !== undefined ? body.published : undefined,
       isSchedulable: body.isSchedulable !== undefined ? body.isSchedulable : undefined,
+      cbtfDurationMinutes:
+        body.cbtfDurationMinutes !== undefined ? body.cbtfDurationMinutes : undefined,
       scheduleWindowStart: body.scheduleWindowStart
         ? new Date(body.scheduleWindowStart)
         : body.scheduleWindowStart === null

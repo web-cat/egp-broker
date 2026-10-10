@@ -51,6 +51,9 @@ const globalStubs = {
   },
   UBadge: {
     template: '<span class="badge"><slot /></span>'
+  },
+  UIcon: {
+    template: '<span class="icon" />'
   }
 }
 
@@ -138,6 +141,102 @@ describe('AssignmentEditPanel.vue - GTA Grading Interviews', () => {
           hasInterviews: true,
           interviewWindowStart: expect.any(String),
           interviewWindowEnd: expect.any(String)
+        })
+      })
+    )
+  })
+
+  it('populates and submits cbtfDurationMinutes for schedulable assignments', async () => {
+    const assignment = {
+      id: 'asg-cbtf',
+      title: 'Quiz 1',
+      dueDate: null,
+      availableFrom: null,
+      acceptUntil: null,
+      isSchedulable: true,
+      cbtfDurationMinutes: 30,
+      scheduleWindowStart: '2026-09-21T09:00:00.000Z',
+      scheduleWindowEnd: '2026-09-25T17:00:00.000Z',
+      eligibilities: []
+    }
+
+    const wrapper = mount(AssignmentEditPanel, {
+      props: {
+        open: true,
+        assignment: assignment as any,
+        courseId: 'course-1',
+        passTypes: []
+      },
+      global: {
+        stubs: globalStubs
+      }
+    })
+
+    await flushPromises()
+
+    const form = wrapper.find('form')
+    await form.trigger('submit')
+    await flushPromises()
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/me/assignments/asg-cbtf',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: expect.objectContaining({
+          isSchedulable: true,
+          cbtfDurationMinutes: 30
+        })
+      })
+    )
+  })
+
+  it('toggles cbtfDurationMinutes from 60 to 30 on button click', async () => {
+    const assignment = {
+      id: 'asg-cbtf-default',
+      title: 'Exam 1',
+      dueDate: null,
+      availableFrom: null,
+      acceptUntil: null,
+      isSchedulable: true,
+      cbtfDurationMinutes: 60,
+      scheduleWindowStart: '2026-09-21T09:00:00.000Z',
+      scheduleWindowEnd: '2026-09-25T17:00:00.000Z',
+      eligibilities: []
+    }
+
+    const wrapper = mount(AssignmentEditPanel, {
+      props: {
+        open: true,
+        assignment: assignment as any,
+        courseId: 'course-1',
+        passTypes: []
+      },
+      global: {
+        stubs: globalStubs
+      }
+    })
+
+    await flushPromises()
+
+    // Find all buttons in the form; the 30-minute button contains "30 Minutes"
+    const buttons = wrapper.findAll('button')
+    const button30 = buttons.find((b) => b.text().includes('30 Minutes'))
+    expect(button30).toBeDefined()
+
+    await button30?.trigger('click')
+    await flushPromises()
+
+    const form = wrapper.find('form')
+    await form.trigger('submit')
+    await flushPromises()
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/me/assignments/asg-cbtf-default',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: expect.objectContaining({
+          isSchedulable: true,
+          cbtfDurationMinutes: 30
         })
       })
     )

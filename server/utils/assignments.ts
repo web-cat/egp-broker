@@ -403,6 +403,7 @@ export async function createAssignment(data: CreateAssignmentData) {
       availableFrom: data.availableFrom ? new Date(data.availableFrom) : null,
       acceptUntil: data.acceptUntil ? new Date(data.acceptUntil) : null,
       isSchedulable: data.isSchedulable ?? false,
+      cbtfDurationMinutes: data.cbtfDurationMinutes ?? 60,
       scheduleWindowStart: data.scheduleWindowStart ? new Date(data.scheduleWindowStart) : null,
       scheduleWindowEnd: data.scheduleWindowEnd ? new Date(data.scheduleWindowEnd) : null,
       hasInterviews: data.hasInterviews ?? false,

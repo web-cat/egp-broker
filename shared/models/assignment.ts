@@ -25,6 +25,7 @@ export const assignmentRowSchema = z.object({
   eligibleUntil: z.string().nullable().optional(),
   published: z.boolean().default(true),
   isSchedulable: z.boolean().default(false),
+  cbtfDurationMinutes: z.number().int().default(60),
   scheduleWindowStart: z.string().nullable().optional(),
   scheduleWindowEnd: z.string().nullable().optional(),
   hasInterviews: z.boolean().default(false),
@@ -76,6 +77,13 @@ export const createAssignmentSchema = z.object({
   acceptUntil: z.string().nullable().optional(),
   published: z.boolean().optional(),
   isSchedulable: z.boolean().optional(),
+  cbtfDurationMinutes: z
+    .number()
+    .int()
+    .refine((val) => val === 30 || val === 60, {
+      message: 'CBTF duration must be 30 or 60 minutes'
+    })
+    .optional(),
   scheduleWindowStart: z.string().nullable().optional(),
   scheduleWindowEnd: z.string().nullable().optional(),
   hasInterviews: z.boolean().optional(),
@@ -91,6 +99,13 @@ export const updateAssignmentSchema = z.object({
   acceptUntil: z.string().nullable().optional(),
   published: z.boolean().optional(),
   isSchedulable: z.boolean().optional(),
+  cbtfDurationMinutes: z
+    .number()
+    .int()
+    .refine((val) => val === 30 || val === 60, {
+      message: 'CBTF duration must be 30 or 60 minutes'
+    })
+    .optional(),
   scheduleWindowStart: z.string().nullable().optional(),
   scheduleWindowEnd: z.string().nullable().optional(),
   hasInterviews: z.boolean().optional(),
