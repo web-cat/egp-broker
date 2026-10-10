@@ -24,7 +24,7 @@
 - [x] Student reservation API (`/api/me/cbtf/reservations`) supporting 30m and 60m durations and offset quota checks
 - [x] Student UI rendering 30-minute or 60-minute slot options based on assignment configuration
 - [x] Teacher assignment configuration UI allowing instructors to toggle 30-minute quiz vs 60-minute exam
-- [ ] 100% Vitest unit test coverage for new allocation math, slot generation, and booking endpoints
+- [x] 100% Vitest unit test coverage for new allocation math, slot generation, and booking endpoints
 
 ---
 
@@ -50,6 +50,6 @@
 
 ### Phase 4: Integration Verification, Proctor Hot-Spares & Final Audit
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Verify end-to-end booking, proctor check-in and checkout flows, and test emergency hot-spare seat reassignments (Seats 19 & 20). Run full test suites across the repository to verify 100% behavioral coverage and zero regressions.  
 **Requirements**: REQ-611
