@@ -4,6 +4,7 @@ import { createReservationInputSchema } from '@@/shared/schemas/cbtf.schema'
 import {
   getPrimaryCbtfFacility,
   getFacilityOperatingHoursForDate,
+  calculatePhasedSeats,
   calculateMaxArrivalsPerSlot,
   assignNextSeat,
   getStudentSchedulingWindow,
@@ -70,10 +71,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       })
     }
 
-    // 2. Test reservations are strictly 1 hour
-    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000)
-
-    // 2b. Ensure reservation is in the future
+    // 2. Ensure reservation is in the future
     currentStep = 'Verifying Slot Is In The Future'
     if (startTime < new Date()) {
       throw createError({
@@ -96,6 +94,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
         availableFrom: true,
         dueDate: true,
         acceptUntil: true,
+        cbtfDurationMinutes: true,
         course: { select: { label: true, title: true } }
       }
     })
@@ -108,6 +107,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     }
     targetAssignmentTitle = assignment.title
     targetCourseLabel = assignment.course?.label || assignment.course?.title || null
+
+    // 4. Compute end time based on assignment duration
+    const durationMinutes = assignment.cbtfDurationMinutes ?? 60
+    const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
 
     // 4. Verify enrollment
     currentStep = 'Verifying Course Enrollment'
@@ -230,8 +233,19 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     currentStep = 'Booking Reservation & Allocating Seat'
     const newReservation = await prisma.$transaction(
       async (tx) => {
-        // A. Enforce arrival throttle limit: ceil(totalSeats / 12)
-        const maxArrivals = calculateMaxArrivalsPerSlot(facility.totalSeats)
+        const offset = Math.floor(startTime.getUTCMinutes() / 5)
+        const seatOrder: number[] = Array.isArray(facility.seatAllocationOrder)
+          ? (facility.seatAllocationOrder as number[])
+          : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
+        const elasticSeatCount = facility.elasticSeatCount ?? (seatOrder.length >= 12 ? 2 : 0)
+
+        // A. Enforce arrival throttle limit for this 5-minute arrival offset
+        const maxArrivals = calculateMaxArrivalsPerSlot(
+          facility.totalSeats,
+          offset,
+          durationMinutes,
+          elasticSeatCount
+        )
         const concurrentArrivals = await tx.cbtfReservation.count({
           where: {
             facilityId: facility.id,
@@ -258,7 +272,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
           select: { seatNumber: true }
         })
 
-        if (activeReservations.length >= facility.totalSeats) {
+        const phasedSeats = calculatePhasedSeats(facility.totalSeats, elasticSeatCount)
+        const phasedSeatOrder = seatOrder.slice(0, phasedSeats)
+        const occupiedSeats = new Set(
+          activeReservations.map((r) => r.seatNumber).filter((s): s is number => s !== null)
+        )
+        const isCapacityOk = phasedSeatOrder.some((seat) => !occupiedSeats.has(seat))
+
+        if (!isCapacityOk) {
           throw createError({
             statusCode: 409,
             statusMessage: 'Testing facility is completely full during this time slot'
@@ -266,11 +287,15 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
         }
 
         // C. Allocate seat based on 5-minute arrival offset
-        const seatOrder: number[] = Array.isArray(facility.seatAllocationOrder)
-          ? (facility.seatAllocationOrder as number[])
-          : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
-
-        const assignedSeat = assignNextSeat(seatOrder, startTime, endTime, activeReservations)
+        const assignedSeat = assignNextSeat(
+          seatOrder,
+          startTime,
+          endTime,
+          activeReservations,
+          null,
+          durationMinutes,
+          elasticSeatCount
+        )
 
         // D. Create or reuse reservation
         let created: any

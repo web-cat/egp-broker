@@ -4,6 +4,7 @@ import { rescheduleReservationInputSchema } from '@@/shared/schemas/cbtf.schema'
 import {
   getPrimaryCbtfFacility,
   getFacilityOperatingHoursForDate,
+  calculatePhasedSeats,
   calculateMaxArrivalsPerSlot,
   assignNextSeat,
   getStudentSchedulingWindow,
@@ -74,8 +75,6 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
       })
     }
 
-    const newEndTime = new Date(newStartTime.getTime() + 60 * 60 * 1000)
-
     // Ensure new time is in the future
     currentStep = 'Verifying Slot Is In The Future'
     if (newStartTime < new Date()) {
@@ -106,6 +105,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     targetAssignmentTitle = existing.assignment?.title || null
     targetCourseLabel =
       existing.assignment?.course?.label || existing.assignment?.course?.title || null
+
+    const durationMinutes = existing.assignment?.cbtfDurationMinutes ?? 60
+    const newEndTime = new Date(newStartTime.getTime() + durationMinutes * 60 * 1000)
 
     currentStep = 'Verifying Reservation Status'
     if (
@@ -181,8 +183,19 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
     currentStep = 'Rescheduling Reservation & Reallocating Seat'
     const updatedReservation = await prisma.$transaction(
       async (tx) => {
+        const offset = Math.floor(newStartTime.getUTCMinutes() / 5)
+        const seatOrder: number[] = Array.isArray(facility.seatAllocationOrder)
+          ? (facility.seatAllocationOrder as number[])
+          : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
+        const elasticSeatCount = facility.elasticSeatCount ?? (seatOrder.length >= 12 ? 2 : 0)
+
         // Check throttle limit at new slot (excluding current reservation)
-        const maxArrivals = calculateMaxArrivalsPerSlot(facility.totalSeats)
+        const maxArrivals = calculateMaxArrivalsPerSlot(
+          facility.totalSeats,
+          offset,
+          durationMinutes,
+          elasticSeatCount
+        )
         const concurrentArrivals = await tx.cbtfReservation.count({
           where: {
             facilityId: facility.id,
@@ -211,18 +224,29 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReserva
           select: { seatNumber: true }
         })
 
-        if (activeReservations.length >= facility.totalSeats) {
+        const phasedSeats = calculatePhasedSeats(facility.totalSeats, elasticSeatCount)
+        const phasedSeatOrder = seatOrder.slice(0, phasedSeats)
+        const occupiedSeats = new Set(
+          activeReservations.map((r) => r.seatNumber).filter((s): s is number => s !== null)
+        )
+        const isCapacityOk = phasedSeatOrder.some((seat) => !occupiedSeats.has(seat))
+
+        if (!isCapacityOk) {
           throw createError({
             statusCode: 409,
             statusMessage: 'Testing facility is completely full during this time slot'
           })
         }
 
-        const seatOrder: number[] = Array.isArray(facility.seatAllocationOrder)
-          ? (facility.seatAllocationOrder as number[])
-          : Array.from({ length: facility.totalSeats }, (_, i) => i + 1)
-
-        const assignedSeat = assignNextSeat(seatOrder, newStartTime, newEndTime, activeReservations)
+        const assignedSeat = assignNextSeat(
+          seatOrder,
+          newStartTime,
+          newEndTime,
+          activeReservations,
+          null,
+          durationMinutes,
+          elasticSeatCount
+        )
 
         const updated = await tx.cbtfReservation.update({
           where: { id: existing.id },

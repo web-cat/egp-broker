@@ -656,6 +656,134 @@ describe('API: CBTF Student Reservation Endpoints', () => {
         })
       )
     })
+
+    it('books a 30-minute reservation when assignment duration is 30 minutes', async () => {
+      const startTime = '2026-10-05T13:00:00.000Z'
+      const event = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        {
+          assignmentId: 'clh1234567890123456789012',
+          startTime
+        }
+      )
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'clh1234567890123456789012',
+        courseId: 'course-1',
+        title: 'Quiz 1',
+        isSchedulable: true,
+        cbtfDurationMinutes: 30,
+        scheduleWindowStart: new Date('2026-10-01T00:00:00.000Z'),
+        scheduleWindowEnd: new Date('2026-10-15T00:00:00.000Z'),
+        course: { label: 'CS 1114', title: 'Intro to Programming' }
+      } as any)
+      vi.mocked(prisma.enrollment.findFirst).mockResolvedValue({ id: 'enr-1' } as any)
+      vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValue(null)
+
+      vi.mocked(prisma.cbtfFacility.findFirst).mockResolvedValue({
+        id: 'fac-1',
+        name: 'Main CBTF',
+        totalSeats: 20,
+        elasticSeatCount: 2,
+        seatAllocationOrder: Array.from({ length: 20 }, (_, i) => i + 1)
+      } as any)
+
+      vi.mocked(prisma.cbtfScheduleException.findFirst).mockResolvedValue(null)
+      vi.mocked(prisma.cbtfOperatingHours.findUnique).mockResolvedValue({
+        openTime: '08:00',
+        closeTime: '17:00'
+      } as any)
+
+      vi.mocked(prisma.cbtfReservation.count).mockResolvedValueOnce(0)
+      vi.mocked(prisma.cbtfReservation.findMany).mockResolvedValueOnce([])
+      vi.mocked(prisma.cbtfReservation.create).mockResolvedValue({
+        id: 'res-quiz',
+        facilityId: 'fac-1',
+        assignmentId: 'clh1234567890123456789012',
+        userId: 'usr-1',
+        seatNumber: 1,
+        startTime: new Date(startTime),
+        endTime: new Date('2026-10-05T13:30:00.000Z'),
+        status: 'SCHEDULED',
+        assignment: { title: 'Quiz 1' },
+        user: { firstName: 'Demo', lastName: 'User', studentId: '906000001', avatarUrl: null }
+      } as any)
+
+      const response = await reservationsPost(event)
+      expect(response.statusCode).toBe(201)
+      expect(prisma.cbtfReservation.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            startTime: new Date('2026-10-05T13:00:00.000Z'),
+            endTime: new Date('2026-10-05T13:30:00.000Z')
+          })
+        })
+      )
+    })
+
+    it('enforces offset-specific arrival quota for 1-seat and 2-seat offsets in 60m mode', async () => {
+      const setupFacilityMock = () => {
+        vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+          id: 'clh1234567890123456789012',
+          courseId: 'course-1',
+          title: 'Exam 1',
+          isSchedulable: true,
+          cbtfDurationMinutes: 60,
+          scheduleWindowStart: new Date('2026-10-01T00:00:00.000Z'),
+          scheduleWindowEnd: new Date('2026-10-15T00:00:00.000Z'),
+          course: { label: 'CS 1114', title: 'Intro to Programming' }
+        } as any)
+        vi.mocked(prisma.enrollment.findFirst).mockResolvedValue({ id: 'enr-1' } as any)
+        vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValue(null)
+        vi.mocked(prisma.cbtfFacility.findFirst).mockResolvedValue({
+          id: 'fac-1',
+          name: 'Main CBTF',
+          totalSeats: 20,
+          elasticSeatCount: 2,
+          seatAllocationOrder: Array.from({ length: 20 }, (_, i) => i + 1)
+        } as any)
+        vi.mocked(prisma.cbtfScheduleException.findFirst).mockResolvedValue(null)
+        vi.mocked(prisma.cbtfOperatingHours.findUnique).mockResolvedValue({
+          openTime: '08:00',
+          closeTime: '17:00'
+        } as any)
+      }
+
+      // 1. Offset 1 (:05): 1 arrival succeeds, 2nd is rejected (quota = 1)
+      setupFacilityMock()
+      const event05 = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        { assignmentId: 'clh1234567890123456789012', startTime: '2026-10-05T13:05:00.000Z' }
+      )
+      vi.mocked(prisma.cbtfReservation.count).mockResolvedValueOnce(1)
+      await expect(reservationsPost(event05)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 409,
+          statusMessage: expect.stringContaining(
+            'Arrival capacity reached for this 5-minute time slot (maximum 1 arrivals)'
+          )
+        })
+      )
+
+      // 2. Offset 0 (:00): 2nd arrival is rejected when concurrent arrivals reach quota 2
+      setupFacilityMock()
+      const event00 = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        { assignmentId: 'clh1234567890123456789012', startTime: '2026-10-05T13:00:00.000Z' }
+      )
+      vi.mocked(prisma.cbtfReservation.count).mockResolvedValueOnce(2)
+      await expect(reservationsPost(event00)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 409,
+          statusMessage: expect.stringContaining(
+            'Arrival capacity reached for this 5-minute time slot (maximum 2 arrivals)'
+          )
+        })
+      )
+    })
   })
 
   describe('PATCH /api/me/cbtf/reservations/[id]', () => {
@@ -843,6 +971,72 @@ describe('API: CBTF Student Reservation Endpoints', () => {
         expect.objectContaining({
           statusCode: 409,
           statusMessage: expect.stringContaining('overlapping this time slot')
+        })
+      )
+    })
+
+    it('preserves assignment 30-minute duration when rescheduling', async () => {
+      const newStartTime = '2026-10-06T15:00:00.000Z'
+      const event = mockEvent(
+        { id: 'usr-1', globalRole: 'USER' },
+        {},
+        { startTime: newStartTime },
+        { id: 'res-1' }
+      )
+
+      vi.mocked(prisma.cbtfReservation.findUnique).mockResolvedValue({
+        id: 'res-1',
+        userId: 'usr-1',
+        status: 'SCHEDULED',
+        assignment: {
+          id: 'asg-quiz',
+          title: 'Quiz 1',
+          cbtfDurationMinutes: 30,
+          scheduleWindowStart: new Date('2026-10-01T00:00:00.000Z'),
+          scheduleWindowEnd: new Date('2026-10-15T00:00:00.000Z')
+        }
+      } as any)
+
+      vi.mocked(prisma.cbtfFacility.findFirst).mockResolvedValue({
+        id: 'fac-1',
+        name: 'Main CBTF',
+        totalSeats: 20,
+        elasticSeatCount: 2,
+        seatAllocationOrder: Array.from({ length: 20 }, (_, i) => i + 1)
+      } as any)
+
+      vi.mocked(prisma.cbtfScheduleException.findFirst).mockResolvedValue(null)
+      vi.mocked(prisma.cbtfOperatingHours.findUnique).mockResolvedValue({
+        openTime: '08:00',
+        closeTime: '17:00'
+      } as any)
+
+      vi.mocked(prisma.cbtfReservation.count).mockResolvedValue(0)
+      vi.mocked(prisma.cbtfReservation.findMany).mockResolvedValue([])
+      vi.mocked(prisma.cbtfReservation.findFirst).mockResolvedValue(null)
+
+      vi.mocked(prisma.cbtfReservation.update).mockResolvedValue({
+        id: 'res-1',
+        facilityId: 'fac-1',
+        assignmentId: 'asg-quiz',
+        userId: 'usr-1',
+        seatNumber: 1,
+        startTime: new Date(newStartTime),
+        endTime: new Date('2026-10-06T15:30:00.000Z'),
+        status: 'SCHEDULED',
+        assignment: { title: 'Quiz 1', cbtfDurationMinutes: 30 },
+        user: { firstName: 'Demo', lastName: 'User', studentId: '906000001', avatarUrl: null }
+      } as any)
+
+      const response = await reservationPatch(event)
+      expect(response.statusCode).toBe(200)
+      expect(prisma.cbtfReservation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'res-1' },
+          data: expect.objectContaining({
+            startTime: new Date(newStartTime),
+            endTime: new Date('2026-10-06T15:30:00.000Z')
+          })
         })
       )
     })
