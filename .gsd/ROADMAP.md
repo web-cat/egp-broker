@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 3: Student Scheduling Experience & Teacher Configuration UI
+> **Current Phase**: Phase 4: Integration Verification, Proctor Hot-Spares & Final Audit
 > **Milestone**: v6.0 — CBTF Phased Capacity & Duration Engine
 > **Goal**: Replace the 115-minute rolling window capacity filter with Periodic Phased Seat Allocation, supporting 18 phased seats and a 2-seat elastic pool, 30-minute and 60-minute reservation tiers, offset-specific arrival throttling, and true seat-level interval availability.
 
@@ -22,8 +22,8 @@
 - [x] True seat-specific interval availability algorithm eliminating the 115-minute phantom concurrency trap
 - [x] Seat allocation preserving primary channels without circular cross-channel cannibalization
 - [x] Student reservation API (`/api/me/cbtf/reservations`) supporting 30m and 60m durations and offset quota checks
-- [ ] Student UI rendering 30-minute or 60-minute slot options based on assignment configuration
-- [ ] Teacher assignment configuration UI allowing instructors to toggle 30-minute quiz vs 60-minute exam
+- [x] Student UI rendering 30-minute or 60-minute slot options based on assignment configuration
+- [x] Teacher assignment configuration UI allowing instructors to toggle 30-minute quiz vs 60-minute exam
 - [ ] 100% Vitest unit test coverage for new allocation math, slot generation, and booking endpoints
 
 ---
@@ -44,7 +44,7 @@
 
 ### Phase 3: Student Scheduling Experience & Teacher Configuration UI
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Update student CBTF booking composables and components to handle 30-minute and 60-minute slot increments dynamically. Update teacher assignment editing interface to allow setting 30-minute or 60-minute CBTF reservation durations with validation on test duration.  
 **Requirements**: REQ-609, REQ-610
 
