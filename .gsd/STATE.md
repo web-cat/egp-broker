@@ -8,9 +8,9 @@ updated: 2026-10-09T20:07:00-04:00
 
 **Milestone:** v6.0 — CBTF Phased Capacity & Duration Engine  
 **Phase:** Phase 3: Student Scheduling Experience & Teacher Configuration UI  
-**Status:** 🚀 Phase 2 completed; ready for Phase 3 planning  
+**Status:** 📋 Planning complete (2 plans across 2 waves)  
 **Roadmap:** [.gsd/ROADMAP.md](file:///Users/edwards/git/egp-broker/.gsd/ROADMAP.md)  
-**Next Step:** /plan 3
+**Next Step:** /execute 3
 
 ## Completed Milestones
 
