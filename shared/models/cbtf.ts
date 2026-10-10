@@ -117,6 +117,8 @@ export interface CbtfHalfDayBlock {
   isCurrentBlock: boolean
   openSlotsCount: number
   totalSlotsCount: number
+  bookedCount?: number
+  capacityCount?: number
   utilizationPercentage: number
   isHighDemand: boolean // true if utilizationPercentage > 60
 }

@@ -879,6 +879,45 @@ describe('CBTF Server Utilities', () => {
       expect(result.blocks[2].id).toBe('2026-10-06-afternoon')
       expect(result.blocks[3].id).toBe('2026-10-07-morning')
     })
+
+    it('accurately calculates bookedCount, capacityCount, and true utilizationPercentage when reservations exist', async () => {
+      // Create 30 reservations on Monday Oct 5 morning (between 08:00 and 12:30 EDT / 12:00 and 16:30 UTC)
+      const reservations = Array.from({ length: 30 }, (_, i) => ({
+        startTime: new Date('2026-10-05T12:00:00.000Z'),
+        endTime: new Date('2026-10-05T12:30:00.000Z'),
+        seatNumber: (i % 18) + 1
+      }))
+
+      const mockTx: any = {
+        cbtfReservation: { findMany: vi.fn().mockResolvedValue(reservations) },
+        cbtfScheduleException: { findFirst: vi.fn().mockResolvedValue(null) },
+        cbtfOperatingHours: {
+          findUnique: vi.fn().mockImplementation(({ where }) => {
+            const h = facility.operatingHours.find(
+              (o: any) => o.dayOfWeek === where.facilityId_dayOfWeek.dayOfWeek
+            )
+            return Promise.resolve(h || null)
+          })
+        }
+      }
+
+      const result = await getRecommendedDaysAndSlots(
+        facility,
+        studentWindow,
+        '2026-10-05-morning',
+        undefined,
+        mockTx,
+        30 // 30-min duration
+      )
+
+      const morningBlock = result.blocks.find((b) => b.id === '2026-10-05-morning')!
+      expect(morningBlock).toBeDefined()
+      expect(morningBlock.bookedCount).toBe(30)
+      expect(morningBlock.capacityCount).toBeGreaterThan(30)
+      expect(morningBlock.utilizationPercentage).toBe(
+        Math.round((30 / morningBlock.capacityCount!) * 100)
+      )
+    })
   })
 
   describe('getStudentSchedulingWindow with section overrides', () => {

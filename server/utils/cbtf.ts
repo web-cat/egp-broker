@@ -561,12 +561,18 @@ export async function getRecommendedDaysAndSlots(
   const searchStart = new Date(Math.max(studentWindow.start.getTime(), now.getTime()))
   const searchEnd = new Date(studentWindow.end)
 
+  // Compute calendar bounds in facility timezone
+  const localStartDateStr = getLocalDateString(searchStart, timeZone)
+  const localEndDateStr = getLocalDateString(searchEnd, timeZone)
+  const queryStart = combineDateAndTime(localStartDateStr, '00:00', timeZone)
+  const queryEnd = combineDateAndTime(localEndDateStr, '23:59', timeZone)
+
   // Fetch all active reservations in the window once to avoid N+1 queries
   const allReservations: CbtfReservation[] = await (tx as any).cbtfReservation.findMany({
     where: {
       facilityId: facility.id,
       status: { in: ['SCHEDULED', 'CHECKED_IN'] },
-      startTime: { gte: searchStart, lte: searchEnd }
+      startTime: { gte: queryStart, lte: queryEnd }
     },
     select: {
       startTime: true,
@@ -597,8 +603,6 @@ export async function getRecommendedDaysAndSlots(
   }[] = []
 
   // Iterate calendar days within the student window (max 30 days lookahead) in facility timezone
-  const localStartDateStr = getLocalDateString(searchStart, timeZone)
-  const localEndDateStr = getLocalDateString(searchEnd, timeZone)
   const startParts = localStartDateStr.split('-').map(Number)
   const cursorDate = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2]))
   const maxDays = 30
@@ -676,15 +680,22 @@ export async function getRecommendedDaysAndSlots(
             const isCurrentBlock = now >= blockStart && now < blockEnd
             const totalSlotsCount = theoreticalBlockSlots.length
             const openSlotsCount = openSlots.length
+
+            // True capacity in student seats: sum of max arrivals for each 5-min slot
+            const capacityCount = theoreticalBlockSlots.reduce(
+              (acc, s) => acc + (s.maxArrivals || 1),
+              0
+            )
+
+            // Actual student reservations scheduled to arrive in this morning block
+            const blockReservations = dayReservations.filter(
+              (r) => r.startTime >= blockStart && r.startTime < afternoonDividingUtc
+            )
+            const bookedCount = blockReservations.length
+
             const utilizationPercentage =
-              totalSlotsCount > 0
-                ? Math.max(
-                    0,
-                    Math.min(
-                      100,
-                      Math.round(((totalSlotsCount - openSlotsCount) / totalSlotsCount) * 100)
-                    )
-                  )
+              capacityCount > 0
+                ? Math.max(0, Math.min(100, Math.round((bookedCount / capacityCount) * 100)))
                 : 100
 
             candidateBlockItems.push({
@@ -699,6 +710,8 @@ export async function getRecommendedDaysAndSlots(
                 isCurrentBlock,
                 openSlotsCount,
                 totalSlotsCount,
+                bookedCount,
+                capacityCount,
                 utilizationPercentage,
                 isHighDemand: utilizationPercentage > 60
               },
@@ -733,15 +746,22 @@ export async function getRecommendedDaysAndSlots(
             const isCurrentBlock = now >= blockStart && now < blockEnd
             const totalSlotsCount = theoreticalBlockSlots.length
             const openSlotsCount = openSlots.length
+
+            // True capacity in student seats: sum of max arrivals for each 5-min slot
+            const capacityCount = theoreticalBlockSlots.reduce(
+              (acc, s) => acc + (s.maxArrivals || 1),
+              0
+            )
+
+            // Actual student reservations scheduled to arrive in this afternoon block
+            const blockReservations = dayReservations.filter(
+              (r) => r.startTime >= afternoonDividingUtc && r.startTime < blockEnd
+            )
+            const bookedCount = blockReservations.length
+
             const utilizationPercentage =
-              totalSlotsCount > 0
-                ? Math.max(
-                    0,
-                    Math.min(
-                      100,
-                      Math.round(((totalSlotsCount - openSlotsCount) / totalSlotsCount) * 100)
-                    )
-                  )
+              capacityCount > 0
+                ? Math.max(0, Math.min(100, Math.round((bookedCount / capacityCount) * 100)))
                 : 100
 
             candidateBlockItems.push({
@@ -756,6 +776,8 @@ export async function getRecommendedDaysAndSlots(
                 isCurrentBlock,
                 openSlotsCount,
                 totalSlotsCount,
+                bookedCount,
+                capacityCount,
                 utilizationPercentage,
                 isHighDemand: utilizationPercentage > 60
               },

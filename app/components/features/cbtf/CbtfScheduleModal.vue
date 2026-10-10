@@ -263,8 +263,8 @@
                     {{ block.utilizationPercentage }}% full
                   </span>
                   <span class="text-neutral-400 text-[11px]">
-                    {{ block.totalSlotsCount - block.openSlotsCount }} /
-                    {{ block.totalSlotsCount }} booked
+                    {{ block.bookedCount ?? (block.totalSlotsCount - block.openSlotsCount) }} /
+                    {{ block.capacityCount ?? block.totalSlotsCount }} booked
                   </span>
                 </div>
                 <div
