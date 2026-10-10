@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 1: Domain Modeling & Allocation Mathematics
+> **Current Phase**: Phase 3: Student Scheduling Experience & Teacher Configuration UI
 > **Milestone**: v6.0 — CBTF Phased Capacity & Duration Engine
 > **Goal**: Replace the 115-minute rolling window capacity filter with Periodic Phased Seat Allocation, supporting 18 phased seats and a 2-seat elastic pool, 30-minute and 60-minute reservation tiers, offset-specific arrival throttling, and true seat-level interval availability.
 
@@ -19,9 +19,9 @@
 - [x] Database support for assignment CBTF reservation duration (`Assignment.cbtfDurationMinutes`, default 60) and facility elastic reserve (`CbtfFacility.elasticSeatCount`, default 2)
 - [x] Phased seat partitioning algorithm supporting 18 phased seats with alternating 2–1 distribution (60m) and 3-per-offset distribution (30m)
 - [x] Offset-specific arrival quota enforcement replacing global `ceil(totalSeats / 12)`
-- [ ] True seat-specific interval availability algorithm eliminating the 115-minute phantom concurrency trap
-- [ ] Seat allocation preserving primary channels without circular cross-channel cannibalization
-- [ ] Student reservation API (`/api/me/cbtf/reservations`) supporting 30m and 60m durations and offset quota checks
+- [x] True seat-specific interval availability algorithm eliminating the 115-minute phantom concurrency trap
+- [x] Seat allocation preserving primary channels without circular cross-channel cannibalization
+- [x] Student reservation API (`/api/me/cbtf/reservations`) supporting 30m and 60m durations and offset quota checks
 - [ ] Student UI rendering 30-minute or 60-minute slot options based on assignment configuration
 - [ ] Teacher assignment configuration UI allowing instructors to toggle 30-minute quiz vs 60-minute exam
 - [ ] 100% Vitest unit test coverage for new allocation math, slot generation, and booking endpoints
@@ -38,7 +38,7 @@
 
 ### Phase 2: Slot Generation & Reservation Booking APIs
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Overhaul `generateAvailableSlotsForDate` in `server/utils/cbtf.ts` to replace the 115-minute rolling window filter with seat-specific interval availability. Update student booking and rescheduling endpoints (`reservations.post.ts`, `[id].patch.ts`) to validate offset quotas, support 30m/60m durations, and allocate seats cleanly within primary channels. Add high-load simulation tests proving zero phantom capacity dropouts.  
 **Requirements**: REQ-606, REQ-607, REQ-608, REQ-611
 
