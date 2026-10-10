@@ -413,3 +413,10 @@ export const cbtfAdminNotesQuerySchema = z.object({
 })
 
 export type CbtfAdminNotesQuery = z.infer<typeof cbtfAdminNotesQuerySchema>
+
+export const cbtfProctorReassignSeatSchema = z.object({
+  reservationId: z.string().trim().min(1, 'Reservation ID is required'),
+  targetSeatNumber: z.number().int().min(1, 'Target seat number must be at least 1')
+})
+
+export type CbtfProctorReassignSeatInput = z.infer<typeof cbtfProctorReassignSeatSchema>

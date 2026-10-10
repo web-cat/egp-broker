@@ -332,6 +332,23 @@ export function generateAvailableSlotsForDate(
 }
 
 /**
+ * Checks whether a specific workstation seat is unreserved during [slotStart, slotEnd)
+ */
+export function isSeatFreeInWindow(
+  seatNumber: number,
+  slotStart: Date,
+  slotEnd: Date,
+  existingReservations: { startTime: Date; endTime: Date; seatNumber: number }[]
+): boolean {
+  return !existingReservations.some(
+    (r) =>
+      r.seatNumber === seatNumber &&
+      r.startTime.getTime() < slotEnd.getTime() &&
+      r.endTime.getTime() > slotStart.getTime()
+  )
+}
+
+/**
  * Calculates the slice of seat indices in seatAllocationOrder for an arrival offset.
  * Partitions seats cleanly based on offset quota, protecting elastic seats if totalOrPhasedSeats is phased count.
  */
@@ -1582,4 +1599,83 @@ export async function autoExpirePastScheduledReservations(
   })
 
   return result.count
+}
+
+/**
+ * Reassigns an active reservation (SCHEDULED or CHECKED_IN) to a target workstation seat,
+ * preventing seat collisions with other active reservations in the same window.
+ * Useful for proctors/admins performing emergency workstation swaps (e.g. to elastic hot spares).
+ */
+export async function reassignReservationSeat(
+  prismaClient: PrismaClient | typeof prisma,
+  reservationId: string,
+  targetSeatNumber: number,
+  _modifiedByUserId?: string
+): Promise<CbtfReservationDto> {
+  const reservation = await (prismaClient as any).cbtfReservation.findUnique({
+    where: { id: reservationId },
+    include: {
+      assignment: { select: { title: true } },
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          studentId: true,
+          avatarUrl: true
+        }
+      }
+    }
+  })
+
+  if (!reservation) {
+    throw createError({ statusCode: 404, statusMessage: 'Reservation not found' })
+  }
+
+  if (reservation.status !== 'SCHEDULED' && reservation.status !== 'CHECKED_IN') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Cannot reassign seat for reservation with status '${reservation.status}'`
+    })
+  }
+
+  // Check if target seat is already occupied by another active reservation during the same interval
+  const conflict = await (prismaClient as any).cbtfReservation.findFirst({
+    where: {
+      facilityId: reservation.facilityId,
+      seatNumber: targetSeatNumber,
+      id: { not: reservationId },
+      status: { in: ['SCHEDULED', 'CHECKED_IN'] },
+      startTime: { lt: reservation.endTime },
+      endTime: { gt: reservation.startTime }
+    }
+  })
+
+  if (conflict) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: `Workstation Seat #${targetSeatNumber} is already occupied during this time window`
+    })
+  }
+
+  const updated = await (prismaClient as any).cbtfReservation.update({
+    where: { id: reservationId },
+    data: {
+      seatNumber: targetSeatNumber
+    },
+    include: {
+      assignment: { select: { title: true } },
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          studentId: true,
+          avatarUrl: true
+        }
+      }
+    }
+  })
+
+  return toCbtfReservationDto(updated)
 }
