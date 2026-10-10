@@ -42,7 +42,7 @@ The refactoring items below are grouped by priority:
 
 ### Priority 0: Critical (Invariants, Security & Integrity)
 
-#### TASK-01: Enforce Presentation Timezone Sovereignty (Course Timezone Lock)
+#### TASK-01: Enforce Presentation Timezone Sovereignty (Course Timezone Lock) [COMPLETED]
 
 - **Constitution Rule:** GEMINI.md § IV (_"All date formatting for user display and user date input parsing MUST route through `shared/utils/timezone.ts` locked to the course timezone (`America/New_York`). Never call `new Date().toISOString()`, `date.toLocaleDateString()`, or `date.getHours()` directly in components."_)
 - **Current Violations:**

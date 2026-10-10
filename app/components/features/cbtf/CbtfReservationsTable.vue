@@ -259,6 +259,7 @@
 import { ref, onMounted } from 'vue'
 import { useAdminCbtfReservations } from '~/composables/features/admin/useAdminCbtfReservations'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
+import { formatDateInTz } from '@@/shared/utils/timezone'
 
 const props = withDefaults(
   defineProps<{
@@ -327,17 +328,7 @@ const statusBadgeColor = (st: string) => {
 }
 
 const formatDateTime = (isoString: string | Date | null | undefined) => {
-  if (!isoString) return '—'
-  const date = new Date(isoString)
-  if (isNaN(date.getTime())) return '—'
-  return date.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  })
+  return formatDateInTz(isoString) || '—'
 }
 
 const handleSearch = () => {

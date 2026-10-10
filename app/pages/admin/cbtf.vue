@@ -696,7 +696,7 @@
 
 <script setup lang="ts">
 import { useCbtfAdmin } from '~/composables/features/admin/useCbtfAdmin'
-import { extractCalendarDate } from '@@/shared/utils/timezone'
+import { extractCalendarDate, formatDateInTz, DEFAULT_TIMEZONE } from '@@/shared/utils/timezone'
 import {
   parseProctorShiftString,
   calculateWeeklyShiftHours,
@@ -1255,10 +1255,7 @@ const isUpdatingShift = ref(false)
 
 const toDateTimeLocalValue = (dateVal: string | Date, timeStr: string) => {
   if (!dateVal || !timeStr) return ''
-  const dateStr =
-    typeof dateVal === 'string'
-      ? dateVal.split('T')[0]
-      : dateVal.toISOString().split('T')[0]
+  const dateStr = extractCalendarDate(dateVal, DEFAULT_TIMEZONE)
   if (!dateStr) return ''
   return `${dateStr}T${timeStr}`
 }
@@ -1320,7 +1317,7 @@ const reservationColumns: any[] = [
   {
     accessorKey: 'startTime',
     header: 'Scheduled Time',
-    cell: ({ row }: { row: any }) => new Date(row.original.startTime).toLocaleString()
+    cell: ({ row }: { row: any }) => formatDateInTz(row.original.startTime) || '—'
   },
   {
     accessorKey: 'status',

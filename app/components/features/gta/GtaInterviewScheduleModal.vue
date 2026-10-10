@@ -361,7 +361,7 @@
               @click="selectSlot(slot)"
             >
               <span class="text-xs font-semibold">
-                {{ formatSlotTime(slot.startTime) }}
+                {{ slot.timeLabel || formatSlotTime(slot.startTime) }}
               </span>
               <span class="text-[10px] text-neutral-500 font-medium">
                 {{ slot.capacity ?? slot.availableGtaCount }} TA{{
@@ -463,6 +463,7 @@ import type {
   GtaInterviewReservationDto
 } from '@@/shared/schemas/gta-interview.schema'
 import { useGtaInterviewStudent } from '~/composables/features/useGtaInterviewStudent'
+import { formatSlotRange, getLocalTimeParts } from '@@/shared/utils/timezone'
 
 const props = defineProps<{
   courseId: string
@@ -693,20 +694,11 @@ const formatGtaName = (gta?: {
 }
 
 const formatReservationTime = (startStr: string, endStr: string) => {
-  const s = new Date(startStr)
-  const e = new Date(endStr)
-  const dateStr = s.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric'
-  })
-  const startT = s.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  const endT = e.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  return `${dateStr}, ${startT} – ${endT}`
+  return formatSlotRange(startStr, endStr)
 }
 
 const formatSlotTime = (iso: string) => {
   const d = new Date(iso)
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return getLocalTimeParts(d).formattedTime
 }
 </script>

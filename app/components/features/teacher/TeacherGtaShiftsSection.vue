@@ -495,7 +495,7 @@ import {
   formatShiftDate,
   type ParsedShiftSlot
 } from '@@/shared/utils/proctor-schedule-parser'
-import { extractCalendarDate } from '@@/shared/utils/timezone'
+import { extractCalendarDate, getLocalDateString, DEFAULT_TIMEZONE } from '@@/shared/utils/timezone'
 import GtaShiftDetailsModal from '~/components/features/teacher/GtaShiftDetailsModal.vue'
 import GtaShiftImpactModal from '~/components/features/teacher/GtaShiftImpactModal.vue'
 import type { ShiftImpactSummary } from '@@/shared/schemas/gta-interview.schema'
@@ -703,9 +703,9 @@ const calculateSlotDuration = (start: string, end: string) => {
 
 const setPresetWeeks = (weeks: number) => {
   const now = new Date()
-  const start = now.toISOString().split('T')[0]
+  const start = getLocalDateString(now, DEFAULT_TIMEZONE)
   const endD = new Date(now.getTime() + weeks * 7 * 24 * 60 * 60 * 1000)
-  const end = endD.toISOString().split('T')[0]
+  const end = getLocalDateString(endD, DEFAULT_TIMEZONE)
   weeklyStartDate.value = start || ''
   weeklyEndDate.value = end || ''
 }
@@ -743,7 +743,7 @@ const singleShiftForm = reactive({
 
 const openAddShiftModal = () => {
   singleShiftForm.userId = gtas.value[0]?.id || ''
-  singleShiftForm.date = new Date().toISOString().split('T')[0] || ''
+  singleShiftForm.date = getLocalDateString(new Date(), DEFAULT_TIMEZONE) || ''
   singleShiftForm.startTime = '10:00'
   singleShiftForm.endTime = '12:00'
   showAddShiftModal.value = true

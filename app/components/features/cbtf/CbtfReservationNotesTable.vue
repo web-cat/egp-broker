@@ -246,6 +246,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useAdminCbtfNotes } from '~/composables/features/admin/useAdminCbtfNotes'
+import { formatDateInTz } from '@@/shared/utils/timezone'
 
 const {
   studentFilter,
@@ -289,16 +290,6 @@ const statusBadgeColor = (st: string) => {
 }
 
 const formatDateTime = (isoString: string | Date | null | undefined) => {
-  if (!isoString) return '—'
-  const date = new Date(isoString)
-  if (isNaN(date.getTime())) return '—'
-  return date.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  })
+  return formatDateInTz(isoString) || '—'
 }
 </script>

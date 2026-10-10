@@ -110,6 +110,7 @@
 import { watch, reactive } from 'vue'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 import type { CbtfAdminUpdateReservationInput } from '@@/shared/schemas/cbtf.schema'
+import { formatDateTimeInput, parseDateTimeInput } from '@@/shared/utils/timezone'
 
 const props = defineProps<{
   open: boolean
@@ -143,21 +144,11 @@ const formState = reactive({
 })
 
 function toDateTimeLocalString(isoString: string | null | undefined): string {
-  if (!isoString) return ''
-  const date = new Date(isoString)
-  if (isNaN(date.getTime())) return ''
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  const yyyy = date.getFullYear()
-  const MM = pad(date.getMonth() + 1)
-  const dd = pad(date.getDate())
-  const hh = pad(date.getHours())
-  const mm = pad(date.getMinutes())
-  return `${yyyy}-${MM}-${dd}T${hh}:${mm}`
+  return formatDateTimeInput(isoString)
 }
 
 function fromDateTimeLocalString(localString: string): string {
-  if (!localString) return ''
-  return new Date(localString).toISOString()
+  return parseDateTimeInput(localString) || ''
 }
 
 watch(

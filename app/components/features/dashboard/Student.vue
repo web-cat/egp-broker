@@ -179,6 +179,7 @@
 
 <script setup lang="ts">
 import type { ApiResponse } from '@@/shared/types/api'
+import { formatUpcomingDate } from '@@/shared/utils/timezone'
 // Feature Composable
 import { useStudentDashboard } from '~/composables/features/useStudentDashboard'
 
@@ -272,11 +273,6 @@ const handleRosterSynced = async () => {
     refreshRedemptions(),
     refreshGtaReservations()
   ])
-}
-
-const formatUpcomingDate = (dateStr: string) => {
-  const d = new Date(dateStr)
-  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
 }
 
 const assignmentRowClass = (row: any) => {

@@ -450,6 +450,7 @@ import type {
   CbtfHourlySlotChoice
 } from '@@/shared/models/cbtf'
 import { useCbtfStudent, type CbtfAvailabilityData } from '~/composables/features/useCbtfStudent'
+import { formatSlotRange } from '@@/shared/utils/timezone'
 
 const props = defineProps<{
   assignment: AssignmentRow | null
@@ -639,9 +640,7 @@ const handleCancel = async () => {
 }
 
 const formatReservationTime = (startStr: string, endStr: string) => {
-  const start = new Date(startStr)
-  const end = new Date(endStr)
-  return `${start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}, ${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} – ${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+  return formatSlotRange(startStr, endStr)
 }
 
 const statusBadgeColor = (status: string) => {

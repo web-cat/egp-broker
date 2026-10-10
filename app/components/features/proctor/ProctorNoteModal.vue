@@ -188,6 +188,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { getLocalTimeParts } from '@@/shared/utils/timezone'
 
 const props = withDefaults(
   defineProps<{
@@ -326,7 +327,8 @@ watch(
 const formatNoteTime = (dateStr: string) => {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  if (isNaN(d.getTime())) return ''
+  return getLocalTimeParts(d).formattedTime
 }
 
 const handleSubmit = () => {

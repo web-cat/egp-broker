@@ -1,14 +1,27 @@
-export const formatDate = (dateString: string | Date | null, locale?: string): string => {
+import { DEFAULT_TIMEZONE } from '@@/shared/utils/timezone'
+
+export const formatDate = (
+  dateString: string | Date | null,
+  locale?: string,
+  timeZone: string = DEFAULT_TIMEZONE
+): string => {
   if (!dateString) return ''
 
-  const { locale: currentLocale } = useI18n()
-  const finalLocale = locale || currentLocale?.value || 'fr-FR'
+  let currentLocale: { value?: string } | undefined
+  try {
+    const i18n = useI18n()
+    currentLocale = i18n.locale
+  } catch {
+    // Fallback if called outside Vue setup context
+  }
+  const finalLocale = locale || currentLocale?.value || 'en-US'
 
   try {
-    const date = new Date(dateString)
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString
     if (isNaN(date.getTime())) return ''
 
     return date.toLocaleDateString(finalLocale, {
+      timeZone,
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -21,21 +34,32 @@ export const formatDate = (dateString: string | Date | null, locale?: string): s
   }
 }
 
-export const formatTime = (dateString: string, locale?: string): string => {
+export const formatTime = (
+  dateString: string | Date | null,
+  locale?: string,
+  timeZone: string = DEFAULT_TIMEZONE
+): string => {
   if (!dateString) return ''
 
-  const { locale: currentLocale } = useI18n()
-  const finalLocale = locale || currentLocale?.value || 'fr-FR'
+  let currentLocale: { value?: string } | undefined
+  try {
+    const i18n = useI18n()
+    currentLocale = i18n.locale
+  } catch {
+    // Fallback if called outside Vue setup context
+  }
+  const finalLocale = locale || currentLocale?.value || 'en-US'
 
   try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return dateString
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+    if (isNaN(date.getTime())) return typeof dateString === 'string' ? dateString : ''
 
     return date.toLocaleTimeString(finalLocale, {
+      timeZone,
       hour: '2-digit',
       minute: '2-digit'
     })
   } catch {
-    return dateString
+    return typeof dateString === 'string' ? dateString : ''
   }
 }

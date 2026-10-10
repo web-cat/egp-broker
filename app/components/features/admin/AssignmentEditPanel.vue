@@ -213,6 +213,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, useTemplateRef } from 'vue'
+import { formatDateTimeInput, parseDateTimeInput } from '@@/shared/utils/timezone'
 const { success, error: showError } = useNotifications()
 
 interface AssignmentData {
@@ -317,10 +318,7 @@ const passTypeMenuItems = computed(() => {
 })
 
 function toLocalDatetime(iso: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return formatDateTimeInput(iso)
 }
 
 // Sync form state when the assignment prop changes or the panel opens
@@ -372,28 +370,20 @@ const handleSubmit = async () => {
     const body: Record<string, any> = {
       title: state.title || null,
       canvasAssignmentId: state.canvasAssignmentId || null,
-      dueDate: state.dueDate ? new Date(state.dueDate).toISOString() : null,
-      availableFrom: state.availableFrom ? new Date(state.availableFrom).toISOString() : null,
-      acceptUntil: state.acceptUntil ? new Date(state.acceptUntil).toISOString() : null,
+      dueDate: parseDateTimeInput(state.dueDate),
+      availableFrom: parseDateTimeInput(state.availableFrom),
+      acceptUntil: parseDateTimeInput(state.acceptUntil),
       isSchedulable: state.isSchedulable,
       cbtfDurationMinutes: state.isSchedulable ? (state.cbtfDurationMinutes || 60) : 60,
       scheduleWindowStart:
-        state.isSchedulable && state.scheduleWindowStart
-          ? new Date(state.scheduleWindowStart).toISOString()
-          : null,
+        state.isSchedulable ? parseDateTimeInput(state.scheduleWindowStart) : null,
       scheduleWindowEnd:
-        state.isSchedulable && state.scheduleWindowEnd
-          ? new Date(state.scheduleWindowEnd).toISOString()
-          : null,
+        state.isSchedulable ? parseDateTimeInput(state.scheduleWindowEnd) : null,
       hasInterviews: state.hasInterviews,
       interviewWindowStart:
-        state.hasInterviews && state.interviewWindowStart
-          ? new Date(state.interviewWindowStart).toISOString()
-          : null,
+        state.hasInterviews ? parseDateTimeInput(state.interviewWindowStart) : null,
       interviewWindowEnd:
-        state.hasInterviews && state.interviewWindowEnd
-          ? new Date(state.interviewWindowEnd).toISOString()
-          : null
+        state.hasInterviews ? parseDateTimeInput(state.interviewWindowEnd) : null
     }
 
     if (isEdit.value) {

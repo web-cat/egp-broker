@@ -8,7 +8,12 @@ import {
   getLocalDayOfWeek,
   getLocalTimeParts,
   combineDateAndTime,
-  normalizeTimeTo24h
+  normalizeTimeTo24h,
+  formatDateTimeInput,
+  parseDateTimeInput,
+  formatUpcomingDate,
+  formatSlotRange,
+  isMorningSlot
 } from '@@/shared/utils/timezone'
 
 describe('Centralized Timezone Utilities', () => {
@@ -138,6 +143,54 @@ describe('Centralized Timezone Utilities', () => {
       expect(normalizeTimeTo24h('25:00')).toBe(null)
       expect(normalizeTimeTo24h('13:00 PM')).toBe(null)
       expect(normalizeTimeTo24h('10:65')).toBe(null)
+    })
+  })
+
+  describe('formatDateTimeInput & parseDateTimeInput', () => {
+    it('formats ISO string to local input string YYYY-MM-DDTHH:mm in America/New_York', () => {
+      // 16:30 UTC on Sep 21 = 12:30 EDT
+      expect(formatDateTimeInput('2026-09-21T16:30:00.000Z')).toBe('2026-09-21T12:30')
+      // 17:00 UTC on Jan 15 = 12:00 EST
+      expect(formatDateTimeInput('2026-01-15T17:00:00.000Z')).toBe('2026-01-15T12:00')
+      expect(formatDateTimeInput(null)).toBe('')
+      expect(formatDateTimeInput(undefined)).toBe('')
+    })
+
+    it('parses local input string YYYY-MM-DDTHH:mm into UTC ISO string via America/New_York', () => {
+      // 12:30 EDT on Sep 21 = 16:30 UTC
+      expect(parseDateTimeInput('2026-09-21T12:30')).toBe('2026-09-21T16:30:00.000Z')
+      // 12:00 EST on Jan 15 = 17:00 UTC
+      expect(parseDateTimeInput('2026-01-15T12:00')).toBe('2026-01-15T17:00:00.000Z')
+      expect(parseDateTimeInput('')).toBe(null)
+      expect(parseDateTimeInput(null)).toBe(null)
+    })
+  })
+
+  describe('formatUpcomingDate', () => {
+    it('formats date and time in Eastern Time', () => {
+      // 16:30 UTC = 12:30 PM EDT
+      const result = formatUpcomingDate('2026-09-21T16:30:00.000Z')
+      expect(result).toMatch(/Sep 21 at 12:30\s*PM/i)
+    })
+  })
+
+  describe('formatSlotRange', () => {
+    it('formats range in Eastern Time', () => {
+      const result = formatSlotRange('2026-09-21T16:00:00.000Z', '2026-09-21T17:00:00.000Z')
+      expect(result).toMatch(/Sep 21, 12:00\s*PM – 1:00\s*PM/i)
+    })
+  })
+
+  describe('isMorningSlot', () => {
+    it('identifies morning slots (< 12:30 PM) in America/New_York', () => {
+      // 16:00 UTC = 12:00 PM EDT -> morning
+      expect(isMorningSlot('2026-09-21T16:00:00.000Z')).toBe(true)
+      // 16:29 UTC = 12:29 PM EDT -> morning
+      expect(isMorningSlot('2026-09-21T16:29:00.000Z')).toBe(true)
+      // 16:30 UTC = 12:30 PM EDT -> afternoon
+      expect(isMorningSlot('2026-09-21T16:30:00.000Z')).toBe(false)
+      // 18:00 UTC = 2:00 PM EDT -> afternoon
+      expect(isMorningSlot('2026-09-21T18:00:00.000Z')).toBe(false)
     })
   })
 })

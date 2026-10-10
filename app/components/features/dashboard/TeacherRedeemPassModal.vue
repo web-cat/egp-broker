@@ -148,7 +148,9 @@ import {
   DEFAULT_TIMEZONE,
   getLocalDateString,
   getLocalTimeParts,
-  combineDateAndTime
+  combineDateAndTime,
+  formatDateTimeInput,
+  parseDateTimeInput
 } from '@@/shared/utils/timezone'
 import type {
   StudentRosterRow,
@@ -236,17 +238,11 @@ const canSubmit = computed(() => {
 })
 
 function toDateTimeLocalString(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
-  const dateStr = getLocalDateString(date, timeZone)
-  const parts = getLocalTimeParts(date, timeZone)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${dateStr}T${pad(parts.hour24)}:${pad(parts.minute)}`
+  return formatDateTimeInput(date, timeZone)
 }
 
 function parseDateTimeLocalInput(value: string, timeZone: string = DEFAULT_TIMEZONE): string {
-  if (!value) return new Date().toISOString()
-  const [dateStr, timePart] = value.split('T')
-  const timeStr = timePart ? timePart.slice(0, 5) : '00:00'
-  return combineDateAndTime(dateStr, timeStr, timeZone).toISOString()
+  return parseDateTimeInput(value, timeZone) || new Date().toISOString()
 }
 
 function calculateDefaultDates(hours: number) {

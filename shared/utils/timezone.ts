@@ -172,3 +172,111 @@ export function normalizeTimeTo24h(input?: string | null): string | null {
   const mm = minute.toString().padStart(2, '0')
   return `${hh}:${mm}`
 }
+
+/**
+ * Formats a Date or ISO string into a local input string ("YYYY-MM-DDTHH:mm") in the specified timezone.
+ */
+export function formatDateTimeInput(
+  date: Date | string | null | undefined,
+  timeZone: string = DEFAULT_TIMEZONE
+): string {
+  if (!date) return ''
+  const d = typeof date === 'string' ? new Date(date) : date
+  if (isNaN(d.getTime())) return ''
+
+  const dateStr = getLocalDateString(d, timeZone)
+  const parts = getLocalTimeParts(d, timeZone)
+  const hh = parts.hour24.toString().padStart(2, '0')
+  const mm = parts.minute.toString().padStart(2, '0')
+  return `${dateStr}T${hh}:${mm}`
+}
+
+/**
+ * Parses an input string ("YYYY-MM-DDTHH:mm" or "YYYY-MM-DD") in the specified timezone into a UTC ISO string.
+ */
+export function parseDateTimeInput(
+  value: string | null | undefined,
+  timeZone: string = DEFAULT_TIMEZONE
+): string | null {
+  if (!value || typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const [datePart, timePart] = trimmed.split('T')
+  if (!datePart) return null
+  const timeStr = timePart ? timePart.slice(0, 5) : '00:00'
+  return combineDateAndTime(datePart, timeStr, timeZone).toISOString()
+}
+
+/**
+ * Formats a timestamp into an upcoming display string ("Mon DD at H:mm AM/PM") in the specified timezone.
+ */
+export function formatUpcomingDate(
+  date: Date | string,
+  timeZone: string = DEFAULT_TIMEZONE
+): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  if (isNaN(d.getTime())) return '—'
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    month: 'short',
+    day: 'numeric'
+  })
+  const parts = getLocalTimeParts(d, timeZone)
+  return `${formatter.format(d)} at ${parts.formattedTime}`
+}
+
+/**
+ * Formats a start and end instant into a time slot range string ("Mon DD, H:mm AM/PM – H:mm AM/PM") in the specified timezone.
+ */
+export function formatSlotRange(
+  start: Date | string,
+  end: Date | string,
+  timeZone: string = DEFAULT_TIMEZONE
+): string {
+  const s = typeof start === 'string' ? new Date(start) : start
+  const e = typeof end === 'string' ? new Date(end) : end
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return '—'
+
+  const dateFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  })
+  const startParts = getLocalTimeParts(s, timeZone)
+  const endParts = getLocalTimeParts(e, timeZone)
+  return `${dateFormatter.format(s)}, ${startParts.formattedTime} – ${endParts.formattedTime}`
+}
+
+/**
+ * Checks whether an instant falls in the morning block (< 12:30 PM local wall-clock) in the specified timezone.
+ */
+export function isMorningSlot(date: Date | string, timeZone: string = DEFAULT_TIMEZONE): boolean {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const parts = getLocalTimeParts(d, timeZone)
+  return parts.hour24 < 12 || (parts.hour24 === 12 && parts.minute < 30)
+}
+
+/**
+ * Formats a date using Intl.DateTimeFormat strictly locked to the specified timezone.
+ */
+export function formatDateInTz(
+  date: Date | string | null | undefined,
+  options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  },
+  timeZone: string = DEFAULT_TIMEZONE,
+  locale: string = 'en-US'
+): string {
+  if (!date) return ''
+  const d = typeof date === 'string' ? new Date(date) : date
+  if (isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat(locale, { ...options, timeZone }).format(d)
+}

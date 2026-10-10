@@ -742,7 +742,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useGtaInterviewConsole } from '~/composables/features/useGtaInterviewConsole'
-import { combineDateAndTime, DEFAULT_GTA_TIMEZONE } from '@@/shared/utils/timezone'
+import {
+  combineDateAndTime,
+  DEFAULT_GTA_TIMEZONE,
+  isMorningSlot,
+  formatSlotRange as sharedFormatSlotRange,
+  getLocalTimeParts
+} from '@@/shared/utils/timezone'
 import type { ApiResponse } from '@@/shared/types/api'
 
 interface ShiftCandidate {
@@ -946,7 +952,7 @@ const candidateShifts = computed<ShiftCandidate[]>(() => {
       if (gtaFilter && gId && gId !== gtaFilter) continue
       const d = new Date(r.startTime)
       const dateStr = getLocalDateStr(d)
-      const isMorning = d.getHours() < 12 || (d.getHours() === 12 && d.getMinutes() < 30)
+      const isMorning = isMorningSlot(d)
       const key = `${gId || 'any'}_${dateStr}_${isMorning ? 'am' : 'pm'}`
       if (!clusterMap.has(key)) {
         clusterMap.set(key, { gtaId: gId, times: [] })
@@ -1036,13 +1042,9 @@ const filteredExpectedArrivals = computed(() => {
         }
       }
     } else if (filterExpectedShift.value === 'MORNING') {
-      const d = new Date(res.startTime)
-      const isMorning = d.getHours() < 12 || (d.getHours() === 12 && d.getMinutes() < 30)
-      if (!isMorning) return false
+      if (!isMorningSlot(res.startTime)) return false
     } else if (filterExpectedShift.value === 'AFTERNOON') {
-      const d = new Date(res.startTime)
-      const isMorning = d.getHours() < 12 || (d.getHours() === 12 && d.getMinutes() < 30)
-      if (isMorning) return false
+      if (isMorningSlot(res.startTime)) return false
     }
 
     return true
@@ -1284,17 +1286,13 @@ const formatStudentName = (student?: any) => {
 
 const formatTimeOnly = (dateStr?: string | Date) => {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
+  if (isNaN(d.getTime())) return ''
+  return getLocalTimeParts(d).formattedTime
 }
 
 const formatSlotRange = (startStr: string, endStr: string) => {
-  const start = new Date(startStr)
-  const end = new Date(endStr)
-  const dateFmt = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  const startFmt = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  const endFmt = end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  return `${dateFmt}, ${startFmt} – ${endFmt}`
+  return sharedFormatSlotRange(startStr, endStr)
 }
 
 const statusColor = (status: string) => {

@@ -250,10 +250,11 @@
       </div>
       <span v-if="lastAction.time" class="text-xs opacity-75">
         {{
-          (lastAction.time instanceof Date ? lastAction.time : new Date(lastAction.time)).toLocaleTimeString([], {
+          formatDateInTz(lastAction.time, {
             hour: 'numeric',
             minute: '2-digit',
-            second: '2-digit'
+            second: '2-digit',
+            hour12: true
           })
         }}
       </span>
@@ -653,6 +654,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, h, resolveComponent } from 'vue'
+import { formatUpcomingDate, formatDateInTz } from '@@/shared/utils/timezone'
 
 const props = withDefaults(
   defineProps<{
@@ -721,10 +723,11 @@ let clockTimer: any = null
 
 onMounted(() => {
   const updateClock = () => {
-    liveClock.value = new Date().toLocaleTimeString([], {
+    liveClock.value = formatDateInTz(new Date(), {
       hour: 'numeric',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
+      hour12: true
     })
   }
   updateClock()
@@ -819,8 +822,7 @@ const handleSaveNote = async (payload: {
 }
 
 const formatSlotTime = (dateStr: string) => {
-  const d = new Date(dateStr)
-  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+  return formatUpcomingDate(dateStr)
 }
 
 // Columns: Currently Seated
