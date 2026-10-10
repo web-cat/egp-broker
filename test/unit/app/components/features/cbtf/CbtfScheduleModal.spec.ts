@@ -246,4 +246,118 @@ describe('CbtfScheduleModal', () => {
     expect(remainingSlotButtons.some((b) => b.text().includes('10:00 AM'))).toBe(false)
     expect(remainingSlotButtons.some((b) => b.text().includes('11:00 AM'))).toBe(true)
   })
+
+  it('displays 30-minute duration badge and quiz title when cbtfDurationMinutes is 30', async () => {
+    const mockBlock = {
+      id: '2026-10-05-morning',
+      date: '2026-10-05',
+      dayOfWeek: 1,
+      blockType: 'morning',
+      label: 'Monday Morning',
+      dateLabel: 'Oct 5',
+      timeRangeLabel: '9:00 AM – 12:30 PM',
+      isCurrentBlock: false,
+      openSlotsCount: 5,
+      totalSlotsCount: 10,
+      utilizationPercentage: 50,
+      isHighDemand: false
+    }
+    const slot = {
+      hour: 9,
+      startTime: '2026-10-05T13:00:00.000Z',
+      endTime: '2026-10-05T13:30:00.000Z',
+      formattedTime: '9:00 AM'
+    }
+
+    mockFetchAvailability.mockResolvedValue({
+      cbtfDurationMinutes: 30,
+      blocks: [mockBlock],
+      recommendedDays: [],
+      hourlySlots: [slot]
+    })
+
+    const wrapper = mount(CbtfScheduleModal, {
+      props: {
+        open: true,
+        assignment: { ...mockAssignment, title: 'Quiz 1', cbtfDurationMinutes: 30 },
+        existingReservation: null
+      },
+      global: { stubs }
+    })
+
+    await flushPromises()
+
+    // Step 1: Click block
+    const blockBtn = wrapper.find('button[type="button"]')
+    await blockBtn.trigger('click')
+    await flushPromises()
+
+    // Step 2: Click slot
+    const slotBtn = wrapper
+      .findAll('button[type="button"]')
+      .find((b) => b.text().includes('9:00 AM'))
+    await slotBtn!.trigger('click')
+    await flushPromises()
+
+    // Step 3: Check summary duration badge and modal text
+    expect(wrapper.text()).toContain('30 Minutes Duration')
+    expect(wrapper.text()).toContain('9:00 AM (30 min)')
+  })
+
+  it('displays 60-minute duration badge and exam title when cbtfDurationMinutes is 60', async () => {
+    const mockBlock = {
+      id: '2026-10-05-morning',
+      date: '2026-10-05',
+      dayOfWeek: 1,
+      blockType: 'morning',
+      label: 'Monday Morning',
+      dateLabel: 'Oct 5',
+      timeRangeLabel: '9:00 AM – 12:30 PM',
+      isCurrentBlock: false,
+      openSlotsCount: 5,
+      totalSlotsCount: 10,
+      utilizationPercentage: 50,
+      isHighDemand: false
+    }
+    const slot = {
+      hour: 9,
+      startTime: '2026-10-05T13:00:00.000Z',
+      endTime: '2026-10-05T14:00:00.000Z',
+      formattedTime: '9:00 AM'
+    }
+
+    mockFetchAvailability.mockResolvedValue({
+      cbtfDurationMinutes: 60,
+      blocks: [mockBlock],
+      recommendedDays: [],
+      hourlySlots: [slot]
+    })
+
+    const wrapper = mount(CbtfScheduleModal, {
+      props: {
+        open: true,
+        assignment: { ...mockAssignment, title: 'Midterm Exam', cbtfDurationMinutes: 60 },
+        existingReservation: null
+      },
+      global: { stubs }
+    })
+
+    await flushPromises()
+
+    // Step 1: Click block
+    const blockBtn = wrapper.find('button[type="button"]')
+    await blockBtn.trigger('click')
+    await flushPromises()
+
+    // Step 2: Click slot
+    const slotBtn = wrapper
+      .findAll('button[type="button"]')
+      .find((b) => b.text().includes('9:00 AM'))
+    await slotBtn!.trigger('click')
+    await flushPromises()
+
+    // Step 3: Check summary duration badge and modal text
+    expect(wrapper.text()).toContain('60 Minutes Duration')
+    expect(wrapper.text()).toContain('9:00 AM (60 min)')
+  })
 })

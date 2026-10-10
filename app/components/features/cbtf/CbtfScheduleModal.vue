@@ -126,7 +126,7 @@
           </div>
           <div>
             <h4 class="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-              Exam Confirmed!
+              {{ durationMinutes === 30 ? 'Quiz Confirmed!' : 'Exam Confirmed!' }}
             </h4>
             <p class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
               {{
@@ -353,7 +353,9 @@
               <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 Reservation Summary
               </span>
-              <UBadge color="neutral" variant="subtle" size="sm"> 60 Minutes Duration </UBadge>
+              <UBadge color="neutral" variant="subtle" size="sm">
+                {{ durationMinutes }} Minutes Duration
+              </UBadge>
             </div>
 
             <div class="space-y-1">
@@ -373,7 +375,7 @@
               <div>
                 <p class="text-xs text-neutral-500 uppercase">Time Slot</p>
                 <p class="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">
-                  {{ selectedSlot?.formattedTime }}
+                  {{ selectedSlot?.formattedTime }} ({{ durationMinutes }} min)
                 </p>
               </div>
             </div>
@@ -491,15 +493,23 @@ const stepTitle = computed(() => {
   }
 })
 
+const durationMinutes = computed(() => {
+  return availabilityData.value?.cbtfDurationMinutes || props.assignment?.cbtfDurationMinutes || 60
+})
+
 const modalTitle = computed(() => {
+  const typeLabel = durationMinutes.value === 30 ? 'Quiz' : 'Exam'
   if (props.existingReservation && !isRescheduling.value) {
-    return 'CBTF Exam Reservation'
+    return `CBTF ${typeLabel} Reservation`
   }
-  return isRescheduling.value ? 'Reschedule CBTF Exam' : 'Schedule CBTF Exam'
+  return isRescheduling.value ? `Reschedule CBTF ${typeLabel}` : `Schedule CBTF ${typeLabel}`
 })
 
 const modalDescription = computed(() => {
-  return props.assignment?.title || 'Testing Center Reservation'
+  const title = props.assignment?.title || 'Testing Center Reservation'
+  const typeLabel =
+    durationMinutes.value === 30 ? '30-minute quiz reservation' : '60-minute exam reservation'
+  return `${title} • ${typeLabel}`
 })
 
 const selectedBlock = computed<CbtfHalfDayBlock | undefined>(() => {

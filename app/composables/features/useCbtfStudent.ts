@@ -8,6 +8,7 @@ import type {
 
 export interface CbtfAvailabilityData {
   assignmentTitle: string | null
+  cbtfDurationMinutes?: number
   studentWindow: {
     start: string
     end: string
