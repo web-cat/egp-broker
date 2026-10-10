@@ -8,9 +8,9 @@ updated: 2026-10-09T20:27:00-04:00
 
 **Milestone:** v6.0 — CBTF Phased Capacity & Duration Engine  
 **Phase:** Phase 4: Integration Verification, Proctor Hot-Spares & Final Audit  
-**Status:** 🚀 Phase 3 completed; ready for Phase 4 planning  
+**Status:** 📋 Planning complete; ready for execution  
 **Roadmap:** [.gsd/ROADMAP.md](file:///Users/edwards/git/egp-broker/.gsd/ROADMAP.md)  
-**Next Step:** /plan 4
+**Next Step:** /execute 4
 
 ## Completed Milestones
 
