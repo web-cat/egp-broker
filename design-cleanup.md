@@ -266,13 +266,13 @@ The refactoring items below are grouped by priority:
 
 ---
 
-#### TASK-09: Align Server Business Logic into `server/utils` (Consolidate `server/services`)
+#### TASK-09: Align Server Business Logic into `server/utils` (Consolidate `server/services`) [COMPLETED]
 
-- **Constitution Rule:** GEMINI.md § II (_"server/utils: Core Business Logic & Helpers (Grading, Auth, Prisma)"_)
-- **Current Violations:** Business logic is fragmented across two parallel directories: `server/services/` ([alert.service.ts](file:///Users/edwards/git/egp-broker/server/services/alert.service.ts), [auth.service.ts](file:///Users/edwards/git/egp-broker/server/services/auth.service.ts), [cas.service.ts](file:///Users/edwards/git/egp-broker/server/services/cas.service.ts), [email.service.ts](file:///Users/edwards/git/egp-broker/server/services/email.service.ts), [rate-limit.service.ts](file:///Users/edwards/git/egp-broker/server/services/rate-limit.service.ts), [token.service.ts](file:///Users/edwards/git/egp-broker/server/services/token.service.ts), [user.service.ts](file:///Users/edwards/git/egp-broker/server/services/user.service.ts)) and `server/utils/`.
+- **Constitution Rule:** GEMINI.md § II.3 (_"server/utils: Divided into services/ for domain workflows and helpers/ for technical plumbing"_)
+- **Current Violations:** Business logic was previously fragmented across two parallel directories: `server/services/` and `server/utils/`.
 - **Refactoring Action:**
-  1. Migrate service modules into [server/utils/](file:///Users/edwards/git/egp-broker/server/utils) to take advantage of Nitro auto-imports and conform strictly to the constitution's directory sovereignty.
-  2. Update import references across endpoints and tests.
+  1. Migrated service modules into [server/utils/services/](file:///Users/edwards/git/egp-broker/server/utils/services) and technical utilities into [server/utils/helpers/](file:///Users/edwards/git/egp-broker/server/utils/helpers) to take advantage of Nitro recursive auto-imports while establishing clean layering.
+  2. Updated import references across endpoints and tests.
 - **Manual UI Inspection Required:**
   - Test authentication (login, logout, password reset, CAS callback) and verify automated alerts and email verification deliveries trigger as expected.
 
@@ -336,7 +336,7 @@ The refactoring items below are grouped by priority:
     - [server/utils/gta-interview.ts](file:///Users/edwards/git/egp-broker/server/utils/gta-interview.ts)
     - [server/utils/lti11.ts](file:///Users/edwards/git/egp-broker/server/utils/lti11.ts)
     - [server/utils/tool-launcher.ts](file:///Users/edwards/git/egp-broker/server/utils/tool-launcher.ts)
-    - [server/utils/validation.helpers.ts](file:///Users/edwards/git/egp-broker/server/utils/validation.helpers.ts)
+    - [server/utils/helpers/validation.helpers.ts](file:///Users/edwards/git/egp-broker/server/utils/helpers/validation.helpers.ts)
   - **Pages lacking tests:** 18+ pages across `app/pages/` (only `admin-index.spec.ts` exists).
 - **Refactoring Action:**
   - Create targeted unit tests for all uncovered composables, feature organisms, server utilities, and API endpoints until 100% behavioral coverage is achieved.

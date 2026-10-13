@@ -1,5 +1,5 @@
 import prisma from '@@/server/utils/db'
-import { getGravatarUrl } from '@@/server/utils/gravatar'
+import { getGravatarUrl } from '@@/server/utils/helpers/gravatar'
 
 /**
  * User Service - Pure business logic without validation

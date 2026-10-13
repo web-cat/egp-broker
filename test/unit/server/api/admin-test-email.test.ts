@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import handler from '../../../../server/api/admin/test-email.post'
-import * as emailTransporterModule from '@@/server/utils/email-transporter.helpers'
+import * as emailTransporterModule from '@@/server/utils/helpers/email-transporter.helpers'
 
-vi.mock('@@/server/utils/email-transporter.helpers', () => ({
+vi.mock('@@/server/utils/helpers/email-transporter.helpers', () => ({
   getEmailTransporter: vi.fn()
 }))
 

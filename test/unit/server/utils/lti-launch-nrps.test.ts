@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { handleLtiLaunch } from '@@/server/utils/lti-launch'
 import * as nrpsModule from '@@/server/utils/nrps'
 
-vi.mock('@@/server/utils/gravatar', () => ({
+vi.mock('@@/server/utils/helpers/gravatar', () => ({
   getGravatarUrl: (email: string) => `https://gravatar.com/avatar/${email}`
 }))
 

@@ -2,7 +2,7 @@ import { importPKCS8, SignJWT } from 'jose'
 import crypto from 'node:crypto'
 import prisma from '@@/server/utils/db'
 import { parseCourseRole } from '@@/server/utils/lti'
-import { getGravatarUrl } from '@@/server/utils/gravatar'
+import { getGravatarUrl } from '@@/server/utils/helpers/gravatar'
 import {
   fetchCanvasCourseEnrollments,
   fetchCanvasSectionEnrollments,

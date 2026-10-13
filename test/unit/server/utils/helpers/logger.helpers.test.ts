@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { logger } from '@@/server/utils/logger.helpers'
+import { logger } from '@@/server/utils/helpers/logger.helpers'
 
 describe('Logger', () => {
   it('logs info, warn, and error messages without crashing', () => {

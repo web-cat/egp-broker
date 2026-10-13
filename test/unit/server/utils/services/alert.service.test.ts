@@ -5,7 +5,7 @@ import {
   notifyCbtfScheduleSuccess,
   notifyCbtfScheduleFailure,
   notifyProctorNote
-} from '../../../../server/services/alert.service'
+} from '@@/server/utils/services/alert.service'
 
 describe('Alert Service (ntfy)', () => {
   const mockFetch = vi.fn()

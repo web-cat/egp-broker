@@ -15,7 +15,7 @@ import type {
 import prisma from '@@/server/utils/db'
 import { resolveStudentEffectiveDates } from './overrides'
 import { sendCbtfIncidentNotification } from './cbtf-notifications'
-import { notifyProctorNote } from '@@/server/services/alert.service'
+import { notifyProctorNote } from '@@/server/utils/services/alert.service'
 import type {
   CbtfFacility,
   CbtfReservation,
@@ -62,9 +62,7 @@ export interface SlotAvailability {
 /**
  * Returns the primary CBTF testing facility.
  */
-export async function getPrimaryCbtfFacility(
-  tx: DbClient = prisma
-): Promise<
+export async function getPrimaryCbtfFacility(tx: DbClient = prisma): Promise<
   CbtfFacility & {
     operatingHours: CbtfOperatingHours[]
     scheduleExceptions: CbtfScheduleException[]

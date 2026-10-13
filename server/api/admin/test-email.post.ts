@@ -1,5 +1,5 @@
 import { defineEventHandler, createError } from 'h3'
-import { getEmailTransporter } from '@@/server/utils/email-transporter.helpers'
+import { getEmailTransporter } from '@@/server/utils/helpers/email-transporter.helpers'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(

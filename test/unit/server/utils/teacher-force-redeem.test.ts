@@ -4,14 +4,14 @@ import {
   syncPassRedemptionCanvasOverride
 } from '../../../../server/utils/redemptions'
 import prisma from '@@/server/utils/db'
-import { notifyPassRedemption } from '@@/server/services/alert.service'
+import { notifyPassRedemption } from '@@/server/utils/services/alert.service'
 import { sendPassPortExtension } from '@@/server/utils/passport'
 import {
   createCanvasAssignmentOverride,
   updateCanvasAssignmentOverride
 } from '@@/server/utils/canvas'
 
-vi.mock('@@/server/services/alert.service', () => ({
+vi.mock('@@/server/utils/services/alert.service', () => ({
   notifyPassRedemption: vi.fn().mockResolvedValue(true),
   notifyPassPortSyncFailure: vi.fn().mockResolvedValue(true)
 }))

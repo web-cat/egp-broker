@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 import prisma from '@@/server/utils/db'
-import { getEmailTransporter } from '@@/server/utils/email-transporter.helpers'
+import { getEmailTransporter } from '@@/server/utils/helpers/email-transporter.helpers'
 
 /**
  * Send an automated email notification summarizing proctor incident notes

@@ -1,6 +1,6 @@
 import prisma from '@@/server/utils/db'
 import type { CasServer } from '@prisma/client'
-import { getGravatarUrl } from '@@/server/utils/gravatar'
+import { getGravatarUrl } from '@@/server/utils/helpers/gravatar'
 
 /**
  * CAS Service - Pure business logic for CAS authentication

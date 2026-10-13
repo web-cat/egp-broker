@@ -26,7 +26,7 @@ In Node.js applications, RCE typically occurs through three patterns:
 **Status in this codebase:**
 
 - **No dynamic shell or code evaluation:** There are zero instances of `child_process`, `eval`, or `new Function`.
-- **Safe Template Rendering:** Handlebars is used for email notifications ([template-renderer.ts](file:///Users/edwards/git/egp-broker/server/services/email/template-renderer.ts)), but it compiles **static `.hbs` files from server storage**, not user-provided strings.
+- **Safe Template Rendering:** Handlebars is used for email notifications ([template-renderer.ts](file:///Users/edwards/git/egp-broker/server/utils/services/email/template-renderer.ts)), but it compiles **static `.hbs` files from server storage**, not user-provided strings.
 - **Prisma ORM:** There are no raw SQL queries (`$queryRaw` / `$executeRaw`), eliminating traditional SQL injection.
 
 ---

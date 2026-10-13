@@ -28,7 +28,9 @@ We adhere to the strict Nuxt 4 directory separation.
 │   └── plugins/        # Client-side initialization
 ├── server/             # Nitro Engine (Domain Layer & Data)
 │   ├── api/            # JSON Endpoints (Inputs/Outputs ONLY - Use Zod, Strictly Projected)
-│   ├── utils/          # **Core Business Logic** & Helpers (Grading, Auth, Prisma)
+│   ├── utils/          # Auto-imported Server Logic
+│   │   ├── services/   # Domain & Business Workflows (DB transactions, external APIs, auth, alerts, redemptions)
+│   │   └── helpers/    # Technical Plumbing & Pure Computations (db singleton, response formatters, logger)
 │   ├── routes/         # Custom server routes (e.g., RSS, Webhooks)
 │   └── middleware/     # Server-side request interceptors
 ├── shared/             # Universal Truths (Zod schemas, TS Interfaces, Constants)
@@ -49,6 +51,14 @@ To prevent "sweeping effects," components must follow a strict taxonomy:
 ### 2. Composable Logic
 
 Use `composables/` to extract stateful logic from UI. If a piece of logic is used in two places, or exceeds 30 lines, it belongs in a composable.
+
+### 3. Server Architecture (`server/utils`)
+
+To avoid the "junk drawer" anti-pattern while maintaining Nitro's native recursive auto-imports, `server/utils/` is divided into two distinct, sovereign subdirectories:
+
+- **`services/` (Domain Orchestration):** Business logic, state machines, Prisma database operations, and external services (Auth, Alerts, CAS, CBTF, Canvas Sync, Email, Redemptions, Tokens).
+- **`helpers/` (Technical Plumbing):** Pure computations, stateless utilities, HTTP response formatters, logging, validation helpers, and infrastructure singletons (`db.ts`).
+- **Layering Rule:** `services/` may import from `helpers/`, but `helpers/` must **NEVER** import from `services/`.
 
 ---
 

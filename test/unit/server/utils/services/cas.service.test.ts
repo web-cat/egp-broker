@@ -3,7 +3,7 @@ import {
   parseCasXmlResponse,
   buildCasServiceUrl,
   buildCasLoginUrl
-} from '@@/server/services/cas.service'
+} from '@@/server/utils/services/cas.service'
 
 describe('CAS Service', () => {
   describe('parseCasXmlResponse', () => {

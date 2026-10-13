@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getGravatarUrl } from '@@/server/utils/gravatar'
+import { getGravatarUrl } from '@@/server/utils/helpers/gravatar'
 
 describe('getGravatarUrl', () => {
   it('returns default robohash when email is not provided', () => {

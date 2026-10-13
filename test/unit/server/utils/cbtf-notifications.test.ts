@@ -17,7 +17,7 @@ vi.mock('@@/server/utils/db', () => ({
 }))
 
 const mockSendMail = vi.fn()
-vi.mock('@@/server/utils/email-transporter.helpers', () => ({
+vi.mock('@@/server/utils/helpers/email-transporter.helpers', () => ({
   getEmailTransporter: vi.fn(() => ({
     sendMail: mockSendMail
   }))

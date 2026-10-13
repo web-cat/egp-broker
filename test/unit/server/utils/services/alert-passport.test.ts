@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { notifyPassPortSyncFailure } from '../../../../server/services/alert.service'
+import { notifyPassPortSyncFailure } from '@@/server/utils/services/alert.service'
 
 describe('PassPort Sync Failure Alerting (ntfy)', () => {
   const mockFetch = vi.fn()

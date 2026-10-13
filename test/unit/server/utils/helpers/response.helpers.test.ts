@@ -11,7 +11,7 @@ import {
   conflictError,
   rateLimitError,
   serverError
-} from '@@/server/utils/response.helpers'
+} from '@@/server/utils/helpers/response.helpers'
 
 describe('Response Helpers', () => {
   describe('createApiResponse', () => {

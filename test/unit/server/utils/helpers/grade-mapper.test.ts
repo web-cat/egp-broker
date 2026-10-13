@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { applyGradeTranslation } from '@@/server/utils/grade-mapper'
+import { applyGradeTranslation } from '@@/server/utils/helpers/grade-mapper'
 
 describe('applyGradeTranslation', () => {
   it('returns rawScore when mapping is missing or has no type', () => {

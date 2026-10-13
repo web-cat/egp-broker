@@ -3,7 +3,7 @@ import { computeRepairedUtcTimes, repairAssignmentCbtfTimezones } from '@@/serve
 import prisma from '@@/server/utils/db'
 import * as canvasModule from '@@/server/utils/canvas'
 
-vi.mock('@@/server/services/alert.service', () => ({
+vi.mock('@@/server/utils/services/alert.service', () => ({
   notifyCbtfCanvasOverrideFailure: vi.fn().mockResolvedValue(true),
   sendAdminAlert: vi.fn().mockResolvedValue(true)
 }))

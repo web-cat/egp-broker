@@ -164,8 +164,7 @@ export default defineNuxtConfig({
       dirs: [
         'shared/**', // Shared resources
         'server/constants/**', // Server constants
-        'server/services/**', // Server services
-        'server/utils/**', // Server utilities
+        'server/utils/**', // Server utilities (includes services/ and helpers/)
         'server/types/**' // Server types
       ]
     },

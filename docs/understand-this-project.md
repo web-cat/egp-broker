@@ -39,17 +39,17 @@ Starts a local web-based dashboard showing the generated graph visually.
 
 The static analyzer grouped the files into **9 distinct layers** matching Nuxt 4 and server-side microservice patterns:
 
-| Layer ID               | Layer Name                     | Responsibility                                                               | Key Directories / Files                                               |
-| :--------------------- | :----------------------------- | :--------------------------------------------------------------------------- | :-------------------------------------------------------------------- |
-| `layer:ui`             | **Frontend UI Layer**          | Vue presentation pages, layouts, and reusable component atoms.               | `app/components/`, `app/layouts/`, `app/pages/`, `app/app.vue`        |
-| `layer:frontend-logic` | **Frontend Logic & State**     | Client-side composables, Pinia state stores, and Vue plugins.                | `app/composables/`, `app/stores/`, `app/plugins/`                     |
-| `layer:api`            | **Server API Handlers**        | Server-side endpoints, custom routes, and Swagger specs.                     | `server/api/`, `server/routes/`, `lib/swagger.ts`                     |
-| `layer:service`        | **Server Services & Logic**    | Core business logic, LTI proxies, token managers, and tasks.                 | `server/services/`, `server/utils/`, `server/tasks/`, `lib/prisma.ts` |
-| `layer:data`           | **Data Models & Schemas**      | Relational schemas, seed scripts, and Zod validator boundary configurations. | `prisma/schema.prisma`, `prisma/seed.ts`, `shared/models/`            |
-| `layer:types`          | **Shared Constants & Helpers** | Universal types, custom authorization abilities, and i18n locales.           | `shared/types/`, `shared/constants/`, `shared/utils/`, `i18n/`        |
-| `layer:infrastructure` | **Infrastructure & Build**     | Docker container setups, shell scripts, and bundler configurations.          | `Dockerfile`, `docker-compose.yml`, `.github/workflows/`, `.husky/`   |
-| `layer:documentation`  | **Documentation & Specs**      | Architecture specs, structural design documents, and manuals.                | `README.md`, `GEMINI.md`, `PROJECT_RULES.md`, `docs/`                 |
-| `layer:test`           | **Verification & Tests**       | Vitest unit tests and Playwright E2E integration test suites.                | `test/`, `playwright/`                                                |
+| Layer ID               | Layer Name                     | Responsibility                                                               | Key Directories / Files                                                             |
+| :--------------------- | :----------------------------- | :--------------------------------------------------------------------------- | :---------------------------------------------------------------------------------- |
+| `layer:ui`             | **Frontend UI Layer**          | Vue presentation pages, layouts, and reusable component atoms.               | `app/components/`, `app/layouts/`, `app/pages/`, `app/app.vue`                      |
+| `layer:frontend-logic` | **Frontend Logic & State**     | Client-side composables, Pinia state stores, and Vue plugins.                | `app/composables/`, `app/stores/`, `app/plugins/`                                   |
+| `layer:api`            | **Server API Handlers**        | Server-side endpoints, custom routes, and Swagger specs.                     | `server/api/`, `server/routes/`, `lib/swagger.ts`                                   |
+| `layer:service`        | **Server Services & Logic**    | Core business logic, LTI proxies, token managers, and tasks.                 | `server/utils/services/`, `server/utils/helpers/`, `server/tasks/`, `lib/prisma.ts` |
+| `layer:data`           | **Data Models & Schemas**      | Relational schemas, seed scripts, and Zod validator boundary configurations. | `prisma/schema.prisma`, `prisma/seed.ts`, `shared/models/`                          |
+| `layer:types`          | **Shared Constants & Helpers** | Universal types, custom authorization abilities, and i18n locales.           | `shared/types/`, `shared/constants/`, `shared/utils/`, `i18n/`                      |
+| `layer:infrastructure` | **Infrastructure & Build**     | Docker container setups, shell scripts, and bundler configurations.          | `Dockerfile`, `docker-compose.yml`, `.github/workflows/`, `.husky/`                 |
+| `layer:documentation`  | **Documentation & Specs**      | Architecture specs, structural design documents, and manuals.                | `README.md`, `GEMINI.md`, `PROJECT_RULES.md`, `docs/`                               |
+| `layer:test`           | **Verification & Tests**       | Vitest unit tests and Playwright E2E integration test suites.                | `test/`, `playwright/`                                                              |
 
 ---
 

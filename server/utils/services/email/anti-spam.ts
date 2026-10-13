@@ -27,7 +27,7 @@ export function htmlToPlainText(html: string): string {
     .replace(/&lt;/g, '<') // Replace &lt; with <
     .replace(/&gt;/g, '>') // Replace &gt; with >
     .replace(/&quot;/g, '"') // Replace &quot; with "
-    .replace(/&#39;/g, '\'') // Replace &#39; with '
+    .replace(/&#39;/g, "'") // Replace &#39; with '
     .replace(/\s+/g, ' ') // Replace multiple whitespace with single space
     .trim()
 }

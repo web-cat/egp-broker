@@ -7,10 +7,10 @@ import reservationDelete from '../../../../../server/api/me/cbtf/reservations/[i
 import {
   notifyCbtfScheduleSuccess,
   notifyCbtfScheduleFailure
-} from '@@/server/services/alert.service'
+} from '@@/server/utils/services/alert.service'
 import prisma from '@@/server/utils/db'
 
-vi.mock('@@/server/services/alert.service', () => ({
+vi.mock('@@/server/utils/services/alert.service', () => ({
   notifyCbtfScheduleSuccess: vi.fn().mockResolvedValue(true),
   notifyCbtfScheduleFailure: vi.fn().mockResolvedValue(true)
 }))

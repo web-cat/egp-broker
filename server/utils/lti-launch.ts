@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
-import { getGravatarUrl } from './gravatar'
+import { getGravatarUrl } from './helpers/gravatar'
 import { parseCourseRole, isTechSupportRole } from './lti'
 import { acquireRosterSyncLock, syncCourseRosterFromNrps } from './nrps'
 import type { LtiSessionUser } from '@@/shared/schemas/auth.schema'

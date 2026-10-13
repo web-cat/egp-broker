@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer'
 import {
   getEmailTransporter,
   resetEmailTransporter
-} from '@@/server/utils/email-transporter.helpers'
+} from '@@/server/utils/helpers/email-transporter.helpers'
 
 vi.mock('nodemailer', () => ({
   default: {

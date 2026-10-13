@@ -13,7 +13,7 @@ import {
 } from '@@/server/utils/cbtf'
 import { combineDateAndTime } from '@@/shared/utils/timezone'
 import { enqueueCanvasOverrideSync } from '@@/server/utils/canvas-override-queue'
-import { notifyCbtfScheduleFailure } from '@@/server/services/alert.service'
+import { notifyCbtfScheduleFailure } from '@@/server/utils/services/alert.service'
 import type { ApiResponse } from '@@/shared/types/api'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 

@@ -15,7 +15,7 @@ import {
 // Mocks
 // ─────────────────────────────────────────────────────────────────────────────
 
-vi.mock('@@/server/utils/gravatar', () => ({
+vi.mock('@@/server/utils/helpers/gravatar', () => ({
   getGravatarUrl: (email: string) => `https://gravatar.com/avatar/${email}`
 }))
 

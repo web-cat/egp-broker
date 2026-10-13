@@ -4,7 +4,7 @@ import type { RedemptionRow } from '@@/shared/models/pass'
 import type { RepairCbtfRedemptionsResponse } from '@@/shared/schemas/cbtf.schema'
 import { calculatePassExtension } from '@@/shared/utils/extension'
 import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
-import { notifyPassPortSyncFailure } from '@@/server/services/alert.service'
+import { notifyPassPortSyncFailure } from '@@/server/utils/services/alert.service'
 import {
   buildPassPortExtensionPayload,
   sendPassPortExtension,

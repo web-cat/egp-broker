@@ -8,7 +8,7 @@ import {
   fetchCanvasAssignmentOverrides,
   withCanvasRetry
 } from '@@/server/utils/canvas'
-import { notifyCbtfCanvasOverrideFailure } from '@@/server/services/alert.service'
+import { notifyCbtfCanvasOverrideFailure } from '@@/server/utils/services/alert.service'
 import type {
   ResyncCbtfOverridesResponse,
   RepairCbtfTimezonesResponse

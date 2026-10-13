@@ -8,9 +8,9 @@ import {
   resyncAssignmentCbtfOverrides
 } from '@@/server/utils/cbtf-canvas'
 import * as canvasModule from '@@/server/utils/canvas'
-import * as alertService from '@@/server/services/alert.service'
+import * as alertService from '@@/server/utils/services/alert.service'
 
-vi.mock('@@/server/services/alert.service', () => ({
+vi.mock('@@/server/utils/services/alert.service', () => ({
   notifyCbtfCanvasOverrideFailure: vi.fn().mockResolvedValue(true),
   sendAdminAlert: vi.fn().mockResolvedValue(true)
 }))

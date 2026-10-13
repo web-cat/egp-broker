@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { redeemPass } from '../../../../server/utils/redemptions'
 import prisma from '@@/server/utils/db'
 
-vi.mock('@@/server/services/alert.service', () => ({
+vi.mock('@@/server/utils/services/alert.service', () => ({
   notifyPassRedemption: vi.fn().mockResolvedValue(true),
   notifyPassPortSyncFailure: vi.fn().mockResolvedValue(true)
 }))
