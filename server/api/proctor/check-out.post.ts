@@ -3,8 +3,9 @@ import prisma from '@@/server/utils/db'
 import { checkOutReservation } from '@@/server/utils/cbtf'
 import { proctorReservationActionSchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
+import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReservationDto>> => {
   const session = await getUserSession(event)
   if (!session?.user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })

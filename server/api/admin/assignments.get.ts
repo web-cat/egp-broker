@@ -25,8 +25,21 @@ export default defineEventHandler(async (event): Promise<ApiResponse<AssignmentR
   const assignments = await prisma.assignment.findMany({
     where,
     orderBy: { createdAt: 'desc' },
-    include: {
-      course: { select: { label: true, title: true } }
+    select: {
+      id: true,
+      resourceLinkId: true,
+      title: true,
+      canvasAssignmentId: true,
+      dueDate: true,
+      availableFrom: true,
+      acceptUntil: true,
+      createdAt: true,
+      course: {
+        select: {
+          label: true,
+          title: true
+        }
+      }
     }
   })
 

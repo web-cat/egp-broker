@@ -1,8 +1,9 @@
-import { defineEventHandler } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
+import { passTypeSelect, type PassTypeData } from '@@/shared/models/pass'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any[]>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<PassTypeData[]>> => {
   const session = await getUserSession(event)
 
   if (!session.user) {
@@ -46,6 +47,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any[]>> => 
     where: {
       courseId: courseId
     },
+    select: passTypeSelect,
     orderBy: {
       createdAt: 'asc'
     }
@@ -53,6 +55,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any[]>> => 
 
   return {
     statusCode: 200,
-    data: passTypes
+    data: passTypes.map((pt) => ({
+      ...pt,
+      createdAt: pt.createdAt.toISOString()
+    }))
   }
 })

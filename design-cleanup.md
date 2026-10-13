@@ -171,7 +171,7 @@ The refactoring items below are grouped by priority:
 
 ---
 
-#### TASK-05: Enforce Interface Segregation & Projected Server APIs
+#### TASK-05: Enforce Interface Segregation & Projected Server APIs [COMPLETED]
 
 - **Constitution Rule:** GEMINI.md § IV & § VII (_"Interface Segregation: Server endpoints must use Prisma select to return only the fields defined in a shared/ projection. Projected API: Does the server return a shared interface instead of the raw model? Endpoint Rule: If an API endpoint changes, will you only need to update the Shared Schema and the Feature Composable?"_)
 - **Current Violations:**

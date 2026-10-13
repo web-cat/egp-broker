@@ -1,6 +1,22 @@
 import prisma from '@@/server/utils/db'
 import type { CourseRow, CreateCourseData, AdminCourseQuery } from '@@/shared/models/course'
 
+export const courseRowSelect = {
+  id: true,
+  ltiContextId: true,
+  label: true,
+  title: true,
+  canvasCourseId: true,
+  workflowState: true,
+  createdAt: true,
+  _count: {
+    select: {
+      enrollments: true,
+      assignments: true
+    }
+  }
+} as const
+
 /**
  * Validates and retrieves all courses, formatted as strict CourseRows.
  * Supports filtering by deployment (logical ID) or platform (PK).
@@ -14,13 +30,6 @@ export async function getAllCourses(filters?: AdminCourseQuery): Promise<CourseR
       select: { id: true }
     })
 
-    // If deployment filter is requested but not found, return empty array?
-    // Or throw error? The original API threw 404.
-    // For a utility, returning empty or throwing specific error is best.
-    // To match original API behavior, we'll let it return empty if not found implies no courses.
-    // BUT original API threw 404 "Deployment not found".
-    // We should probably replicate that check here or let the caller handle validation.
-    // Given "Thin Controller", logic should be here.
     if (!deployment) {
       throw createError({
         statusCode: 404,
@@ -34,14 +43,7 @@ export async function getAllCourses(filters?: AdminCourseQuery): Promise<CourseR
 
   const courses = await prisma.course.findMany({
     where,
-    include: {
-      _count: {
-        select: {
-          enrollments: true,
-          assignments: true
-        }
-      }
-    },
+    select: courseRowSelect,
     orderBy: { createdAt: 'desc' }
   })
 
@@ -64,14 +66,7 @@ export async function getAllCourses(filters?: AdminCourseQuery): Promise<CourseR
 export async function getCourse(id: string): Promise<CourseRow | null> {
   const course = await prisma.course.findUnique({
     where: { id },
-    include: {
-      _count: {
-        select: {
-          enrollments: true,
-          assignments: true
-        }
-      }
-    }
+    select: courseRowSelect
   })
 
   if (!course) return null
@@ -95,14 +90,7 @@ export async function getCourse(id: string): Promise<CourseRow | null> {
 export async function createCourse(data: CreateCourseData): Promise<CourseRow> {
   const course = await prisma.course.create({
     data,
-    include: {
-      _count: {
-        select: {
-          enrollments: true,
-          assignments: true
-        }
-      }
-    }
+    select: courseRowSelect
   })
 
   return {

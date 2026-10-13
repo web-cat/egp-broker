@@ -1,9 +1,9 @@
-import { defineEventHandler, readValidatedBody } from 'h3'
+import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
-import { createPassTypeSchema } from '@@/shared/models/pass'
+import { createPassTypeSchema, passTypeSelect, type PassTypeData } from '@@/shared/models/pass'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<PassTypeData>> => {
   const session = await getUserSession(event)
 
   if (!session.user) {
@@ -42,11 +42,15 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     data: {
       ...body,
       courseId
-    }
+    },
+    select: passTypeSelect
   })
 
   return {
     statusCode: 201,
-    data: passType
+    data: {
+      ...passType,
+      createdAt: passType.createdAt.toISOString()
+    }
   }
 })

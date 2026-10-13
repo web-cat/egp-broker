@@ -1,9 +1,9 @@
-import { defineEventHandler, readValidatedBody } from 'h3'
+import { defineEventHandler, readValidatedBody, getRouterParam, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
-import { updatePassTypeSchema } from '@@/shared/models/pass'
+import { updatePassTypeSchema, passTypeSelect, type PassTypeData } from '@@/shared/models/pass'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<PassTypeData>> => {
   const session = await getUserSession(event)
   const id = getRouterParam(event, 'id')
 
@@ -28,9 +28,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
   // Check if user has teacher access to this course
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    include: {
+    select: {
       enrollments: {
-        where: { courseId: passType.courseId, role: { in: ['TEACHER', 'ADMIN'] } }
+        where: { courseId: passType.courseId, role: { in: ['TEACHER', 'ADMIN'] } },
+        select: { id: true }
       }
     }
   })
@@ -48,7 +49,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   const updated = await prisma.passType.update({
     where: { id },
-    data: body
+    data: body,
+    select: passTypeSelect
   })
 
   // Sync eligibility if titlePattern changed (or just always to be safe)
@@ -56,6 +58,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   return {
     statusCode: 200,
-    data: updated
+    data: {
+      ...updated,
+      createdAt: updated.createdAt.toISOString()
+    }
   }
 })

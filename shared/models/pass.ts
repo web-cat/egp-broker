@@ -60,6 +60,26 @@ export const passTypeDataSchema = z.object({
 
 export type PassTypeData = z.infer<typeof passTypeDataSchema>
 
+export const passTypeSelect = {
+  id: true,
+  name: true,
+  description: true,
+  extensionOnly: true,
+  extendsCutoffOnly: true,
+  initialBalance: true,
+  allowRequests: true,
+  hoursPerPass: true,
+  titlePattern: true,
+  minDaysPastDue: true,
+  maxDaysPastDue: true,
+  maxRedemptionsPerAssignment: true,
+  coolDownPeriod: true,
+  coolDownUnit: true,
+  coolDownReset: true,
+  coolDownResetOffset: true,
+  createdAt: true
+} as const
+
 export const createPassTypeSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional().nullable(),

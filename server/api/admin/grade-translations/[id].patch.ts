@@ -1,8 +1,13 @@
 import { defineEventHandler, readValidatedBody, getRouterParam, createError } from 'h3'
 import prisma from '@@/server/utils/db'
-import { updateGradeTranslationSchema } from '@@/shared/models/grade-translation'
+import type { ApiResponse } from '@@/shared/types/api'
+import {
+  updateGradeTranslationSchema,
+  gradeTranslationSelect,
+  type GradeTranslationRow
+} from '@@/shared/models/grade-translation'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event): Promise<ApiResponse<GradeTranslationRow>> => {
   const session = await getUserSession(event)
   if (!session.user || session.user.globalRole !== 'ADMIN') {
     throw createError({ statusCode: 403, statusMessage: 'Unauthorized' })
@@ -23,9 +28,18 @@ export default defineEventHandler(async (event) => {
         description: body.description,
         maxScore: body.maxScore,
         mapping: body.mapping as any
-      }
+      },
+      select: gradeTranslationSelect
     })
-    return { data: updated }
+
+    return {
+      statusCode: 200,
+      data: {
+        ...updated,
+        createdAt: updated.createdAt.toISOString(),
+        updatedAt: updated.updatedAt.toISOString()
+      }
+    }
   } catch {
     throw createError({
       statusCode: 500,

@@ -14,6 +14,16 @@ export const gradeTranslationRowSchema = z.object({
 
 export type GradeTranslationRow = z.infer<typeof gradeTranslationRowSchema>
 
+export const gradeTranslationSelect = {
+  id: true,
+  name: true,
+  description: true,
+  maxScore: true,
+  mapping: true,
+  createdAt: true,
+  updatedAt: true
+} as const
+
 export const createGradeTranslationSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().nullable().optional(),
