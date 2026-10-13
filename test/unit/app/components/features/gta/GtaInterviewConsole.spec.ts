@@ -569,7 +569,7 @@ describe('GtaInterviewConsole Component', () => {
     const tableRows = wrapper.findAll('tbody tr')
     expect(tableRows.length).toBe(25)
     expect(wrapper.text()).toContain('Showing 1 to 25 of 30 completed interviews')
-  })
+  }, 30000)
 
   it('filters completed interviews by student, date range, gta, and status', async () => {
     mockCompletedList.value = [

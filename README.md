@@ -115,21 +115,21 @@ Sometimes when developing, you may make changes that are big enough you need to 
 
 The following scripts are available in `package.json` and can be executed using `pnpm <script-name>` within the development image (or use `docker compose exec app-dev pnpm <script-name>`, or `run` instead of `exec` if the image isn't already running).
 
-| Script            | Command             | Description                                                         |
-| :---------------- | :------------------ | :------------------------------------------------------------------ |
-| **`dev`**         | `nuxt dev`          | Starts the development server with Hot Module Replacement (HMR).    |
-| **`build`**       | `nuxt build`        | Compiles the application for production. Output is in `.output/`.   |
-| **`preview`**     | `nuxt preview`      | Locally boots the production build for testing.                     |
-| **`lint`**        | `run lint:*`        | Runs both ESLint and Prettier to ensure code quality.               |
-| **`test`**        | `run test:*`        | Runs the full test suite (Unit + E2E).                              |
-| **`test:unit`**   | `vitest run`        | Runs unit tests once. Use `:watch` for TDD mode.                    |
-| **`test:e2e`**    | `playwright test`   | Runs end-to-end tests. Use `:ui` for the interactive runner.        |
-| **`db:generate`** | `prisma generate`   | Generates the Prisma Client based on your schema.                   |
-| **`db:push`**     | `prisma db push`    | Syncs schema to the DB without creating a migration file.           |
-| **`db:seed`**     | `prisma db seed`    | populates the database with initial/test data.                      |
-| **`postinstall`** | `db:gen && prepare` | Automatically runs after `pnpm install` to set up your environment. |
-| **`changelog`**   | `git-cliff`         | Generates a `CHANGELOG.md` based on conventional commits.           |
-| **`release:*`**   | `pnpm version`      | Increments version (patch/minor/major) and pushes tags.             |
+| Script            | Command              | Description                                                         |
+| :---------------- | :------------------- | :------------------------------------------------------------------ |
+| **`dev`**         | `nuxt dev`           | Starts the development server with Hot Module Replacement (HMR).    |
+| **`build`**       | `nuxt build`         | Compiles the application for production. Output is in `.output/`.   |
+| **`preview`**     | `nuxt preview`       | Locally boots the production build for testing.                     |
+| **`lint`**        | `run lint:*`         | Runs both ESLint and Prettier to ensure code quality.               |
+| **`test`**        | `run test:*`         | Runs the full test suite (Unit + E2E).                              |
+| **`test:unit`**   | `vitest run`         | Runs unit tests once. Use `:watch` for TDD mode.                    |
+| **`test:e2e`**    | `playwright test`    | Runs end-to-end tests. Use `:ui` for the interactive runner.        |
+| **`db:generate`** | `prisma generate`    | Generates the Prisma Client based on your schema.                   |
+| **`db:migrate`**  | `prisma migrate dev` | Applies pending migrations or creates a new migration.              |
+| **`db:seed`**     | `prisma db seed`     | populates the database with initial/test data.                      |
+| **`postinstall`** | `db:gen && prepare`  | Automatically runs after `pnpm install` to set up your environment. |
+| **`changelog`**   | `git-cliff`          | Generates a `CHANGELOG.md` based on conventional commits.           |
+| **`release:*`**   | `pnpm version`       | Increments version (patch/minor/major) and pushes tags.             |
 
 ---
 

@@ -127,7 +127,7 @@ The refactoring items below are grouped by priority:
 
 ---
 
-#### TASK-03: Remove Disallowed `db:push` Script from Package
+#### TASK-03: Remove Disallowed `db:push` Script from Package [COMPLETED]
 
 - **Constitution Rule:** GEMINI.md § III (_"Migrations: Never use `db push`. Use: `docker compose exec app-dev pnpm prisma migrate dev --name <description>`"_)
 - **Current Violations:** [package.json](file:///Users/edwards/git/egp-broker/package.json#L35) defines `"db:push": "prisma db push"`.
@@ -361,3 +361,40 @@ When executing the refactoring tasks above, use this matrix to guide manual visu
 | **Decomposed Monoliths: Proctor Console**   | [ProctorConsole.vue](file:///Users/edwards/git/egp-broker/app/components/features/proctor/ProctorConsole.vue)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | 1. Navigate to `/proctor`.<br>2. Check student lookup by ID/name.<br>3. Execute Quick Check-in, Reassign Seat, and Check-out.<br>4. Test Training Mode toggle and ensure simulation data resets cleanly.                                                                                                                                                                                    |
 | **Layout Shell & Course Switcher**          | [default.vue](file:///Users/edwards/git/egp-broker/app/layouts/default.vue)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | 1. Log in as an instructor enrolled in multiple courses.<br>2. Click "Change Course" in the top navigation bar.<br>3. Verify you are smoothly redirected to the course picker `/` without console errors.<br>4. Choose another course and confirm dashboard updates to the selected course.                                                                                                 |
 | **Authentication Flows**                    | [login.vue](file:///Users/edwards/git/egp-broker/app/pages/auth/login.vue), [register.vue](file:///Users/edwards/git/egp-broker/app/pages/auth/register.vue), [forgot-password.vue](file:///Users/edwards/git/egp-broker/app/pages/auth/forgot-password.vue), [reset-password.vue](file:///Users/edwards/git/egp-broker/app/pages/auth/reset-password.vue)                                                                                                                                                                                                                                                                                                  | 1. Test local login with valid credentials.<br>2. Test login with invalid credentials and verify error alerts.<br>3. Test "Forgot Password" request and password reset token link.<br>4. Verify user avatar and dropdown menu in the top right corner.                                                                                                                                      |
+
+---
+
+### ✅ Task 02 Complete & Committed
+
+**TASK-02: Universal Server-Side Input Validation (Zod Fail-Fast)** is complete, verified, and committed.
+
+#### Summary of Work Completed:
+
+1. **Endpoint Refactoring**: Refactored all 24 unvalidated or ad-hoc endpoints across CBTF Admin, Proctor Console, GTA/Student scheduling, and Passport API to use `readValidatedBody` and `getValidatedQuery`.
+2. **Schema Contracts**: Added centralized, reusable schemas in:
+   - [shared/schemas/cbtf.schema.ts](file:///Users/edwards/git/egp-broker/shared/schemas/cbtf.schema.ts) (`proctorReservationActionSchema`, `proctorStatusInputSchema`, `proctorLookupQuerySchema`)
+   - [shared/schemas/course.schema.ts](file:///Users/edwards/git/egp-broker/shared/schemas/course.schema.ts) (`studentContextQuerySchema`)
+   - [shared/models/passport.ts](file:///Users/edwards/git/egp-broker/shared/models/passport.ts) (`passPortCredentialsQuerySchema`)
+3. **Vitest Verification**: Updated test mocks and verified the full test suite inside Docker: **169 test files passed (1,102 passed, 0 failed)**.
+4. **Documentation**: Marked complete in [design-cleanup.md](file:///Users/edwards/git/egp-broker/design-cleanup.md).
+5. **Git Commit**: Committed on `main` via `b7ccc5e` (`fix(api): add zod validation across endpoints`) following conventional commit and lint-staged guidelines.
+
+---
+
+### ✅ Task 03 Complete & Verified
+
+**TASK-03: Remove Disallowed `db:push` Script from Package** is complete and verified.
+
+#### Summary of Work Completed:
+
+1. **Script Replacement**: Removed `"db:push": "prisma db push"` from [package.json](file:///Users/edwards/git/egp-broker/package.json) and replaced it with `"db:migrate": "prisma migrate dev"`, complying with GEMINI.md § III.
+2. **Documentation**: Updated [README.md](file:///Users/edwards/git/egp-broker/README.md) scripts table to document `db:migrate` instead of `db:push`.
+3. **Verification**: Full unit test suite verified passing.
+
+---
+
+### ⏸️ Status & Next Steps
+
+Next task in the roadmap:
+
+- **TASK-04**: Enforce "The Transport Rule" (Encapsulate `$fetch` and `useFetch` across feature components and admin pages into dedicated composables).

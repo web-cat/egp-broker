@@ -32,7 +32,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "processor:dev": "nuxt-processor dev",
     "changelog": "pnpm exec git-cliff --output CHANGELOG.md",
