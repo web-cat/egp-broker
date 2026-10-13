@@ -3,8 +3,9 @@ import prisma from '@@/server/utils/db'
 import { lookupStudentForProctor } from '@@/server/utils/cbtf'
 import { proctorLookupQuerySchema } from '@@/shared/schemas/cbtf.schema'
 import type { ApiResponse } from '@@/shared/types/api'
+import type { ProctorLookupResultDto } from '@@/shared/models/cbtf'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<ProctorLookupResultDto>> => {
   const session = await getUserSession(event)
   if (!session?.user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
@@ -17,7 +18,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   const { studentId } = await getValidatedQuery(event, proctorLookupQuerySchema.parse)
 
-  const result = await lookupStudentForProctor(prisma as any, studentId)
+  const result = await lookupStudentForProctor(prisma, studentId)
 
   return {
     statusCode: 200,

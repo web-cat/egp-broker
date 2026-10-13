@@ -219,7 +219,7 @@ The refactoring items below are grouped by priority:
 
 ### Priority 2: Medium (Code Quality, Type Safety & Architecture)
 
-#### TASK-07: Eliminate Pervasive `any` and Enforce Defensive TypeScript
+#### TASK-07: Eliminate Pervasive `any` and Enforce Defensive TypeScript [COMPLETED]
 
 - **Constitution Rule:** GEMINI.md § V.2 & § VII (_"Defensive TypeScript: No any. Use unknown with Type Guards if needed. Prefer interface over type for public APIs. Definition of Done: No any: Are all types derived from Zod schemas or explicit interfaces?"_)
 - **Current Violations:** Over 800 occurrences of `as any` or `: any` across the codebase:

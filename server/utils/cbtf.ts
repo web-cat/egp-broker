@@ -6,7 +6,12 @@
  */
 
 import { createError } from 'h3'
-import type { PrismaClient } from '@prisma/client'
+import type {
+  PrismaClient,
+  Prisma,
+  CbtfOperatingHours,
+  CbtfScheduleException
+} from '@prisma/client'
 import prisma from '@@/server/utils/db'
 import { resolveStudentEffectiveDates } from './overrides'
 import { sendCbtfIncidentNotification } from './cbtf-notifications'
@@ -28,6 +33,8 @@ import {
   getLocalTimeParts,
   combineDateAndTime
 } from '@@/shared/utils/timezone'
+
+type DbClient = PrismaClient | Prisma.TransactionClient
 
 export interface FacilityOperatingHoursResult {
   isOpen: boolean
@@ -56,9 +63,14 @@ export interface SlotAvailability {
  * Returns the primary CBTF testing facility.
  */
 export async function getPrimaryCbtfFacility(
-  tx: PrismaClient | typeof prisma = prisma
-): Promise<CbtfFacility & { operatingHours: any[]; scheduleExceptions: any[] }> {
-  let facility = await (tx as any).cbtfFacility.findFirst({
+  tx: DbClient = prisma
+): Promise<
+  CbtfFacility & {
+    operatingHours: CbtfOperatingHours[]
+    scheduleExceptions: CbtfScheduleException[]
+  }
+> {
+  let facility = await tx.cbtfFacility.findFirst({
     orderBy: { createdAt: 'asc' },
     include: {
       operatingHours: true,
@@ -69,7 +81,7 @@ export async function getPrimaryCbtfFacility(
   if (!facility) {
     // Auto-create default facility if none exists yet
     const seatOrder = Array.from({ length: 48 }, (_, i) => i + 1)
-    facility = await (tx as any).cbtfFacility.create({
+    facility = await tx.cbtfFacility.create({
       data: {
         name: 'Main CBTF Facility',
         totalSeats: 48,
@@ -105,7 +117,7 @@ export function getFacilityTimezone(facility?: { timezone?: string | null }): st
 export async function getFacilityOperatingHoursForDate(
   facilityId: string,
   targetDate: Date,
-  tx: PrismaClient | typeof prisma = prisma,
+  tx: DbClient = prisma,
   timeZone: string = DEFAULT_CBTF_TIMEZONE
 ): Promise<FacilityOperatingHoursResult> {
   const localDateStr = extractCalendarDate(targetDate, timeZone)
@@ -113,7 +125,7 @@ export async function getFacilityOperatingHoursForDate(
   const startOfDay = combineDateAndTime(localDateStr, '00:00', timeZone)
 
   // 1. Check schedule exception
-  const exception = await (tx as any).cbtfScheduleException.findFirst({
+  const exception = await tx.cbtfScheduleException.findFirst({
     where: {
       facilityId,
       date: {
@@ -143,7 +155,7 @@ export async function getFacilityOperatingHoursForDate(
 
   // 2. Query weekly recurring operating hours (dayOfWeek in facility's timezone)
   const dayOfWeek = getLocalDayOfWeek(targetDate, timeZone)
-  const weeklyHours = await (tx as any).cbtfOperatingHours.findUnique({
+  const weeklyHours = await tx.cbtfOperatingHours.findUnique({
     where: {
       facilityId_dayOfWeek: {
         facilityId,
@@ -454,10 +466,10 @@ export async function getStudentSchedulingWindow(
     dueDate: Date | null
     acceptUntil: Date | null
   },
-  tx: PrismaClient | typeof prisma = prisma
+  tx: DbClient = prisma
 ): Promise<StudentSchedulingWindow> {
   // Check if student redeemed a pass for this assignment
-  const latestRedemption = await (tx as any).passRedemption.findFirst({
+  const latestRedemption = await tx.passRedemption.findFirst({
     where: {
       pool: { userId },
       assignmentId: assignment.id
@@ -545,11 +557,15 @@ function formatTimeStr12h(timeStr: string): string {
  * - Highlights blocks with utilization > 60%.
  */
 export async function getRecommendedDaysAndSlots(
-  facility: CbtfFacility & { operatingHours: any[]; scheduleExceptions: any[]; timezone?: string },
+  facility: CbtfFacility & {
+    operatingHours: CbtfOperatingHours[]
+    scheduleExceptions: CbtfScheduleException[]
+    timezone?: string
+  },
   studentWindow: StudentSchedulingWindow,
   preferenceOrBlockId?: string,
   selectedDateStr?: string,
-  tx: PrismaClient | typeof prisma = prisma,
+  tx: DbClient = prisma,
   durationMinutes: number = 60
 ): Promise<{
   blocks: CbtfHalfDayBlock[]
@@ -568,7 +584,7 @@ export async function getRecommendedDaysAndSlots(
   const queryEnd = combineDateAndTime(localEndDateStr, '23:59', timeZone)
 
   // Fetch all active reservations in the window once to avoid N+1 queries
-  const allReservations: CbtfReservation[] = await (tx as any).cbtfReservation.findMany({
+  const allReservations: CbtfReservation[] = await tx.cbtfReservation.findMany({
     where: {
       facilityId: facility.id,
       status: { in: ['SCHEDULED', 'CHECKED_IN'] },
@@ -964,10 +980,10 @@ export function toCbtfReservationDto(res: any): CbtfReservationDto {
 /**
  * Returns live feed of seated roster, arriving students, departures, and facility capacity
  */
-export async function getProctorLiveFeed(prisma: PrismaClient, facilityId?: string) {
+export async function getProctorLiveFeed(prismaClient: DbClient = prisma, facilityId?: string) {
   const facility = facilityId
-    ? await prisma.cbtfFacility.findUnique({ where: { id: facilityId } })
-    : await getPrimaryCbtfFacility(prisma)
+    ? await prismaClient.cbtfFacility.findUnique({ where: { id: facilityId } })
+    : await getPrimaryCbtfFacility(prismaClient)
 
   if (!facility) {
     throw createError({ statusCode: 404, statusMessage: 'No facility found' })
@@ -1080,13 +1096,13 @@ export async function getProctorLiveFeed(prisma: PrismaClient, facilityId?: stri
 /**
  * Looks up student by studentId and determines check-in / check-out decision
  */
-export async function lookupStudentForProctor(prisma: PrismaClient, studentId: string) {
+export async function lookupStudentForProctor(prismaClient: DbClient = prisma, studentId: string) {
   const cleanId = studentId.trim()
   if (!cleanId) {
     throw createError({ statusCode: 400, statusMessage: 'Student ID is required' })
   }
 
-  const user = await prisma.user.findFirst({
+  const user = await prismaClient.user.findFirst({
     where: {
       studentId: cleanId
     },
@@ -1110,13 +1126,13 @@ export async function lookupStudentForProctor(prisma: PrismaClient, studentId: s
     }
   }
 
-  const facility = await getPrimaryCbtfFacility(prisma)
+  const facility = await getPrimaryCbtfFacility(prismaClient)
   const leadMinutes = facility.checkInLeadMinutes ?? 5
   const graceMinutes = facility.checkInGraceMinutes ?? 15
   const now = new Date()
 
   // 1. Check if student is currently seated (ready for checkout)
-  const seatedReservation = await prisma.cbtfReservation.findFirst({
+  const seatedReservation = await prismaClient.cbtfReservation.findFirst({
     where: {
       userId: user.id,
       facilityId: facility.id,
@@ -1146,7 +1162,7 @@ export async function lookupStudentForProctor(prisma: PrismaClient, studentId: s
   }
 
   // 2. Check for scheduled reservation closest to now
-  const scheduledReservation = await prisma.cbtfReservation.findFirst({
+  const scheduledReservation = await prismaClient.cbtfReservation.findFirst({
     where: {
       userId: user.id,
       facilityId: facility.id,
@@ -1354,7 +1370,7 @@ export async function checkOutReservation(
 
   // Trigger incident email notification if any notes exist for this test session
   const noteCount =
-    (await (prisma as any).cbtfReservationNote?.count?.({
+    (await prisma.cbtfReservationNote.count({
       where: { reservationId }
     })) ?? 0
   if (noteCount > 0) {
@@ -1476,7 +1492,7 @@ export async function reinstateCheckoutReservation(prisma: PrismaClient, reserva
  * Adds a proctor observation note / incident report to a reservation.
  */
 export async function addReservationNote(
-  prisma: PrismaClient,
+  prismaClient: DbClient = prisma,
   data: {
     reservationId?: string
     seatNumber?: number
@@ -1488,9 +1504,9 @@ export async function addReservationNote(
   let targetReservationId = data.reservationId
 
   if (!targetReservationId && data.seatNumber) {
-    const facility = await getPrimaryCbtfFacility(prisma)
+    const facility = await getPrimaryCbtfFacility(prismaClient)
     // Locate the active (seated or scheduled) reservation at this seat
-    const activeAtSeat = await prisma.cbtfReservation.findFirst({
+    const activeAtSeat = await prismaClient.cbtfReservation.findFirst({
       where: {
         facilityId: facility.id,
         seatNumber: data.seatNumber,
@@ -1515,7 +1531,7 @@ export async function addReservationNote(
     })
   }
 
-  const note = await prisma.cbtfReservationNote.create({
+  const note = await prismaClient.cbtfReservationNote.create({
     data: {
       reservationId: targetReservationId,
       authorId: data.authorId,
@@ -1613,7 +1629,7 @@ export async function autoExpirePastScheduledReservations(
   if (filter?.facilityId) where.facilityId = filter.facilityId
   if (filter?.assignmentId) where.assignmentId = filter.assignmentId
 
-  const result = await (tx as any).cbtfReservation.updateMany({
+  const result = await tx.cbtfReservation.updateMany({
     where,
     data: {
       status: 'MISSED'
@@ -1629,12 +1645,12 @@ export async function autoExpirePastScheduledReservations(
  * Useful for proctors/admins performing emergency workstation swaps (e.g. to elastic hot spares).
  */
 export async function reassignReservationSeat(
-  prismaClient: PrismaClient | typeof prisma,
+  prismaClient: DbClient = prisma,
   reservationId: string,
   targetSeatNumber: number,
   _modifiedByUserId?: string
 ): Promise<CbtfReservationDto> {
-  const reservation = await (prismaClient as any).cbtfReservation.findUnique({
+  const reservation = await prismaClient.cbtfReservation.findUnique({
     where: { id: reservationId },
     include: {
       assignment: { select: { title: true } },
@@ -1662,7 +1678,7 @@ export async function reassignReservationSeat(
   }
 
   // Check if target seat is already occupied by another active reservation during the same interval
-  const conflict = await (prismaClient as any).cbtfReservation.findFirst({
+  const conflict = await prismaClient.cbtfReservation.findFirst({
     where: {
       facilityId: reservation.facilityId,
       seatNumber: targetSeatNumber,
@@ -1680,7 +1696,7 @@ export async function reassignReservationSeat(
     })
   }
 
-  const updated = await (prismaClient as any).cbtfReservation.update({
+  const updated = await prismaClient.cbtfReservation.update({
     where: { id: reservationId },
     data: {
       seatNumber: targetSeatNumber

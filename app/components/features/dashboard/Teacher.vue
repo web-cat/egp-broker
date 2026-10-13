@@ -327,9 +327,8 @@
 <script setup lang="ts">
 import type { PassTypeData } from '@@/shared/models/pass'
 import type { AssignmentRow } from '@@/shared/models/assignment'
-import type { StudentRosterRow, StudentPassBalance } from '@@/shared/models/teacher'
-
-import type { DropdownMenuItem } from '@nuxt/ui'
+import type { TableColumn, DropdownMenuItem } from '@nuxt/ui'
+import type { CourseSectionRow } from '@@/shared/models/section'
 import FeaturesCourseSettingsModal from '~/components/features/course/CourseSettingsModal.vue'
 import FeaturesTeacherTeacherGtaShiftsSection from '~/components/features/teacher/TeacherGtaShiftsSection.vue'
 
@@ -345,7 +344,6 @@ import { useStudentView } from '~/composables/features/useStudentView'
 
 const { t } = useI18n()
 const { enterStudentView } = useStudentView()
-const toast = useToast()
 
 const props = defineProps<{
   courseId?: string | null
@@ -454,7 +452,7 @@ const onAssignmentSavedWithRefresh = () => {
   onAssignmentItemCreated()
 }
 
-const passTypeColumns: any[] = [
+const passTypeColumns: TableColumn<PassTypeData>[] = [
   {
     accessorKey: 'name',
     header: 'Name'
@@ -470,7 +468,7 @@ const passTypeColumns: any[] = [
   {
     accessorKey: 'extensionOnly',
     header: 'Policy',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const ext = row.original.extensionOnly
       const cutoff = row.original.extendsCutoffOnly
       const req = row.original.allowRequests
@@ -633,18 +631,18 @@ const sortedAssignments = computed(() => {
     }))
 })
 
-const assignmentRowClass = (row: any) => {
+const assignmentRowClass = (row: { original: AssignmentRow }) => {
   if (row.original.highlight) {
     return 'bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-l-primary-500 dark:border-l-primary-400'
   }
   return 'border-l-4 border-l-transparent opacity-75 hover:opacity-100 transition-opacity'
 }
 
-const assignmentColumns: any[] = [
+const assignmentColumns: TableColumn<AssignmentRow>[] = [
   {
     accessorKey: 'title',
     header: 'Title',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
       const isHidden =
         row.original.availableFrom && new Date(row.original.availableFrom) > new Date()
@@ -718,7 +716,7 @@ const assignmentColumns: any[] = [
   {
     accessorKey: 'eligiblePassTypeNames',
     header: 'Pass Type(s)',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const names = row.original.eligiblePassTypeNames || []
       if (!names.length) return '—'
 
@@ -741,7 +739,7 @@ const assignmentColumns: any[] = [
   {
     accessorKey: 'dueDate',
     header: 'Due Date',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
       const content = formatDate(row.getValue('dueDate')) || '—'
       return h('span', { class: isEligible ? '' : 'text-gray-400 dark:text-gray-500' }, content)
@@ -750,14 +748,14 @@ const assignmentColumns: any[] = [
   {
     accessorKey: 'availableFrom',
     header: 'Available From',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const isEligible = (row.original.eligiblePassTypeNames?.length ?? 0) > 0
       const content = formatDate(row.getValue('availableFrom')) || '—'
       return h('span', { class: isEligible ? '' : 'text-gray-400 dark:text-gray-500' }, content)
     }
   },
   actionsColumn<AssignmentRow>((row) => {
-    const actions: any[] = [
+    const actions: DropdownMenuItem[] = [
       {
         label: 'View Redemptions',
         icon: 'i-lucide-history',
@@ -796,11 +794,11 @@ const assignmentColumns: any[] = [
   })
 ]
 
-const sectionColumns: any[] = [
+const sectionColumns: TableColumn<CourseSectionRow>[] = [
   {
     accessorKey: 'name',
     header: 'Section Name',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       return h('div', { class: 'flex items-center gap-2' }, [
         h(resolveComponent('UIcon'), {
           name: 'i-lucide-layers',
@@ -817,7 +815,7 @@ const sectionColumns: any[] = [
   {
     accessorKey: 'canvasSectionId',
     header: 'Canvas ID',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       return h(
         'span',
         { class: 'font-mono text-xs text-neutral-600 dark:text-neutral-400' },
@@ -828,7 +826,7 @@ const sectionColumns: any[] = [
   {
     accessorKey: 'totalStudents',
     header: 'Enrolled Students',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const count = row.getValue('totalStudents') || 0
       return h('div', { class: 'flex items-center gap-1.5' }, [
         h(resolveComponent('UIcon'), {
@@ -849,7 +847,7 @@ const sectionColumns: any[] = [
   {
     accessorKey: 'totalOverrides',
     header: 'Section Overrides',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const count = row.getValue('totalOverrides') || 0
       return h('div', { class: 'flex items-center gap-1.5' }, [
         h(resolveComponent('UIcon'), {
@@ -869,11 +867,11 @@ const sectionColumns: any[] = [
   }
 ]
 
-const studentColumns: any[] = [
+const studentColumns: TableColumn<StudentRosterRow>[] = [
   {
     accessorKey: 'studentName',
     header: 'Student',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const name = row.getValue('studentName') || '—'
       const email = row.original.studentEmail
       return h('div', { class: 'flex flex-col items-start' }, [
@@ -894,19 +892,19 @@ const studentColumns: any[] = [
   {
     accessorKey: 'sectionName',
     header: 'Section',
-    cell: ({ row }: { row: any }) => row.getValue('sectionName') || '—'
+    cell: ({ row }) => row.getValue('sectionName') || '—'
   },
   {
     accessorKey: 'passBalances',
     header: 'Pass Balances',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const balances = row.original.passBalances || []
       if (!balances.length) return '—'
 
       return h(
         'div',
         { class: 'flex flex-wrap gap-2' },
-        balances.map((pb: any) =>
+        balances.map((pb: StudentPassBalance) =>
           h(
             'div',
             {
@@ -931,7 +929,7 @@ const studentColumns: any[] = [
   {
     accessorKey: 'totalRedemptions',
     header: 'Redemptions',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const count = row.getValue('totalRedemptions') || 0
       return h(
         'span',

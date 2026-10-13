@@ -2,9 +2,13 @@ import { defineEventHandler, createError, setHeader } from 'h3'
 import prisma from '@@/server/utils/db'
 import { getProctorLiveFeed } from '@@/server/utils/cbtf'
 import type { ApiResponse } from '@@/shared/types/api'
+import type { ProctorLiveFeedDto } from '@@/shared/models/cbtf'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
-  if (event.node?.res && typeof (event.node.res as any).setHeader === 'function') {
+export default defineEventHandler(async (event): Promise<ApiResponse<ProctorLiveFeedDto>> => {
+  if (
+    event.node?.res &&
+    typeof (event.node.res as { setHeader?: unknown }).setHeader === 'function'
+  ) {
     setHeader(event, 'Cache-Control', 'no-cache, no-store, must-revalidate')
     setHeader(event, 'Pragma', 'no-cache')
     setHeader(event, 'Expires', '0')
@@ -20,7 +24,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const feed = await getProctorLiveFeed(prisma as any)
+  const feed = await getProctorLiveFeed(prisma)
 
   return {
     statusCode: 200,

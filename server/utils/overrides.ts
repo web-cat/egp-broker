@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient, Prisma } from '@prisma/client'
 import prisma from '@@/server/utils/db'
 import type { EffectiveAssignmentDates } from '@@/shared/models/override'
 
@@ -17,9 +17,9 @@ export async function resolveStudentEffectiveDates(
   assignment: AssignmentDateSource,
   userId: string,
   courseId: string,
-  tx: PrismaClient | typeof prisma = prisma
+  tx: PrismaClient | Prisma.TransactionClient = prisma
 ): Promise<EffectiveAssignmentDates> {
-  const client = (tx as any) || prisma
+  const client = tx || prisma
   // 1. Check for individual student override
   // Note: We MUST exclude CBTF exam slot overrides because they represent
   // scheduled testing session access windows rather than assignment/section deadline policies.

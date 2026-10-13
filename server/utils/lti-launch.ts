@@ -442,13 +442,13 @@ export async function handleLtiLaunch(
       const enrollment = await tx.enrollment.upsert({
         where: { userId_courseId: { userId: user.id, courseId: course.id } },
         update: {
-          role: userRole as any,
+          role: userRole,
           ...(courseSectionId ? { courseSectionId } : {})
         },
         create: {
           userId: user.id,
           courseId: course.id,
-          role: userRole as any,
+          role: userRole,
           courseSectionId
         }
       })

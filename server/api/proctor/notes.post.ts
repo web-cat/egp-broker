@@ -3,8 +3,9 @@ import prisma from '@@/server/utils/db'
 import { createReservationNoteInputSchema } from '@@/shared/schemas/cbtf.schema'
 import { addReservationNote } from '@@/server/utils/cbtf'
 import type { ApiResponse } from '@@/shared/types/api'
+import type { CbtfReservationNoteDto } from '@@/shared/models/cbtf'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReservationNoteDto>> => {
   const session = await getUserSession(event)
   if (!session?.user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
@@ -17,7 +18,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   const noteInput = await readValidatedBody(event, createReservationNoteInputSchema.parse)
 
-  const note = await addReservationNote(prisma as any, {
+  const note = await addReservationNote(prisma, {
     reservationId: noteInput.reservationId,
     seatNumber: noteInput.seatNumber,
     authorId: session.user.id,

@@ -492,13 +492,13 @@ export async function syncCourseRosterFromNrps(courseId: string): Promise<{
           }
         },
         update: {
-          role: courseRole as any,
+          role: courseRole,
           ...(sectionDbId ? { courseSectionId: sectionDbId } : {})
         },
         create: {
           userId: user.id,
           courseId,
-          role: courseRole as any,
+          role: courseRole,
           courseSectionId: sectionDbId
         }
       })

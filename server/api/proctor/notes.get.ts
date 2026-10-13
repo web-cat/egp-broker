@@ -1,8 +1,9 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import type { ApiResponse } from '@@/shared/types/api'
+import type { CbtfReservationNoteDto } from '@@/shared/models/cbtf'
 
-export default defineEventHandler(async (event): Promise<ApiResponse<any[]>> => {
+export default defineEventHandler(async (event): Promise<ApiResponse<CbtfReservationNoteDto[]>> => {
   const session = await getUserSession(event)
   if (!session?.user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })

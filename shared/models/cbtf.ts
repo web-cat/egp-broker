@@ -64,6 +64,27 @@ export interface CbtfProctorShiftDto {
   endTime: string
 }
 
+export interface CbtfAdminProctorShiftDto {
+  id: string
+  facilityId: string
+  userId: string
+  date: Date | string
+  startTime: string
+  endTime: string
+  user?: {
+    id: string
+    firstName: string | null
+    lastName: string | null
+    email: string | null
+    globalRole: string
+    avatarUrl: string | null
+  }
+  facility?: {
+    id: string
+    name: string
+  }
+}
+
 export interface CbtfReservationDto {
   id: string
   facilityId: string
@@ -177,4 +198,39 @@ export interface CbtfAssignmentReservationSummary {
   remainingOpenSlots: number
   remainingOpenSeats: number
   reservationWindowEnd: string | null
+}
+
+export interface ProctorLiveFeedDto {
+  facility: {
+    id: string
+    name: string
+    totalSeats: number
+    occupiedSeats: number
+    availableSeats: number
+    checkInLeadMinutes: number
+    checkInGraceMinutes: number
+  }
+  counts: {
+    seated: number
+    arriving: number
+    departures: number
+  }
+  seated: (CbtfReservationDto & { elapsedMinutes: number; remainingMinutes: number })[]
+  arriving: CbtfReservationDto[]
+  departures: CbtfReservationDto[]
+}
+
+export interface ProctorLookupResultDto {
+  found: boolean
+  student: {
+    id: string
+    firstName: string | null
+    lastName: string | null
+    studentId: string | null
+    email: string | null
+    avatarUrl: string | null
+  } | null
+  reservation: CbtfReservationDto | null
+  decision: string
+  message: string
 }

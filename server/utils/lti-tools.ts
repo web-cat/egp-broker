@@ -1,3 +1,4 @@
+import type { Prisma, LtiTool } from '@prisma/client'
 import prisma from '@@/server/utils/db'
 import type { ToolRow, AdminToolQuery, CreateToolData, UpdateToolData } from '@@/shared/models/tool'
 import { normalizePassPortExtensionUrl } from '@@/shared/models/passport'
@@ -5,7 +6,7 @@ import { normalizePassPortExtensionUrl } from '@@/shared/models/passport'
 /**
  * Transforms a Prisma LtiTool record into a projected ToolRow.
  */
-export function toToolRow(t: any): ToolRow {
+export function toToolRow(t: LtiTool & { platform?: { issuer: string | null } | null }): ToolRow {
   return {
     id: t.id,
     name: t.name,
@@ -99,7 +100,7 @@ export async function getTool(id: string): Promise<ToolRow | null> {
 export async function createTool(data: CreateToolData): Promise<ToolRow> {
   const sanitized = sanitizeToolData(data)
   const t = await prisma.ltiTool.create({
-    data: sanitized as any,
+    data: sanitized as Prisma.LtiToolUncheckedCreateInput,
     include: { platform: { select: { issuer: true } } }
   })
 
@@ -113,7 +114,7 @@ export async function updateTool(id: string, data: UpdateToolData): Promise<Tool
   const sanitized = sanitizeToolData(data, true)
   const t = await prisma.ltiTool.update({
     where: { id },
-    data: sanitized as any,
+    data: sanitized as Prisma.LtiToolUncheckedUpdateInput,
     include: { platform: { select: { issuer: true } } }
   })
 

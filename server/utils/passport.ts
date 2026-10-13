@@ -1,6 +1,7 @@
 import { randomUUID, createHmac } from 'node:crypto'
 import type { H3Event } from 'h3'
 import { createError } from 'h3'
+import type { Prisma } from '@prisma/client'
 import prisma from '@@/server/utils/db'
 import { getServerSiteUrl } from '@@/server/utils/site'
 import { toToolRow } from '@@/server/utils/lti-tools'
@@ -127,7 +128,7 @@ export async function handlePassPortCredentialsDelivery(
       passportClientId: validated.credentials.client_id,
       passportClientSecret: validated.credentials.client_secret,
       passportExtensionUrl: normalizePassPortExtensionUrl(validated.endpoints.extension_handler),
-      passportRequestedProperties: (validated.requested_properties || []) as any,
+      passportRequestedProperties: (validated.requested_properties || []) as Prisma.InputJsonValue,
       passportRegistrationStatus: 'REGISTERED',
       passportRegistrationError: null,
       passportRegisteredAt: new Date(),

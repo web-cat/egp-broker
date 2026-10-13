@@ -695,8 +695,15 @@
 </template>
 
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui'
 import { useCbtfAdmin } from '~/composables/features/admin/useCbtfAdmin'
 import { extractCalendarDate, formatDateInTz, DEFAULT_TIMEZONE } from '@@/shared/utils/timezone'
+import type {
+  CbtfOperatingHoursDto,
+  CbtfScheduleExceptionDto,
+  CbtfAdminProctorShiftDto,
+  CbtfReservationDto
+} from '@@/shared/models/cbtf'
 import {
   parseProctorShiftString,
   calculateWeeklyShiftHours,
@@ -820,26 +827,26 @@ const sortedOperatingHours = computed(() => {
   return list.sort((a: any, b: any) => a.dayOfWeek - b.dayOfWeek)
 })
 
-const hoursColumns: any[] = [
+const hoursColumns: TableColumn<CbtfOperatingHoursDto>[] = [
   {
     accessorKey: 'dayOfWeek',
     header: 'Day',
-    cell: ({ row }: { row: any }) => dayNames[row.original.dayOfWeek]
+    cell: ({ row }) => dayNames[row.original.dayOfWeek]
   },
   {
     accessorKey: 'openTime',
     header: 'Opens',
-    cell: ({ row }: { row: any }) => row.original.openTime
+    cell: ({ row }) => row.original.openTime
   },
   {
     accessorKey: 'closeTime',
     header: 'Closes',
-    cell: ({ row }: { row: any }) => row.original.closeTime
+    cell: ({ row }) => row.original.closeTime
   },
   {
     id: 'actions',
     header: 'Actions',
-    cell: ({ row }: { row: any }) =>
+    cell: ({ row }) =>
       h(resolveComponent('UButton'), {
         color: 'error',
         variant: 'ghost',
@@ -899,16 +906,16 @@ const openEditExceptionModal = (exception: any) => {
   showExceptionModal.value = true
 }
 
-const exceptionColumns: any[] = [
+const exceptionColumns: TableColumn<CbtfScheduleExceptionDto>[] = [
   {
     accessorKey: 'date',
     header: 'Date',
-    cell: ({ row }: { row: any }) => formatShiftDate(row.original.date)
+    cell: ({ row }) => formatShiftDate(row.original.date)
   },
   {
     accessorKey: 'status',
     header: 'Type',
-    cell: ({ row }: { row: any }) =>
+    cell: ({ row }) =>
       row.original.isClosed
         ? h(
             resolveComponent('UBadge'),
@@ -918,18 +925,18 @@ const exceptionColumns: any[] = [
         : h(
             resolveComponent('UBadge'),
             { color: 'warning', variant: 'subtle', size: 'sm' },
-            () => `${formatTimeStr12h(row.original.openTime)} – ${formatTimeStr12h(row.original.closeTime)}`
+            () => `${formatTimeStr12h(row.original.openTime || '')} – ${formatTimeStr12h(row.original.closeTime || '')}`
           )
   },
   {
     accessorKey: 'reason',
     header: 'Reason',
-    cell: ({ row }: { row: any }) => row.original.reason || '—'
+    cell: ({ row }) => row.original.reason || '—'
   },
   {
     id: 'actions',
     header: 'Actions',
-    cell: ({ row }: { row: any }) =>
+    cell: ({ row }) =>
       h('div', { class: 'flex items-center gap-1' }, [
         h(resolveComponent('UButton'), {
           color: 'neutral',
@@ -1089,22 +1096,22 @@ const handleConfirmGrantProctor = async () => {
   }
 }
 
-const shiftColumns: any[] = [
+const shiftColumns: TableColumn<CbtfAdminProctorShiftDto>[] = [
   {
     accessorKey: 'proctor',
     header: 'Proctor',
-    cell: ({ row }: { row: any }) =>
+    cell: ({ row }) =>
       `${row.original.user?.firstName || ''} ${row.original.user?.lastName || ''} (${row.original.user?.email || '—'})`
   },
   {
     accessorKey: 'date',
     header: 'Date',
-    cell: ({ row }: { row: any }) => formatShiftDate(row.original.date)
+    cell: ({ row }) => formatShiftDate(row.original.date)
   },
   {
     accessorKey: 'hours',
     header: 'Shift Hours',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const dur = formatShiftDuration(row.original.startTime, row.original.endTime)
       return `${formatTimeStr12h(row.original.startTime)} – ${formatTimeStr12h(row.original.endTime)}${dur ? ` (${dur})` : ''}`
     }
@@ -1112,7 +1119,7 @@ const shiftColumns: any[] = [
   {
     id: 'actions',
     header: 'Actions',
-    cell: ({ row }: { row: any }) =>
+    cell: ({ row }) =>
       h('div', { class: 'flex items-center gap-1' }, [
         h(resolveComponent('UButton'), {
           color: 'neutral',
@@ -1284,11 +1291,11 @@ const handleUpdateShift = async () => {
 }
 
 // --- Reservations Table ---
-const reservationColumns: any[] = [
+const reservationColumns: TableColumn<CbtfReservationDto>[] = [
   {
     accessorKey: 'studentName',
     header: 'Student',
-    cell: ({ row }: { row: any }) =>
+    cell: ({ row }) =>
       h('div', { class: 'flex flex-col' }, [
         h('span', { class: 'font-semibold' }, row.original.studentName || '—'),
         row.original.studentId &&
@@ -1302,12 +1309,12 @@ const reservationColumns: any[] = [
   {
     accessorKey: 'assignmentTitle',
     header: 'Assignment',
-    cell: ({ row }: { row: any }) => row.original.assignmentTitle || '—'
+    cell: ({ row }) => row.original.assignmentTitle || '—'
   },
   {
     accessorKey: 'seatNumber',
     header: 'Seat',
-    cell: ({ row }: { row: any }) =>
+    cell: ({ row }) =>
       h(
         'span',
         { class: 'font-bold font-mono text-primary-600 dark:text-primary-400' },
@@ -1317,12 +1324,12 @@ const reservationColumns: any[] = [
   {
     accessorKey: 'startTime',
     header: 'Scheduled Time',
-    cell: ({ row }: { row: any }) => formatDateInTz(row.original.startTime) || '—'
+    cell: ({ row }) => formatDateInTz(row.original.startTime) || '—'
   },
   {
     accessorKey: 'status',
     header: 'Status',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       const color =
         row.original.status === 'SCHEDULED'
           ? 'primary'
@@ -1341,7 +1348,7 @@ const reservationColumns: any[] = [
   {
     id: 'actions',
     header: 'Actions',
-    cell: ({ row }: { row: any }) => {
+    cell: ({ row }) => {
       if (row.original.status === 'SCHEDULED') {
         return h(resolveComponent('UButton'), {
           color: 'error',
