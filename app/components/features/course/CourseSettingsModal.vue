@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useCourseContext } from '~/composables/features/useCourseContext'
 
 const props = defineProps<{
@@ -64,22 +64,19 @@ const emit = defineEmits<{
   (e: 'saved', location: string | null): void
 }>()
 
-const open = defineModel<boolean>('open', { default: false })
+const modelOpen = defineModel<boolean>('open', { default: false })
 const location = ref(props.initialLocation ?? '')
 const saving = ref(false)
 const toast = useToast()
 const { updateCourseSettings } = useCourseContext()
 
-watch(
-  () => props.initialLocation,
-  (newLoc) => {
-    location.value = newLoc ?? ''
-  }
-)
-
-watch(open, (isOpen) => {
-  if (isOpen) {
-    location.value = props.initialLocation ?? ''
+const open = computed({
+  get: () => modelOpen.value,
+  set: (val: boolean) => {
+    if (val) {
+      location.value = props.initialLocation ?? ''
+    }
+    modelOpen.value = val
   }
 })
 

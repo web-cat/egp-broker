@@ -1,10 +1,9 @@
 <template>
   <UModal
-    :open="open"
+    v-model:open="open"
     :title="modalTitle"
     :description="modalDescription"
     :ui="{ content: 'max-w-xl' }"
-    @update:open="$emit('update:open', $event)"
   >
     <template #body>
       <div class="space-y-5">
@@ -20,6 +19,7 @@
             placeholder="Select an assignment…"
             class="w-full"
             :disabled="isSubmitting"
+            @update:model-value="onAssignmentChange"
           />
         </UFormField>
 
@@ -47,6 +47,7 @@
             "
             class="w-full"
             :disabled="isSubmitting || !selectedAssignmentId || applicablePassTypes.length === 0"
+            @update:model-value="onPassTypeChange"
           />
         </UFormField>
 
@@ -127,7 +128,7 @@
           color="neutral"
           variant="outline"
           :disabled="isSubmitting"
-          @click="$emit('update:open', false)"
+          @click="open = false"
         />
         <UButton
           label="Redeem Pass"
@@ -143,27 +144,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import {
   DEFAULT_TIMEZONE,
-  getLocalDateString,
-  getLocalTimeParts,
-  combineDateAndTime,
   formatDateTimeInput,
   parseDateTimeInput
 } from '@@/shared/utils/timezone'
 import type {
   StudentRosterRow,
-  StudentPassBalance,
-  TeacherForceRedeemPassResponse
+  StudentPassBalance
 } from '@@/shared/models/teacher'
 import type { AssignmentRow } from '@@/shared/models/assignment'
-import type { ApiResponse } from '@@/shared/types/api'
 import { usePassRedemptions } from '~/composables/features/usePassRedemptions'
 
 const props = withDefaults(
   defineProps<{
-    open: boolean
     student: StudentRosterRow | null
     assignments?: AssignmentRow[]
   }>(),
@@ -173,18 +168,19 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  'update:open': [value: boolean]
   redeemed: [balances: StudentPassBalance[]]
 }>()
+
+const modelOpen = defineModel<boolean>('open', { default: false })
 
 const toast = useToast()
 const { forceRedeemStudentPass } = usePassRedemptions()
 
-const selectedAssignmentId = ref('')
-const selectedPassTypeId = ref('')
+const rawSelectedAssignmentId = ref('')
+const rawSelectedPassTypeId = ref('')
+const rawStartDate = ref('')
+const rawEndDate = ref('')
 const deductFromBalance = ref(true)
-const startDate = ref('')
-const endDate = ref('')
 const isSubmitting = ref(false)
 
 const modalTitle = computed(() => {
@@ -206,7 +202,7 @@ const assignmentOptions = computed(() => {
 })
 
 const selectedAssignment = computed(() => {
-  return props.assignments?.find((a) => a.id === selectedAssignmentId.value) || null
+  return props.assignments?.find((a) => a.id === rawSelectedAssignmentId.value) || null
 })
 
 // Applicable Pass Types for the selected assignment (unfiltered by min/max days!)
@@ -222,19 +218,67 @@ const passTypeOptions = computed(() => {
 })
 
 const selectedPassType = computed(() => {
-  return applicablePassTypes.value.find((pt) => pt.id === selectedPassTypeId.value) || null
+  return applicablePassTypes.value.find((pt) => pt.id === rawSelectedPassTypeId.value) || null
 })
 
 const durationHours = computed(() => {
   return selectedPassType.value?.hoursPerPass || 24
 })
 
+const selectedAssignmentId = computed({
+  get: () => rawSelectedAssignmentId.value,
+  set: (val: string) => {
+    rawSelectedAssignmentId.value = val
+    if (!val) {
+      selectedPassTypeId.value = ''
+      return
+    }
+
+    const available = applicablePassTypes.value
+    if (available.length > 0) {
+      const match = available.find((pt) => pt.id === rawSelectedPassTypeId.value)
+      if (!match) {
+        selectedPassTypeId.value = available[0].id
+      }
+    } else {
+      selectedPassTypeId.value = ''
+    }
+  }
+})
+
+const selectedPassTypeId = computed({
+  get: () => rawSelectedPassTypeId.value,
+  set: (val: string) => {
+    rawSelectedPassTypeId.value = val
+    if (val) {
+      updateEndDateForPassType(val)
+    }
+  }
+})
+
+const startDate = computed({
+  get: () => rawStartDate.value,
+  set: (val: string) => {
+    rawStartDate.value = val
+    if (val && rawSelectedPassTypeId.value) {
+      updateEndDateForPassType(rawSelectedPassTypeId.value)
+    }
+  }
+})
+
+const endDate = computed({
+  get: () => rawEndDate.value,
+  set: (val: string) => {
+    rawEndDate.value = val
+  }
+})
+
 const canSubmit = computed(() => {
   return (
-    Boolean(selectedAssignmentId.value) &&
-    Boolean(selectedPassTypeId.value) &&
-    Boolean(startDate.value) &&
-    Boolean(endDate.value) &&
+    Boolean(rawSelectedAssignmentId.value) &&
+    Boolean(rawSelectedPassTypeId.value) &&
+    Boolean(rawStartDate.value) &&
+    Boolean(rawEndDate.value) &&
     !isSubmitting.value
   )
 })
@@ -247,63 +291,46 @@ function parseDateTimeLocalInput(value: string, timeZone: string = DEFAULT_TIMEZ
   return parseDateTimeInput(value, timeZone) || new Date().toISOString()
 }
 
-function calculateDefaultDates(hours: number) {
-  const now = new Date()
-  startDate.value = toDateTimeLocalString(now)
-  const end = new Date(now.getTime() + hours * 3600 * 1000)
-  endDate.value = toDateTimeLocalString(end)
+function updateEndDateForPassType(passTypeId: string) {
+  const pt = applicablePassTypes.value.find((p) => p.id === passTypeId)
+  if (pt) {
+    const startIso = rawStartDate.value
+      ? parseDateTimeLocalInput(rawStartDate.value)
+      : new Date().toISOString()
+    const startMs = new Date(startIso).getTime()
+    const hours = pt.hoursPerPass || 24
+    const end = new Date(startMs + hours * 3600 * 1000)
+    rawEndDate.value = toDateTimeLocalString(end)
+  }
 }
 
-// Watch modal opening
-watch(
-  () => props.open,
-  (isOpen) => {
-    if (isOpen) {
-      selectedAssignmentId.value = ''
-      selectedPassTypeId.value = ''
-      deductFromBalance.value = true
-      calculateDefaultDates(24)
-    }
-  },
-  { immediate: true }
-)
+function calculateDefaultDates(hours: number) {
+  const now = new Date()
+  rawStartDate.value = toDateTimeLocalString(now)
+  const end = new Date(now.getTime() + hours * 3600 * 1000)
+  rawEndDate.value = toDateTimeLocalString(end)
+}
 
-// When assignment changes, update selected pass type
-watch(
-  () => selectedAssignmentId.value,
-  (newAssignmentId) => {
-    if (!newAssignmentId) {
-      selectedPassTypeId.value = ''
-      return
-    }
+function resetForm() {
+  rawSelectedAssignmentId.value = ''
+  rawSelectedPassTypeId.value = ''
+  deductFromBalance.value = true
+  calculateDefaultDates(24)
+}
 
-    const available = applicablePassTypes.value
-    if (available.length > 0) {
-      const match = available.find((pt) => pt.id === selectedPassTypeId.value)
-      if (!match) {
-        selectedPassTypeId.value = available[0].id
-      }
-    } else {
-      selectedPassTypeId.value = ''
+const open = computed({
+  get: () => modelOpen.value,
+  set: (val: boolean) => {
+    if (val) {
+      resetForm()
     }
+    modelOpen.value = val
   }
-)
+})
 
-// When pass type changes, recalculate default end date based on duration
-watch(
-  () => selectedPassTypeId.value,
-  () => {
-    if (selectedPassType.value) {
-      const startIso = startDate.value
-        ? parseDateTimeLocalInput(startDate.value)
-        : new Date().toISOString()
-      const startMs = new Date(startIso).getTime()
-      const hours = selectedPassType.value.hoursPerPass || 24
-      const end = new Date(startMs + hours * 3600 * 1000)
-      endDate.value = toDateTimeLocalString(end)
-    }
-  }
-)
+if (modelOpen.value) {
+  resetForm()
+}
 
 async function handleSubmit() {
   if (!props.student?.userId || !canSubmit.value) return
@@ -339,7 +366,7 @@ async function handleSubmit() {
       }
 
       emit('redeemed', res.data.passBalances)
-      emit('update:open', false)
+      open.value = false
     }
   } catch (err: unknown) {
     const error = err as { data?: { message?: string; statusMessage?: string }; message?: string }

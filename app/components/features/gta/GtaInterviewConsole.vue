@@ -897,13 +897,17 @@ const handleResetScenario = () => {
 
 const notesDraft = ref('')
 
-watch(
+const stopNotesWatch = watch(
   () => activeInterview.value?.id,
   () => {
     notesDraft.value = activeInterview.value?.notes || ''
   },
   { immediate: true }
 )
+
+onUnmounted(() => {
+  stopNotesWatch()
+})
 
 const handleCheckIn = async (reservationId: string) => {
   await checkIn(reservationId)

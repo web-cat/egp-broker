@@ -212,7 +212,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, useTemplateRef } from 'vue'
+import { ref, reactive, computed, useTemplateRef } from 'vue'
 import { formatDateTimeInput, parseDateTimeInput } from '@@/shared/utils/timezone'
 import { useAdminAssignments } from '~/composables/features/admin/useAdminAssignments'
 const { success, error: showError } = useNotifications()
@@ -269,7 +269,7 @@ const emit = defineEmits<{
   created: []
 }>()
 
-const open = defineModel<boolean>('open', { required: true })
+const modelOpen = defineModel<boolean>('open', { required: true })
 
 const formRef = useTemplateRef('formRef')
 const saving = ref(false)
@@ -323,48 +323,58 @@ function toLocalDatetime(iso: string | null): string {
   return formatDateTimeInput(iso)
 }
 
-// Sync form state when the assignment prop changes or the panel opens
-watch(
-  [() => props.assignment, open],
-  ([assignment, isOpen]) => {
-    if (isOpen && assignment) {
-      state.title = assignment.title ?? ''
-      state.canvasAssignmentId = assignment.canvasAssignmentId ?? ''
-      state.dueDate = toLocalDatetime(assignment.dueDate)
-      state.availableFrom = toLocalDatetime(assignment.availableFrom)
-      state.acceptUntil = toLocalDatetime(assignment.acceptUntil)
-      state.isSchedulable = !!assignment.isSchedulable
-      state.cbtfDurationMinutes = assignment.cbtfDurationMinutes ?? 60
-      state.scheduleWindowStart = toLocalDatetime(assignment.scheduleWindowStart ?? null)
-      state.scheduleWindowEnd = toLocalDatetime(assignment.scheduleWindowEnd ?? null)
-      state.hasInterviews = !!assignment.hasInterviews
-      state.interviewWindowStart = toLocalDatetime(assignment.interviewWindowStart ?? null)
-      state.interviewWindowEnd = toLocalDatetime(assignment.interviewWindowEnd ?? null)
+function syncFormFromProps() {
+  const assignment = props.assignment
+  if (assignment) {
+    state.title = assignment.title ?? ''
+    state.canvasAssignmentId = assignment.canvasAssignmentId ?? ''
+    state.dueDate = toLocalDatetime(assignment.dueDate)
+    state.availableFrom = toLocalDatetime(assignment.availableFrom)
+    state.acceptUntil = toLocalDatetime(assignment.acceptUntil)
+    state.isSchedulable = !!assignment.isSchedulable
+    state.cbtfDurationMinutes = assignment.cbtfDurationMinutes ?? 60
+    state.scheduleWindowStart = toLocalDatetime(assignment.scheduleWindowStart ?? null)
+    state.scheduleWindowEnd = toLocalDatetime(assignment.scheduleWindowEnd ?? null)
+    state.hasInterviews = !!assignment.hasInterviews
+    state.interviewWindowStart = toLocalDatetime(assignment.interviewWindowStart ?? null)
+    state.interviewWindowEnd = toLocalDatetime(assignment.interviewWindowEnd ?? null)
 
-      // Pre-select all currently eligible pass types (auto + manual)
-      if (assignment.eligibilities) {
-        selectedPassTypeIds.value = assignment.eligibilities.map((e) => e.passTypeId)
-      } else {
-        selectedPassTypeIds.value = []
-      }
-    } else if (isOpen && !assignment) {
-      state.title = ''
-      state.canvasAssignmentId = ''
-      state.dueDate = ''
-      state.availableFrom = ''
-      state.acceptUntil = ''
-      state.isSchedulable = false
-      state.cbtfDurationMinutes = 60
-      state.scheduleWindowStart = ''
-      state.scheduleWindowEnd = ''
-      state.hasInterviews = false
-      state.interviewWindowStart = ''
-      state.interviewWindowEnd = ''
+    // Pre-select all currently eligible pass types (auto + manual)
+    if (assignment.eligibilities) {
+      selectedPassTypeIds.value = assignment.eligibilities.map((e) => e.passTypeId)
+    } else {
       selectedPassTypeIds.value = []
     }
-  },
-  { immediate: true }
-)
+  } else {
+    state.title = ''
+    state.canvasAssignmentId = ''
+    state.dueDate = ''
+    state.availableFrom = ''
+    state.acceptUntil = ''
+    state.isSchedulable = false
+    state.cbtfDurationMinutes = 60
+    state.scheduleWindowStart = ''
+    state.scheduleWindowEnd = ''
+    state.hasInterviews = false
+    state.interviewWindowStart = ''
+    state.interviewWindowEnd = ''
+    selectedPassTypeIds.value = []
+  }
+}
+
+const open = computed({
+  get: () => modelOpen.value,
+  set: (val: boolean) => {
+    if (val) {
+      syncFormFromProps()
+    }
+    modelOpen.value = val
+  }
+})
+
+if (modelOpen.value) {
+  syncFormFromProps()
+}
 
 const handleSubmit = async () => {
   saving.value = true

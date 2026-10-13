@@ -252,7 +252,7 @@ The refactoring items below are grouped by priority:
 
 ---
 
-#### TASK-08: Clean Up Unpredictable Side Effects (`watch` / `watchEffect`)
+#### TASK-08: Clean Up Unpredictable Side Effects (`watch` / `watchEffect`) [COMPLETED]
 
 - **Constitution Rule:** GEMINI.md § V.2 (_"Predictable Side Effects: Avoid watch/watchEffect in favor of explicit function calls. Clean up in onUnmounted."_)
 - **Current Violations:** Over 40 watchers in components and composables:

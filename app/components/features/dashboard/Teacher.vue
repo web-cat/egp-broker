@@ -354,17 +354,13 @@ const props = defineProps<{
 }>()
 
 const courseSettingsOpen = ref(false)
-const currentInterviewLocation = ref(props.interviewLocation ?? null)
-
-watch(
-  () => props.interviewLocation,
-  (loc) => {
-    currentInterviewLocation.value = loc ?? null
-  }
+const savedLocationOverride = ref<string | null>(null)
+const currentInterviewLocation = computed(
+  () => savedLocationOverride.value ?? props.interviewLocation ?? null
 )
 
 const onCourseSettingsSaved = (newLoc: string | null) => {
-  currentInterviewLocation.value = newLoc
+  savedLocationOverride.value = newLoc
 }
 
 const {
