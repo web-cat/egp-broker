@@ -54,6 +54,8 @@ vi.mock('~/composables/features/useGtaInterviewConsole', () => ({
     completedList: mockCompletedList,
     feedStatus: mockFeedStatus,
     isUpdating: mockIsUpdating,
+    courseGtasData: ref({ data: [] }),
+    courseShiftsData: ref({ data: [] }),
     refreshFeed: mockRefreshFeed,
     checkIn: mockCheckIn,
     cancelCheckIn: mockCancelCheckIn,

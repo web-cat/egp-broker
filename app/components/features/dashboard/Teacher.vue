@@ -427,32 +427,10 @@ const {
   saveApiKey,
   syncAssignments,
   resyncAssignmentCbtfOverrides,
-  resyncAssignmentPassPort
+  resyncAssignmentPassPort,
+  toggleAssignmentPublish,
+  deletePassType
 } = useTeacherDashboard()
-
-// Toggle assignment published state
-const toggleAssignmentPublish = async (assignment: AssignmentRow) => {
-  try {
-    const newPublished = !assignment.published
-    await $fetch(`/api/me/assignments/${assignment.id}`, {
-      method: 'PATCH',
-      body: { published: newPublished }
-    })
-    assignment.published = newPublished
-    toast.add({
-      title: newPublished ? 'Assignment Published' : 'Assignment Unpublished',
-      description: `"${assignment.title || 'Assignment'}" is now ${newPublished ? 'visible' : 'hidden'} to students.`,
-      color: 'success'
-    })
-  } catch (err: any) {
-    console.error(err)
-    toast.add({
-      title: 'Failed to update assignment',
-      description: err.data?.message || err.message || 'Could not update assignment status.',
-      color: 'error'
-    })
-  }
-}
 
 // Handle in-place update and background sync when a student's pass pool balances are edited
 const onStudentBalancesUpdated = (newBalances: StudentPassBalance[]) => {
@@ -512,8 +490,7 @@ const passTypeColumns: any[] = [
         color: 'error' as const,
         onSelect: async () => {
           if (confirm('Are you sure you want to delete this pass type?')) {
-            await $fetch(`/api/me/pass-types/${row.original.id}`, { method: 'DELETE' })
-            onPassTypeItemCreated() // Refresh table
+            await deletePassType(row.original.id)
           }
         }
       }

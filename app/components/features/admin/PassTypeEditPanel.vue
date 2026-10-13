@@ -166,6 +166,7 @@
 
 <script setup lang="ts">
 import type { PassTypeData } from '@@/shared/models/pass'
+import { useAdminPassTypes } from '~/composables/features/admin/useAdminPassTypes'
 
 const { success, error: showError } = useNotifications()
 const { t } = useI18n()
@@ -183,6 +184,7 @@ const open = defineModel<boolean>('open', { required: true })
 
 const formRef = useTemplateRef('formRef')
 const saving = ref(false)
+const { createPassType, updatePassType } = useAdminPassTypes()
 
 const isEdit = computed(() => !!props.passType)
 const panelDescription = computed(() => {
@@ -271,20 +273,14 @@ const handleSubmit = async () => {
     }
 
     if (isEdit.value) {
-      await $fetch(`/api/me/pass-types/${props.passType!.id}`, {
-        method: 'PATCH',
-        body
-      })
+      await updatePassType(props.passType!.id, body)
       success({
         title: t('admin.passType.notifications.updatedTitle'),
         message: t('admin.passType.notifications.updatedMessage')
       })
       emit('saved', props.passType!.id, body)
     } else {
-      await $fetch('/api/me/pass-types', {
-        method: 'POST',
-        body
-      })
+      await createPassType(body)
       success({
         title: t('admin.passType.notifications.createdTitle'),
         message: t('admin.passType.notifications.createdMessage')

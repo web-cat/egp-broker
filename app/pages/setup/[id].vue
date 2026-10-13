@@ -6,14 +6,15 @@ const assignmentId = route.params.id
 const availableTools = ref([])
 const availableTranslations = ref([])
 const loadingData = ref(true)
+const { fetchLtiTools, fetchProxyGradeTranslations, configureAssignment } = useLtiSetup()
 
 const fetchTools = async () => {
   try {
     loadingData.value = true
     // Fetching both in parallel for efficiency
     const [tools, translations] = await Promise.all([
-      $fetch('/api/lti13/tools'),
-      $fetch('/api/proxy/grade-translations')
+      fetchLtiTools(),
+      fetchProxyGradeTranslations()
     ])
     availableTools.value = tools
     availableTranslations.value = translations
@@ -39,12 +40,9 @@ async function saveConfiguration() {
 
   saving.value = true
   try {
-    await $fetch(`/api/assignments/${assignmentId}/configure`, {
-      method: 'POST',
-      body: {
-        toolId: selectedToolId.value,
-        gradeTranslationId: selectedTranslationId.value || null //send null if no translation chosen
-      }
+    await configureAssignment(String(assignmentId), {
+      toolId: selectedToolId.value,
+      gradeTranslationId: selectedTranslationId.value || null //send null if no translation chosen
     })
 
     // Success: Redirect to the actual LTI launch endpoint

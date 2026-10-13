@@ -447,6 +447,38 @@ export const useTeacherDashboard = () => {
     }
   }
 
+  const toggleAssignmentPublish = async (assignment: AssignmentRow) => {
+    try {
+      const newPublished = !assignment.published
+      await $fetch(`/api/me/assignments/${assignment.id}`, {
+        method: 'PATCH',
+        body: { published: newPublished }
+      })
+      assignment.published = newPublished
+      toast.add({
+        title: newPublished ? 'Assignment Published' : 'Assignment Unpublished',
+        description: `"${assignment.title || 'Assignment'}" is now ${newPublished ? 'visible' : 'hidden'} to students.`,
+        color: 'success'
+      })
+    } catch (err: any) {
+      console.error(err)
+      toast.add({
+        title: 'Failed to update assignment',
+        description:
+          err.data?.statusMessage ||
+          err.data?.message ||
+          err.message ||
+          'Failed to update assignment visibility',
+        color: 'error'
+      })
+    }
+  }
+
+  const deletePassType = async (id: string) => {
+    await $fetch(`/api/me/pass-types/${id}`, { method: 'DELETE' })
+    await onPassTypeItemCreated()
+  }
+
   return {
     // Pass Types
     passTypesData,
@@ -511,6 +543,10 @@ export const useTeacherDashboard = () => {
     resyncAssignmentCbtfOverrides,
     repairAssignmentCbtfTimezones,
     repairAssignmentCbtfPassRedemptions,
-    resyncAssignmentPassPort
+    resyncAssignmentPassPort,
+
+    // Assignment & Pass Type Mutations
+    toggleAssignmentPublish,
+    deletePassType
   }
 }

@@ -113,7 +113,7 @@
 import { ref, computed } from 'vue'
 import { useAdminStats } from '~/composables/features/useAdminStats'
 
-const { error, status, stats, simpleCards } = useAdminStats()
+const { error, status, stats, simpleCards, sendTestEmail } = useAdminStats()
 const { user } = useUserSession()
 const toast = useToast()
 
@@ -123,10 +123,7 @@ const sendingTestEmail = ref(false)
 const handleSendTestEmail = async () => {
   sendingTestEmail.value = true
   try {
-    const res = await $fetch<{ statusCode: number; data: { success: boolean; email: string } }>(
-      '/api/admin/test-email',
-      { method: 'POST' }
-    )
+    const res = await sendTestEmail()
     toast.add({
       title: 'Test Email Sent',
       description: `A test email has been dispatched to ${res?.data?.email || userEmail.value || 'your email'}.`,

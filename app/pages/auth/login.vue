@@ -90,6 +90,7 @@ import { useCasServers } from '~/composables/features/useCasServers'
 // =============================================================================
 const { t } = useI18n()
 const { fetch: fetchUser } = useUserSession()
+const { login } = useAuthFeature()
 const { success, error } = useNotifications()
 const { getErrorData, getErrorCode } = useApiError()
 const localePath = useLocalePath()
@@ -150,10 +151,7 @@ const handleSubmit = async (event: FormSubmitEvent<LoginData>) => {
   try {
     isLoading.value = true
 
-    const response = await $fetch<ApiResponse<{ user: PublicUser }>>('/api/auth/login', {
-      method: 'POST',
-      body: event.data
-    })
+    const response = await login(event.data)
 
     if (response.statusCode === 200 && response.data) {
       // Refresh user session from server

@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAdminCourses } from '~/composables/features/admin/useAdminCourses'
 const { success, error: showError } = useNotifications()
 
 interface CourseData {
@@ -90,6 +91,7 @@ const open = defineModel<boolean>('open', { required: true })
 
 const formRef = useTemplateRef('formRef')
 const saving = ref(false)
+const { createCourse, updateCourse } = useAdminCourses()
 
 const isEdit = computed(() => !!props.course)
 const panelDescription = computed(() => {
@@ -127,37 +129,22 @@ watch(
 const handleSubmit = async () => {
   saving.value = true
   try {
+    const payload = {
+      label: state.label || null,
+      title: state.title || null,
+      canvasCourseId: state.canvasCourseId || null,
+      workflowState: state.workflowState || null
+    }
+
     if (isEdit.value) {
-      await $fetch(`/api/admin/courses/${props.course!.id}`, {
-        method: 'PATCH',
-        body: {
-          label: state.label || null,
-          title: state.title || null,
-          canvasCourseId: state.canvasCourseId || null,
-          workflowState: state.workflowState || null
-        }
-      })
-      const updates = {
-        label: state.label || null,
-        title: state.title || null,
-        canvasCourseId: state.canvasCourseId || null,
-        workflowState: state.workflowState || null
-      }
+      await updateCourse(props.course!.id, payload)
       success({
         title: 'Course updated',
         message: 'The course has been saved successfully.'
       })
-      emit('saved', props.course!.id, updates)
+      emit('saved', props.course!.id, payload)
     } else {
-      await $fetch('/api/admin/courses', {
-        method: 'POST',
-        body: {
-          label: state.label || null,
-          title: state.title || null,
-          canvasCourseId: state.canvasCourseId || null,
-          workflowState: state.workflowState || null
-        }
-      })
+      await createCourse(payload)
       success({
         title: 'Course created',
         message: 'The new course has been created successfully.'

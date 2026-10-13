@@ -32,9 +32,20 @@ export const useCourseContext = () => {
     }
   }
 
+  const updateCourseSettings = async (
+    courseId: string,
+    settings: { interviewLocation: string | null }
+  ): Promise<{ data: { interviewLocation: string | null } }> => {
+    return $fetch<{ data: { interviewLocation: string | null } }>(`/api/me/courses/${courseId}`, {
+      method: 'PATCH',
+      body: settings
+    })
+  }
+
   return {
     selecting,
     setCourseContext,
-    clearCourseContext
+    clearCourseContext,
+    updateCourseSettings
   }
 }

@@ -231,6 +231,7 @@ import {
   createStudentAssignmentColumns,
   studentAssignmentRowClass
 } from '~/composables/features/useStudentAssignmentTable'
+import { usePassRedemptions } from '~/composables/features/usePassRedemptions'
 
 const props = withDefaults(
   defineProps<{
@@ -262,6 +263,13 @@ const studentDescription = computed(() => {
 })
 
 const toast = useToast()
+const {
+  fetchAssignments,
+  updateStudentPassBalances,
+  fetchStudentRedemptions,
+  fetchStudentInterviews,
+  fetchStudentCbtfReservations
+} = usePassRedemptions()
 
 const redemptions = ref<StudentRedemptionHistoryRow[]>([])
 const loading = ref(false)
@@ -287,7 +295,7 @@ const fetchAssignmentsIfEmpty = async () => {
   if (props.assignments && props.assignments.length > 0) return
   assignmentsLoading.value = true
   try {
-    const res = await $fetch<ApiResponse<AssignmentRow[]>>('/api/me/assignments')
+    const res = await fetchAssignments()
     if (res.data) {
       internalAssignments.value = res.data
     }
@@ -337,13 +345,7 @@ const saveBalances = async () => {
       }))
     }
 
-    const res = await $fetch<ApiResponse<StudentPassBalance[]>>(
-      `/api/me/students/${props.student.userId}/pass-pools`,
-      {
-        method: 'PATCH',
-        body: payload
-      }
-    )
+    const res = await updateStudentPassBalances(props.student.userId, payload.balances)
 
     if (res.data) {
       localPassBalances.value = res.data
@@ -374,9 +376,7 @@ const fetchRedemptions = async () => {
   if (!props.student?.userId) return
   loading.value = true
   try {
-    const res = await $fetch<{ data: StudentRedemptionHistoryRow[] }>(
-      `/api/me/students/${props.student.userId}/redemptions`
-    )
+    const res = await fetchStudentRedemptions(props.student.userId)
     redemptions.value = res.data || []
   } catch (err) {
     console.error(err)
@@ -393,10 +393,7 @@ const fetchInterviews = async () => {
   if (!props.student?.userId) return
   interviewsLoading.value = true
   try {
-    const url = props.courseId
-      ? `/api/me/students/${props.student.userId}/interviews?courseId=${props.courseId}`
-      : `/api/me/students/${props.student.userId}/interviews`
-    const res = await $fetch<{ data: StudentInterviewHistoryRow[] }>(url)
+    const res = await fetchStudentInterviews(props.student.userId, props.courseId)
     interviews.value = res.data || []
   } catch (err) {
     console.error('Failed to fetch student interviews:', err)
@@ -413,10 +410,7 @@ const fetchCbtfReservations = async () => {
   if (!props.student?.userId) return
   cbtfReservationsLoading.value = true
   try {
-    const url = props.courseId
-      ? `/api/me/students/${props.student.userId}/cbtf-reservations?courseId=${props.courseId}`
-      : `/api/me/students/${props.student.userId}/cbtf-reservations`
-    const res = await $fetch<{ data: CbtfReservationDto[] }>(url)
+    const res = await fetchStudentCbtfReservations(props.student.userId, props.courseId)
     cbtfReservations.value = res.data || []
   } catch (err) {
     console.error('Failed to fetch student CBTF reservations:', err)

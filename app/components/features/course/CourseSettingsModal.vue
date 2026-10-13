@@ -53,6 +53,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useCourseContext } from '~/composables/features/useCourseContext'
 
 const props = defineProps<{
   courseId: string
@@ -67,6 +68,7 @@ const open = defineModel<boolean>('open', { default: false })
 const location = ref(props.initialLocation ?? '')
 const saving = ref(false)
 const toast = useToast()
+const { updateCourseSettings } = useCourseContext()
 
 watch(
   () => props.initialLocation,
@@ -87,15 +89,9 @@ const handleSave = async () => {
   saving.value = true
   try {
     const trimmed = location.value.trim()
-    const res = await $fetch<{ data: { interviewLocation: string | null } }>(
-      `/api/me/courses/${props.courseId}`,
-      {
-        method: 'PATCH',
-        body: {
-          interviewLocation: trimmed || null
-        }
-      }
-    )
+    const res = await updateCourseSettings(props.courseId, {
+      interviewLocation: trimmed || null
+    })
 
     toast.add({
       title: 'Course Settings Saved',

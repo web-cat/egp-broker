@@ -333,6 +333,9 @@ export function useGtaInterviewTraining() {
     })
   }
 
+  const courseGtasData = ref<ApiResponse<any[]> | null>(null)
+  const courseShiftsData = ref<ApiResponse<any[]> | null>(null)
+
   return {
     reservations,
     activeInterview,
@@ -340,6 +343,8 @@ export function useGtaInterviewTraining() {
     completedList,
     feedStatus,
     isUpdating,
+    courseGtasData,
+    courseShiftsData,
     refreshFeed,
     checkIn,
     cancelCheckIn,

@@ -68,6 +68,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAdminPlatforms } from '~/composables/features/admin/useAdminPlatforms'
 import { z } from 'zod'
 
 interface PlatformItem {
@@ -152,21 +153,17 @@ function onIssuerUpdate(val: string) {
   }
 }
 
+const { createPlatform, updatePlatform } = useAdminPlatforms()
+
 async function handleSubmit() {
   loading.value = true
   try {
     if (isEdit.value && props.platform) {
-      await $fetch(`/api/admin/platforms/${props.platform.id}`, {
-        method: 'PATCH',
-        body: state
-      })
+      await updatePlatform(props.platform.id, state)
       emit('saved', props.platform.id, { ...state })
       toast.add({ title: 'Platform updated', color: 'success' })
     } else {
-      await $fetch('/api/admin/platforms', {
-        method: 'POST',
-        body: state
-      })
+      await createPlatform(state)
       emit('created')
       toast.add({ title: 'Platform registered', color: 'success' })
     }

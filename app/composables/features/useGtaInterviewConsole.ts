@@ -231,6 +231,16 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     }
   }
 
+  const { data: courseGtasData, refresh: refreshGtas } = useFetch<ApiResponse<any[]>>(
+    computed(() => (cId.value ? `/api/me/courses/${cId.value}/gtas` : null)),
+    { lazy: true }
+  )
+
+  const { data: courseShiftsData, refresh: refreshShifts } = useFetch<ApiResponse<any[]>>(
+    computed(() => (cId.value ? `/api/me/courses/${cId.value}/gta-shifts` : null)),
+    { lazy: true }
+  )
+
   return {
     reservations,
     activeInterview,
@@ -238,6 +248,10 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     completedList,
     feedStatus,
     isUpdating,
+    courseGtasData,
+    courseShiftsData,
+    refreshGtas,
+    refreshShifts,
     refreshFeed,
     checkIn,
     cancelCheckIn,

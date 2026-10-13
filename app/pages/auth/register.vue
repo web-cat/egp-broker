@@ -58,6 +58,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 const { t } = useI18n()
 const { success, error } = useNotifications()
 const { getErrorCode } = useApiError()
+const { register } = useAuthFeature()
 const localePath = useLocalePath()
 
 // =============================================================================
@@ -134,13 +135,7 @@ const handleSubmit = async (event: FormSubmitEvent<RegisterData>) => {
   try {
     isLoading.value = true
 
-    const response = await $fetch<ApiResponse<{ message: string; email: string }>>(
-      '/api/auth/register',
-      {
-        method: 'POST',
-        body: event.data
-      }
-    )
+    const response = await register(event.data)
 
     if (response.statusCode === 201 && response.data) {
       // Show success message with email verification instruction

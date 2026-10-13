@@ -26,12 +26,23 @@ export function useAdminStats() {
     ]
   })
 
+  const sendTestEmail = async (): Promise<{
+    statusCode: number
+    data: { success: boolean; email: string }
+  }> => {
+    return $fetch<{ statusCode: number; data: { success: boolean; email: string } }>(
+      '/api/admin/test-email',
+      { method: 'POST' }
+    )
+  }
+
   return {
     data,
     error,
     status,
     stats,
     simpleCards,
+    sendTestEmail,
     refresh
   }
 }

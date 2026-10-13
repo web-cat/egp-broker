@@ -138,7 +138,7 @@ The refactoring items below are grouped by priority:
 
 ### Priority 1: High (Layered Sovereignty, Transport & Coupling)
 
-#### TASK-04: Enforce "The Transport Rule" (Encapsulate `$fetch` and `useFetch`)
+#### TASK-04: Enforce "The Transport Rule" (Encapsulate `$fetch` and `useFetch`) [COMPLETED]
 
 - **Constitution Rule:** GEMINI.md § II & § IV (_"The 'Transport' Rule: Components should not know the details of an useFetch call. Wrap data fetching in a feature-specific composable. Zero Implicit Coupling: Components must not have 'secret' knowledge of API structures or global states."_)
 - **Current Violations:** Multiple components and pages bypass composables to execute network requests directly:

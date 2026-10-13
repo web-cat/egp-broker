@@ -79,6 +79,7 @@ const {
   onItemCreated
 } = useAdminCrud<AssignmentRow>('/api/admin/assignments', { c: courseFilter })
 
+const { deleteAssignment } = useAdminAssignments()
 const isDeleting = ref(false)
 
 async function handleDeleteConfirm() {
@@ -86,9 +87,7 @@ async function handleDeleteConfirm() {
   isDeleting.value = true
   const target = deletingItem.value
   try {
-    await $fetch(`/api/admin/assignments/${target.id}`, {
-      method: 'DELETE'
-    })
+    await deleteAssignment(target.id)
     onRowDeleted(target.id)
     deleteOpen.value = false
     toast.add({

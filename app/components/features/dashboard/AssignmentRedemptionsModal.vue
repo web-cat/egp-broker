@@ -376,6 +376,7 @@ import type { AssignmentOverrideDetails } from '@@/shared/models/override'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import type { CbtfAssignmentReservationSummary } from '@@/shared/models/cbtf'
 import { formatDate } from '~/utils/date'
+import { usePassRedemptions } from '~/composables/features/usePassRedemptions'
 
 const props = defineProps<{
   open: boolean
@@ -394,17 +395,19 @@ const loadingOverrides = ref(false)
 const loadingCbtfSummary = ref(false)
 const isSyncingPassPort = ref(false)
 const toast = useToast()
+const {
+  syncPassport,
+  fetchAssignmentRedemptions,
+  fetchAssignmentOverrides,
+  fetchAssignmentCbtfSummary
+} = usePassRedemptions()
 
 const handlePassPortSync = async () => {
   if (!props.assignment?.id) return
   isSyncingPassPort.value = true
 
   try {
-    const res = await $fetch<{
-      data: { syncedCount: number; failedCount: number; totalCount: number }
-    }>(`/api/me/assignments/${props.assignment.id}/passport-sync`, {
-      method: 'POST'
-    })
+    const res = await syncPassport(props.assignment.id)
 
     const { syncedCount, failedCount, totalCount } = res.data
     if (failedCount > 0) {
@@ -445,16 +448,10 @@ const fetchData = async () => {
 
   try {
     const [redemptionRes, overrideRes, cbtfSummaryRes] = await Promise.all([
-      $fetch<{ data: AssignmentRedemptionRow[] }>(
-        `/api/me/assignments/${props.assignment.id}/redemptions`
-      ).catch(() => ({ data: [] })),
-      $fetch<{ data: AssignmentOverrideDetails[] }>(
-        `/api/me/assignments/${props.assignment.id}/overrides`
-      ).catch(() => ({ data: [] })),
+      fetchAssignmentRedemptions(props.assignment.id).catch(() => ({ data: [] })),
+      fetchAssignmentOverrides(props.assignment.id).catch(() => ({ data: [] })),
       props.assignment.isSchedulable
-        ? $fetch<{ data: CbtfAssignmentReservationSummary }>(
-            `/api/me/assignments/${props.assignment.id}/cbtf-reservation-summary`
-          ).catch((err) => {
+        ? fetchAssignmentCbtfSummary(props.assignment.id).catch((err) => {
             console.error('Failed to fetch CBTF reservation summary:', err)
             return { data: null }
           })

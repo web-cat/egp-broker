@@ -10,6 +10,9 @@ const mockUser = ref<any>({
 })
 
 const mockToastAdd = vi.fn()
+const mockSendTestEmail = vi
+  .fn()
+  .mockImplementation(() => (globalThis as any).$fetch('/api/admin/test-email', { method: 'POST' }))
 
 vi.mock('~/composables/features/useAdminStats', () => ({
   useAdminStats: () => ({
@@ -21,7 +24,8 @@ vi.mock('~/composables/features/useAdminStats', () => ({
       platformList: [],
       deploymentList: []
     }),
-    simpleCards: ref([])
+    simpleCards: ref([]),
+    sendTestEmail: mockSendTestEmail
   })
 }))
 

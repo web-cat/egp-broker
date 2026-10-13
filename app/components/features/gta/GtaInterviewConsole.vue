@@ -785,6 +785,9 @@ const consoleState =
     ? props.trainingState
     : useGtaInterviewConsole(computed(() => props.courseId))
 
+const courseGtasData = consoleState.courseGtasData ?? ref(null)
+const courseShiftsData = consoleState.courseShiftsData ?? ref(null)
+
 const {
   activeInterview,
   expectedArrivals,
@@ -819,20 +822,6 @@ const canEditInterview = (res: any) => {
 // ─────────────────────────────────────────────────────────
 // Common Filter Options & Data
 // ─────────────────────────────────────────────────────────
-
-const { data: courseGtasData } = useFetch<ApiResponse<any[]>>(
-  computed(() =>
-    !props.isTraining && props.courseId ? `/api/me/courses/${props.courseId}/gtas` : null
-  ),
-  { lazy: true }
-)
-
-const { data: courseShiftsData } = useFetch<ApiResponse<any[]>>(
-  computed(() =>
-    !props.isTraining && props.courseId ? `/api/me/courses/${props.courseId}/gta-shifts` : null
-  ),
-  { lazy: true }
-)
 
 const gtaFilterOptions = computed(() => {
   const opts = [{ label: 'All GTAs', value: 'ALL' }]

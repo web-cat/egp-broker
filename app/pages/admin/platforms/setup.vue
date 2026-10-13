@@ -118,16 +118,15 @@ const schema = z.object({
   jwksEndpoint: z.string().url('Invalid URL')
 })
 
+const { createPlatform } = useAdminPlatforms()
+
 async function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
   loading.value = true
   try {
     // 1. Create the platform
-    await $fetch('/api/admin/platforms', {
-      method: 'POST',
-      body: {
-        ...event.data,
-        issuer
-      }
+    await createPlatform({
+      ...event.data,
+      issuer
     })
 
     toast.add({

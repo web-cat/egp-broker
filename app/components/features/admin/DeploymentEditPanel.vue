@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAdminDeployments } from '~/composables/features/admin/useAdminDeployments'
 interface DeploymentItem {
   id: string
   deploymentId: string
@@ -86,6 +87,8 @@ watch([() => props.deployment, open], ([item, isOpen]) => {
   }
 })
 
+const { createDeployment, updateDeployment } = useAdminDeployments()
+
 async function handleSubmit() {
   try {
     if (isEdit.value && props.deployment) {
@@ -93,19 +96,13 @@ async function handleSubmit() {
         deploymentId: state.deploymentId,
         deploymentHost: state.deploymentHost || null
       }
-      await $fetch(`/api/admin/deployments/${props.deployment.id}`, {
-        method: 'PATCH',
-        body: updates
-      })
+      await updateDeployment(props.deployment.id, updates)
       emit('saved', props.deployment.id, updates)
     } else {
-      await $fetch('/api/admin/deployments', {
-        method: 'POST',
-        body: {
-          platformId: state.platformId,
-          deploymentId: state.deploymentId,
-          deploymentHost: state.deploymentHost || null
-        }
+      await createDeployment({
+        platformId: state.platformId,
+        deploymentId: state.deploymentId,
+        deploymentHost: state.deploymentHost || null
       })
       emit('created')
     }

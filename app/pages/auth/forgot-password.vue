@@ -51,6 +51,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 const { t } = useI18n()
 const { success, error } = useNotifications()
 const { getErrorCode, getErrorData } = useApiError()
+const { forgotPassword } = useAuthFeature()
 const localePath = useLocalePath()
 
 // =============================================================================
@@ -95,13 +96,7 @@ const handleSubmit = async (event: FormSubmitEvent<ForgotPasswordData>) => {
   try {
     isLoading.value = true
 
-    const response = await $fetch<ApiResponse<{ message: string; email: string }>>(
-      '/api/auth/forgot-password',
-      {
-        method: 'POST',
-        body: event.data
-      }
-    )
+    const response = await forgotPassword(event.data)
 
     if (response.statusCode === 200) {
       // Show success message

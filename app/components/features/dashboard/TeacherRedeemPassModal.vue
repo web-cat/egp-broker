@@ -159,6 +159,7 @@ import type {
 } from '@@/shared/models/teacher'
 import type { AssignmentRow } from '@@/shared/models/assignment'
 import type { ApiResponse } from '@@/shared/types/api'
+import { usePassRedemptions } from '~/composables/features/usePassRedemptions'
 
 const props = withDefaults(
   defineProps<{
@@ -177,6 +178,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { forceRedeemStudentPass } = usePassRedemptions()
 
 const selectedAssignmentId = ref('')
 const selectedPassTypeId = ref('')
@@ -319,13 +321,7 @@ async function handleSubmit() {
       acceptUntil: endDate.value ? parseDateTimeLocalInput(endDate.value) : null
     }
 
-    const res = await $fetch<ApiResponse<TeacherForceRedeemPassResponse>>(
-      `/api/me/students/${props.student.userId}/redemptions`,
-      {
-        method: 'POST',
-        body: payload
-      }
-    )
+    const res = await forceRedeemStudentPass(props.student.userId, payload)
 
     if (res.data) {
       toast.add({

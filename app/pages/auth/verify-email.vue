@@ -150,6 +150,7 @@ const { t } = useI18n()
 const { fetch: fetchUser } = useUserSession()
 const { success } = useNotifications()
 const { getErrorCode } = useApiError()
+const { verifyEmail } = useAuthFeature()
 const localePath = useLocalePath()
 const route = useRoute()
 
@@ -188,13 +189,7 @@ onMounted(async () => {
 // =============================================================================
 const performVerification = async (token: string) => {
   try {
-    const response = await $fetch<ApiResponse<{ user: PublicUser; loggedIn: boolean }>>(
-      '/api/auth/verify-email',
-      {
-        method: 'POST',
-        body: { token }
-      }
-    )
+    const response = await verifyEmail(token)
 
     if (response.statusCode === 200 && response.data) {
       // Refresh user session from server

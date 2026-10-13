@@ -116,6 +116,7 @@
 <script setup lang="ts">
 import type { ApiResponse } from '@@/shared/types/api'
 import type { RosterSyncStatusData } from '@@/shared/models/course'
+import { useRosterSync } from '~/composables/features/useRosterSync'
 
 const props = withDefaults(
   defineProps<{
@@ -146,9 +147,11 @@ const closeModal = () => {
   isOpen.value = false
 }
 
+const { fetchRosterSyncStatus } = useRosterSync()
+
 const checkStatus = async () => {
   try {
-    const res = await $fetch<ApiResponse<RosterSyncStatusData>>('/api/me/course/roster-sync-status')
+    const res = await fetchRosterSyncStatus()
     if (res?.data) {
       if (!res.data.isSyncing) {
         // Sync has completed

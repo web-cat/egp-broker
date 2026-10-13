@@ -214,6 +214,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, useTemplateRef } from 'vue'
 import { formatDateTimeInput, parseDateTimeInput } from '@@/shared/utils/timezone'
+import { useAdminAssignments } from '~/composables/features/admin/useAdminAssignments'
 const { success, error: showError } = useNotifications()
 
 interface AssignmentData {
@@ -272,6 +273,7 @@ const open = defineModel<boolean>('open', { required: true })
 
 const formRef = useTemplateRef('formRef')
 const saving = ref(false)
+const { createAssignment, updateAssignment } = useAdminAssignments()
 
 const isEdit = computed(() => !!props.assignment)
 const panelDescription = computed(() => {
@@ -390,10 +392,7 @@ const handleSubmit = async () => {
       // Include all selected pass type IDs in edit mode
       body.manualPassTypeIds = selectedPassTypeIds.value
 
-      await $fetch(`/api/me/assignments/${props.assignment!.id}`, {
-        method: 'PATCH',
-        body
-      })
+      await updateAssignment(props.assignment!.id, body)
       success({
         title: 'Assignment updated',
         message: 'The assignment has been saved successfully.'
@@ -407,10 +406,7 @@ const handleSubmit = async () => {
         })
         return
       }
-      await $fetch('/api/me/assignments', {
-        method: 'POST',
-        body: { ...body, courseId: props.courseId }
-      })
+      await createAssignment({ ...body, courseId: props.courseId })
       success({
         title: 'Assignment created',
         message: 'The new assignment has been created successfully.'

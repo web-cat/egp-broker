@@ -182,6 +182,7 @@ import type { ApiResponse } from '@@/shared/types/api'
 import { formatUpcomingDate } from '@@/shared/utils/timezone'
 // Feature Composable
 import { useStudentDashboard } from '~/composables/features/useStudentDashboard'
+import { useRosterSync } from '~/composables/features/useRosterSync'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -242,12 +243,8 @@ const {
 // --- Roster Sync (NRPS) ---
 const rosterSyncModalOpen = ref(false)
 
-const { data: rosterSyncStatus } = useFetch<
-  ApiResponse<{
-    isSyncing: boolean
-    lastRosterSyncAt: string | null
-  }>
->('/api/me/course/roster-sync-status', { lazy: true, server: false })
+const { useRosterSyncStatus } = useRosterSync()
+const { data: rosterSyncStatus } = useRosterSyncStatus()
 
 if (route.query.sync === 'roster') {
   rosterSyncModalOpen.value = true

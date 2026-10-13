@@ -83,6 +83,7 @@ const {
   onItemCreated
 } = useAdminCrud<PlatformRow>('/api/admin/platforms')
 
+const { deletePlatform } = useAdminPlatforms()
 const isDeleting = ref(false)
 
 async function handleDeleteConfirm() {
@@ -90,9 +91,7 @@ async function handleDeleteConfirm() {
   isDeleting.value = true
   const target = deletingItem.value
   try {
-    await $fetch(`/api/admin/platforms/${target.id}`, {
-      method: 'DELETE'
-    })
+    await deletePlatform(target.id)
     onRowDeleted(target.id)
     deleteOpen.value = false
     toast.add({

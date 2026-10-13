@@ -130,6 +130,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAdminGradeTranslations } from '~/composables/features/admin/useAdminGradeTranslations'
 interface GradeTranslationRow {
   id: string
   name: string
@@ -219,21 +220,21 @@ async function onSubmit() {
     finalMapping.failValue = 0.0
   }
 
-  try {
-    const url = isEdit.value
-      ? `/api/admin/grade-translations/${props.translation?.id}`
-      : '/api/admin/grade-translations'
-    const method = isEdit.value ? 'PATCH' : 'POST'
+  const { createGradeTranslation, updateGradeTranslation } = useAdminGradeTranslations()
 
-    await $fetch<any>(url, {
-      method,
-      body: {
-        name: state.name,
-        description: state.description,
-        maxScore: savedMaxScore, // This maps to your new Prisma column
-        mapping: finalMapping
-      }
-    })
+  try {
+    const payload = {
+      name: state.name,
+      description: state.description,
+      maxScore: savedMaxScore, // This maps to your new Prisma column
+      mapping: finalMapping
+    }
+
+    if (isEdit.value && props.translation?.id) {
+      await updateGradeTranslation(props.translation.id, payload)
+    } else {
+      await createGradeTranslation(payload)
+    }
 
     open.value = false
     emit(isEdit.value ? 'saved' : 'created')
