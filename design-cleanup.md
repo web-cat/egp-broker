@@ -192,7 +192,7 @@ The refactoring items below are grouped by priority:
 
 ---
 
-#### TASK-06: Decompose Monolithic Components & Extract Domain Composables (>30 Lines Rule)
+#### TASK-06: Decompose Monolithic Components & Extract Domain Composables (>30 Lines Rule) [COMPLETED]
 
 - **Constitution Rule:** GEMINI.md § II.2 (_"Composable Logic: Use composables/ to extract stateful logic from UI. If a piece of logic is used in two places, or exceeds 30 lines, it belongs in a composable."_)
 - **Current Violations:** Massive Vue components containing 600–1,300+ lines with large `<script setup>` sections managing filtering, sorting, multi-step modals, training simulations, and mutations:
