@@ -26,14 +26,7 @@
           {{ t('auth.login.title') }}
         </BaseButton>
 
-        <BaseButton
-          v-if="loggedIn"
-          variant="ghost"
-          color="neutral"
-          icon="i-lucide-library"
-          :title="t('global.actions.changeCourse')"
-          @click="handleChangeCourse"
-        />
+        <CourseSwitchButton v-if="loggedIn" />
 
         <BaseButton
           v-if="user?.globalRole === 'PROCTOR' || user?.globalRole === 'ADMIN'"
@@ -99,19 +92,14 @@
 </template>
 
 <script lang="ts" setup>
-import { useCourseContext } from '~/composables/features/useCourseContext'
 import UserMenu from '~/components/features/auth/UserMenu.vue'
+import CourseSwitchButton from '~/components/features/course/CourseSwitchButton.vue'
 
 const { loggedIn, user } = useUserSession()
 const { locale, locales, t } = useI18n()
 const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
-const { clearCourseContext } = useCourseContext()
 const config = useRuntimeConfig()
-
-const handleChangeCourse = async () => {
-  await clearCourseContext()
-}
 
 // Available locales for the selector
 const availableLocales = computed(() =>

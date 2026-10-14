@@ -278,7 +278,7 @@ The refactoring items below are grouped by priority:
 
 ---
 
-#### TASK-10: Remove Business Logic from Layout Shell
+#### TASK-10: Remove Business Logic from Layout Shell [COMPLETED]
 
 - **Constitution Rule:** GEMINI.md § II.1 (_"layouts/: Define the 'shell' only. No business logic allowed."_)
 - **Current Violations:** [app/layouts/default.vue](file:///Users/edwards/git/egp-broker/app/layouts/default.vue#L102-L114) imports `useCourseContext()` and defines `handleChangeCourse = async () => await clearCourseContext()`.
@@ -398,3 +398,12 @@ When executing the refactoring tasks above, use this matrix to guide manual visu
 Next task in the roadmap:
 
 - **TASK-04**: Enforce "The Transport Rule" (Encapsulate `$fetch` and `useFetch` across feature components and admin pages into dedicated composables).
+
+---
+
+What Remains at the Root of server/utils/:
+The ~28 domain workflow modules that were already living in server/utils/ were kept at the root of server/utils/ to avoid destabilizing ~350+ explicit import paths and Vitest mocks across API endpoints and tests in a single commit:
+
+Core Domain Workflows: cbtf.ts, cbtf-canvas.ts, cbtf-notifications.ts, redemptions.ts, passport.ts, assignments.ts, canvas.ts, canvas-sync.ts, canvas-override-queue.ts, canvas-rate-limiter.ts, teacher.ts, nrps.ts, overrides.ts, pass-types.ts, users.ts, courses.ts, enrollments.ts, gta-interview.ts, gta-slots.ts, gta-shift-rescheduling.ts, lti.ts, lti11.ts, lti-launch.ts, lti-deployments.ts, lti-platforms.ts, lti-tools.ts, tool-launcher.ts
+Infrastructure / Session: db.ts (imported by 208 files), session.ts, site.ts
+Their corresponding test suites: ~34 test files currently in test/unit/server/utils/.
