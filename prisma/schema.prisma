@@ -46,6 +46,8 @@ model User {
   emailVerified   Boolean    @default(false)
   emailVerifiedAt DateTime?
   avatarUrl       String?
+  /// Stored natural weekly shift pattern for CBTF proctors (e.g. "Mon 2:00–5:00 PM (3.0h), Wed 9:00–11:30 AM (2.5h)")
+  proctorShiftDefinition String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
@@ -329,6 +331,8 @@ model Enrollment {
   courseId        String
   role            CourseRole
   courseSectionId String?
+  /// Stored natural weekly shift pattern for teaching assistants (e.g. "Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h)")
+  shiftDefinition String?
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)

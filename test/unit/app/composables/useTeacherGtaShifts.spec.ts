@@ -178,4 +178,19 @@ describe('useTeacherGtaShifts composable', () => {
       expect.objectContaining({ title: 'Interview Location Saved', color: 'success' })
     )
   })
+
+  it('saves GTA shift definition', async () => {
+    mockFetch.mockResolvedValue({
+      statusCode: 200,
+      data: { shiftDefinition: 'Tue 2:00–5:00 PM (3.0h)' }
+    })
+    const { saveGtaShiftDefinition } = useTeacherGtaShifts(courseId)
+
+    const res = await saveGtaShiftDefinition('ta-1', 'Tue 2:00–5:00 PM (3.0h)')
+    expect(mockFetch).toHaveBeenCalledWith('/api/me/courses/course-1/gtas/ta-1/shift-definition', {
+      method: 'PUT',
+      body: { shiftDefinition: 'Tue 2:00–5:00 PM (3.0h)' }
+    })
+    expect(res).toEqual({ shiftDefinition: 'Tue 2:00–5:00 PM (3.0h)' })
+  })
 })

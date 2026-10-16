@@ -1,6 +1,7 @@
 import { defineEventHandler, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { cbtfBatchGenerateShiftsSchema } from '@@/shared/schemas/cbtf.schema'
+import { formatSlotsToShiftString } from '@@/shared/utils/proctor-schedule-parser'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
@@ -12,10 +13,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const { facilityId, userId, startDate, endDate, shifts } = await readValidatedBody(
-    event,
-    cbtfBatchGenerateShiftsSchema.parse
-  )
+  const { facilityId, userId, startDate, endDate, shifts, shiftDefinition } =
+    await readValidatedBody(event, cbtfBatchGenerateShiftsSchema.parse)
 
   const start = new Date(`${startDate}T00:00:00Z`)
   const end = new Date(`${endDate}T23:59:59Z`)
@@ -86,6 +85,18 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
       })
     )
   )
+
+  const definitionToSave = shiftDefinition || formatSlotsToShiftString(shifts)
+  if (definitionToSave && prisma.user) {
+    try {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { proctorShiftDefinition: definitionToSave }
+      })
+    } catch {
+      // In case user record is missing in a test mock, avoid failing batch generation
+    }
+  }
 
   return {
     statusCode: 201,

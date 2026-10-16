@@ -179,11 +179,16 @@
     />
 
     <!-- Modal: Weekly Schedule Builder -->
-    <UModal v-model:open="showWeeklyModal" title="Weekly Schedule Builder for GTAs">
+    <UModal
+      v-model:open="showWeeklyModal"
+      title="Weekly Schedule Builder for GTAs"
+      :ui="{ content: 'sm:max-w-2xl' }"
+    >
       <template #body>
         <div class="space-y-4">
           <p class="text-xs text-neutral-500">
-            Paste a weekly shift availability block for a Graduate TA. The parser will automatically generate recurring dates within your target window.
+            Enter a Graduate TA's recurring weekly shift pattern using natural text (or the slot
+            builder) and generate concrete shift records across any date range.
           </p>
 
           <!-- Select Target GTA -->
@@ -196,29 +201,33 @@
             />
           </UFormField>
 
-          <!-- Weekly Schedule Text Input -->
-          <div class="space-y-1.5">
+          <!-- Smart Text / Fast Entry -->
+          <div
+            class="space-y-1.5 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50"
+          >
             <div class="flex items-center justify-between">
               <label class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                Weekly Schedule (Text)
+                Paste / Fast Text Entry
               </label>
-              <span class="text-xs text-neutral-400">e.g. MWF 10:00-11:00 or T 14:00-16:00</span>
+              <span class="text-[11px] text-neutral-400">
+                Parses days &amp; times automatically
+              </span>
             </div>
             <UTextarea
               v-model="weeklyRawText"
-              placeholder="e.g.&#10;MWF 10:00-11:00&#10;TR 14:00-15:30"
-              :rows="3"
-              class="w-full font-mono text-xs"
+              rows="2"
+              class="font-mono text-xs w-full"
+              placeholder="Mon 2:00–5:00 PM (3.0h), Wed 9:00–11:30 AM (2.5h), Fri 9:00–11:30 AM (2.5h)"
+              @input="handleWeeklyTextChange"
             />
-            <div class="flex justify-end pt-1">
+            <div class="flex justify-end">
               <UButton
                 size="sm"
                 variant="subtle"
-                color="primary"
-                icon="i-lucide-wand-2"
-                label="Parse Schedule"
-                :disabled="!weeklyRawText.trim()"
-                @click="handleParseWeeklyText"
+                color="neutral"
+                icon="i-lucide-sparkles"
+                label="Parse Text into Slots"
+                @click="handleWeeklyTextChange"
               />
             </div>
           </div>
@@ -493,6 +502,7 @@ import {
   formatTimeStr12h,
   formatShiftDuration,
   formatShiftDate,
+  formatSlotsToShiftString,
   type ParsedShiftSlot
 } from '@@/shared/utils/proctor-schedule-parser'
 import { extractCalendarDate, getLocalDateString, DEFAULT_TIMEZONE } from '@@/shared/utils/timezone'
@@ -664,18 +674,84 @@ const weeklyStartDate = ref('')
 const weeklyEndDate = ref('')
 const isGeneratingShifts = ref(false)
 
+const getGtaStoredShiftDefinition = (gtaId: string): string => {
+  if (!gtaId) return ''
+  const gta = gtas.value.find((g) => g.id === gtaId)
+  if (gta?.shiftDefinition?.trim()) {
+    return gta.shiftDefinition.trim()
+  }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const cached = window.localStorage.getItem(`gta-shift-def:${props.courseId}:${gtaId}`)
+      if (cached?.trim()) return cached.trim()
+    } catch {
+      // ignore
+    }
+  }
+  return ''
+}
+
+const saveGtaStoredShiftDefinition = (gtaId: string, definition: string) => {
+  if (!gtaId) return
+  const gta = gtas.value.find((g) => g.id === gtaId)
+  if (gta) {
+    gta.shiftDefinition = definition
+  }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      if (definition) {
+        window.localStorage.setItem(`gta-shift-def:${props.courseId}:${gtaId}`, definition)
+      }
+    } catch {
+      // ignore
+    }
+  }
+}
+
+const populateShiftListForGta = (gtaId: string) => {
+  const storedDef = getGtaStoredShiftDefinition(gtaId)
+  if (storedDef) {
+    weeklyRawText.value = storedDef
+    const parsed = parseProctorShiftString(storedDef)
+    weeklySlots.value = parsed
+  } else {
+    weeklyRawText.value = ''
+    weeklySlots.value = []
+  }
+}
+
+watch(weeklyGtaId, (newId) => {
+  if (showWeeklyModal.value) {
+    populateShiftListForGta(newId)
+  }
+})
+
 const openWeeklyModal = () => {
   weeklyGtaId.value = gtas.value[0]?.id || ''
-  weeklyRawText.value = ''
-  weeklySlots.value = []
+  populateShiftListForGta(weeklyGtaId.value)
   setPresetWeeks(4)
   showWeeklyModal.value = true
 }
 
-const handleParseWeeklyText = () => {
+const handleWeeklyTextChange = () => {
+  if (!weeklyRawText.value.trim()) {
+    weeklySlots.value = []
+    return
+  }
   const parsed = parseProctorShiftString(weeklyRawText.value)
   if (parsed.length > 0) {
     weeklySlots.value = parsed
+    saveGtaStoredShiftDefinition(weeklyGtaId.value, weeklyRawText.value)
+  }
+}
+
+const syncWeeklyRawTextFromSlots = () => {
+  if (weeklySlots.value.length > 0) {
+    const formatted = formatSlotsToShiftString(weeklySlots.value)
+    weeklyRawText.value = formatted
+    saveGtaStoredShiftDefinition(weeklyGtaId.value, formatted)
+  } else {
+    weeklyRawText.value = ''
   }
 }
 
@@ -691,40 +767,55 @@ const addWeeklySlot = () => {
     endTime: '12:00',
     durationHours: 2.0
   })
+  syncWeeklyRawTextFromSlots()
 }
 
 const removeWeeklySlot = (idx: number) => {
   weeklySlots.value.splice(idx, 1)
+  syncWeeklyRawTextFromSlots()
 }
 
 const calculateSlotDuration = (start: string, end: string) => {
-  return formatShiftDuration(start, end)
+  if (!start || !end) return 0
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  const dur = (eh * 60 + em - (sh * 60 + sm)) / 60
+  return Math.round((dur > 0 ? dur : 0) * 10) / 10
 }
 
 const setPresetWeeks = (weeks: number) => {
-  const now = new Date()
-  const start = getLocalDateString(now, DEFAULT_TIMEZONE)
-  const endD = new Date(now.getTime() + weeks * 7 * 24 * 60 * 60 * 1000)
-  const end = getLocalDateString(endD, DEFAULT_TIMEZONE)
-  weeklyStartDate.value = start || ''
-  weeklyEndDate.value = end || ''
+  const today = new Date()
+  const day = today.getDay()
+  const diffToMon = day === 1 ? 0 : (8 - day) % 7
+  const start = new Date(today)
+  start.setDate(today.getDate() + diffToMon)
+
+  const end = new Date(start)
+  end.setDate(start.getDate() + weeks * 7 - 3) // Friday of that week
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  weeklyStartDate.value = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`
+  weeklyEndDate.value = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`
 }
 
 const handleBatchGenerate = async () => {
   if (!weeklyGtaId.value || !weeklyStartDate.value || !weeklyEndDate.value || weeklySlots.value.length === 0)
     return
   isGeneratingShifts.value = true
+  const shiftDefinition = weeklyRawText.value.trim() || formatSlotsToShiftString(weeklySlots.value)
   try {
     await batchGenerateShifts({
       userId: weeklyGtaId.value,
       startDate: weeklyStartDate.value,
       endDate: weeklyEndDate.value,
+      shiftDefinition,
       shifts: weeklySlots.value.map((s) => ({
         dayOfWeek: Number(s.dayOfWeek),
         startTime: s.startTime,
         endTime: s.endTime
       }))
     })
+    saveGtaStoredShiftDefinition(weeklyGtaId.value, shiftDefinition)
     showWeeklyModal.value = false
   } finally {
     isGeneratingShifts.value = false

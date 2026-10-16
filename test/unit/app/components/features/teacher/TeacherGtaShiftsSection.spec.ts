@@ -50,14 +50,16 @@ const mockGtas = ref([
     firstName: 'Alice',
     lastName: 'Smith',
     email: 'alice@example.edu',
-    avatarUrl: null
+    avatarUrl: null,
+    shiftDefinition: 'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h), Thu 2:30–5:00 PM (2.5h)'
   },
   {
     id: 'ta-2',
     firstName: 'Bob',
     lastName: 'Jones',
     email: 'bob@example.edu',
-    avatarUrl: null
+    avatarUrl: null,
+    shiftDefinition: null
   }
 ])
 
@@ -378,5 +380,132 @@ describe('TeacherGtaShiftsSection component', () => {
     await resetBtn.trigger('click')
     expect(capturedData.length).toBe(2)
     expect(resetBtn.attributes('disabled')).toBeDefined()
+  })
+
+  it('auto-populates shift list from GTA stored definition when Weekly Schedule Builder is opened', async () => {
+    const wrapper = mount(TeacherGtaShiftsSection, {
+      props: {
+        courseId: 'course-1',
+        interviewLocation: 'McBryde 106'
+      },
+      global: {
+        stubs: {
+          BaseDataTable: true,
+          UCard: true,
+          UButton: {
+            props: ['label', 'disabled', 'icon'],
+            template:
+              '<button :disabled="disabled" :data-label="label" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>'
+          },
+          USelect: {
+            props: ['modelValue', 'items', 'ariaLabel'],
+            emits: ['update:modelValue'],
+            setup(props, { emit }) {
+              return () =>
+                h('select', {
+                  'data-testid': props.ariaLabel || 'select',
+                  value: props.modelValue,
+                  onChange: (e: any) => emit('update:modelValue', e.target.value)
+                })
+            }
+          },
+          UTextarea: {
+            props: ['modelValue'],
+            emits: ['update:modelValue', 'input'],
+            setup(props, { emit }) {
+              return () =>
+                h('textarea', {
+                  'data-testid': 'weekly-raw-textarea',
+                  value: props.modelValue,
+                  onInput: (e: any) => {
+                    emit('update:modelValue', e.target.value)
+                    emit('input', e)
+                  }
+                })
+            }
+          },
+          UBadge: true,
+          UIcon: true,
+          UInput: true,
+          UModal: {
+            props: ['open', 'title'],
+            template:
+              '<div v-if="open" data-testid="modal" :data-title="title"><slot name="body" /><slot name="footer" /></div>'
+          },
+          UFormField: true,
+          BaseFormInput: true
+        }
+      }
+    })
+
+    // Click Weekly Schedule Builder button
+    const openBtn = wrapper.find('[data-label="Weekly Schedule Builder"]')
+    expect(openBtn.exists()).toBe(true)
+    await openBtn.trigger('click')
+
+    // Modal is open
+    const modal = wrapper.find('[data-testid="modal"]')
+    expect(modal.exists()).toBe(true)
+
+    // ta-1 was initially selected, which has stored definition
+    // Check textarea value
+    const textarea = wrapper.find('[data-testid="weekly-raw-textarea"]')
+    expect(textarea.exists()).toBe(true)
+    expect((textarea.element as HTMLTextAreaElement).value).toBe(
+      'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h), Thu 2:30–5:00 PM (2.5h)'
+    )
+
+    // Check that 3 slots were parsed into the weekly slots list
+    expect(wrapper.vm.weeklySlots).toHaveLength(3)
+    expect(wrapper.vm.weeklySlots[0].dayOfWeek).toBe(2) // Tuesday
+    expect(wrapper.vm.weeklySlots[0].startTime).toBe('14:00')
+    expect(wrapper.vm.weeklySlots[0].endTime).toBe('17:00')
+    expect(wrapper.vm.weeklySlots[1].dayOfWeek).toBe(3) // Wednesday
+    expect(wrapper.vm.weeklySlots[1].startTime).toBe('14:30')
+    expect(wrapper.vm.weeklySlots[1].endTime).toBe('17:00')
+    expect(wrapper.vm.weeklySlots[2].dayOfWeek).toBe(4) // Thursday
+    expect(wrapper.vm.weeklySlots[2].startTime).toBe('14:30')
+    expect(wrapper.vm.weeklySlots[2].endTime).toBe('17:00')
+
+    // Switch selected GTA to ta-2 (which has no stored definition)
+    wrapper.vm.weeklyGtaId = 'ta-2'
+    await wrapper.vm.$nextTick()
+
+    // Slots and text should be cleared for ta-2
+    expect(wrapper.vm.weeklyRawText).toBe('')
+    expect(wrapper.vm.weeklySlots).toHaveLength(0)
+
+    // Fast text entry for ta-2: Enter compact format without spaces before AM/PM
+    wrapper.vm.weeklyRawText = 'Mon 2:00–5:00PM, Wed 9:00–11:30AM, Fri 9:00–11:30AM'
+    wrapper.vm.handleWeeklyTextChange()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.weeklySlots).toHaveLength(3)
+    expect(wrapper.vm.weeklySlots[0].dayOfWeek).toBe(1) // Monday
+    expect(wrapper.vm.weeklySlots[0].startTime).toBe('14:00')
+    expect(wrapper.vm.weeklySlots[0].endTime).toBe('17:00')
+    expect(wrapper.vm.weeklySlots[1].dayOfWeek).toBe(3) // Wednesday
+    expect(wrapper.vm.weeklySlots[1].startTime).toBe('09:00')
+    expect(wrapper.vm.weeklySlots[1].endTime).toBe('11:30')
+    expect(wrapper.vm.weeklySlots[2].dayOfWeek).toBe(5) // Friday
+    expect(wrapper.vm.weeklySlots[2].startTime).toBe('09:00')
+    expect(wrapper.vm.weeklySlots[2].endTime).toBe('11:30')
+
+    // Generate batch shifts
+    wrapper.vm.weeklyStartDate = '2026-09-14'
+    wrapper.vm.weeklyEndDate = '2026-09-20'
+    await wrapper.vm.handleBatchGenerate()
+
+    expect(mockBatchGenerateShifts).toHaveBeenCalledWith({
+      userId: 'ta-2',
+      startDate: '2026-09-14',
+      endDate: '2026-09-20',
+      shiftDefinition: 'Mon 2:00–5:00PM, Wed 9:00–11:30AM, Fri 9:00–11:30AM',
+      shifts: [
+        { dayOfWeek: 1, startTime: '14:00', endTime: '17:00' },
+        { dayOfWeek: 3, startTime: '09:00', endTime: '11:30' },
+        { dayOfWeek: 5, startTime: '09:00', endTime: '11:30' }
+      ]
+    })
   })
 })

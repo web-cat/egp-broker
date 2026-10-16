@@ -72,7 +72,11 @@ export const gtaBatchGenerateShiftsSchema = z
     userId: z.string().min(1, 'GTA User ID is required'),
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be formatted as YYYY-MM-DD'),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate must be formatted as YYYY-MM-DD'),
-    shifts: z.array(gtaBatchShiftSlotSchema).min(1, 'At least one shift slot is required')
+    shifts: z.array(gtaBatchShiftSlotSchema).min(1, 'At least one shift slot is required'),
+    shiftDefinition: z
+      .string()
+      .max(2000, 'Shift definition cannot exceed 2,000 characters')
+      .optional()
   })
   .refine((data) => data.endDate >= data.startDate, {
     message: 'endDate must be on or after startDate',
@@ -80,6 +84,12 @@ export const gtaBatchGenerateShiftsSchema = z
   })
 
 export type GtaBatchGenerateShiftsInput = z.infer<typeof gtaBatchGenerateShiftsSchema>
+
+export const updateGtaShiftDefinitionSchema = z.object({
+  shiftDefinition: z.string().max(2000, 'Shift definition cannot exceed 2,000 characters')
+})
+
+export type UpdateGtaShiftDefinitionInput = z.infer<typeof updateGtaShiftDefinitionSchema>
 
 export const createGtaInterviewReservationInputSchema = z.object({
   assignmentId: z.string().min(1, 'Assignment ID is required'),

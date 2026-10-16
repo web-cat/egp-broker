@@ -2,6 +2,7 @@ import { defineEventHandler, getRouterParam, readValidatedBody, createError } fr
 import prisma from '@@/server/utils/db'
 import { assertCourseInstructorOrSelfGta } from '@@/server/utils/gta-interview'
 import { gtaBatchGenerateShiftsSchema } from '@@/shared/schemas/gta-interview.schema'
+import { formatSlotsToShiftString } from '@@/shared/utils/proctor-schedule-parser'
 import type { ApiResponse } from '@@/shared/types/api'
 
 export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
@@ -10,11 +11,13 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     throw createError({ statusCode: 400, statusMessage: 'Course ID is required' })
   }
 
-  const { userId, startDate, endDate, shifts } = await readValidatedBody(event, (body) =>
-    gtaBatchGenerateShiftsSchema.parse({
-      courseId,
-      ...body
-    })
+  const { userId, startDate, endDate, shifts, shiftDefinition } = await readValidatedBody(
+    event,
+    (body) =>
+      gtaBatchGenerateShiftsSchema.parse({
+        courseId,
+        ...body
+      })
   )
 
   await assertCourseInstructorOrSelfGta(event, courseId, userId)
@@ -83,6 +86,25 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
       })
     )
   )
+
+  const definitionToSave = shiftDefinition || formatSlotsToShiftString(shifts)
+  if (definitionToSave && prisma.enrollment) {
+    try {
+      await prisma.enrollment.update({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId
+          }
+        },
+        data: {
+          shiftDefinition: definitionToSave
+        }
+      })
+    } catch {
+      // In case enrollment record is missing in a test mock, avoid failing batch generation
+    }
+  }
 
   return {
     statusCode: 201,

@@ -10,6 +10,9 @@ vi.mock('@@/server/utils/db', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn()
+    },
+    cbtfProctorShift: {
+      findMany: vi.fn()
     }
   }
 }))
@@ -63,7 +66,7 @@ describe('API: Admin CBTF Proctor Management Endpoints', () => {
       await expect(proctorsGet(event)).rejects.toThrow('Forbidden')
     })
 
-    it('returns all users with PROCTOR globalRole', async () => {
+    it('returns all users with PROCTOR globalRole and stored proctorShiftDefinition', async () => {
       const event = mockEvent('ADMIN')
       const mockProctors = [
         {
@@ -72,7 +75,8 @@ describe('API: Admin CBTF Proctor Management Endpoints', () => {
           lastName: 'Smith',
           email: 'alice@example.com',
           globalRole: 'PROCTOR',
-          avatarUrl: null
+          avatarUrl: null,
+          proctorShiftDefinition: 'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h)'
         }
       ]
       vi.mocked(prisma.user.findMany).mockResolvedValue(mockProctors as any)
@@ -88,10 +92,48 @@ describe('API: Admin CBTF Proctor Management Endpoints', () => {
           lastName: true,
           email: true,
           globalRole: true,
-          avatarUrl: true
+          avatarUrl: true,
+          proctorShiftDefinition: true
         },
         orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }]
       })
+    })
+
+    it('auto-derives proctorShiftDefinition from existing shifts if null in DB', async () => {
+      const event = mockEvent('ADMIN')
+      const mockProctors = [
+        {
+          id: 'p1',
+          firstName: 'Alice',
+          lastName: 'Smith',
+          email: 'alice@example.com',
+          globalRole: 'PROCTOR',
+          avatarUrl: null,
+          proctorShiftDefinition: null
+        }
+      ]
+      vi.mocked(prisma.user.findMany).mockResolvedValue(mockProctors as any)
+      vi.mocked(prisma.cbtfProctorShift.findMany).mockResolvedValue([
+        {
+          id: 's1',
+          userId: 'p1',
+          date: new Date('2026-10-13T00:00:00.000Z'), // Tuesday (dayOfWeek 2)
+          startTime: '14:00',
+          endTime: '17:00'
+        },
+        {
+          id: 's2',
+          userId: 'p1',
+          date: new Date('2026-10-14T00:00:00.000Z'), // Wednesday (dayOfWeek 3)
+          startTime: '14:30',
+          endTime: '17:00'
+        }
+      ] as any)
+
+      const res = await proctorsGet(event)
+      expect(res.statusCode).toBe(200)
+      expect(res.data[0].proctorShiftDefinition).toContain('Tue')
+      expect(res.data[0].proctorShiftDefinition).toContain('Wed')
     })
   })
 

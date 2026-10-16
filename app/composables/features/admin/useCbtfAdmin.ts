@@ -244,6 +244,7 @@ export function useCbtfAdmin() {
     startDate: string
     endDate: string
     shifts: Array<{ dayOfWeek: number; startTime: string; endTime: string }>
+    shiftDefinition?: string
   }) => {
     if (!facility.value?.id) return
     try {
@@ -262,6 +263,12 @@ export function useCbtfAdmin() {
         description: `Successfully scheduled ${res.data?.count || 0} shift instances.`,
         color: 'success'
       })
+      if (payload.shiftDefinition) {
+        const target = proctors.value.find((p: any) => p.id === payload.userId)
+        if (target) {
+          target.proctorShiftDefinition = payload.shiftDefinition
+        }
+      }
       await refreshShifts()
       return res.data
     } catch (err: any) {
@@ -366,6 +373,30 @@ export function useCbtfAdmin() {
     }
   }
 
+  const saveProctorShiftDefinition = async (userId: string, shiftDefinition: string) => {
+    try {
+      const res = await $fetch<ApiResponse<{ id: string; proctorShiftDefinition: string | null }>>(
+        `/api/admin/cbtf/proctors/${userId}/shift-definition`,
+        {
+          method: 'PUT',
+          body: { shiftDefinition }
+        }
+      )
+      const target = proctors.value.find((p: any) => p.id === userId)
+      if (target) {
+        target.proctorShiftDefinition = shiftDefinition
+      }
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Save Shift Definition',
+        description: err.data?.statusMessage || err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
   return {
     facility,
     facilityStatus,
@@ -390,6 +421,7 @@ export function useCbtfAdmin() {
     createShift,
     deleteShift,
     batchGenerateShifts,
+    saveProctorShiftDefinition,
     updateShift,
     updateReservation
   }

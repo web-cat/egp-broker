@@ -45,6 +45,9 @@ vi.mock('@@/server/utils/db', () => ({
       findUnique: vi.fn(),
       count: vi.fn(),
       update: vi.fn()
+    },
+    user: {
+      update: vi.fn()
     }
   }
 }))
@@ -357,6 +360,37 @@ describe('API: Admin CBTF Endpoints', () => {
           }
         })
       )
+    })
+
+    it('persists proctor shiftDefinition when provided in batch generation', async () => {
+      const event = mockEvent('ADMIN', {
+        facilityId: 'fac-1',
+        userId: 'usr-p1',
+        startDate: '2026-09-14',
+        endDate: '2026-09-20',
+        shiftDefinition: 'Mon 2:00–5:00PM, Wed 9:00–11:30AM',
+        shifts: [
+          { dayOfWeek: 1, startTime: '14:00', endTime: '17:00' },
+          { dayOfWeek: 3, startTime: '09:00', endTime: '11:30' }
+        ]
+      })
+
+      vi.mocked(prisma.cbtfProctorShift.create).mockResolvedValue({
+        id: 'shift-generated',
+        facilityId: 'fac-1',
+        userId: 'usr-p1',
+        date: new Date('2026-09-14T00:00:00.000Z'),
+        startTime: '14:00',
+        endTime: '17:00'
+      } as any)
+      vi.mocked(prisma.user.update).mockResolvedValue({ id: 'usr-p1' } as any)
+
+      const res = await shiftsBatchPost(event)
+      expect(res.statusCode).toBe(201)
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'usr-p1' },
+        data: { proctorShiftDefinition: 'Mon 2:00–5:00PM, Wed 9:00–11:30AM' }
+      })
     })
 
     it('updates a specific proctor shift (single timeslot adjustment or reassignment)', async () => {

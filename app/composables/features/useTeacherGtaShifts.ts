@@ -26,6 +26,7 @@ export interface CourseGtaUser {
   lastName: string
   email: string
   avatarUrl: string | null
+  shiftDefinition?: string | null
 }
 
 export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null | undefined>) => {
@@ -254,6 +255,7 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
     startDate: string
     endDate: string
     shifts: Array<{ dayOfWeek: number; startTime: string; endTime: string }>
+    shiftDefinition?: string
   }) => {
     if (!courseId.value) return
     try {
@@ -269,11 +271,42 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
         description: `Successfully scheduled ${res.data?.count || 0} shift instances.`,
         color: 'success'
       })
+      if (payload.shiftDefinition) {
+        const target = gtas.value.find((g) => g.id === payload.userId)
+        if (target) {
+          target.shiftDefinition = payload.shiftDefinition
+        }
+      }
       await refreshShifts()
       return res.data
     } catch (err: any) {
       toast.add({
         title: 'Failed to Generate Weekly Shifts',
+        description: err.data?.statusMessage || err.data?.message || err.message,
+        color: 'error'
+      })
+      throw err
+    }
+  }
+
+  const saveGtaShiftDefinition = async (gtaId: string, shiftDefinition: string) => {
+    if (!courseId.value || !gtaId) return
+    try {
+      const res = await $fetch<ApiResponse<{ shiftDefinition: string }>>(
+        `/api/me/courses/${courseId.value}/gtas/${gtaId}/shift-definition`,
+        {
+          method: 'PUT',
+          body: { shiftDefinition }
+        }
+      )
+      const target = gtas.value.find((g) => g.id === gtaId)
+      if (target) {
+        target.shiftDefinition = res.data?.shiftDefinition ?? shiftDefinition
+      }
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Failed to Save Shift Definition',
         description: err.data?.statusMessage || err.data?.message || err.message,
         color: 'error'
       })
@@ -322,6 +355,7 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
     deleteShift,
     previewShiftImpact,
     batchGenerateShifts,
+    saveGtaShiftDefinition,
     updateInterviewLocation,
     getShiftDetails,
     rescheduleInterview,

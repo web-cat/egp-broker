@@ -89,6 +89,7 @@ describe('API: Course GTAs Endpoint (GET /api/me/courses/:courseId/gtas)', () =>
         userId: 'ta-1',
         courseId: 'course-1',
         role: 'TA',
+        shiftDefinition: 'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h)',
         user: {
           id: 'ta-1',
           firstName: 'Alice',
@@ -102,6 +103,7 @@ describe('API: Course GTAs Endpoint (GET /api/me/courses/:courseId/gtas)', () =>
         userId: 'ta-2',
         courseId: 'course-1',
         role: 'TA',
+        shiftDefinition: null,
         user: {
           id: 'ta-2',
           firstName: 'Bob',
@@ -120,7 +122,16 @@ describe('API: Course GTAs Endpoint (GET /api/me/courses/:courseId/gtas)', () =>
       firstName: 'Alice',
       lastName: 'Smith',
       email: 'alice@example.edu',
-      avatarUrl: 'https://gravatar.com/alice'
+      avatarUrl: 'https://gravatar.com/alice',
+      shiftDefinition: 'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h)'
+    })
+    expect(res.data[1]).toEqual({
+      id: 'ta-2',
+      firstName: 'Bob',
+      lastName: 'Taylor',
+      email: 'bob@example.edu',
+      avatarUrl: null,
+      shiftDefinition: null
     })
     expect(prisma.enrollment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({

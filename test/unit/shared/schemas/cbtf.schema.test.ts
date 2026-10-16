@@ -15,6 +15,7 @@ import {
   grantProctorRoleInputSchema,
   createScheduleExceptionInputSchema,
   cbtfBatchGenerateShiftsSchema,
+  updateProctorShiftDefinitionSchema,
   cbtfUpdateProctorShiftInputSchema,
   cbtfReservationStatusEnum
 } from '../../../../shared/schemas/cbtf.schema'
@@ -395,6 +396,25 @@ describe('CBTF Shared Schemas', () => {
       expect(cbtfBatchGenerateShiftsSchema.safeParse(valid).success).toBe(true)
     })
 
+    it('validates a valid batch shift generation input with shiftDefinition', () => {
+      const valid = {
+        facilityId: 'fac-1',
+        userId: 'usr-p1',
+        startDate: '2026-09-15',
+        endDate: '2026-12-11',
+        shiftDefinition: 'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h)',
+        shifts: [
+          { dayOfWeek: 2, startTime: '14:00', endTime: '17:00' },
+          { dayOfWeek: 3, startTime: '14:30', endTime: '17:00' }
+        ]
+      }
+      const result = cbtfBatchGenerateShiftsSchema.safeParse(valid)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.shiftDefinition).toBe('Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h)')
+      }
+    })
+
     it('rejects endDate earlier than startDate', () => {
       const invalid = {
         facilityId: 'fac-1',
@@ -426,6 +446,27 @@ describe('CBTF Shared Schemas', () => {
           shifts: [{ dayOfWeek: 1, startTime: '17:00', endTime: '14:00' }]
         }).success
       ).toBe(false)
+    })
+  })
+
+  describe('updateProctorShiftDefinitionSchema', () => {
+    it('validates a valid shiftDefinition string', () => {
+      const valid = {
+        shiftDefinition: 'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h)'
+      }
+      const result = updateProctorShiftDefinitionSchema.safeParse(valid)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.shiftDefinition).toBe('Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h)')
+      }
+    })
+
+    it('rejects shiftDefinition longer than 2000 characters', () => {
+      const invalid = {
+        shiftDefinition: 'a'.repeat(2001)
+      }
+      const result = updateProctorShiftDefinitionSchema.safeParse(invalid)
+      expect(result.success).toBe(false)
     })
   })
 

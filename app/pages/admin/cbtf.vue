@@ -182,6 +182,7 @@
             variant="subtle"
             icon="i-lucide-calendar-days"
             label="Weekly Schedule Builder"
+            data-label="Weekly Schedule Builder"
             @click="openWeeklyScheduleModal"
           />
           <UButton color="primary" icon="i-lucide-plus" label="Add Shift" @click="openShiftModal" />
@@ -497,6 +498,7 @@
             </div>
             <UTextarea
               v-model="weeklyRawText"
+              data-testid="weekly-raw-textarea"
               rows="2"
               class="font-mono text-xs w-full"
               placeholder="Mon 2:00–5:00 PM (3.0h), Wed 9:00–11:30 AM (2.5h), Fri 9:00–11:30 AM (2.5h)"
@@ -706,6 +708,7 @@ import type {
 } from '@@/shared/models/cbtf'
 import {
   parseProctorShiftString,
+  formatSlotsToShiftString,
   calculateWeeklyShiftHours,
   formatTimeStr12h,
   formatShiftDuration,
@@ -734,6 +737,7 @@ const {
   createShift,
   deleteShift,
   batchGenerateShifts,
+  saveProctorShiftDefinition,
   updateShift,
   updateReservation
 } = useCbtfAdmin()
@@ -1169,6 +1173,58 @@ const weeklyStartDate = ref('')
 const weeklyEndDate = ref('')
 const isGeneratingShifts = ref(false)
 
+const getProctorStoredShiftDefinition = (proctorId: string): string => {
+  if (!proctorId) return ''
+  const proctor = proctors.value.find((p: any) => p.id === proctorId)
+  if (proctor?.proctorShiftDefinition?.trim()) {
+    return proctor.proctorShiftDefinition.trim()
+  }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const cached = window.localStorage.getItem(`cbtf-proctor-shift-def:${proctorId}`)
+      if (cached?.trim()) return cached.trim()
+    } catch {
+      // ignore
+    }
+  }
+  return ''
+}
+
+const saveProctorStoredShiftDefinition = (proctorId: string, definition: string) => {
+  if (!proctorId) return
+  const proctor = proctors.value.find((p: any) => p.id === proctorId)
+  if (proctor) {
+    proctor.proctorShiftDefinition = definition
+  }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      if (definition) {
+        window.localStorage.setItem(`cbtf-proctor-shift-def:${proctorId}`, definition)
+      }
+    } catch {
+      // ignore
+    }
+  }
+}
+
+const populateShiftListForProctor = (proctorId: string) => {
+  const storedDef = getProctorStoredShiftDefinition(proctorId)
+  if (storedDef) {
+    weeklyRawText.value = storedDef
+    const parsed = parseProctorShiftString(storedDef)
+    weeklySlots.value = parsed
+  } else {
+    weeklyRawText.value = ''
+    weeklySlots.value = []
+  }
+}
+
+watch(weeklyProctorId, (newId) => {
+  if (showWeeklyModal.value) {
+    populateShiftListForProctor(newId)
+  }
+})
+
 const weeklyTotalHours = computed(() => calculateWeeklyShiftHours(weeklySlots.value))
 
 const calculateSlotDuration = (start: string, end: string) => {
@@ -1180,10 +1236,24 @@ const calculateSlotDuration = (start: string, end: string) => {
 }
 
 const handleWeeklyTextChange = () => {
-  if (!weeklyRawText.value.trim()) return
+  if (!weeklyRawText.value.trim()) {
+    weeklySlots.value = []
+    return
+  }
   const parsed = parseProctorShiftString(weeklyRawText.value)
   if (parsed.length > 0) {
     weeklySlots.value = parsed
+    saveProctorStoredShiftDefinition(weeklyProctorId.value, weeklyRawText.value)
+  }
+}
+
+const syncWeeklyRawTextFromSlots = () => {
+  if (weeklySlots.value.length > 0) {
+    const formatted = formatSlotsToShiftString(weeklySlots.value)
+    weeklyRawText.value = formatted
+    saveProctorStoredShiftDefinition(weeklyProctorId.value, formatted)
+  } else {
+    weeklyRawText.value = ''
   }
 }
 
@@ -1195,10 +1265,12 @@ const addWeeklySlot = () => {
     endTime: '12:00',
     durationHours: 3.0
   })
+  syncWeeklyRawTextFromSlots()
 }
 
 const removeWeeklySlot = (index: number) => {
   weeklySlots.value.splice(index, 1)
+  syncWeeklyRawTextFromSlots()
 }
 
 const setPresetWeeks = (weeks: number) => {
@@ -1217,9 +1289,12 @@ const setPresetWeeks = (weeks: number) => {
 }
 
 const openWeeklyScheduleModal = () => {
-  weeklyProctorId.value = ''
-  weeklyRawText.value = ''
-  weeklySlots.value = []
+  const firstProctorId = proctors.value[0]?.id || ''
+  weeklyProctorId.value =
+    selectedProctorId.value && selectedProctorId.value !== ADD_PROCTOR_VALUE
+      ? selectedProctorId.value
+      : firstProctorId
+  populateShiftListForProctor(weeklyProctorId.value)
   setPresetWeeks(4)
   showWeeklyModal.value = true
 }
@@ -1233,17 +1308,20 @@ const handleBatchGenerate = async () => {
   )
     return
   isGeneratingShifts.value = true
+  const shiftDefinition = weeklyRawText.value.trim() || formatSlotsToShiftString(weeklySlots.value)
   try {
     await batchGenerateShifts({
       userId: weeklyProctorId.value,
       startDate: weeklyStartDate.value,
       endDate: weeklyEndDate.value,
+      shiftDefinition,
       shifts: weeklySlots.value.map((s) => ({
         dayOfWeek: s.dayOfWeek,
         startTime: s.startTime,
         endTime: s.endTime
       }))
     })
+    saveProctorStoredShiftDefinition(weeklyProctorId.value, shiftDefinition)
     showWeeklyModal.value = false
   } finally {
     isGeneratingShifts.value = false

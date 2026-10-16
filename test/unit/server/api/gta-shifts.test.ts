@@ -9,7 +9,8 @@ import gtaShiftsBatchPost from '@@/server/api/me/courses/[courseId]/gta-shifts/b
 vi.mock('@@/server/utils/db', () => ({
   default: {
     enrollment: {
-      findUnique: vi.fn()
+      findUnique: vi.fn(),
+      update: vi.fn().mockResolvedValue({})
     },
     gtaShift: {
       findMany: vi.fn(),
@@ -388,13 +389,14 @@ describe('API: Course GTA Shifts Endpoints', () => {
   })
 
   describe('POST /api/me/courses/:courseId/gta-shifts/batch', () => {
-    it('batch generates shifts across matching days of the week', async () => {
+    it('batch generates shifts across matching days of the week and saves shiftDefinition', async () => {
       const event = mockEvent(
         { id: 'gta-1', globalRole: 'USER' },
         {
           userId: 'gta-1',
           startDate: '2026-09-14', // Mon
           endDate: '2026-09-20', // Sun
+          shiftDefinition: 'Mon 10:00 AM–12:00 PM (2.0h), Wed 2:00–4:00 PM (2.0h)',
           shifts: [
             { dayOfWeek: 1, startTime: '10:00', endTime: '12:00' }, // Mon
             { dayOfWeek: 3, startTime: '14:00', endTime: '16:00' } // Wed
@@ -418,6 +420,17 @@ describe('API: Course GTA Shifts Endpoints', () => {
       expect(res.statusCode).toBe(201)
       expect(res.data.count).toBe(2)
       expect(prisma.gtaShift.create).toHaveBeenCalledTimes(2)
+      expect(prisma.enrollment.update).toHaveBeenCalledWith({
+        where: {
+          userId_courseId: {
+            userId: 'gta-1',
+            courseId: 'course-1'
+          }
+        },
+        data: {
+          shiftDefinition: 'Mon 10:00 AM–12:00 PM (2.0h), Wed 2:00–4:00 PM (2.0h)'
+        }
+      })
     })
   })
 })

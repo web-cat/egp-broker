@@ -3,6 +3,7 @@ import {
   createGtaShiftInputSchema,
   updateGtaShiftInputSchema,
   gtaBatchGenerateShiftsSchema,
+  updateGtaShiftDefinitionSchema,
   createGtaInterviewReservationInputSchema,
   updateGtaInterviewReservationInputSchema,
   updateCourseInterviewLocationInputSchema
@@ -95,6 +96,19 @@ describe('Shared Schema: GTA Interview Schemas', () => {
       expect(result.success).toBe(true)
     })
 
+    it('validates batch shift payload with optional shiftDefinition', () => {
+      const valid = {
+        courseId: 'course-1',
+        userId: 'gta-1',
+        startDate: '2026-09-16',
+        endDate: '2026-12-09',
+        shiftDefinition: 'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h)',
+        shifts: [{ dayOfWeek: 2, startTime: '14:00', endTime: '17:00' }]
+      }
+      const result = gtaBatchGenerateShiftsSchema.safeParse(valid)
+      expect(result.success).toBe(true)
+    })
+
     it('rejects if endDate is before startDate', () => {
       const invalid = {
         courseId: 'course-1',
@@ -116,6 +130,24 @@ describe('Shared Schema: GTA Interview Schemas', () => {
         shifts: []
       }
       const result = gtaBatchGenerateShiftsSchema.safeParse(invalid)
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('updateGtaShiftDefinitionSchema', () => {
+    it('validates a valid shiftDefinition string', () => {
+      const valid = {
+        shiftDefinition: 'Mon 2:00–5:00PM, Wed 9:00–11:30AM, Fri 9:00–11:30AM'
+      }
+      const result = updateGtaShiftDefinitionSchema.safeParse(valid)
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects if shiftDefinition exceeds 2000 characters', () => {
+      const invalid = {
+        shiftDefinition: 'a'.repeat(2001)
+      }
+      const result = updateGtaShiftDefinitionSchema.safeParse(invalid)
       expect(result.success).toBe(false)
     })
   })

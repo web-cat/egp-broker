@@ -5,6 +5,7 @@ import {
   formatTimeStr12h,
   formatShiftDuration,
   formatShiftDate,
+  formatSlotsToShiftString,
   type ParsedShiftSlot
 } from '../../../../shared/utils/proctor-schedule-parser'
 
@@ -114,9 +115,138 @@ Fri 2:00 PM - 5:00 PM`
       expect(result[0].endTime).toBe('12:00')
     })
 
+    it('parses typical GTA schedule format with durations: Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h), Thu 2:30–5:00 PM (2.5h)', () => {
+      const input = 'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h), Thu 2:30–5:00 PM (2.5h)'
+      const result = parseProctorShiftString(input)
+
+      expect(result).toHaveLength(3)
+
+      expect(result[0]).toEqual({
+        dayOfWeek: 2,
+        dayName: 'Tuesday',
+        startTime: '14:00',
+        endTime: '17:00',
+        durationHours: 3.0
+      })
+
+      expect(result[1]).toEqual({
+        dayOfWeek: 3,
+        dayName: 'Wednesday',
+        startTime: '14:30',
+        endTime: '17:00',
+        durationHours: 2.5
+      })
+
+      expect(result[2]).toEqual({
+        dayOfWeek: 4,
+        dayName: 'Thursday',
+        startTime: '14:30',
+        endTime: '17:00',
+        durationHours: 2.5
+      })
+    })
+
+    it('parses compact GTA format without space before AM/PM: Mon 2:00–5:00PM, Wed 9:00–11:30AM, Fri 9:00–11:30AM', () => {
+      const input = 'Mon 2:00–5:00PM, Wed 9:00–11:30AM, Fri 9:00–11:30AM'
+      const result = parseProctorShiftString(input)
+
+      expect(result).toHaveLength(3)
+
+      expect(result[0]).toEqual({
+        dayOfWeek: 1,
+        dayName: 'Monday',
+        startTime: '14:00',
+        endTime: '17:00',
+        durationHours: 3.0
+      })
+
+      expect(result[1]).toEqual({
+        dayOfWeek: 3,
+        dayName: 'Wednesday',
+        startTime: '09:00',
+        endTime: '11:30',
+        durationHours: 2.5
+      })
+
+      expect(result[2]).toEqual({
+        dayOfWeek: 5,
+        dayName: 'Friday',
+        startTime: '09:00',
+        endTime: '11:30',
+        durationHours: 2.5
+      })
+    })
+
+    it('parses two-letter day abbreviations Tu and Th', () => {
+      const input = 'Tu 14:00 - 17:00, Th 14:30 - 17:00'
+      const result = parseProctorShiftString(input)
+
+      expect(result).toHaveLength(2)
+      expect(result[0].dayOfWeek).toBe(2)
+      expect(result[0].dayName).toBe('Tuesday')
+      expect(result[1].dayOfWeek).toBe(4)
+      expect(result[1].dayName).toBe('Thursday')
+    })
+
     it('returns empty array for empty or whitespace string', () => {
       expect(parseProctorShiftString('')).toEqual([])
       expect(parseProctorShiftString('   \n  ')).toEqual([])
+    })
+  })
+
+  describe('formatSlotsToShiftString', () => {
+    it('formats parsed slots into a readable shift string with duration labels', () => {
+      const slots: ParsedShiftSlot[] = [
+        {
+          dayOfWeek: 2,
+          dayName: 'Tuesday',
+          startTime: '14:00',
+          endTime: '17:00',
+          durationHours: 3.0
+        },
+        {
+          dayOfWeek: 3,
+          dayName: 'Wednesday',
+          startTime: '14:30',
+          endTime: '17:00',
+          durationHours: 2.5
+        },
+        {
+          dayOfWeek: 4,
+          dayName: 'Thursday',
+          startTime: '14:30',
+          endTime: '17:00',
+          durationHours: 2.5
+        }
+      ]
+
+      const formatted = formatSlotsToShiftString(slots)
+      expect(formatted).toBe(
+        'Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h), Thu 2:30–5:00 PM (2.5h)'
+      )
+
+      // Round-trip parsing should reproduce the original slots
+      const roundTrip = parseProctorShiftString(formatted)
+      expect(roundTrip).toEqual(slots)
+    })
+
+    it('formats slots spanning AM to PM with both meridians', () => {
+      const slots: ParsedShiftSlot[] = [
+        {
+          dayOfWeek: 3,
+          dayName: 'Wednesday',
+          startTime: '11:30',
+          endTime: '14:30',
+          durationHours: 3.0
+        }
+      ]
+
+      const formatted = formatSlotsToShiftString(slots)
+      expect(formatted).toBe('Wed 11:30 AM–2:30 PM (3.0h)')
+    })
+
+    it('returns empty string for empty slots array', () => {
+      expect(formatSlotsToShiftString([])).toBe('')
     })
   })
 

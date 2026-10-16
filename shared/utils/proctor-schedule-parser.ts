@@ -12,12 +12,14 @@ const DAY_MAP: Record<string, { dayOfWeek: number; dayName: string }> = {
   tue: { dayOfWeek: 2, dayName: 'Tuesday' },
   tues: { dayOfWeek: 2, dayName: 'Tuesday' },
   tuesday: { dayOfWeek: 2, dayName: 'Tuesday' },
+  tu: { dayOfWeek: 2, dayName: 'Tuesday' },
   wed: { dayOfWeek: 3, dayName: 'Wednesday' },
   wednesday: { dayOfWeek: 3, dayName: 'Wednesday' },
   thu: { dayOfWeek: 4, dayName: 'Thursday' },
   thur: { dayOfWeek: 4, dayName: 'Thursday' },
   thurs: { dayOfWeek: 4, dayName: 'Thursday' },
   thursday: { dayOfWeek: 4, dayName: 'Thursday' },
+  th: { dayOfWeek: 4, dayName: 'Thursday' },
   fri: { dayOfWeek: 5, dayName: 'Friday' },
   friday: { dayOfWeek: 5, dayName: 'Friday' },
   sat: { dayOfWeek: 6, dayName: 'Saturday' },
@@ -132,7 +134,7 @@ export function parseProctorShiftString(input: string): ParsedShiftSlot[] {
   for (const seg of segments) {
     // Find day keyword at beginning of segment
     const dayMatch = seg.match(
-      /^\s*(Mon(?:day)?|Tue(?:s(?:day)?)?|Wed(?:nesday)?|Thu(?:r(?:s(?:day)?)?)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)\b/i
+      /^\s*(Mon(?:day)?|Tu(?:e(?:s(?:day)?)?)?|Wed(?:nesday)?|Th(?:u(?:r(?:s(?:day)?)?)?)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)\b/i
     )
     if (!dayMatch) continue
 
@@ -221,4 +223,58 @@ export function formatShiftDate(dateVal: string | Date): string {
     year: 'numeric',
     timeZone: 'UTC'
   })
+}
+
+/**
+ * Formats an array of shift slot items into a human-friendly weekly shift definition string,
+ * e.g.: "Tue 2:00–5:00 PM (3.0h), Wed 2:30–5:00 PM (2.5h), Thu 2:30–5:00 PM (2.5h)"
+ */
+export function formatSlotsToShiftString(
+  slots: Array<{ dayOfWeek: number; startTime: string; endTime: string; durationHours?: number }>
+): string {
+  if (!slots || slots.length === 0) return ''
+
+  const dayAbbreviations = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  // Sort slots by day of week (Mon = 1 ... Sun = 0) then start time
+  const sorted = [...slots].sort((a, b) => {
+    const aOrder = a.dayOfWeek === 0 ? 7 : a.dayOfWeek
+    const bOrder = b.dayOfWeek === 0 ? 7 : b.dayOfWeek
+    if (aOrder !== bOrder) return aOrder - bOrder
+    return a.startTime.localeCompare(b.startTime)
+  })
+
+  return sorted
+    .map((slot) => {
+      const dayAbbr = dayAbbreviations[slot.dayOfWeek] || 'Mon'
+      const [shStr, smStr] = slot.startTime.split(':')
+      const [ehStr, emStr] = slot.endTime.split(':')
+      const sh = parseInt(shStr, 10)
+      const sm = parseInt(smStr || '0', 10)
+      const eh = parseInt(ehStr, 10)
+      const em = parseInt(emStr || '0', 10)
+
+      const startMeridian = sh >= 12 ? 'PM' : 'AM'
+      const endMeridian = eh >= 12 ? 'PM' : 'AM'
+
+      const startH12 = sh % 12 === 0 ? 12 : sh % 12
+      const endH12 = eh % 12 === 0 ? 12 : eh % 12
+
+      const startFormatted =
+        sm === 0 ? `${startH12}:00` : `${startH12}:${sm.toString().padStart(2, '0')}`
+      const endFormatted = em === 0 ? `${endH12}:00` : `${endH12}:${em.toString().padStart(2, '0')}`
+
+      // Include meridian on start only if different from end
+      const startWithMer =
+        startMeridian !== endMeridian ? `${startFormatted} ${startMeridian}` : startFormatted
+      const endWithMer = `${endFormatted} ${endMeridian}`
+
+      const durHours =
+        typeof slot.durationHours === 'number'
+          ? slot.durationHours
+          : Math.round(((eh * 60 + em - (sh * 60 + sm)) / 60) * 10) / 10
+
+      return `${dayAbbr} ${startWithMer}–${endWithMer} (${durHours.toFixed(1)}h)`
+    })
+    .join(', ')
 }
