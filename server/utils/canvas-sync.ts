@@ -158,6 +158,16 @@ export async function syncCourseAssignmentsFromCanvas(
       })
     }
 
+    // Attempt 3: Find by resourceLinkId where canvasResourceLinkId is present
+    if (!assignment && canvasResourceLinkId) {
+      assignment = await prisma.assignment.findFirst({
+        where: {
+          courseId: course.id,
+          resourceLinkId: canvasResourceLinkId
+        }
+      })
+    }
+
     if (assignment) {
       // Update existing assignment including published status
       const updateData: Record<string, any> = {

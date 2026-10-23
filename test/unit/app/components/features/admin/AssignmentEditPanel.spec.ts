@@ -101,6 +101,62 @@ describe('AssignmentEditPanel.vue - GTA Grading Interviews', () => {
     expect(endInput?.element.value).toContain('2026-09-25')
   })
 
+  it('populates fields when panel is opened dynamically after mounting with open: false', async () => {
+    const assignment = {
+      id: 'asg-dynamic',
+      title: 'Dynamic Project',
+      canvasAssignmentId: 'canvas-999',
+      dueDate: '2026-09-25T17:00:00.000Z',
+      availableFrom: '2026-09-20T09:00:00.000Z',
+      acceptUntil: '2026-09-26T23:59:00.000Z',
+      hasInterviews: true,
+      interviewWindowStart: '2026-09-21T09:00:00.000Z',
+      interviewWindowEnd: '2026-09-25T17:00:00.000Z',
+      eligibilities: []
+    }
+
+    const wrapper = mount(AssignmentEditPanel, {
+      props: {
+        open: false,
+        assignment: null,
+        courseId: 'course-1',
+        passTypes: []
+      },
+      global: {
+        stubs: globalStubs
+      }
+    })
+
+    await flushPromises()
+
+    // Parent simulates clicking "Edit" on row
+    await wrapper.setProps({
+      open: true,
+      assignment
+    })
+    await flushPromises()
+
+    const inputs = wrapper.findAll('input')
+    const titleInput = inputs.find((i) => i.attributes('name') === 'title')
+    expect(titleInput?.element.value).toBe('Dynamic Project')
+
+    const form = wrapper.find('form')
+    await form.trigger('submit')
+    await flushPromises()
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/me/assignments/asg-dynamic',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: expect.objectContaining({
+          title: 'Dynamic Project',
+          canvasAssignmentId: 'canvas-999',
+          hasInterviews: true
+        })
+      })
+    )
+  })
+
   it('submits updated hasInterviews and window dates on submit', async () => {
     const assignment = {
       id: 'asg-1',

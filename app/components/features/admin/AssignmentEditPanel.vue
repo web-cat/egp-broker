@@ -212,7 +212,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, useTemplateRef } from 'vue'
+import { ref, reactive, computed, watch, onUnmounted, useTemplateRef } from 'vue'
 import { formatDateTimeInput, parseDateTimeInput } from '@@/shared/utils/timezone'
 import { useAdminAssignments } from '~/composables/features/admin/useAdminAssignments'
 const { success, error: showError } = useNotifications()
@@ -269,7 +269,7 @@ const emit = defineEmits<{
   created: []
 }>()
 
-const modelOpen = defineModel<boolean>('open', { required: true })
+const open = defineModel<boolean>('open', { required: true })
 
 const formRef = useTemplateRef('formRef')
 const saving = ref(false)
@@ -362,19 +362,19 @@ function syncFormFromProps() {
   }
 }
 
-const open = computed({
-  get: () => modelOpen.value,
-  set: (val: boolean) => {
-    if (val) {
+const stopSyncWatch = watch(
+  [() => props.assignment, open],
+  () => {
+    if (open.value) {
       syncFormFromProps()
     }
-    modelOpen.value = val
-  }
-})
+  },
+  { immediate: true }
+)
 
-if (modelOpen.value) {
-  syncFormFromProps()
-}
+onUnmounted(() => {
+  stopSyncWatch()
+})
 
 const handleSubmit = async () => {
   saving.value = true

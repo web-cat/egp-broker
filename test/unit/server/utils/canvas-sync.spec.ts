@@ -144,4 +144,54 @@ describe('Utility: syncCourseAssignmentsFromCanvas', () => {
       })
     })
   })
+
+  it('matches existing assignment by resourceLinkId when canvasAssignmentId and title are null', async () => {
+    vi.mocked(fetchCanvasAssignments).mockResolvedValue([
+      {
+        id: 777,
+        name: 'Restored Canvas Homework',
+        due_at: '2026-10-15T23:59:00Z',
+        unlock_at: '2026-10-01T00:00:00Z',
+        lock_at: '2026-10-16T23:59:00Z',
+        published: true,
+        submission_types: ['external_tool'],
+        external_tool_tag_attributes: {
+          url: 'https://tool.example.edu/launch',
+          resource_link_id: 'res-link-777'
+        }
+      }
+    ] as any)
+
+    // Attempt 1: canvasAssignmentId -> null
+    // Attempt 2: title -> null
+    // Attempt 3: resourceLinkId -> existing assignment
+    vi.mocked(prisma.assignment.findFirst)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'damaged-asgn-id',
+        resourceLinkId: 'res-link-777',
+        courseId: 'course-1',
+        title: null,
+        canvasAssignmentId: null,
+        hasInterviews: true,
+        interviewWindowStart: new Date('2026-10-01T09:00:00Z'),
+        interviewWindowEnd: new Date('2026-10-15T17:00:00Z')
+      } as any)
+
+    vi.mocked(prisma.assignment.update).mockResolvedValue({ id: 'damaged-asgn-id' } as any)
+
+    const result = await syncCourseAssignmentsFromCanvas('course-1', 'api-key')
+
+    expect(result.assignmentCount).toBe(1)
+    expect(prisma.assignment.update).toHaveBeenCalledWith({
+      where: { id: 'damaged-asgn-id' },
+      data: expect.objectContaining({
+        title: 'Restored Canvas Homework',
+        canvasAssignmentId: '777',
+        published: true
+      })
+    })
+    expect(prisma.assignment.create).not.toHaveBeenCalled()
+  })
 })
