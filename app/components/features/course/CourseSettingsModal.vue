@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { useCourseContext } from '~/composables/features/useCourseContext'
 
 const props = defineProps<{
@@ -64,20 +64,24 @@ const emit = defineEmits<{
   (e: 'saved', location: string | null): void
 }>()
 
-const modelOpen = defineModel<boolean>('open', { default: false })
+const open = defineModel<boolean>('open', { default: false })
 const location = ref(props.initialLocation ?? '')
 const saving = ref(false)
 const toast = useToast()
 const { updateCourseSettings } = useCourseContext()
 
-const open = computed({
-  get: () => modelOpen.value,
-  set: (val: boolean) => {
-    if (val) {
-      location.value = props.initialLocation ?? ''
+const stopSyncWatch = watch(
+  [() => props.initialLocation, open],
+  ([newLoc, isOpen]) => {
+    if (isOpen) {
+      location.value = newLoc ?? ''
     }
-    modelOpen.value = val
-  }
+  },
+  { immediate: true }
+)
+
+onUnmounted(() => {
+  stopSyncWatch()
 })
 
 const handleSave = async () => {

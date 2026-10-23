@@ -107,26 +107,23 @@
 </template>
 
 <script setup lang="ts">
-import { watch, reactive } from 'vue'
+import { watch, reactive, onUnmounted } from 'vue'
 import type { CbtfReservationDto } from '@@/shared/models/cbtf'
 import type { CbtfAdminUpdateReservationInput } from '@@/shared/schemas/cbtf.schema'
 import { formatDateTimeInput, parseDateTimeInput } from '@@/shared/utils/timezone'
 
 const props = defineProps<{
-  open: boolean
+  open?: boolean
   reservation: CbtfReservationDto | null
   saving?: boolean
 }>()
+
+const open = defineModel<boolean>('open', { required: true })
 
 const emit = defineEmits<{
   (e: 'update:open', val: boolean): void
   (e: 'save', payload: { id: string; data: CbtfAdminUpdateReservationInput }): void
 }>()
-
-const open = computed({
-  get: () => props.open,
-  set: (val) => emit('update:open', val)
-})
 
 const statusOptions = [
   { label: 'Scheduled', value: 'SCHEDULED' },
@@ -151,10 +148,10 @@ function fromDateTimeLocalString(localString: string): string {
   return parseDateTimeInput(localString) || ''
 }
 
-watch(
-  () => props.reservation,
-  (res) => {
-    if (res) {
+const stopSyncWatch = watch(
+  [() => props.reservation, open],
+  ([res, isOpen]) => {
+    if (isOpen && res) {
       formState.status = res.status
       formState.seatNumber = res.seatNumber
       formState.startTime = toDateTimeLocalString(res.startTime)
@@ -163,6 +160,10 @@ watch(
   },
   { immediate: true }
 )
+
+onUnmounted(() => {
+  stopSyncWatch()
+})
 
 const handleSubmit = () => {
   if (!props.reservation) return

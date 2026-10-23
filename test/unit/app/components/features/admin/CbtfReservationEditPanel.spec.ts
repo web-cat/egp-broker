@@ -123,4 +123,27 @@ describe('CbtfReservationEditPanel.vue', () => {
       'delete the corresponding student assignment override in Canvas'
     )
   })
+
+  it('resets form state from reservation when reopened', async () => {
+    const wrapper = mount(CbtfReservationEditPanel, {
+      props: {
+        open: true,
+        reservation: mockReservation
+      },
+      global: {
+        stubs: globalStubs
+      }
+    })
+
+    const select = wrapper.find('select')
+    await select.setValue('CHECKED_IN')
+    expect((select.element as HTMLSelectElement).value).toBe('CHECKED_IN')
+
+    // Close and reopen panel
+    await wrapper.setProps({ open: false })
+    await wrapper.setProps({ open: true })
+
+    const reopenedSelect = wrapper.find('select')
+    expect((reopenedSelect.element as HTMLSelectElement).value).toBe('SCHEDULED')
+  })
 })

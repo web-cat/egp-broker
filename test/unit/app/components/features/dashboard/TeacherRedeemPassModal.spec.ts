@@ -318,4 +318,35 @@ describe('TeacherRedeemPassModal', () => {
       })
     )
   })
+
+  it('resets form state when modal opens from open: false to open: true', async () => {
+    const wrapper = mount(TeacherRedeemPassModal, {
+      props: {
+        open: false,
+        student: baseStudent,
+        assignments: baseAssignments
+      },
+      global: {
+        stubs: {
+          UModal: true,
+          USelect: true,
+          UInput: true,
+          USwitch: true,
+          UButton: true,
+          UIcon: true
+        }
+      }
+    })
+
+    const vm = wrapper.vm as any
+    vm.rawSelectedAssignmentId = 'assign-1'
+    vm.rawSelectedPassTypeId = 'pt-1'
+
+    // Open dynamically
+    await wrapper.setProps({ open: true })
+    await wrapper.vm.$nextTick()
+
+    expect(vm.rawSelectedAssignmentId).toBe('')
+    expect(vm.rawSelectedPassTypeId).toBe('')
+  })
 })

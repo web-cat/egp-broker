@@ -144,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import {
   DEFAULT_TIMEZONE,
   formatDateTimeInput,
@@ -171,7 +171,7 @@ const emit = defineEmits<{
   redeemed: [balances: StudentPassBalance[]]
 }>()
 
-const modelOpen = defineModel<boolean>('open', { default: false })
+const open = defineModel<boolean>('open', { default: false })
 
 const toast = useToast()
 const { forceRedeemStudentPass } = usePassRedemptions()
@@ -318,19 +318,19 @@ function resetForm() {
   calculateDefaultDates(24)
 }
 
-const open = computed({
-  get: () => modelOpen.value,
-  set: (val: boolean) => {
-    if (val) {
+const stopSyncWatch = watch(
+  [() => props.student, open],
+  ([student, isOpen]) => {
+    if (isOpen && student) {
       resetForm()
     }
-    modelOpen.value = val
-  }
-})
+  },
+  { immediate: true }
+)
 
-if (modelOpen.value) {
-  resetForm()
-}
+onUnmounted(() => {
+  stopSyncWatch()
+})
 
 async function handleSubmit() {
   if (!props.student?.userId || !canSubmit.value) return
