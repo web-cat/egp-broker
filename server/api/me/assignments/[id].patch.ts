@@ -99,6 +99,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     await syncAssignmentEligibility(updated.id)
   }
 
+  if (body.title && (body.isSchedulable === undefined || body.hasInterviews === undefined)) {
+    await syncAssignmentCoursePatterns(updated.id)
+  }
+
   return {
     statusCode: 200,
     data: updated

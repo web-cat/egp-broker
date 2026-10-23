@@ -34,9 +34,20 @@ export const useCourseContext = () => {
 
   const updateCourseSettings = async (
     courseId: string,
-    settings: { interviewLocation: string | null }
-  ): Promise<{ data: { interviewLocation: string | null } }> => {
-    return $fetch<{ data: { interviewLocation: string | null } }>(`/api/me/courses/${courseId}`, {
+    settings: {
+      interviewLocation?: string | null
+      cbtfTitlePattern?: string | null
+      interviewTitlePattern?: string | null
+    }
+  ): Promise<{
+    data: {
+      id: string
+      interviewLocation: string | null
+      cbtfTitlePattern: string | null
+      interviewTitlePattern: string | null
+    }
+  }> => {
+    return $fetch(`/api/me/courses/${courseId}`, {
       method: 'PATCH',
       body: settings
     })

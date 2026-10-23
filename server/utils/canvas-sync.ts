@@ -5,7 +5,12 @@ import {
   fetchCanvasSections,
   getPlatformCanvasDomain
 } from '@@/server/utils/canvas'
-import { matchLtiToolForLaunchUrl, syncAssignmentEligibility } from '@@/server/utils/assignments'
+import {
+  matchLtiToolForLaunchUrl,
+  syncAssignmentEligibility,
+  matchesTitlePattern,
+  syncAssignmentCoursePatterns
+} from '@@/server/utils/assignments'
 
 export interface CanvasSyncResult {
   assignmentCount: number
@@ -189,12 +194,29 @@ export async function syncCourseAssignmentsFromCanvas(
         updateData.resourceLinkId = canvasResourceLinkId
       }
 
+      if (course.cbtfTitlePattern && matchesTitlePattern(course.cbtfTitlePattern, ca.name)) {
+        updateData.isSchedulable = true
+      }
+      if (
+        course.interviewTitlePattern &&
+        matchesTitlePattern(course.interviewTitlePattern, ca.name)
+      ) {
+        updateData.hasInterviews = true
+      }
+
       assignment = await prisma.assignment.update({
         where: { id: assignment.id },
         data: updateData
       })
     } else {
       // Create new assignment with matched tool and resource link ID
+      const shouldBeSchedulable = Boolean(
+        course.cbtfTitlePattern && matchesTitlePattern(course.cbtfTitlePattern, ca.name)
+      )
+      const shouldHaveInterviews = Boolean(
+        course.interviewTitlePattern && matchesTitlePattern(course.interviewTitlePattern, ca.name)
+      )
+
       assignment = await prisma.assignment.create({
         data: {
           courseId: course.id,
@@ -204,6 +226,8 @@ export async function syncCourseAssignmentsFromCanvas(
           availableFrom: ca.unlock_at ? new Date(ca.unlock_at) : null,
           acceptUntil: ca.lock_at ? new Date(ca.lock_at) : null,
           published: isPublished,
+          isSchedulable: shouldBeSchedulable,
+          hasInterviews: shouldHaveInterviews,
           toolId: matchedToolId ?? undefined,
           resourceLinkId: canvasResourceLinkId || undefined
         }
@@ -326,6 +350,7 @@ export async function syncCourseAssignmentsFromCanvas(
 
     // Auto-eligibility sync
     await syncAssignmentEligibility(assignment.id)
+    await syncAssignmentCoursePatterns(assignment.id)
   }
 
   return {

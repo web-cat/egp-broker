@@ -31,6 +31,18 @@
             label="Workflow State"
             placeholder="Optional"
           />
+          <BaseFormInput
+            v-model="state.cbtfTitlePattern"
+            name="cbtfTitlePattern"
+            label="CBTF Assignment Pattern"
+            placeholder="e.g. ^exam\b|midterm"
+          />
+          <BaseFormInput
+            v-model="state.interviewTitlePattern"
+            name="interviewTitlePattern"
+            label="GTA Interview Assignment Pattern"
+            placeholder="e.g. \binterview\b"
+          />
         </div>
       </UForm>
     </template>
@@ -68,6 +80,8 @@ interface CourseData {
   title: string | null
   canvasCourseId?: string | null
   workflowState?: string | null
+  cbtfTitlePattern?: string | null
+  interviewTitlePattern?: string | null
 }
 
 const props = defineProps<{
@@ -82,6 +96,8 @@ const emit = defineEmits<{
       title: string | null
       canvasCourseId: string | null
       workflowState: string | null
+      cbtfTitlePattern: string | null
+      interviewTitlePattern: string | null
     }
   ]
   created: []
@@ -103,7 +119,9 @@ const state = reactive({
   label: '',
   title: '',
   canvasCourseId: '',
-  workflowState: ''
+  workflowState: '',
+  cbtfTitlePattern: '',
+  interviewTitlePattern: ''
 })
 
 // Sync form state when the course prop changes or the panel opens
@@ -115,12 +133,16 @@ watch(
       state.title = course.title ?? ''
       state.canvasCourseId = course.canvasCourseId ?? ''
       state.workflowState = course.workflowState ?? ''
+      state.cbtfTitlePattern = course.cbtfTitlePattern ?? ''
+      state.interviewTitlePattern = course.interviewTitlePattern ?? ''
     } else if (isOpen && !course) {
       // Reset form for create mode
       state.label = ''
       state.title = ''
       state.canvasCourseId = ''
       state.workflowState = ''
+      state.cbtfTitlePattern = ''
+      state.interviewTitlePattern = ''
     }
   },
   { immediate: true }
@@ -133,7 +155,9 @@ const handleSubmit = async () => {
       label: state.label || null,
       title: state.title || null,
       canvasCourseId: state.canvasCourseId || null,
-      workflowState: state.workflowState || null
+      workflowState: state.workflowState || null,
+      cbtfTitlePattern: state.cbtfTitlePattern || null,
+      interviewTitlePattern: state.interviewTitlePattern || null
     }
 
     if (isEdit.value) {

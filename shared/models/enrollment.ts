@@ -24,6 +24,8 @@ export interface SimpleEnrollment {
   courseLabel: string | null
   role: CourseRole
   interviewLocation?: string | null
+  cbtfTitlePattern?: string | null
+  interviewTitlePattern?: string | null
 }
 
 /**
@@ -38,6 +40,8 @@ export function toSimpleEnrollment(
     courseTitle: enrollment.course?.title ?? null,
     courseLabel: enrollment.course?.label ?? null,
     role: enrollment.role,
-    interviewLocation: enrollment.course?.interviewLocation ?? null
+    interviewLocation: enrollment.course?.interviewLocation ?? null,
+    cbtfTitlePattern: enrollment.course?.cbtfTitlePattern ?? null,
+    interviewTitlePattern: enrollment.course?.interviewTitlePattern ?? null
   }
 }

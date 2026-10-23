@@ -67,6 +67,8 @@
                 :course-code="enrollment.data.courseLabel"
                 :is-admin="user?.globalRole === 'ADMIN'"
                 :interview-location="enrollment.data.interviewLocation"
+                :cbtf-title-pattern="enrollment.data.cbtfTitlePattern"
+                :interview-title-pattern="enrollment.data.interviewTitlePattern"
               />
               <FeaturesDashboardStudent
                 v-else

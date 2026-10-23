@@ -273,6 +273,128 @@ export async function syncPassTypeEligibility(passTypeId: string) {
 }
 
 /**
+ * Automatically enables CBTF scheduling (isSchedulable) or GTA interviews (hasInterviews)
+ * on an assignment if its title matches the course-level regex patterns.
+ */
+export async function syncAssignmentCoursePatterns(
+  assignmentId: string,
+  tx: any = prisma
+): Promise<void> {
+  const assignment = await tx.assignment.findUnique({
+    where: { id: assignmentId },
+    select: {
+      id: true,
+      title: true,
+      isSchedulable: true,
+      hasInterviews: true,
+      course: {
+        select: {
+          id: true,
+          cbtfTitlePattern: true,
+          interviewTitlePattern: true
+        }
+      }
+    }
+  })
+
+  if (!assignment || !assignment.title || !assignment.course) return
+
+  const updates: { isSchedulable?: boolean; hasInterviews?: boolean } = {}
+
+  if (
+    assignment.course.cbtfTitlePattern &&
+    !assignment.isSchedulable &&
+    matchesTitlePattern(assignment.course.cbtfTitlePattern, assignment.title)
+  ) {
+    updates.isSchedulable = true
+  }
+
+  if (
+    assignment.course.interviewTitlePattern &&
+    !assignment.hasInterviews &&
+    matchesTitlePattern(assignment.course.interviewTitlePattern, assignment.title)
+  ) {
+    updates.hasInterviews = true
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await tx.assignment.update({
+      where: { id: assignment.id },
+      data: updates
+    })
+  }
+}
+
+/**
+ * Synchronizes all assignments in a course against the course's CBTF and GTA interview title patterns.
+ * Automatically enables isSchedulable or hasInterviews for any matching assignments.
+ */
+export async function syncCoursePatternAssignments(
+  courseId: string,
+  tx: any = prisma
+): Promise<void> {
+  const course = await tx.course.findUnique({
+    where: { id: courseId },
+    select: {
+      id: true,
+      cbtfTitlePattern: true,
+      interviewTitlePattern: true,
+      assignments: {
+        select: {
+          id: true,
+          title: true,
+          isSchedulable: true,
+          hasInterviews: true
+        }
+      }
+    }
+  })
+
+  if (!course || !course.assignments || course.assignments.length === 0) return
+
+  const operations: any[] = []
+
+  for (const assignment of course.assignments) {
+    if (!assignment.title) continue
+
+    const updates: { isSchedulable?: boolean; hasInterviews?: boolean } = {}
+
+    if (
+      course.cbtfTitlePattern &&
+      !assignment.isSchedulable &&
+      matchesTitlePattern(course.cbtfTitlePattern, assignment.title)
+    ) {
+      updates.isSchedulable = true
+    }
+
+    if (
+      course.interviewTitlePattern &&
+      !assignment.hasInterviews &&
+      matchesTitlePattern(course.interviewTitlePattern, assignment.title)
+    ) {
+      updates.hasInterviews = true
+    }
+
+    if (Object.keys(updates).length > 0) {
+      operations.push(
+        tx.assignment.update({
+          where: { id: assignment.id },
+          data: updates
+        })
+      )
+    }
+  }
+
+  if (operations.length > 0) {
+    if (typeof tx.$transaction === 'function') {
+      await tx.$transaction(operations)
+    } else {
+      await Promise.all(operations)
+    }
+  }
+}
+
+/**
  * Fetches all assignments for a course with their pass eligibilities.
  * strictly conforms to the `AssignmentRow` shared schema.
  */

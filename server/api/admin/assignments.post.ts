@@ -29,6 +29,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
 
   // Sync automatic pass eligibility
   await syncAssignmentEligibility(assignment.id)
+  await syncAssignmentCoursePatterns(assignment.id)
 
   return {
     statusCode: 201,

@@ -309,6 +309,8 @@ model Course {
   sections         CourseSection[]
   usersWithCurrent User[]         @relation("UserCurrentCourse")
   interviewLocation String?
+  cbtfTitlePattern      String? // Regex pattern against Assignment.title to automatically enable CBTF scheduling
+  interviewTitlePattern String? // Regex pattern against Assignment.title to automatically enable GTA interviews
   gtaShifts        GtaShift[]
 
   createdAt DateTime @default(now())

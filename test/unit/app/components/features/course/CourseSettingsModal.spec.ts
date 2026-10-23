@@ -20,7 +20,7 @@ const globalStubs = {
   UInput: {
     props: ['modelValue', 'placeholder', 'icon'],
     template:
-      '<input class="location-input" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />'
+      '<input class="input-field" :placeholder="placeholder" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />'
   },
   UButton: {
     props: ['label', 'color', 'variant', 'loading', 'icon'],
@@ -38,12 +38,14 @@ describe('CourseSettingsModal.vue', () => {
     vi.clearAllMocks()
   })
 
-  it('populates location when modal is opened from open: false to open: true', async () => {
+  it('populates location and pattern fields when modal is opened from open: false to open: true', async () => {
     const wrapper = mount(CourseSettingsModal, {
       props: {
         open: false,
         courseId: 'course-123',
-        initialLocation: 'McBryde Hall 106'
+        initialLocation: 'McBryde Hall 106',
+        initialCbtfTitlePattern: '^Exam',
+        initialInterviewTitlePattern: '^Project'
       },
       global: {
         stubs: globalStubs
@@ -56,57 +58,86 @@ describe('CourseSettingsModal.vue', () => {
     await wrapper.setProps({ open: true })
 
     expect(wrapper.find('.modal').exists()).toBe(true)
-    const input = wrapper.find('.location-input')
-    expect((input.element as HTMLInputElement).value).toBe('McBryde Hall 106')
+    const inputs = wrapper.findAll('.input-field')
+    expect(inputs).toHaveLength(3)
+    expect((inputs[0].element as HTMLInputElement).value).toBe('McBryde Hall 106')
+    expect((inputs[1].element as HTMLInputElement).value).toBe('^Exam')
+    expect((inputs[2].element as HTMLInputElement).value).toBe('^Project')
   })
 
-  it('updates location if initialLocation changes while modal is open', async () => {
+  it('updates fields if initial props change while modal is open', async () => {
     const wrapper = mount(CourseSettingsModal, {
       props: {
         open: true,
         courseId: 'course-123',
-        initialLocation: 'Zoom Room A'
+        initialLocation: 'Zoom Room A',
+        initialCbtfTitlePattern: 'Midterm',
+        initialInterviewTitlePattern: 'Interview'
       },
       global: {
         stubs: globalStubs
       }
     })
 
-    const input = wrapper.find('.location-input')
-    expect((input.element as HTMLInputElement).value).toBe('Zoom Room A')
+    const inputs = wrapper.findAll('.input-field')
+    expect((inputs[0].element as HTMLInputElement).value).toBe('Zoom Room A')
+    expect((inputs[1].element as HTMLInputElement).value).toBe('Midterm')
+    expect((inputs[2].element as HTMLInputElement).value).toBe('Interview')
 
-    await wrapper.setProps({ initialLocation: 'Zoom Room B' })
-    expect((input.element as HTMLInputElement).value).toBe('Zoom Room B')
+    await wrapper.setProps({
+      initialLocation: 'Zoom Room B',
+      initialCbtfTitlePattern: 'Final',
+      initialInterviewTitlePattern: 'Demo'
+    })
+    expect((inputs[0].element as HTMLInputElement).value).toBe('Zoom Room B')
+    expect((inputs[1].element as HTMLInputElement).value).toBe('Final')
+    expect((inputs[2].element as HTMLInputElement).value).toBe('Demo')
   })
 
   it('calls updateCourseSettings and emits saved on save', async () => {
     mockUpdateCourseSettings.mockResolvedValue({
-      data: { interviewLocation: 'Torgersen 2150' }
+      data: {
+        interviewLocation: 'Torgersen 2150',
+        cbtfTitlePattern: '^Exam\\s\\d+',
+        interviewTitlePattern: '^Milestone\\b'
+      }
     })
 
     const wrapper = mount(CourseSettingsModal, {
       props: {
         open: true,
         courseId: 'course-123',
-        initialLocation: 'Old Location'
+        initialLocation: 'Old Location',
+        initialCbtfTitlePattern: '^OldExam',
+        initialInterviewTitlePattern: '^OldProj'
       },
       global: {
         stubs: globalStubs
       }
     })
 
-    const input = wrapper.find('.location-input')
-    await input.setValue('Torgersen 2150')
+    const inputs = wrapper.findAll('.input-field')
+    await inputs[0].setValue('Torgersen 2150')
+    await inputs[1].setValue('^Exam\\s\\d+')
+    await inputs[2].setValue('^Milestone\\b')
 
     const saveButton = wrapper.findAll('button').find((b) => b.text().includes('Save Settings'))
     expect(saveButton).toBeDefined()
     await saveButton!.trigger('click')
 
     expect(mockUpdateCourseSettings).toHaveBeenCalledWith('course-123', {
-      interviewLocation: 'Torgersen 2150'
+      interviewLocation: 'Torgersen 2150',
+      cbtfTitlePattern: '^Exam\\s\\d+',
+      interviewTitlePattern: '^Milestone\\b'
     })
     expect(wrapper.emitted('saved')).toBeTruthy()
-    expect(wrapper.emitted('saved')![0]).toEqual(['Torgersen 2150'])
+    expect(wrapper.emitted('saved')![0]).toEqual([
+      {
+        location: 'Torgersen 2150',
+        cbtfTitlePattern: '^Exam\\s\\d+',
+        interviewTitlePattern: '^Milestone\\b'
+      }
+    ])
     expect(wrapper.emitted('update:open')?.[0]).toEqual([false])
   })
 })

@@ -5,13 +5,18 @@ import {
   recalculateAssignmentEligibleDates,
   getCourseAssignments,
   setManualEligibilities,
-  matchLtiToolForLaunchUrl
+  matchLtiToolForLaunchUrl,
+  syncAssignmentCoursePatterns,
+  syncCoursePatternAssignments
 } from '../../../../server/utils/assignments'
 import prisma from '@@/server/utils/db'
 
 // Mock Prisma
 vi.mock('@@/server/utils/db', () => ({
   default: {
+    course: {
+      findUnique: vi.fn()
+    },
     assignment: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -355,6 +360,132 @@ describe('Assignment Eligibility Logic', () => {
 
     it('returns null when no registered tool matches the launch URL', () => {
       expect(matchLtiToolForLaunchUrl('https://unregistered-tool.com/launch', tools)).toBeNull()
+    })
+  })
+
+  describe('syncAssignmentCoursePatterns', () => {
+    it('automatically enables isSchedulable when title matches course cbtfTitlePattern', async () => {
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'a1',
+        title: 'Midterm Exam 1',
+        isSchedulable: false,
+        hasInterviews: false,
+        course: {
+          id: 'c1',
+          cbtfTitlePattern: '^Midterm|Final',
+          interviewTitlePattern: null
+        }
+      } as any)
+
+      await syncAssignmentCoursePatterns('a1')
+
+      expect(prisma.assignment.update).toHaveBeenCalledWith({
+        where: { id: 'a1' },
+        data: { isSchedulable: true }
+      })
+    })
+
+    it('automatically enables hasInterviews when title matches course interviewTitlePattern', async () => {
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'a2',
+        title: 'Project 1 Milestone',
+        isSchedulable: false,
+        hasInterviews: false,
+        course: {
+          id: 'c1',
+          cbtfTitlePattern: null,
+          interviewTitlePattern: '^Project.*'
+        }
+      } as any)
+
+      await syncAssignmentCoursePatterns('a2')
+
+      expect(prisma.assignment.update).toHaveBeenCalledWith({
+        where: { id: 'a2' },
+        data: { hasInterviews: true }
+      })
+    })
+
+    it('enables both when title matches both patterns', async () => {
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'a3',
+        title: 'Exam Project',
+        isSchedulable: false,
+        hasInterviews: false,
+        course: {
+          id: 'c1',
+          cbtfTitlePattern: 'Exam',
+          interviewTitlePattern: 'Project'
+        }
+      } as any)
+
+      await syncAssignmentCoursePatterns('a3')
+
+      expect(prisma.assignment.update).toHaveBeenCalledWith({
+        where: { id: 'a3' },
+        data: { isSchedulable: true, hasInterviews: true }
+      })
+    })
+
+    it('does not update assignment if already enabled or does not match', async () => {
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'a4',
+        title: 'Homework 1',
+        isSchedulable: true,
+        hasInterviews: false,
+        course: {
+          id: 'c1',
+          cbtfTitlePattern: '^Exam',
+          interviewTitlePattern: '^Project'
+        }
+      } as any)
+
+      await syncAssignmentCoursePatterns('a4')
+
+      expect(prisma.assignment.update).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('syncCoursePatternAssignments', () => {
+    it('synchronizes all assignments in a course against patterns', async () => {
+      const mockUpdate = vi.fn().mockReturnValue('mock-update-op')
+      const mockTx = {
+        course: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'c1',
+            cbtfTitlePattern: '^Exam',
+            interviewTitlePattern: '^Project',
+            assignments: [
+              { id: 'asg-1', title: 'Exam 1', isSchedulable: false, hasInterviews: false },
+              { id: 'asg-2', title: 'Project Alpha', isSchedulable: false, hasInterviews: false },
+              { id: 'asg-3', title: 'Homework 1', isSchedulable: false, hasInterviews: false },
+              { id: 'asg-4', title: 'Exam 2', isSchedulable: true, hasInterviews: false }
+            ]
+          })
+        },
+        assignment: {
+          update: mockUpdate
+        },
+        $transaction: vi.fn((ops) => Promise.resolve(ops))
+      }
+
+      await syncCoursePatternAssignments('c1', mockTx)
+
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { id: 'asg-1' },
+        data: { isSchedulable: true }
+      })
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { id: 'asg-2' },
+        data: { hasInterviews: true }
+      })
+      expect(mockUpdate).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'asg-3' } })
+      )
+      expect(mockUpdate).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'asg-4' } })
+      )
+      expect(mockTx.$transaction).toHaveBeenCalledTimes(1)
     })
   })
 })

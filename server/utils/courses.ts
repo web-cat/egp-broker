@@ -8,6 +8,8 @@ export const courseRowSelect = {
   title: true,
   canvasCourseId: true,
   workflowState: true,
+  cbtfTitlePattern: true,
+  interviewTitlePattern: true,
   createdAt: true,
   _count: {
     select: {
@@ -54,6 +56,8 @@ export async function getAllCourses(filters?: AdminCourseQuery): Promise<CourseR
     title: c.title,
     canvasCourseId: c.canvasCourseId,
     workflowState: c.workflowState,
+    cbtfTitlePattern: c.cbtfTitlePattern,
+    interviewTitlePattern: c.interviewTitlePattern,
     enrollmentCount: c._count.enrollments,
     assignmentCount: c._count.assignments,
     createdAt: c.createdAt.toISOString()
@@ -78,6 +82,8 @@ export async function getCourse(id: string): Promise<CourseRow | null> {
     title: course.title,
     canvasCourseId: course.canvasCourseId,
     workflowState: course.workflowState,
+    cbtfTitlePattern: course.cbtfTitlePattern,
+    interviewTitlePattern: course.interviewTitlePattern,
     enrollmentCount: course._count.enrollments,
     assignmentCount: course._count.assignments,
     createdAt: course.createdAt.toISOString()
@@ -100,6 +106,8 @@ export async function createCourse(data: CreateCourseData): Promise<CourseRow> {
     title: course.title,
     canvasCourseId: course.canvasCourseId,
     workflowState: course.workflowState,
+    cbtfTitlePattern: course.cbtfTitlePattern,
+    interviewTitlePattern: course.interviewTitlePattern,
     enrollmentCount: course._count.enrollments,
     assignmentCount: course._count.assignments,
     createdAt: course.createdAt.toISOString()

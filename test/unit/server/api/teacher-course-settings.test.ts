@@ -24,6 +24,8 @@ vi.mock('@@/server/utils/db', () => ({
 
 vi.mock('@@/server/utils/assignments', () => ({
   syncAssignmentEligibility: vi.fn().mockResolvedValue(undefined),
+  syncAssignmentCoursePatterns: vi.fn().mockResolvedValue(undefined),
+  syncCoursePatternAssignments: vi.fn().mockResolvedValue(undefined),
   setManualEligibilities: vi.fn().mockResolvedValue(undefined)
 }))
 
@@ -139,7 +141,9 @@ describe('API: Teacher Course & Assignment GTA Settings', () => {
           id: true,
           title: true,
           label: true,
-          interviewLocation: true
+          interviewLocation: true,
+          cbtfTitlePattern: true,
+          interviewTitlePattern: true
         }
       })
     })
@@ -172,6 +176,47 @@ describe('API: Teacher Course & Assignment GTA Settings', () => {
         data: { interviewLocation: null },
         select: expect.any(Object)
       })
+    })
+
+    it('updates cbtfTitlePattern and interviewTitlePattern and synchronizes course assignments', async () => {
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'e1',
+        userId: 'u1',
+        courseId: 'c1',
+        role: 'TEACHER'
+      } as any)
+
+      vi.mocked(prisma.course.update).mockResolvedValue({
+        id: 'c1',
+        title: 'CS 1114',
+        label: 'CS1114',
+        interviewLocation: null,
+        cbtfTitlePattern: '^Exam\\s[0-9]+',
+        interviewTitlePattern: '^Project|Milestone'
+      } as any)
+
+      const { syncCoursePatternAssignments } = await import('@@/server/utils/assignments')
+
+      const event = mockEvent(
+        { id: 'u1', globalRole: 'USER' },
+        { courseId: 'c1' },
+        {
+          cbtfTitlePattern: '^Exam\\s[0-9]+',
+          interviewTitlePattern: '^Project|Milestone'
+        }
+      )
+
+      const response = await patchCourseSettings(event)
+      expect(response.statusCode).toBe(200)
+      expect(prisma.course.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: {
+          cbtfTitlePattern: '^Exam\\s[0-9]+',
+          interviewTitlePattern: '^Project|Milestone'
+        },
+        select: expect.any(Object)
+      })
+      expect(syncCoursePatternAssignments).toHaveBeenCalledWith('c1')
     })
   })
 

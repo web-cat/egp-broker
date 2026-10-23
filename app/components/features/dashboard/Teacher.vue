@@ -320,6 +320,8 @@
     v-model:open="courseSettingsOpen"
     :course-id="courseId"
     :initial-location="currentInterviewLocation"
+    :initial-cbtf-title-pattern="currentCbtfTitlePattern"
+    :initial-interview-title-pattern="currentInterviewTitlePattern"
     @saved="onCourseSettingsSaved"
   />
 </template>
@@ -351,16 +353,42 @@ const props = defineProps<{
   courseCode?: string | null
   isAdmin: boolean
   interviewLocation?: string | null
+  cbtfTitlePattern?: string | null
+  interviewTitlePattern?: string | null
 }>()
 
 const courseSettingsOpen = ref(false)
 const savedLocationOverride = ref<string | null>(null)
+const savedCbtfPatternOverride = ref<string | null>(null)
+const savedInterviewPatternOverride = ref<string | null>(null)
+
 const currentInterviewLocation = computed(
   () => savedLocationOverride.value ?? props.interviewLocation ?? null
 )
+const currentCbtfTitlePattern = computed(
+  () => savedCbtfPatternOverride.value ?? props.cbtfTitlePattern ?? null
+)
+const currentInterviewTitlePattern = computed(
+  () => savedInterviewPatternOverride.value ?? props.interviewTitlePattern ?? null
+)
 
-const onCourseSettingsSaved = (newLoc: string | null) => {
-  savedLocationOverride.value = newLoc
+const onCourseSettingsSaved = (
+  payload:
+    | {
+        location?: string | null
+        cbtfTitlePattern?: string | null
+        interviewTitlePattern?: string | null
+      }
+    | string
+    | null
+) => {
+  if (typeof payload === 'string' || payload === null) {
+    savedLocationOverride.value = payload
+  } else {
+    savedLocationOverride.value = payload.location ?? null
+    savedCbtfPatternOverride.value = payload.cbtfTitlePattern ?? null
+    savedInterviewPatternOverride.value = payload.interviewTitlePattern ?? null
+  }
 }
 
 const {

@@ -19,6 +19,8 @@ export const courseRowSchema = z.object({
   title: z.string().nullable(),
   canvasCourseId: z.string().nullable(),
   workflowState: z.string().nullable(),
+  cbtfTitlePattern: z.string().nullable().optional(),
+  interviewTitlePattern: z.string().nullable().optional(),
   enrollmentCount: z.number(),
   assignmentCount: z.number(),
   createdAt: z.string()
@@ -44,14 +46,18 @@ export const createCourseSchema = z.object({
   label: z.string().nullable().optional(),
   title: z.string().nullable().optional(),
   canvasCourseId: z.string().nullable().optional(),
-  workflowState: z.string().nullable().optional()
+  workflowState: z.string().nullable().optional(),
+  cbtfTitlePattern: z.string().nullable().optional(),
+  interviewTitlePattern: z.string().nullable().optional()
 })
 
 export const updateCourseSchema = z.object({
   label: z.string().nullable().optional(),
   title: z.string().nullable().optional(),
   canvasCourseId: z.string().nullable().optional(),
-  workflowState: z.string().nullable().optional()
+  workflowState: z.string().nullable().optional(),
+  cbtfTitlePattern: z.string().nullable().optional(),
+  interviewTitlePattern: z.string().nullable().optional()
 })
 
 export const adminCourseQuerySchema = z.object({
@@ -76,5 +82,7 @@ export const initialCourseState: CreateCourseData = {
   label: '',
   title: '',
   canvasCourseId: '',
-  workflowState: ''
+  workflowState: '',
+  cbtfTitlePattern: '',
+  interviewTitlePattern: ''
 }

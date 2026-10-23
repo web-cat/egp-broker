@@ -28,6 +28,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     data: body
   })
 
+  if (body.cbtfTitlePattern !== undefined || body.interviewTitlePattern !== undefined) {
+    await syncCoursePatternAssignments(id)
+  }
+
   return {
     statusCode: 200,
     data: course

@@ -1,6 +1,7 @@
 import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseMember } from '@@/server/utils/gta-interview'
+import { syncCoursePatternAssignments } from '@@/server/utils/assignments'
 import { updateCourseSettingsSchema } from '@@/shared/schemas/course.schema'
 import type { ApiResponse } from '@@/shared/types/api'
 
@@ -18,7 +19,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
     })
   }
 
-  const { interviewLocation } = await readValidatedBody(event, updateCourseSettingsSchema.parse)
+  const { interviewLocation, cbtfTitlePattern, interviewTitlePattern } = await readValidatedBody(
+    event,
+    updateCourseSettingsSchema.parse
+  )
 
   const updatedCourse = await prisma.course.update({
     where: { id: courseId },
@@ -28,15 +32,34 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any>> => {
           ? interviewLocation === null || interviewLocation === ''
             ? null
             : interviewLocation
+          : undefined,
+      cbtfTitlePattern:
+        cbtfTitlePattern !== undefined
+          ? cbtfTitlePattern === null || cbtfTitlePattern === ''
+            ? null
+            : cbtfTitlePattern
+          : undefined,
+      interviewTitlePattern:
+        interviewTitlePattern !== undefined
+          ? interviewTitlePattern === null || interviewTitlePattern === ''
+            ? null
+            : interviewTitlePattern
           : undefined
     },
     select: {
       id: true,
       title: true,
       label: true,
-      interviewLocation: true
+      interviewLocation: true,
+      cbtfTitlePattern: true,
+      interviewTitlePattern: true
     }
   })
+
+  // Synchronize existing assignments in this course if patterns were updated
+  if (cbtfTitlePattern !== undefined || interviewTitlePattern !== undefined) {
+    await syncCoursePatternAssignments(courseId)
+  }
 
   return {
     statusCode: 200,

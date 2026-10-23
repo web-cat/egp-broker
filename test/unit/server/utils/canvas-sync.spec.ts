@@ -23,6 +23,7 @@ vi.mock('@@/server/utils/db', () => ({
     },
     assignment: {
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn()
     },
@@ -51,7 +52,8 @@ vi.mock('@@/server/utils/assignments', async () => {
   const actual = await vi.importActual('@@/server/utils/assignments')
   return {
     ...actual,
-    syncAssignmentEligibility: vi.fn()
+    syncAssignmentEligibility: vi.fn(),
+    syncAssignmentCoursePatterns: vi.fn()
   }
 })
 
@@ -193,5 +195,62 @@ describe('Utility: syncCourseAssignmentsFromCanvas', () => {
       })
     })
     expect(prisma.assignment.create).not.toHaveBeenCalled()
+  })
+
+  it('automatically enables isSchedulable and hasInterviews based on course title patterns', async () => {
+    vi.mocked(prisma.course.findUnique).mockResolvedValue({
+      id: 'course-1',
+      canvasCourseId: 'canvas-101',
+      cbtfTitlePattern: '^Exam',
+      interviewTitlePattern: '^Project',
+      deployment: {
+        id: 'deploy-1',
+        deploymentHost: 'canvas.example.edu',
+        platform: {
+          id: 'platform-1',
+          issuer: 'https://canvas.example.edu'
+        }
+      }
+    } as any)
+
+    vi.mocked(fetchCanvasAssignments).mockResolvedValue([
+      {
+        id: 101,
+        name: 'Exam 1 - Midterm',
+        published: true
+      },
+      {
+        id: 102,
+        name: 'Project 1 - Milestone',
+        published: true
+      }
+    ] as any)
+
+    vi.mocked(prisma.assignment.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.assignment.create).mockImplementation(({ data }: any) =>
+      Promise.resolve({ id: `asgn-${data.canvasAssignmentId}`, ...data })
+    )
+
+    await syncCourseAssignmentsFromCanvas('course-1', 'api-key')
+
+    expect(prisma.assignment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          title: 'Exam 1 - Midterm',
+          isSchedulable: true,
+          hasInterviews: false
+        })
+      })
+    )
+
+    expect(prisma.assignment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          title: 'Project 1 - Milestone',
+          isSchedulable: false,
+          hasInterviews: true
+        })
+      })
+    )
   })
 })

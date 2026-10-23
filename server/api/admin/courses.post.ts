@@ -16,6 +16,10 @@ export default defineEventHandler(async (event): Promise<ApiResponse<CourseRow>>
   const body = await readValidatedBody(event, createCourseSchema.parse)
   const course = await createCourse(body)
 
+  if (body.cbtfTitlePattern || body.interviewTitlePattern) {
+    await syncCoursePatternAssignments(course.id)
+  }
+
   return {
     statusCode: 201,
     data: course
