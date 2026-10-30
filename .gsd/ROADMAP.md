@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 2: PassPort v1.2 Status Query Client & Server APIs
+> **Current Phase**: Phase 3: GTA Dashboard Cards & Periodic Staleness Refresh
 > **Milestone**: v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links
 > **Goal**: Implement PassPort Protocol v1.2 status query support for external LTI tools, caching submission metadata on interview reservations, and displaying deep links to latest/grading submissions and staff notices on GTA interview cards with 15-minute screen-bound staleness refresh.
 
@@ -20,8 +20,8 @@
 - [x] Database support for `LtiTool.passportStatusUrl` and `GtaInterviewReservation.submissionStatus` / `submissionStatusCheckedAt`
 - [x] PassPort v1.2 dynamic registration handshake supporting `passport_version: '1.2'` and extracting `endpoints.status_handler`
 - [x] Admin tool configuration panel support for viewing and editing `passportStatusUrl`
-- [ ] HMAC-SHA256 authenticated PassPort status query engine with Zod schema validation
-- [ ] Server endpoints for interview submission status refresh and projection in GTA interview feeds
+- [x] HMAC-SHA256 authenticated PassPort status query engine with Zod schema validation
+- [x] Server endpoints for interview submission status refresh and projection in GTA interview feeds
 - [ ] Clickable deep link to latest student submission on GTA dashboard cards (preferring staff grading view, opening in new tab)
 - [ ] Separate clickable deep link to submission for grading when distinct from latest submission
 - [ ] Rendered HTML `staff_notice` callout on GTA interview cards
@@ -41,7 +41,7 @@
 
 ### Phase 2: PassPort v1.2 Status Query Client & Server APIs
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Implement PassPort v1.2 signed status query function in `server/utils/passport.ts` (`queryPassPortSubmissionStatus`). Build identifying payload (`context`, `user`, `resource`) and sign with HMAC-SHA256 headers. Parse and validate response with Zod. Create server endpoints to query and update status cache (`POST /api/me/courses/:courseId/interviews/:id/refresh-status` and batch endpoint). Include `submissionStatus` and `submissionStatusCheckedAt` in `GET /api/me/courses/:courseId/interviews`.  
 **Requirements**: REQ-703, REQ-704, REQ-705, REQ-706
 
