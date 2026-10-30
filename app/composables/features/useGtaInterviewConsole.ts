@@ -1,4 +1,4 @@
-import { ref, computed, unref } from 'vue'
+import { ref, computed, unref, onMounted, onUnmounted, getCurrentInstance } from 'vue'
 import type { Ref } from 'vue'
 import type { ApiResponse } from '@@/shared/types/api'
 
@@ -241,6 +241,159 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     { lazy: true }
   )
 
+  const STALENESS_THRESHOLD_MS = 15 * 60 * 1000 // 15 minutes
+  const refreshingStatusIds = ref<Set<string>>(new Set())
+
+  const setRefreshing = (id: string, isRefreshing: boolean) => {
+    const next = new Set(refreshingStatusIds.value)
+    if (isRefreshing) {
+      next.add(id)
+    } else {
+      next.delete(id)
+    }
+    refreshingStatusIds.value = next
+  }
+
+  const setBatchRefreshing = (ids: string[], isRefreshing: boolean) => {
+    const next = new Set(refreshingStatusIds.value)
+    for (const id of ids) {
+      if (isRefreshing) {
+        next.add(id)
+      } else {
+        next.delete(id)
+      }
+    }
+    refreshingStatusIds.value = next
+  }
+
+  const refreshReservationStatus = async (reservationId: string): Promise<any> => {
+    if (!cId.value) throw new Error('Course ID is required')
+    setRefreshing(reservationId, true)
+    try {
+      const res = await $fetch<ApiResponse<any>>(
+        `/api/me/courses/${cId.value}/interviews/${reservationId}/refresh-status`,
+        {
+          method: 'POST'
+        }
+      )
+      if (feedResponse.value?.data && res.data) {
+        const idx = feedResponse.value.data.findIndex((r: any) => r.id === reservationId)
+        if (idx !== -1) {
+          feedResponse.value.data[idx] = {
+            ...feedResponse.value.data[idx],
+            submissionStatus: res.data.submissionStatus,
+            submissionStatusCheckedAt: res.data.submissionStatusCheckedAt
+          }
+        }
+      }
+      return res.data
+    } catch (err: any) {
+      toast.add({
+        title: 'Status Refresh Failed',
+        description:
+          err?.data?.statusMessage || err?.message || 'Could not query external tool status.',
+        color: 'error'
+      })
+      throw err
+    } finally {
+      setRefreshing(reservationId, false)
+    }
+  }
+
+  const refreshVisibleStaleStatuses = async (visibleReservationIds: string[]): Promise<any[]> => {
+    if (!cId.value || !visibleReservationIds || visibleReservationIds.length === 0) {
+      return []
+    }
+
+    const currentReservations = feedResponse.value?.data || []
+    const staleIds = visibleReservationIds.filter((id) => {
+      const r = currentReservations.find((item: any) => item.id === id)
+      if (!r) return false
+      if (!r.submissionStatusCheckedAt) return true
+      return Date.now() - new Date(r.submissionStatusCheckedAt).getTime() >= STALENESS_THRESHOLD_MS
+    })
+
+    if (staleIds.length === 0) {
+      return []
+    }
+
+    const batchToQuery = staleIds.slice(0, 20)
+    setBatchRefreshing(batchToQuery, true)
+
+    try {
+      const res = await $fetch<ApiResponse<any[]>>(
+        `/api/me/courses/${cId.value}/interviews/refresh-status`,
+        {
+          method: 'POST',
+          body: { reservationIds: batchToQuery }
+        }
+      )
+
+      if (feedResponse.value?.data && Array.isArray(res.data)) {
+        for (const updated of res.data) {
+          const idx = feedResponse.value.data.findIndex((r: any) => r.id === updated.id)
+          if (idx !== -1) {
+            feedResponse.value.data[idx] = {
+              ...feedResponse.value.data[idx],
+              submissionStatus: updated.submissionStatus,
+              submissionStatusCheckedAt: updated.submissionStatusCheckedAt
+            }
+          }
+        }
+      }
+
+      return res.data || []
+    } catch (err: any) {
+      console.warn(
+        '[useGtaInterviewConsole] Failed to refresh stale submission statuses:',
+        err?.message
+      )
+      return []
+    } finally {
+      setBatchRefreshing(batchToQuery, false)
+    }
+  }
+
+  let stalenessTimer: any = null
+
+  const getVisibleIdsDefault = (): string[] => {
+    const ids: string[] = []
+    if (activeInterview.value?.id) {
+      ids.push(activeInterview.value.id)
+    }
+    for (const r of expectedArrivals.value.slice(0, 10)) {
+      if (r?.id) ids.push(r.id)
+    }
+    return ids
+  }
+
+  const startStalenessPolling = (getIds?: () => string[]) => {
+    if (stalenessTimer) {
+      clearInterval(stalenessTimer)
+    }
+    stalenessTimer = setInterval(() => {
+      const ids = getIds ? getIds() : getVisibleIdsDefault()
+      refreshVisibleStaleStatuses(ids)
+    }, STALENESS_THRESHOLD_MS)
+  }
+
+  const stopStalenessPolling = () => {
+    if (stalenessTimer) {
+      clearInterval(stalenessTimer)
+      stalenessTimer = null
+    }
+  }
+
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      startStalenessPolling()
+    })
+
+    onUnmounted(() => {
+      stopStalenessPolling()
+    })
+  }
+
   return {
     reservations,
     activeInterview,
@@ -250,6 +403,8 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     isUpdating,
     courseGtasData,
     courseShiftsData,
+    refreshingStatusIds,
+    STALENESS_THRESHOLD_MS,
     refreshGtas,
     refreshShifts,
     refreshFeed,
@@ -259,6 +414,10 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     updateInterview,
     saveNotes,
     markNoShow,
-    reinstateReservation
+    reinstateReservation,
+    refreshReservationStatus,
+    refreshVisibleStaleStatuses,
+    startStalenessPolling,
+    stopStalenessPolling
   }
 }
