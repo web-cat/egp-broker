@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 3: GTA Dashboard Cards & Periodic Staleness Refresh
+> **Current Phase**: Phase 4: Verification, Security Audit & End-to-End Tests
 > **Milestone**: v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links
 > **Goal**: Implement PassPort Protocol v1.2 status query support for external LTI tools, caching submission metadata on interview reservations, and displaying deep links to latest/grading submissions and staff notices on GTA interview cards with 15-minute screen-bound staleness refresh.
 
@@ -22,11 +22,11 @@
 - [x] Admin tool configuration panel support for viewing and editing `passportStatusUrl`
 - [x] HMAC-SHA256 authenticated PassPort status query engine with Zod schema validation
 - [x] Server endpoints for interview submission status refresh and projection in GTA interview feeds
-- [ ] Clickable deep link to latest student submission on GTA dashboard cards (preferring staff grading view, opening in new tab)
-- [ ] Separate clickable deep link to submission for grading when distinct from latest submission
-- [ ] Rendered HTML `staff_notice` callout on GTA interview cards
-- [ ] Screen-bound 15-minute staleness auto-refresh and periodic polling for visible dashboard cards
-- [ ] Manual refresh icon button on cards for immediate sync
+- [x] Clickable deep link to latest student submission on GTA dashboard cards (preferring staff grading view, opening in new tab)
+- [x] Separate clickable deep link to submission for grading when distinct from latest submission
+- [x] Rendered HTML `staff_notice` callout on GTA interview cards
+- [x] Screen-bound 15-minute staleness auto-refresh and periodic polling for visible dashboard cards
+- [x] Manual refresh icon button on cards for immediate sync
 - [ ] 100% Vitest behavioral test coverage across all new and existing features
 
 ---
@@ -47,9 +47,15 @@
 
 ### Phase 3: GTA Dashboard Cards & Periodic Staleness Refresh
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Update GTA interview console composables (`useGtaInterviewConsole`) to handle on-screen 15-minute staleness checks, background 15-minute polling interval, and per-card manual refresh action. Update `GtaInterviewConsole.vue` cards (Expected Arrivals and Active Interview in Progress) to display clickable link to latest submission, separate link to submission for grading (if distinct), rendered HTML `staff_notice`, and manual refresh button.  
 **Requirements**: REQ-707, REQ-708, REQ-709
+
+### Phase 4: Verification, Security Audit & End-to-End Tests
+
+**Status**: ⬜ Not Started  
+**Objective**: Comprehensive Vitest test suite covering PassPort v1.2 handshake, signed status requests, malformed/null response resilience, HTML staff notice sanitization, screen-bound 15-minute staleness checks, manual refresh flows, and regression suite execution.  
+**Requirements**: REQ-710
 
 ### Phase 4: Verification, Security Audit & End-to-End Tests
 
