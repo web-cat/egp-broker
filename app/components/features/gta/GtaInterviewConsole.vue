@@ -157,6 +157,82 @@
               {{ formatSlotRange(activeInterview.startTime, activeInterview.endTime) }}
             </p>
           </div>
+
+          <!-- Submissions & Assessment Section -->
+          <div class="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-neutral-500 uppercase font-medium">Submissions & Status</span>
+              <UButton
+                variant="ghost"
+                color="neutral"
+                size="xs"
+                icon="i-lucide-refresh-cw"
+                :loading="refreshingStatusIds?.has(activeInterview.id)"
+                title="Refresh student submission status"
+                @click="() => handleRefreshStatus(activeInterview.id)"
+              />
+            </div>
+
+            <!-- Deep links to submissions -->
+            <div class="flex flex-col gap-1.5">
+              <a
+                v-if="activeInterview.submissionStatus?.latestSubmissionUrl"
+                :href="activeInterview.submissionStatus.latestSubmissionUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
+              >
+                <UIcon name="i-lucide-external-link" class="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Latest Submission
+                  <span v-if="activeInterview.submissionStatus.latestSubmissionNumber !== null && activeInterview.submissionStatus.latestSubmissionNumber !== undefined">
+                    (#{{ activeInterview.submissionStatus.latestSubmissionNumber }})
+                  </span>
+                </span>
+              </a>
+
+              <a
+                v-if="
+                  activeInterview.submissionStatus?.gradingSubmissionUrl &&
+                  activeInterview.submissionStatus.gradingSubmissionUrl !== activeInterview.submissionStatus.latestSubmissionUrl
+                "
+                :href="activeInterview.submissionStatus.gradingSubmissionUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                <UIcon name="i-lucide-external-link" class="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Submission for Grading
+                  <span v-if="activeInterview.submissionStatus.gradingSubmissionNumber !== null && activeInterview.submissionStatus.gradingSubmissionNumber !== undefined">
+                    (#{{ activeInterview.submissionStatus.gradingSubmissionNumber }})
+                  </span>
+                </span>
+              </a>
+
+              <p
+                v-if="!activeInterview.submissionStatus?.latestSubmissionUrl && !activeInterview.submissionStatus?.gradingSubmissionUrl"
+                class="text-xs text-neutral-400 italic"
+              >
+                No submissions recorded yet
+              </p>
+            </div>
+
+            <!-- Staff Notice callout -->
+            <div
+              v-if="activeInterview.submissionStatus?.staffNotice"
+              class="p-2.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs space-y-1"
+            >
+              <div class="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300">
+                <UIcon name="i-lucide-alert-triangle" class="w-3.5 h-3.5 shrink-0" />
+                <span>Staff Notice</span>
+              </div>
+              <div
+                class="prose prose-xs dark:prose-invert max-w-none break-words"
+                v-html="sanitizeStaffNoticeHtml(activeInterview.submissionStatus.staffNotice)"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Notes & Checkout Console -->
@@ -360,6 +436,82 @@
               <UBadge color="neutral" variant="outline" size="sm">
                 {{ reservation.assignment?.title || 'Assignment' }}
               </UBadge>
+            </div>
+
+            <!-- Submissions & Status snippet -->
+            <div class="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-neutral-400 font-medium">Submission Status</span>
+                <UButton
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                  icon="i-lucide-refresh-cw"
+                  :loading="refreshingStatusIds?.has(reservation.id)"
+                  title="Refresh student submission status"
+                  @click="() => handleRefreshStatus(reservation.id)"
+                />
+              </div>
+
+              <!-- Links -->
+              <div class="flex flex-col gap-1">
+                <a
+                  v-if="reservation.submissionStatus?.latestSubmissionUrl"
+                  :href="reservation.submissionStatus.latestSubmissionUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                >
+                  <UIcon name="i-lucide-external-link" class="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Latest Submission
+                    <span v-if="reservation.submissionStatus.latestSubmissionNumber !== null && reservation.submissionStatus.latestSubmissionNumber !== undefined">
+                      (#{{ reservation.submissionStatus.latestSubmissionNumber }})
+                    </span>
+                  </span>
+                </a>
+
+                <a
+                  v-if="
+                    reservation.submissionStatus?.gradingSubmissionUrl &&
+                    reservation.submissionStatus.gradingSubmissionUrl !== reservation.submissionStatus.latestSubmissionUrl
+                  "
+                  :href="reservation.submissionStatus.gradingSubmissionUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  <UIcon name="i-lucide-external-link" class="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Submission for Grading
+                    <span v-if="reservation.submissionStatus.gradingSubmissionNumber !== null && reservation.submissionStatus.gradingSubmissionNumber !== undefined">
+                      (#{{ reservation.submissionStatus.gradingSubmissionNumber }})
+                    </span>
+                  </span>
+                </a>
+
+                <p
+                  v-if="!reservation.submissionStatus?.latestSubmissionUrl && !reservation.submissionStatus?.gradingSubmissionUrl"
+                  class="text-xs text-neutral-400 italic"
+                >
+                  No submissions recorded
+                </p>
+              </div>
+
+              <!-- Staff Notice banner -->
+              <div
+                v-if="reservation.submissionStatus?.staffNotice"
+                class="p-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs space-y-1"
+              >
+                <div class="flex items-center gap-1 font-semibold text-amber-800 dark:text-amber-300">
+                  <UIcon name="i-lucide-alert-triangle" class="w-3.5 h-3.5 shrink-0" />
+                  <span>Staff Notice</span>
+                </div>
+                <div
+                  class="prose prose-xs dark:prose-invert max-w-none break-words"
+                  v-html="sanitizeStaffNoticeHtml(reservation.submissionStatus.staffNotice)"
+                />
+              </div>
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
@@ -740,7 +892,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useGtaInterviewConsole } from '~/composables/features/useGtaInterviewConsole'
 import {
   formatSlotRange as sharedFormatSlotRange,
@@ -750,6 +902,7 @@ import {
   useGtaInterviewFilters,
   formatStudentName
 } from '~/composables/features/useGtaInterviewFilters'
+import { sanitizeStaffNoticeHtml } from '@@/shared/utils/html'
 
 const props = withDefaults(
   defineProps<{
@@ -787,6 +940,7 @@ const {
   completedList,
   feedStatus,
   isUpdating,
+  refreshingStatusIds,
   refreshFeed,
   checkIn,
   cancelCheckIn,
@@ -794,7 +948,9 @@ const {
   updateInterview,
   saveNotes,
   markNoShow,
-  reinstateReservation
+  reinstateReservation,
+  refreshReservationStatus,
+  refreshVisibleStaleStatuses
 } = consoleState
 
 const { user } = useUserSession()
@@ -884,6 +1040,47 @@ const {
   allReservationsForShifts,
   courseShiftsData
 })
+
+// ─────────────────────────────────────────────────────────
+// Submission Status Refresh & Staleness Trigger
+// ─────────────────────────────────────────────────────────
+
+const handleRefreshStatus = async (reservationId: string) => {
+  if (refreshReservationStatus) {
+    await refreshReservationStatus(reservationId)
+  }
+}
+
+const visibleReservationIds = computed(() => {
+  const ids: string[] = []
+  if (activeInterview.value?.id) {
+    ids.push(activeInterview.value.id)
+  }
+  if (paginatedExpectedArrivals.value) {
+    for (const r of paginatedExpectedArrivals.value) {
+      if (r?.id) ids.push(r.id)
+    }
+  }
+  return ids
+})
+
+const checkStaleVisible = () => {
+  if (refreshVisibleStaleStatuses && visibleReservationIds.value.length > 0) {
+    refreshVisibleStaleStatuses(visibleReservationIds.value)
+  }
+}
+
+onMounted(() => {
+  checkStaleVisible()
+})
+
+watch(
+  () => visibleReservationIds.value,
+  () => {
+    checkStaleVisible()
+  },
+  { deep: true }
+)
 
 // ─────────────────────────────────────────────────────────
 // Scenario & Interview Actions

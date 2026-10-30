@@ -46,6 +46,9 @@ const mockUpdateInterview = vi.fn()
 const mockSaveNotes = vi.fn()
 const mockMarkNoShow = vi.fn()
 const mockReinstateReservation = vi.fn()
+const mockRefreshReservationStatus = vi.fn()
+const mockRefreshVisibleStaleStatuses = vi.fn()
+const mockRefreshingStatusIds = ref<Set<string>>(new Set())
 
 vi.mock('~/composables/features/useGtaInterviewConsole', () => ({
   useGtaInterviewConsole: () => ({
@@ -54,6 +57,7 @@ vi.mock('~/composables/features/useGtaInterviewConsole', () => ({
     completedList: mockCompletedList,
     feedStatus: mockFeedStatus,
     isUpdating: mockIsUpdating,
+    refreshingStatusIds: mockRefreshingStatusIds,
     courseGtasData: ref({ data: [] }),
     courseShiftsData: ref({ data: [] }),
     refreshFeed: mockRefreshFeed,
@@ -63,7 +67,9 @@ vi.mock('~/composables/features/useGtaInterviewConsole', () => ({
     updateInterview: mockUpdateInterview,
     saveNotes: mockSaveNotes,
     markNoShow: mockMarkNoShow,
-    reinstateReservation: mockReinstateReservation
+    reinstateReservation: mockReinstateReservation,
+    refreshReservationStatus: mockRefreshReservationStatus,
+    refreshVisibleStaleStatuses: mockRefreshVisibleStaleStatuses
   })
 }))
 
@@ -730,5 +736,184 @@ describe('GtaInterviewConsole Component', () => {
     // Now it should show arrivals for gta-other's shift
     expect(wrapper.text()).toContain('Afternoon Arrival')
     expect(wrapper.text()).not.toContain('Morning Arrival')
+  })
+
+  describe('PassPort Submission Deep Links & Staff Notices', () => {
+    it('renders latest submission link and staff notice in active interview panel', () => {
+      mockActiveInterview.value = {
+        id: 'res-active-passport',
+        status: 'CHECKED_IN',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T10:10:00.000Z',
+        student: { firstName: 'Alice', lastName: 'Code', email: 'alice@vt.edu' },
+        assignment: { title: 'Project 1' },
+        submissionStatus: {
+          latestSubmissionUrl: 'https://web-cat.org/grade/4',
+          latestSubmissionNumber: 4,
+          staffNotice: '<p><strong>Check edge case:</strong> Recursion limit</p>'
+        }
+      }
+      mockExpectedArrivals.value = []
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      const links = wrapper.findAll('a[target="_blank"]')
+      const latestLink = links.find((a) => a.text().includes('Latest Submission'))
+      expect(latestLink).toBeDefined()
+      expect(latestLink!.attributes('href')).toBe('https://web-cat.org/grade/4')
+      expect(latestLink!.attributes('rel')).toBe('noopener noreferrer')
+      expect(latestLink!.text()).toContain('(#4)')
+
+      expect(wrapper.text()).toContain('Staff Notice')
+      expect(wrapper.text()).toContain('Check edge case:')
+      expect(wrapper.text()).toContain('Recursion limit')
+    })
+
+    it('renders separate grading submission link when different from latest submission', () => {
+      mockActiveInterview.value = {
+        id: 'res-active-passport-multi',
+        status: 'CHECKED_IN',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T10:10:00.000Z',
+        student: { firstName: 'Bob', lastName: 'Builder', email: 'bob@vt.edu' },
+        assignment: { title: 'Project 2' },
+        submissionStatus: {
+          latestSubmissionUrl: 'https://web-cat.org/grade/5',
+          latestSubmissionNumber: 5,
+          gradingSubmissionUrl: 'https://web-cat.org/grade/3',
+          gradingSubmissionNumber: 3
+        }
+      }
+      mockExpectedArrivals.value = []
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      const links = wrapper.findAll('a[target="_blank"]')
+      const latestLink = links.find((a) => a.text().includes('Latest Submission'))
+      const gradingLink = links.find((a) => a.text().includes('Submission for Grading'))
+
+      expect(latestLink).toBeDefined()
+      expect(latestLink!.attributes('href')).toBe('https://web-cat.org/grade/5')
+      expect(latestLink!.text()).toContain('(#5)')
+
+      expect(gradingLink).toBeDefined()
+      expect(gradingLink!.attributes('href')).toBe('https://web-cat.org/grade/3')
+      expect(gradingLink!.text()).toContain('(#3)')
+    })
+
+    it('does not render separate grading link if gradingSubmissionUrl is identical to latestSubmissionUrl', () => {
+      mockActiveInterview.value = {
+        id: 'res-active-passport-single',
+        status: 'CHECKED_IN',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T10:10:00.000Z',
+        student: { firstName: 'Carol', lastName: 'Single', email: 'carol@vt.edu' },
+        assignment: { title: 'Project 3' },
+        submissionStatus: {
+          latestSubmissionUrl: 'https://web-cat.org/grade/1',
+          latestSubmissionNumber: 1,
+          gradingSubmissionUrl: 'https://web-cat.org/grade/1',
+          gradingSubmissionNumber: 1
+        }
+      }
+      mockExpectedArrivals.value = []
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      const links = wrapper.findAll('a[target="_blank"]')
+      const gradingLink = links.find((a) => a.text().includes('Submission for Grading'))
+      expect(gradingLink).toBeUndefined()
+    })
+
+    it('renders submission links and staff notices in expected arrivals cards', () => {
+      mockActiveInterview.value = null
+      mockExpectedArrivals.value = [
+        {
+          id: 'exp-passport-1',
+          status: 'SCHEDULED',
+          startTime: '2026-10-05T10:10:00.000Z',
+          endTime: '2026-10-05T10:20:00.000Z',
+          student: { firstName: 'Dan', lastName: 'Arrival', email: 'dan@vt.edu' },
+          assignment: { title: 'Project 1' },
+          submissionStatus: {
+            latestSubmissionUrl: 'https://web-cat.org/grade/2',
+            latestSubmissionNumber: 2,
+            staffNotice: '<p>Flagged for plagiarism check</p>'
+          }
+        }
+      ]
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      const links = wrapper.findAll('a[target="_blank"]')
+      const latestLink = links.find((a) => a.text().includes('Latest Submission'))
+      expect(latestLink).toBeDefined()
+      expect(latestLink!.attributes('href')).toBe('https://web-cat.org/grade/2')
+      expect(wrapper.text()).toContain('Flagged for plagiarism check')
+    })
+
+    it('invokes refreshReservationStatus when clicking refresh button on active card', async () => {
+      mockActiveInterview.value = {
+        id: 'res-active-refresh',
+        status: 'CHECKED_IN',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T10:10:00.000Z',
+        student: { firstName: 'Eve', lastName: 'Active', email: 'eve@vt.edu' },
+        assignment: { title: 'Project 1' },
+        submissionStatus: null
+      }
+      mockExpectedArrivals.value = []
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      const refreshBtn = wrapper.find('button[title="Refresh student submission status"]')
+      expect(refreshBtn.exists()).toBe(true)
+
+      await refreshBtn.trigger('click')
+      expect(mockRefreshReservationStatus).toHaveBeenCalledWith('res-active-refresh')
+    })
+
+    it('triggers refreshVisibleStaleStatuses for visible reservations on mount', () => {
+      mockActiveInterview.value = {
+        id: 'res-active-visible',
+        status: 'CHECKED_IN',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T10:10:00.000Z',
+        student: { firstName: 'Frank', lastName: 'Vis', email: 'frank@vt.edu' }
+      }
+      mockExpectedArrivals.value = [
+        {
+          id: 'exp-vis-1',
+          status: 'SCHEDULED',
+          startTime: '2026-10-05T10:10:00.000Z',
+          endTime: '2026-10-05T10:20:00.000Z',
+          student: { firstName: 'Grace', lastName: 'Vis', email: 'grace@vt.edu' }
+        }
+      ]
+
+      mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      expect(mockRefreshVisibleStaleStatuses).toHaveBeenCalledWith(
+        expect.arrayContaining(['res-active-visible', 'exp-vis-1'])
+      )
+    })
   })
 })
