@@ -156,6 +156,13 @@
               placeholder="https://external-tool.edu/api/passport/v1/extensions"
             />
             <BaseFormInput
+              v-model="state.passportStatusUrl"
+              name="passportStatusUrl"
+              label="PassPort Status Query URL"
+              placeholder="https://external-tool.edu/api/passport/v1/status"
+              help="Optional endpoint for querying student submission status, feedback links, and staff notices."
+            />
+            <BaseFormInput
               v-model="state.passportClientId"
               name="passportClientId"
               label="PassPort Client ID"
@@ -219,6 +226,7 @@ interface LocalToolState {
   passportClientSecret: string
   passportRegistrationUrl: string
   passportExtensionUrl: string
+  passportStatusUrl: string
   passportRegistrationStatus: PassPortRegistrationStatus
   passportRegistrationError: string | null
   passportRegisteredAt: string | null
@@ -239,6 +247,7 @@ const state = reactive<LocalToolState>({
   passportClientSecret: '',
   passportRegistrationUrl: '',
   passportExtensionUrl: '',
+  passportStatusUrl: '',
   passportRegistrationStatus: 'NOT_REGISTERED',
   passportRegistrationError: null,
   passportRegisteredAt: null
@@ -321,6 +330,7 @@ function syncState(tool: ToolRow | null) {
     state.passportClientSecret = (tool as any).passportClientSecret ?? ''
     state.passportRegistrationUrl = tool.passportRegistrationUrl ?? ''
     state.passportExtensionUrl = tool.passportExtensionUrl ?? ''
+    state.passportStatusUrl = tool.passportStatusUrl ?? ''
     state.passportRegistrationStatus = tool.passportRegistrationStatus ?? 'NOT_REGISTERED'
     state.passportRegistrationError = tool.passportRegistrationError ?? null
     state.passportRegisteredAt = tool.passportRegisteredAt ?? null
@@ -338,6 +348,7 @@ function syncState(tool: ToolRow | null) {
     state.passportClientSecret = ''
     state.passportRegistrationUrl = ''
     state.passportExtensionUrl = ''
+    state.passportStatusUrl = ''
     state.passportRegistrationStatus = 'NOT_REGISTERED'
     state.passportRegistrationError = null
     state.passportRegisteredAt = null

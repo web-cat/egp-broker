@@ -108,6 +108,7 @@ describe('ToolEditPanel', () => {
       passportClientId: 'cw_client_1',
       passportRegistrationUrl: 'https://codeworkout.edu/api/passport/v1/register',
       passportExtensionUrl: 'https://codeworkout.edu/api/passport/v1/extensions',
+      passportStatusUrl: 'https://codeworkout.edu/api/passport/v1/status',
       passportRegistrationStatus: 'REGISTERED',
       passportRegistrationError: null,
       passportRegisteredAt: '2026-09-06T12:00:00Z',
@@ -148,6 +149,7 @@ describe('ToolEditPanel', () => {
       passportClientId: null,
       passportRegistrationUrl: 'https://fail.edu/register',
       passportExtensionUrl: null,
+      passportStatusUrl: null,
       passportRegistrationStatus: 'FAILED',
       passportRegistrationError: 'Connection timed out after 10000ms',
       passportRegisteredAt: null,
@@ -187,6 +189,7 @@ describe('ToolEditPanel', () => {
       passportClientId: null,
       passportRegistrationUrl: 'https://tool.edu/register',
       passportExtensionUrl: null,
+      passportStatusUrl: null,
       passportRegistrationStatus: 'NOT_REGISTERED',
       passportRegistrationError: null,
       passportRegisteredAt: null,
@@ -235,6 +238,60 @@ describe('ToolEditPanel', () => {
         title: 'PassPort registration initiated',
         color: 'success'
       })
+    )
+  })
+
+  it('renders passportStatusUrl input field and saves changes', async () => {
+    const mockTool: ToolRow = {
+      id: 'tool-4',
+      name: 'Status Tool',
+      baseUrl: 'https://status-tool.edu',
+      protocol: 'LTI13',
+      key: null,
+      supportsProxy: false,
+      supportsPassport: true,
+      supportsExtensionApi: false,
+      passportClientId: 'cid-4',
+      passportRegistrationUrl: 'https://status-tool.edu/register',
+      passportExtensionUrl: 'https://status-tool.edu/extension',
+      passportStatusUrl: 'https://status-tool.edu/status',
+      passportRegistrationStatus: 'REGISTERED',
+      passportRegistrationError: null,
+      passportRegisteredAt: null,
+      passportRequestedProperties: null,
+      platformId: null,
+      platformIssuer: null,
+      createdAt: '2026-09-01T00:00:00Z'
+    }
+
+    mockSaveTool.mockResolvedValue({ data: mockTool })
+
+    const wrapper = mount(ToolEditPanel, {
+      props: {
+        open: true,
+        tool: mockTool
+      },
+      global: {
+        stubs: globalStubs
+      }
+    })
+
+    await flushPromises()
+
+    const statusInput = wrapper.find('input[name="passportStatusUrl"]')
+    expect(statusInput.exists()).toBe(true)
+    expect((statusInput.element as HTMLInputElement).value).toBe('https://status-tool.edu/status')
+    expect(wrapper.text()).toContain('PassPort Status Query URL')
+
+    // Submit form
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(mockSaveTool).toHaveBeenCalledWith(
+      expect.objectContaining({
+        passportStatusUrl: 'https://status-tool.edu/status'
+      }),
+      'tool-4'
     )
   })
 })
