@@ -1,7 +1,10 @@
 import type { Prisma, LtiTool } from '@prisma/client'
 import prisma from '@@/server/utils/db'
 import type { ToolRow, AdminToolQuery, CreateToolData, UpdateToolData } from '@@/shared/models/tool'
-import { normalizePassPortExtensionUrl } from '@@/shared/models/passport'
+import {
+  normalizePassPortExtensionUrl,
+  normalizePassPortStatusUrl
+} from '@@/shared/models/passport'
 
 /**
  * Transforms a Prisma LtiTool record into a projected ToolRow.
@@ -19,6 +22,7 @@ export function toToolRow(t: LtiTool & { platform?: { issuer: string | null } | 
     passportClientId: t.passportClientId ?? null,
     passportRegistrationUrl: t.passportRegistrationUrl ?? null,
     passportExtensionUrl: t.passportExtensionUrl ?? null,
+    passportStatusUrl: t.passportStatusUrl ?? null,
     passportRegistrationStatus: t.passportRegistrationStatus ?? 'NOT_REGISTERED',
     passportRegistrationError: t.passportRegistrationError ?? null,
     passportRegisteredAt: t.passportRegisteredAt
@@ -50,6 +54,11 @@ function sanitizeToolData<T extends CreateToolData | UpdateToolData>(
     result.passportExtensionUrl = null
   } else if (typeof result.passportExtensionUrl === 'string') {
     result.passportExtensionUrl = normalizePassPortExtensionUrl(result.passportExtensionUrl)
+  }
+  if (result.passportStatusUrl === '') {
+    result.passportStatusUrl = null
+  } else if (typeof result.passportStatusUrl === 'string') {
+    result.passportStatusUrl = normalizePassPortStatusUrl(result.passportStatusUrl)
   }
   if (isUpdate) {
     if (result.passportClientSecret === '') {

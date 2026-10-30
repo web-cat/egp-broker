@@ -5,7 +5,11 @@ import {
   passPortExtensionPayloadSchema,
   passPortRollbackPayloadSchema,
   passPortRegistrationStatusSchema,
-  normalizePassPortExtensionUrl
+  normalizePassPortExtensionUrl,
+  normalizePassPortStatusUrl,
+  passPortStatusResponseSchema,
+  passPortStatusPayloadSchema,
+  toCachedSubmissionStatus
 } from '../../../../shared/models/passport'
 
 describe('PassPort Shared Models', () => {
@@ -37,6 +41,12 @@ describe('PassPort Shared Models', () => {
         passport_version: '1.1' as const
       }
       expect(passPortPhase1RequestSchema.parse(valid11)).toEqual(valid11)
+
+      const valid12 = {
+        ...valid10,
+        passport_version: '1.2' as const
+      }
+      expect(passPortPhase1RequestSchema.parse(valid12)).toEqual(valid12)
     })
 
     it('rejects invalid urls or unsupported version', () => {
@@ -66,7 +76,8 @@ describe('PassPort Shared Models', () => {
         tool_name: 'CodeWorkout',
         passport_version: '1.1',
         endpoints: {
-          extension_handler: 'https://codeworkout.org/api/passport/v1/extension'
+          extension_handler: 'https://codeworkout.org/api/passport/v1/extension',
+          status_handler: 'https://codeworkout.org/api/passport/v1/status'
         },
         requested_properties: ['canvas_course_id', 'lti_user_id', 'email'],
         credentials: {
@@ -77,6 +88,7 @@ describe('PassPort Shared Models', () => {
       const parsed = passPortPhase2CredentialsSchema.parse(valid)
       expect(parsed.tool_name).toBe('CodeWorkout')
       expect(parsed.passport_version).toBe('1.1')
+      expect(parsed.endpoints.status_handler).toBe('https://codeworkout.org/api/passport/v1/status')
       expect(parsed.credentials.client_secret).toBe('random-secret-key-abc')
     })
 
@@ -261,6 +273,118 @@ describe('PassPort Shared Models', () => {
     it('leaves standard PassPort v1 endpoints unchanged', () => {
       const standardUrl = 'https://codeworkout.org/api/passport/v1/extension'
       expect(normalizePassPortExtensionUrl(standardUrl)).toBe(standardUrl)
+    })
+  })
+
+  describe('normalizePassPortStatusUrl', () => {
+    it('rewrites Web-CAT /wa/passport/v1/status to /wa/passport/status', () => {
+      const input = 'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/v1/status'
+      const expected = 'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/status'
+      expect(normalizePassPortStatusUrl(input)).toBe(expected)
+    })
+
+    it('trims whitespace', () => {
+      const input =
+        '  https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/status  '
+      expect(normalizePassPortStatusUrl(input)).toBe(
+        'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/status'
+      )
+    })
+  })
+
+  describe('PassPort v1.2 Status Query Payload Schema', () => {
+    it('validates status query request payload', () => {
+      const payload = {
+        context: {
+          lms_instance_guid: 'stable-guid-1',
+          issuer: 'https://canvas.vt.edu',
+          lti_context_id: 'course-1'
+        },
+        user: {
+          lti_user_id: 'user-sub-1',
+          email: 'student@vt.edu'
+        },
+        resource: {
+          lti_resource_link_id: 'link-1'
+        }
+      }
+      expect(passPortStatusPayloadSchema.parse(payload)).toEqual(payload)
+    })
+  })
+
+  describe('PassPort v1.2 Status Response Schemas & toCachedSubmissionStatus', () => {
+    it('normalizes status response when latest and grading submission differ', () => {
+      const payload = {
+        status: 'ok',
+        submission_for_grading: {
+          timestamp: '2026-10-25T14:32:00Z',
+          submission_number: 3,
+          total_score: 88.5,
+          ta_score: 18.0,
+          staff_notice: '<p>Inspection Needed</p>',
+          grading_url: 'https://web-cat.org/grading/3',
+          feedback_url: 'https://web-cat.org/feedback/3'
+        },
+        most_recent_submission: {
+          timestamp: '2026-10-26T09:15:00Z',
+          submission_number: 4,
+          total_score: 92.0,
+          ta_score: null,
+          staff_notice: null,
+          grading_url: 'https://web-cat.org/grading/4',
+          feedback_url: 'https://web-cat.org/feedback/4'
+        }
+      }
+
+      const parsed = passPortStatusResponseSchema.parse(payload)
+      const cached = toCachedSubmissionStatus(parsed)
+
+      expect(cached.latestSubmissionUrl).toBe('https://web-cat.org/grading/4')
+      expect(cached.latestSubmissionNumber).toBe(4)
+      expect(cached.latestTotalScore).toBe(92.0)
+      expect(cached.gradingSubmissionUrl).toBe('https://web-cat.org/grading/3')
+      expect(cached.gradingSubmissionNumber).toBe(3)
+      expect(cached.gradingTotalScore).toBe(88.5)
+      expect(cached.staffNotice).toBe('<p>Inspection Needed</p>')
+    })
+
+    it('normalizes status response when only submission_for_grading is present', () => {
+      const payload = {
+        status: 'ok',
+        submission_for_grading: {
+          timestamp: '2026-10-25T14:32:00Z',
+          submission_number: 2,
+          total_score: 75.0,
+          ta_score: null,
+          staff_notice: null,
+          direct_url_grading: 'https://web-cat.org/edit?id=2',
+          direct_url_feedback: 'https://web-cat.org/view?id=2'
+        }
+      }
+
+      const parsed = passPortStatusResponseSchema.parse(payload)
+      const cached = toCachedSubmissionStatus(parsed)
+
+      expect(cached.latestSubmissionUrl).toBe('https://web-cat.org/edit?id=2')
+      expect(cached.latestSubmissionNumber).toBe(2)
+      expect(cached.latestTotalScore).toBe(75.0)
+      expect(cached.gradingSubmissionUrl).toBeNull()
+      expect(cached.gradingSubmissionNumber).toBeNull()
+      expect(cached.staffNotice).toBeNull()
+    })
+
+    it('handles student with no submissions', () => {
+      const payload = {
+        status: 'ok',
+        submission_for_grading: null
+      }
+
+      const parsed = passPortStatusResponseSchema.parse(payload)
+      const cached = toCachedSubmissionStatus(parsed)
+
+      expect(cached.latestSubmissionUrl).toBeNull()
+      expect(cached.latestSubmissionNumber).toBeNull()
+      expect(cached.gradingSubmissionUrl).toBeNull()
     })
   })
 })

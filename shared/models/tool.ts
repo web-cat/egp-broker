@@ -25,6 +25,7 @@ export const toolRowSchema = z.object({
   passportClientId: z.string().nullable(),
   passportRegistrationUrl: z.string().nullable(),
   passportExtensionUrl: z.string().nullable(),
+  passportStatusUrl: z.string().nullable(),
   passportRegistrationStatus: passPortRegistrationStatusSchema,
   passportRegistrationError: z.string().nullable(),
   passportRegisteredAt: z.string().nullable(),
@@ -63,6 +64,7 @@ export const createToolSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal('')),
+  passportStatusUrl: z.string().url('Must be a valid URL').nullable().optional().or(z.literal('')),
   passportRegistrationStatus: passPortRegistrationStatusSchema.optional(),
   passportRegistrationError: z.string().nullable().optional(),
   passportRequestedProperties: z.array(z.string()).nullable().optional(),
@@ -100,5 +102,6 @@ export const initialToolState: CreateToolData = {
   passportClientSecret: '',
   passportRegistrationUrl: '',
   passportExtensionUrl: '',
+  passportStatusUrl: '',
   platformId: null
 }

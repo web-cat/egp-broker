@@ -35,6 +35,7 @@ describe('LTI Tool Utilities', () => {
           passportClientId: 'cid-1',
           passportRegistrationUrl: 'https://tool.com/reg',
           passportExtensionUrl: 'https://tool.com/ext',
+          passportStatusUrl: 'https://tool.com/status',
           passportRegistrationStatus: 'REGISTERED',
           passportRegistrationError: null,
           passportRegisteredAt: mockDate,
@@ -62,6 +63,7 @@ describe('LTI Tool Utilities', () => {
           passportClientId: 'cid-1',
           passportRegistrationUrl: 'https://tool.com/reg',
           passportExtensionUrl: 'https://tool.com/ext',
+          passportStatusUrl: 'https://tool.com/status',
           passportRegistrationStatus: 'REGISTERED',
           passportRegistrationError: null,
           passportRegisteredAt: mockDate.toISOString(),
@@ -89,6 +91,7 @@ describe('LTI Tool Utilities', () => {
         passportClientId: null,
         passportRegistrationUrl: null,
         passportExtensionUrl: null,
+        passportStatusUrl: null,
         passportRegistrationStatus: 'NOT_REGISTERED',
         passportRegistrationError: null,
         passportRegisteredAt: null,
@@ -114,6 +117,7 @@ describe('LTI Tool Utilities', () => {
         passportClientId: null,
         passportRegistrationUrl: null,
         passportExtensionUrl: null,
+        passportStatusUrl: null,
         passportRegistrationStatus: 'NOT_REGISTERED',
         passportRegistrationError: null,
         passportRegisteredAt: null,
@@ -143,6 +147,7 @@ describe('LTI Tool Utilities', () => {
         ...input,
         passportRegistrationUrl: null,
         passportExtensionUrl: null,
+        passportStatusUrl: null,
         supportsExtensionApi: false,
         passportClientId: null,
         passportRegistrationStatus: 'NOT_REGISTERED',
@@ -190,6 +195,7 @@ describe('LTI Tool Utilities', () => {
         passportClientId: null,
         passportRegistrationUrl: null,
         passportExtensionUrl: null,
+        passportStatusUrl: null,
         passportRegistrationStatus: 'PENDING',
         passportRegistrationError: null,
         passportRegisteredAt: null,
@@ -231,6 +237,7 @@ describe('LTI Tool Utilities', () => {
         passportRegistrationUrl: null,
         passportExtensionUrl:
           'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/extension',
+        passportStatusUrl: null,
         passportRegistrationStatus: 'REGISTERED',
         passportRegistrationError: null,
         passportRegisteredAt: null,
@@ -249,6 +256,50 @@ describe('LTI Tool Utilities', () => {
         data: expect.objectContaining({
           passportExtensionUrl:
             'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/extension'
+        }),
+        include: { platform: { select: { issuer: true } } }
+      })
+    })
+
+    it('normalizes Web-CAT /v1/status URL to /status on save', async () => {
+      const mockDate = new Date('2023-01-01T00:00:00.000Z')
+      const updateData = {
+        passportStatusUrl:
+          'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/v1/status'
+      }
+
+      const updatedRecord = {
+        id: 't1',
+        name: 'Web-CAT',
+        baseUrl: 'https://web-cat.cs.vt.edu',
+        protocol: 'LTI13',
+        key: 'k',
+        supportsProxy: true,
+        supportsPassport: true,
+        supportsExtensionApi: false,
+        passportClientId: 'cid',
+        passportRegistrationUrl: null,
+        passportExtensionUrl: null,
+        passportStatusUrl:
+          'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/status',
+        passportRegistrationStatus: 'REGISTERED',
+        passportRegistrationError: null,
+        passportRegisteredAt: null,
+        passportRequestedProperties: null,
+        platformId: null,
+        platform: null,
+        createdAt: mockDate
+      }
+
+      vi.mocked(prisma.ltiTool.update).mockResolvedValue(updatedRecord as any)
+
+      await updateTool('t1', updateData as any)
+
+      expect(prisma.ltiTool.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: expect.objectContaining({
+          passportStatusUrl:
+            'https://web-cat.cs.vt.edu/Web-CAT/WebObjects/Web-CAT.woa/wa/passport/status'
         }),
         include: { platform: { select: { issuer: true } } }
       })

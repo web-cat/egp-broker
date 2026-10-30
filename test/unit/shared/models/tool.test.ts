@@ -21,6 +21,7 @@ describe('LtiTool Shared Models', () => {
         passportClientId: 'cw-client-id',
         passportRegistrationUrl: 'https://codeworkout.org/api/passport/v1/register',
         passportExtensionUrl: 'https://codeworkout.org/api/passport/v1/extension',
+        passportStatusUrl: 'https://codeworkout.org/api/passport/v1/status',
         passportRegistrationStatus: 'REGISTERED',
         passportRegistrationError: null,
         passportRegisteredAt: '2026-09-06T12:00:00.000Z',
@@ -55,7 +56,8 @@ describe('LtiTool Shared Models', () => {
         protocol: 'LTI13',
         supportsProxy: false,
         supportsPassport: true,
-        passportRegistrationUrl: 'https://codeworkout.org/api/passport/v1/register'
+        passportRegistrationUrl: 'https://codeworkout.org/api/passport/v1/register',
+        passportStatusUrl: 'https://codeworkout.org/api/passport/v1/status'
       }
 
       const parsed = createToolSchema.parse(input)
@@ -64,6 +66,7 @@ describe('LtiTool Shared Models', () => {
       expect(parsed.passportRegistrationUrl).toBe(
         'https://codeworkout.org/api/passport/v1/register'
       )
+      expect(parsed.passportStatusUrl).toBe('https://codeworkout.org/api/passport/v1/status')
     })
   })
 
@@ -85,6 +88,7 @@ describe('LtiTool Shared Models', () => {
       expect(initialToolState.supportsProxy).toBe(true)
       expect(initialToolState.supportsPassport).toBe(false)
       expect(initialToolState.passportRegistrationUrl).toBe('')
+      expect(initialToolState.passportStatusUrl).toBe('')
       expect(initialToolState.protocol).toBe('LTI13')
     })
   })
