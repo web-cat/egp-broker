@@ -15,7 +15,8 @@ import {
   passPortPhase2CredentialsSchema,
   passPortExtensionPayloadSchema,
   passPortRollbackPayloadSchema,
-  normalizePassPortExtensionUrl
+  normalizePassPortExtensionUrl,
+  normalizePassPortStatusUrl
 } from '@@/shared/models/passport'
 import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
 
@@ -65,7 +66,7 @@ export async function initiatePassPortRegistration(
     broker_base_url: siteUrl,
     callback_url: `${siteUrl}/api/passport/v1/credentials?token=${registrationToken}`,
     name: 'EGP Broker',
-    passport_version: '1.1'
+    passport_version: '1.2'
   }
 
   try {
@@ -122,12 +123,17 @@ export async function handlePassPortCredentialsDelivery(
     })
   }
 
+  const passportStatusUrl = validated.endpoints.status_handler
+    ? normalizePassPortStatusUrl(validated.endpoints.status_handler)
+    : null
+
   const updatedTool = await prisma.ltiTool.update({
     where: { id: tool.id },
     data: {
       passportClientId: validated.credentials.client_id,
       passportClientSecret: validated.credentials.client_secret,
       passportExtensionUrl: normalizePassPortExtensionUrl(validated.endpoints.extension_handler),
+      passportStatusUrl,
       passportRequestedProperties: (validated.requested_properties || []) as Prisma.InputJsonValue,
       passportRegistrationStatus: 'REGISTERED',
       passportRegistrationError: null,

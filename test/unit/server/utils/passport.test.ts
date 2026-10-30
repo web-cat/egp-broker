@@ -103,7 +103,7 @@ describe('PassPort Server Utilities', () => {
               'https://broker.university.edu/api/passport/v1/credentials?token='
             ),
             name: 'EGP Broker',
-            passport_version: '1.1'
+            passport_version: '1.2'
           })
         })
       )
@@ -213,6 +213,7 @@ describe('PassPort Server Utilities', () => {
         passportClientId: 'tool-client-001',
         passportClientSecret: 'tool-secret-999',
         passportExtensionUrl: 'https://codeworkout.org/api/passport/v1/extension',
+        passportStatusUrl: null,
         passportRequestedProperties: ['email', 'canvas_course_id'],
         passportRegistrationStatus: 'REGISTERED',
         passportRegistrationError: null,
@@ -232,6 +233,7 @@ describe('PassPort Server Utilities', () => {
             passportClientId: 'tool-client-001',
             passportClientSecret: 'tool-secret-999',
             passportExtensionUrl: 'https://codeworkout.org/api/passport/v1/extension',
+            passportStatusUrl: null,
             passportRequestedProperties: ['email', 'canvas_course_id'],
             passportRegistrationStatus: 'REGISTERED',
             passportRegistrationToken: null
@@ -242,6 +244,61 @@ describe('PassPort Server Utilities', () => {
       expect(result.passportRegistrationStatus).toBe('REGISTERED')
       expect(result.passportClientId).toBe('tool-client-001')
       expect(result.passportExtensionUrl).toBe('https://codeworkout.org/api/passport/v1/extension')
+    })
+
+    it('persists passportStatusUrl when status_handler is provided in endpoints', async () => {
+      const pendingTool = {
+        id: 't2',
+        name: 'Web-CAT',
+        baseUrl: 'https://web-cat.org',
+        protocol: 'LTI13',
+        key: 'k',
+        supportsProxy: true,
+        supportsPassport: true,
+        supportsExtensionApi: false,
+        passportRegistrationToken: 'token-v12',
+        passportRegistrationStatus: 'PENDING',
+        platformId: null,
+        platform: null,
+        createdAt: new Date('2026-09-06T00:00:00.000Z')
+      }
+
+      const bodyWithStatus = {
+        ...validBody,
+        endpoints: {
+          extension_handler: 'https://web-cat.org/api/passport/v1/extension',
+          status_handler: 'https://web-cat.org/api/passport/v1/status'
+        }
+      }
+
+      const updatedRecord = {
+        ...pendingTool,
+        passportClientId: 'tool-client-001',
+        passportClientSecret: 'tool-secret-999',
+        passportExtensionUrl: 'https://web-cat.org/api/passport/v1/extension',
+        passportStatusUrl: 'https://web-cat.org/api/passport/v1/status',
+        passportRequestedProperties: ['email'],
+        passportRegistrationStatus: 'REGISTERED',
+        passportRegistrationError: null,
+        passportRegisteredAt: new Date('2026-09-06T12:00:00.000Z'),
+        passportRegistrationToken: null
+      }
+
+      vi.mocked(prisma.ltiTool.findUnique).mockResolvedValue(pendingTool as any)
+      vi.mocked(prisma.ltiTool.update).mockResolvedValue(updatedRecord as any)
+
+      const result = await handlePassPortCredentialsDelivery('token-v12', bodyWithStatus)
+
+      expect(prisma.ltiTool.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 't2' },
+          data: expect.objectContaining({
+            passportStatusUrl: 'https://web-cat.org/api/passport/v1/status'
+          })
+        })
+      )
+
+      expect(result.passportStatusUrl).toBe('https://web-cat.org/api/passport/v1/status')
     })
   })
 })
