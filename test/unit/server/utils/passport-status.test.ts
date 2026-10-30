@@ -1,9 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import prisma from '@@/server/utils/db'
 import {
   buildPassPortStatusPayload,
   resolveToolStatusUrl,
-  queryPassPortSubmissionStatus
+  queryPassPortSubmissionStatus,
+  refreshReservationSubmissionStatus,
+  refreshBatchReservationSubmissionStatus
 } from '../../../../server/utils/passport'
+
+vi.mock('@@/server/utils/db', () => ({
+  default: {
+    gtaInterviewReservation: {
+      findUnique: vi.fn(),
+      update: vi.fn()
+    }
+  }
+}))
 
 const mockFetch = vi.fn()
 vi.stubGlobal('$fetch', mockFetch)
@@ -228,6 +240,178 @@ describe('PassPort Status Query Client Engine', () => {
           params
         )
       ).toBeNull()
+    })
+  })
+
+  describe('refreshReservationSubmissionStatus', () => {
+    const mockReservation = {
+      id: 'res-1',
+      assignmentId: 'asg-1',
+      studentId: 'usr-1',
+      gtaId: 'gta-1',
+      assignment: {
+        id: 'asg-1',
+        title: 'Project 1',
+        resourceLinkId: 'link-1',
+        canvasAssignmentId: '101',
+        tool: {
+          id: 'tool-1',
+          supportsPassport: true,
+          passportClientId: 'client-id-123',
+          passportClientSecret: 'secret-key-456',
+          passportStatusUrl: 'https://web-cat.org/passport/status',
+          platformId: 'plat-1'
+        },
+        course: {
+          id: 'course-1',
+          ltiContextId: 'canvas-course-10',
+          canvasCourseId: '10',
+          deployment: {
+            deploymentId: 'dep-1',
+            deploymentHost: 'canvas.vt.edu',
+            platform: {
+              issuer: 'https://canvas.vt.edu',
+              name: 'Canvas'
+            }
+          }
+        }
+      },
+      student: {
+        id: 'usr-1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'jane@vt.edu',
+        avatarUrl: null,
+        ltiIdentities: [
+          {
+            platformId: 'plat-1',
+            ltiSub: 'canvas-sub-123',
+            platformUserId: '987'
+          }
+        ]
+      },
+      gta: {
+        id: 'gta-1',
+        firstName: 'Bob',
+        lastName: 'Smith',
+        email: 'bob@vt.edu'
+      }
+    }
+
+    it('throws 404 when reservation is not found', async () => {
+      vi.mocked(prisma.gtaInterviewReservation.findUnique).mockResolvedValue(null)
+
+      await expect(refreshReservationSubmissionStatus('missing-res')).rejects.toThrowError(
+        expect.objectContaining({ statusCode: 404 })
+      )
+    })
+
+    it('updates only timestamp when tool does not support PassPort', async () => {
+      vi.mocked(prisma.gtaInterviewReservation.findUnique).mockResolvedValue({
+        ...mockReservation,
+        assignment: {
+          ...mockReservation.assignment,
+          tool: null
+        }
+      } as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.update).mockResolvedValue({
+        id: 'res-1',
+        submissionStatusCheckedAt: new Date()
+      } as any)
+
+      const result = await refreshReservationSubmissionStatus('res-1')
+
+      expect(prisma.gtaInterviewReservation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'res-1' },
+          data: expect.objectContaining({
+            submissionStatusCheckedAt: expect.any(Date)
+          })
+        })
+      )
+      expect(mockFetch).not.toHaveBeenCalled()
+      expect(result.id).toBe('res-1')
+    })
+
+    it('queries external tool, saves parsed status, and updates timestamp', async () => {
+      vi.mocked(prisma.gtaInterviewReservation.findUnique).mockResolvedValue(mockReservation as any)
+      mockFetch.mockResolvedValue({
+        status: 'ok',
+        most_recent_submission: {
+          submission_number: 2,
+          direct_url_grading: 'https://web-cat.org/grading/2'
+        }
+      })
+      vi.mocked(prisma.gtaInterviewReservation.update).mockResolvedValue({
+        id: 'res-1',
+        submissionStatus: {
+          latestSubmissionUrl: 'https://web-cat.org/grading/2',
+          latestSubmissionNumber: 2
+        },
+        submissionStatusCheckedAt: new Date()
+      } as any)
+
+      const result = await refreshReservationSubmissionStatus('res-1')
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      expect(prisma.gtaInterviewReservation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'res-1' },
+          data: expect.objectContaining({
+            submissionStatus: expect.objectContaining({
+              latestSubmissionUrl: 'https://web-cat.org/grading/2',
+              latestSubmissionNumber: 2
+            }),
+            submissionStatusCheckedAt: expect.any(Date)
+          })
+        })
+      )
+      expect(result.id).toBe('res-1')
+    })
+
+    it('retains existing submissionStatus when external query fails (resilience)', async () => {
+      vi.mocked(prisma.gtaInterviewReservation.findUnique).mockResolvedValue(mockReservation as any)
+      mockFetch.mockRejectedValue(new Error('500 Internal Server Error'))
+      vi.mocked(prisma.gtaInterviewReservation.update).mockResolvedValue({
+        id: 'res-1',
+        submissionStatusCheckedAt: new Date()
+      } as any)
+
+      await refreshReservationSubmissionStatus('res-1')
+
+      expect(prisma.gtaInterviewReservation.update).toHaveBeenCalledWith({
+        where: { id: 'res-1' },
+        data: {
+          submissionStatusCheckedAt: expect.any(Date)
+        },
+        include: expect.any(Object)
+      })
+    })
+  })
+
+  describe('refreshBatchReservationSubmissionStatus', () => {
+    it('concurrently refreshes multiple reservations and returns successful updates', async () => {
+      vi.mocked(prisma.gtaInterviewReservation.findUnique).mockImplementation((args: any) => {
+        if (args.where.id === 'res-1') {
+          return Promise.resolve({
+            id: 'res-1',
+            assignment: { tool: null },
+            student: { ltiIdentities: [] }
+          } as any)
+        }
+        return Promise.resolve(null)
+      })
+
+      vi.mocked(prisma.gtaInterviewReservation.update).mockResolvedValue({
+        id: 'res-1',
+        submissionStatusCheckedAt: new Date()
+      } as any)
+
+      const results = await refreshBatchReservationSubmissionStatus(['res-1', 'res-missing'])
+
+      expect(results).toHaveLength(1)
+      expect(results[0].id).toBe('res-1')
     })
   })
 })

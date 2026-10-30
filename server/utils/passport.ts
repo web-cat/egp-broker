@@ -576,6 +576,149 @@ export async function queryPassPortSubmissionStatus(
 }
 
 /**
+ * Queries the student's submission status from the assignment's PassPort tool
+ * and persists the cached status and query timestamp on GtaInterviewReservation.
+ */
+export async function refreshReservationSubmissionStatus(reservationId: string) {
+  const reservation = await prisma.gtaInterviewReservation.findUnique({
+    where: { id: reservationId },
+    include: {
+      assignment: {
+        include: {
+          tool: {
+            include: {
+              platform: true
+            }
+          },
+          course: {
+            include: {
+              deployment: {
+                include: {
+                  platform: true
+                }
+              }
+            }
+          }
+        }
+      },
+      student: {
+        include: {
+          ltiIdentities: true
+        }
+      }
+    }
+  })
+
+  if (!reservation) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Interview reservation not found'
+    })
+  }
+
+  const tool = reservation.assignment?.tool
+  if (!tool || !tool.supportsPassport || !tool.passportClientId || !tool.passportClientSecret) {
+    return await prisma.gtaInterviewReservation.update({
+      where: { id: reservationId },
+      data: {
+        submissionStatusCheckedAt: new Date()
+      },
+      include: {
+        assignment: { select: { id: true, title: true } },
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatarUrl: true
+          }
+        },
+        gta: { select: { id: true, firstName: true, lastName: true, email: true } }
+      }
+    })
+  }
+
+  const assignment = reservation.assignment
+  const user = reservation.student
+  const studentDisplayName =
+    user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || null
+
+  const platformId = assignment.course?.deployment?.platformId || tool.platformId
+  const platform = assignment.course?.deployment?.platform || tool.platform
+
+  const ltiIdentity =
+    user?.ltiIdentities?.find((i: any) => i.platformId === platformId) || user?.ltiIdentities?.[0]
+  const ltiUserId = ltiIdentity?.ltiSub || user.id
+
+  const cachedStatus = await queryPassPortSubmissionStatus(tool, {
+    context: {
+      lmsInstanceGuid:
+        assignment.course?.deployment?.deploymentHost || platform?.issuer || 'egp-broker',
+      issuer: platform?.issuer || 'https://canvas.instructure.com',
+      ltiContextId: assignment.course?.ltiContextId || assignment.courseId,
+      lmsInstance: platform?.name || assignment.course?.deployment?.deploymentHost || null,
+      ltiDeploymentId: assignment.course?.deployment?.deploymentId || null,
+      canvasCourseId: assignment.course?.canvasCourseId || null
+    },
+    user: {
+      ltiUserId,
+      brokerUserId: user.id,
+      canvasUserId: ltiIdentity?.platformUserId || null,
+      firstName: user.firstName || null,
+      lastName: user.lastName || null,
+      email: user.email || null,
+      displayName: studentDisplayName
+    },
+    resource: {
+      ltiResourceLinkId: assignment.resourceLinkId || assignment.id,
+      brokerAssignmentId: assignment.id,
+      canvasAssignmentId: assignment.canvasAssignmentId || null,
+      title: assignment.title || null
+    },
+    requestedProperties: (tool.passportRequestedProperties as string[]) || null
+  })
+
+  return await prisma.gtaInterviewReservation.update({
+    where: { id: reservationId },
+    data: {
+      ...(cachedStatus
+        ? { submissionStatus: cachedStatus as unknown as Prisma.InputJsonValue }
+        : {}),
+      submissionStatusCheckedAt: new Date()
+    },
+    include: {
+      assignment: { select: { id: true, title: true } },
+      student: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          avatarUrl: true
+        }
+      },
+      gta: { select: { id: true, firstName: true, lastName: true, email: true } }
+    }
+  })
+}
+
+/**
+ * Refreshes submission status for multiple interview reservations concurrently.
+ * Ignores individual failures and returns successfully updated reservation records.
+ */
+export async function refreshBatchReservationSubmissionStatus(
+  reservationIds: string[]
+): Promise<any[]> {
+  const results = await Promise.allSettled(
+    reservationIds.map((id) => refreshReservationSubmissionStatus(id))
+  )
+  return results
+    .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+    .map((r) => r.value)
+}
+
+/**
  * Resends all active pass redemptions for an assignment to its registered PassPort LTI tool.
  */
 export async function resyncAssignmentPassPortExtensions(
