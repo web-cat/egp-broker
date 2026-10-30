@@ -9,14 +9,19 @@ import type { ToolRow } from '@@/shared/models/tool'
 import type {
   PassPortPhase1Request,
   PassPortExtensionPayload,
-  PassPortRollbackPayload
+  PassPortRollbackPayload,
+  PassPortStatusPayload,
+  CachedSubmissionStatus
 } from '@@/shared/models/passport'
 import {
   passPortPhase2CredentialsSchema,
   passPortExtensionPayloadSchema,
   passPortRollbackPayloadSchema,
+  passPortStatusPayloadSchema,
+  passPortStatusResponseSchema,
   normalizePassPortExtensionUrl,
-  normalizePassPortStatusUrl
+  normalizePassPortStatusUrl,
+  toCachedSubmissionStatus
 } from '@@/shared/models/passport'
 import { resolveStudentEffectiveDates } from '@@/server/utils/overrides'
 
@@ -392,6 +397,182 @@ export async function sendPassPortRollback(
     },
     timeout: 10000
   })
+}
+
+// =============================================================================
+// SUBMISSION STATUS QUERY ENGINE (PassPort v1.2)
+// =============================================================================
+
+export interface BuildPassPortStatusParams {
+  context: {
+    lmsInstanceGuid: string
+    issuer: string
+    ltiContextId: string
+    lmsInstance?: string | null
+    ltiDeploymentId?: string | null
+    canvasCourseId?: string | number | null
+  }
+  user: {
+    ltiUserId: string
+    brokerUserId?: string | null
+    canvasUserId?: string | number | null
+    firstName?: string | null
+    lastName?: string | null
+    email?: string | null
+    displayName?: string | null
+    courseRole?: string | null
+  }
+  resource: {
+    ltiResourceLinkId: string
+    brokerAssignmentId?: string | null
+    canvasAssignmentId?: string | number | null
+    title?: string | null
+    externalUrl?: string | null
+  }
+  requestedProperties?: string[] | null
+}
+
+/**
+ * Builds a compliant PassPort v1.2 status query payload, filtering optional
+ * properties according to the tool's requested_properties list.
+ */
+export function buildPassPortStatusPayload(
+  params: BuildPassPortStatusParams
+): PassPortStatusPayload {
+  const reqProps = new Set(params.requestedProperties || [])
+
+  // Context: mandatory baseline + optional requested
+  const context: Record<string, any> = {
+    lms_instance_guid: params.context.lmsInstanceGuid,
+    issuer: params.context.issuer,
+    lti_context_id: params.context.ltiContextId
+  }
+  if (reqProps.has('lms_instance') && params.context.lmsInstance) {
+    context.lms_instance = params.context.lmsInstance
+  }
+  if (reqProps.has('lti_deployment_id') && params.context.ltiDeploymentId) {
+    context.lti_deployment_id = params.context.ltiDeploymentId
+  }
+  if (reqProps.has('canvas_course_id') && params.context.canvasCourseId != null) {
+    context.canvas_course_id = String(params.context.canvasCourseId)
+  }
+
+  // User: mandatory baseline + optional requested
+  const user: Record<string, any> = {
+    lti_user_id: params.user.ltiUserId
+  }
+  if (reqProps.has('broker_user_id') && params.user.brokerUserId) {
+    user.broker_user_id = params.user.brokerUserId
+  }
+  if (reqProps.has('canvas_user_id') && params.user.canvasUserId != null) {
+    user.canvas_user_id = String(params.user.canvasUserId)
+  }
+  if (reqProps.has('first_name') && params.user.firstName) {
+    user.first_name = params.user.firstName
+  }
+  if (reqProps.has('last_name') && params.user.lastName) {
+    user.last_name = params.user.lastName
+  }
+  if (reqProps.has('email') && params.user.email) {
+    user.email = params.user.email
+  }
+  if (reqProps.has('display_name') && params.user.displayName) {
+    user.display_name = params.user.displayName
+  }
+  if (reqProps.has('course_role') && params.user.courseRole) {
+    user.course_role = params.user.courseRole
+  }
+
+  // Resource: mandatory baseline + optional requested
+  const resource: Record<string, any> = {
+    lti_resource_link_id: params.resource.ltiResourceLinkId
+  }
+  if (reqProps.has('broker_assignment_id') && params.resource.brokerAssignmentId) {
+    resource.broker_assignment_id = params.resource.brokerAssignmentId
+  }
+  if (reqProps.has('canvas_assignment_id') && params.resource.canvasAssignmentId != null) {
+    resource.canvas_assignment_id = String(params.resource.canvasAssignmentId)
+  }
+  if (reqProps.has('title') && params.resource.title) {
+    resource.title = params.resource.title
+  }
+  if (reqProps.has('external_url') && params.resource.externalUrl) {
+    resource.external_url = params.resource.externalUrl
+  }
+
+  return passPortStatusPayloadSchema.parse({
+    context,
+    user,
+    resource
+  })
+}
+
+/**
+ * Resolves the destination status URL for an LTI tool.
+ * Prefers explicitly configured passportStatusUrl, or derives from passportExtensionUrl.
+ */
+export function resolveToolStatusUrl(tool: {
+  passportStatusUrl?: string | null
+  passportExtensionUrl?: string | null
+}): string | null {
+  if (tool.passportStatusUrl) {
+    return normalizePassPortStatusUrl(tool.passportStatusUrl)
+  }
+  if (tool.passportExtensionUrl) {
+    return normalizePassPortStatusUrl(
+      tool.passportExtensionUrl.replace(/\/extensions?$/, '/status')
+    )
+  }
+  return null
+}
+
+/**
+ * Dispatches an HMAC-signed status query POST request to an external tool's status_handler.
+ * Returns normalized CachedSubmissionStatus or null if unavailable / on failure.
+ */
+export async function queryPassPortSubmissionStatus(
+  tool: {
+    passportClientId?: string | null
+    passportClientSecret?: string | null
+    passportStatusUrl?: string | null
+    passportExtensionUrl?: string | null
+  },
+  params: BuildPassPortStatusParams
+): Promise<CachedSubmissionStatus | null> {
+  const targetUrl = resolveToolStatusUrl(tool)
+  if (!targetUrl) {
+    return null
+  }
+  if (!tool.passportClientId || !tool.passportClientSecret) {
+    return null
+  }
+
+  const payload = buildPassPortStatusPayload(params)
+  const { signature, timestamp } = signPassPortRequest(tool.passportClientSecret, payload)
+
+  try {
+    const rawResponse = await $fetch(targetUrl, {
+      method: 'POST',
+      body: payload,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-PassPort-Client-ID': tool.passportClientId,
+        'X-PassPort-Signature': signature,
+        'X-PassPort-Timestamp': String(timestamp)
+      },
+      timeout: 10000
+    })
+
+    const validated = passPortStatusResponseSchema.parse(rawResponse)
+    return toCachedSubmissionStatus(validated)
+  } catch (err: any) {
+    const errorData = err?.data ?? err?.response?._data
+    console.warn(
+      `[passport] Status query to ${targetUrl} failed (${err?.status ?? err?.statusCode ?? err?.message}). Remote response:`,
+      typeof errorData === 'object' ? JSON.stringify(errorData) : errorData
+    )
+    return null
+  }
 }
 
 /**
