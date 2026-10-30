@@ -110,6 +110,17 @@ export type UpdateGtaInterviewReservationInput = z.infer<
   typeof updateGtaInterviewReservationInputSchema
 >
 
+export const refreshBatchGtaInterviewStatusInputSchema = z.object({
+  reservationIds: z
+    .array(z.string().cuid().or(z.string().min(1)))
+    .min(1)
+    .max(20)
+})
+
+export type RefreshBatchGtaInterviewStatusInput = z.infer<
+  typeof refreshBatchGtaInterviewStatusInputSchema
+>
+
 export const updateCourseInterviewLocationInputSchema = z.object({
   interviewLocation: z
     .string()
