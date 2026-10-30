@@ -338,3 +338,58 @@ Replace the rolling window union filter with true seat-specific interval availab
 ### Rationale
 
 Completely eliminates phantom concurrency lockups while executing in $O(1)$ seat lookups.
+
+---
+
+## DECISION-019: Storage of PassPort Submission Status in GtaInterviewReservation
+
+### Context
+
+PassPort v1.2 introduces status query support (`/passport/v1/status`), returning URLs for the most recent submission and submission for grading, scores, and optional HTML staff notice. The GTA interview dashboard displays interview cards for expected arrivals and the currently active interview.
+
+### Decision
+
+Store submission status metadata directly on `GtaInterviewReservation` via:
+
+- `submissionStatus`: Json? (structured payload caching `latestSubmissionUrl`, `gradingSubmissionUrl`, `latestSubmissionNumber`, `gradingSubmissionNumber`, `staffNotice`, `totalScore`, `taScore`)
+- `submissionStatusCheckedAt`: DateTime? (UTC timestamp of the most recent query to the tool)
+
+In `LtiTool`, add:
+
+- `passportStatusUrl`: String? (for status query endpoint registered via Phase 2 `endpoints.status_handler` or configured manually in admin)
+
+### Rationale
+
+Keeps interview card querying fast and relational without redundant joins or external tables. Direct placement on `GtaInterviewReservation` allows GTA interview feed endpoints to return current status cache immediately.
+
+---
+
+## DECISION-020: Grader-First Action Deep Linking for Teaching Staff
+
+### Context
+
+PassPort v1.2 returns both student feedback view URLs (`feedback_url`, `view_url`, etc.) and staff grading URLs (`grading_url`, `direct_url_grading`, `edit_url`, `grader_view_url`).
+
+### Decision
+
+For GTA interview cards, deep links prioritize the staff grading URL so GTAs open the submission directly with the grading interface active (`grading_url || direct_url_grading || edit_url || grader_view_url`). If a grading URL is absent, fall back to the feedback URL (`feedback_url || direct_url_feedback || view_url || student_view_url`). All external submission links open in a new tab (`target="_blank"`).
+
+### Rationale
+
+GTAs conducting interviews need to view student code and grade submissions on the spot; routing to the staff grading view directly eliminates extra navigation.
+
+---
+
+## DECISION-021: Dashboard Visibility-Bound 15-Minute Staleness & Refresh Architecture
+
+### Context
+
+Students may submit work shortly before or during their interview slot. PassPort status must refresh periodically to reflect newer submissions without spamming external tools for hidden/completed items.
+
+### Decision
+
+Limit 15-minute staleness checks strictly to `GtaInterviewReservation` objects currently visible on screen (Active Interview in progress and paginated Expected Arrivals queue). When visible cards mount or change, if `submissionStatusCheckedAt` is null or older than 15 minutes, trigger a status refresh. While the dashboard is active, a 15-minute polling interval checks visible cards. Additionally, provide an on-demand manual refresh button on each card for immediate sync.
+
+### Rationale
+
+Avoids unnecessary background queries for off-screen, completed, or paginated-away reservations while ensuring GTAs always have fresh submission links and notices.

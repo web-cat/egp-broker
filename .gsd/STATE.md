@@ -1,16 +1,16 @@
 ---
-updated: 2026-10-09T20:27:00-04:00
+updated: 2026-10-29T20:01:00-04:00
 ---
 
 # Project State
 
 ## Current Position
 
-**Milestone:** v6.0 — CBTF Phased Capacity & Duration Engine  
-**Phase:** Phase 4: Integration Verification, Proctor Hot-Spares & Final Audit  
-**Status:** 🎉 All phases complete and verified (1093/1093 tests passing)  
+**Milestone:** v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links  
+**Phase:** Phase 1: Data Models & Registration Protocol v1.2  
+**Status:** 📋 Ready for Planning  
 **Roadmap:** [.gsd/ROADMAP.md](file:///Users/edwards/git/egp-broker/.gsd/ROADMAP.md)  
-**Next Step:** Milestone complete!
+**Next Step:** Run `/plan 1` to generate implementation plan for Phase 1.
 
 ## Completed Milestones
 
@@ -23,12 +23,11 @@ updated: 2026-10-09T20:27:00-04:00
 
 ## Active Decisions
 
-| Decision                                                               | Choice                                                                              | Made       | Affects          |
-| :--------------------------------------------------------------------- | :---------------------------------------------------------------------------------- | :--------- | :--------------- |
-| [DECISION-015](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | 18 Phased Seats + 2 Elastic Pool Seats (for a 20-seat lab)                          | 2026-10-09 | Phase 1, Phase 2 |
-| [DECISION-016](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Alternating 2–1 arrival quota distribution across 12 offsets for 60m exams          | 2026-10-09 | Phase 1, Phase 2 |
-| [DECISION-017](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | 3-per-offset distribution across 6 offsets for 30m quizzes                          | 2026-10-09 | Phase 1, Phase 2 |
-| [DECISION-018](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | True seat-specific interval availability replacing 115-minute rolling window filter | 2026-10-09 | Phase 2          |
+| Decision                                                               | Choice                                                                                                                      | Made       | Affects          |
+| :--------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- | :--------- | :--------------- |
+| [DECISION-019](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Store `submissionStatus` and `submissionStatusCheckedAt` in `GtaInterviewReservation`; add `passportStatusUrl` to `LtiTool` | 2026-10-29 | Phase 1, Phase 2 |
+| [DECISION-020](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Prefer staff grading URL (`grading_url`) over feedback URL for GTA links; open in new tab                                   | 2026-10-29 | Phase 2, Phase 3 |
+| [DECISION-021](file:///Users/edwards/git/egp-broker/.gsd/DECISIONS.md) | Screen-bound 15-minute staleness checks restricted strictly to visible cards, plus 15m polling & manual refresh button      | 2026-10-29 | Phase 2, Phase 3 |
 
 ## Blockers
 

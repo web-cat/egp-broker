@@ -16,3 +16,13 @@
 | **REQ-609** | Update student CBTF booking UI to display slots matching assignment duration (30 min vs 60 min) | SPEC Goal 5 | Complete | `test/unit/app/components/features/cbtf/CbtfScheduleModal.spec.ts` |
 | **REQ-610** | Provide teacher settings controls to toggle CBTF assignment duration (30m vs 60m) | SPEC Goal 5 | Complete | `test/unit/app/components/features/admin/AssignmentEditPanel.spec.ts` |
 | **REQ-611** | Full Vitest test suite validating high-throughput scenario with 0 phantom capacity dropouts | SPEC Goal 3 | Complete | `test/unit/server/utils/cbtf-simulation.test.ts` |
+| **REQ-701** | Update `LtiTool` schema and admin UI to support `passportStatusUrl` and PassPort v1.2 dynamic registration (`endpoints.status_handler`) | SPEC Goal 1 | Pending | — |
+| **REQ-702** | Update `GtaInterviewReservation` model to store `submissionStatus` (Json) and `submissionStatusCheckedAt` (DateTime) | SPEC Goal 1 | Pending | — |
+| **REQ-703** | Implement PassPort v1.2 submission status client service in `server/utils/passport.ts` with HMAC-SHA256 signed requests | SPEC Goal 2 | Pending | — |
+| **REQ-704** | Parse status responses extracting latest submission, submission for grading, scores, and HTML staff notice | SPEC Goal 2 | Pending | — |
+| **REQ-705** | Provide interview status refresh endpoints (`POST /api/me/courses/:courseId/interviews/:id/refresh-status`) | SPEC Goal 3 | Pending | — |
+| **REQ-706** | Project `submissionStatus` and `submissionStatusCheckedAt` in GTA interview feed responses | SPEC Goal 3 | Pending | — |
+| **REQ-707** | Implement composable status management with 15-minute staleness check for visible cards and periodic polling | SPEC Goal 4 | Pending | — |
+| **REQ-708** | Render clickable links for latest submission, submission for grading (if different), and HTML staff notice on cards | SPEC Goal 4 | Pending | — |
+| **REQ-709** | Provide manual per-card refresh button on Expected Arrivals and Active Interview cards | SPEC Goal 4 | Pending | — |
+| **REQ-710** | Comprehensive Vitest unit tests verifying protocol signing, status parsing, refresh scheduling, and UI cards | SPEC Goal 5 | Pending | — |

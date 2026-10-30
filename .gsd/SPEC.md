@@ -1,55 +1,82 @@
 # SPEC.md — Project Specification
 
 > **Status**: `FINALIZED`
-> **Project**: CBTF Phased Capacity & Duration Engine
-> **Milestone**: v6.0 — CBTF Phased Capacity & Duration Engine
+> **Project**: PassPort v1.2 External Tool Status & GTA Submission Links
+> **Milestone**: v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links
+
+---
 
 ## Vision
 
-Overhaul the CBTF scheduling engine to replace the flawed 115-minute rolling-window concurrency filter with a high-throughput **Periodic Phased Seat Allocation** architecture. By partitioning facility seats into 18 phased seats and a 2-seat elastic pool (with an alternating 2–1 arrival quota per 5-minute offset), the facility eliminates "schedule holes" and phantom capacity lockouts. The system supports both 30-minute reservation blocks (for $\le 25$-minute quizzes) and 60-minute blocks (for $\le 50$-minute exams), providing built-in transition buffers, smooth proctor check-in rates ($\le 2$ arrivals/5 min for 60m; $\le 3$ arrivals/5 min for 30m), and doubling daily throughput for quiz cohorts up to 280 students/day.
+Integrate the PassPort Protocol v1.2 status query specification to enable external Learning Tools (such as Web-CAT) to report student submission status, scoring metadata, staff inspection notices, and direct deep links. Surface this intelligence directly on Graduate Teaching Assistant (GTA) interview dashboard cards, equipping GTAs and instructors conducting 1-on-1 grading interviews with immediate, 1-click access to the student's latest submission and (when distinct) previous submission designated for grading, alongside critical automated inspection notices. The dashboard maintains freshness by automatically re-evaluating on-screen cards after a 15-minute staleness interval and offering instant manual sync.
+
+---
 
 ## Goals
 
-1. **Phased Seat Partitioning & Quota-Matched Arrival Throttles**:
-   - Partition facility seats into **18 phased seats** and **2 elastic pool seats** (for a 20-seat lab).
-   - In 60-minute mode, distribute the 18 seats across the 12 five-minute arrival offsets (:00 through :55) in a balanced 2–1 alternating pattern.
-   - Enforce offset-specific arrival quotas matching seat allocations (preventing cross-offset seat stealing).
-2. **Dual Duration Support (30-Minute and 60-Minute Tiers)**:
-   - Support assignment-level reservation duration configuration: 30 minutes or 60 minutes.
-   - Enforce business invariants for student test time: at most 25 minutes for 30-minute slots ($\ge 5$ min buffer) and at most 50 minutes for 60-minute slots ($\ge 10$ min buffer).
-   - In 30-minute mode, cycle 18 phased seats twice per hour with 3 seats per 5-minute offset across the 6 half-hour offsets (:00, :05, :10, :15, :20, :25, and repeated :30..:55).
-3. **Elimination of Phantom Concurrency & Schedule Holes**:
-   - Replace the rolling 115-minute `activeReservations.length < totalSeats` window filter with true seat-specific interval availability (`isSeatFreeInWindow`).
-   - Eliminate circular fallback cannibalization so primary channels remain orthogonal and contiguous.
-4. **Elastic Pool Reservation & Hot Spares**:
-   - Preserve Seats 19 and 20 as hot spares for hardware failure failover and proctor emergency reassignments.
-5. **Teacher Configuration & Student Scheduling UI**:
-   - Allow teachers to set CBTF exam duration (30 min vs 60 min) per assignment.
-   - Render student scheduling slots at the assignment's configured duration intervals.
+1. **PassPort Protocol v1.2 Schema & Registration Handshake**:
+   - Update `LtiTool` model and Zod schemas to store `passportStatusUrl` alongside existing `passportExtensionUrl`.
+   - Update PassPort dynamic registration handshake to support PassPort version `1.2` in Phase 1 and extract `endpoints.status_handler` during Phase 2 credential delivery.
+   - Support manual admin editing and display of `passportStatusUrl` in the `ToolEditPanel.vue`.
+
+2. **PassPort v1.2 Status Query Engine**:
+   - Implement an HMAC-SHA256 authenticated query client in `server/utils/passport.ts` targeting `passportStatusUrl` (or standard `/passport/v1/status` fallback).
+   - Formulate identifying payload with course `context`, student `user` (`lti_user_id`, `email`), and assignment `resource` (`lti_resource_link_id`, etc.) adhering to `extension-api.v1.2.md`.
+   - Parse status responses with Zod schema validation:
+     - `submission_for_grading`: active submission designated for grading evaluation.
+     - `most_recent_submission`: optional submission present when different from `submission_for_grading`.
+     - Extract `total_score`, `ta_score`, `submission_number`, `staff_notice` (HTML), and links (`grading_url` / `direct_url_grading` preferred for staff, falling back to `feedback_url` / `view_url`).
+
+3. **Status Caching on GtaInterviewReservation**:
+   - Add `submissionStatus` (Json) and `submissionStatusCheckedAt` (DateTime) to `GtaInterviewReservation` via Prisma migration.
+   - Provide server endpoint `POST /api/me/courses/:courseId/interviews/:id/refresh-status` (and batch endpoint for visible IDs) to execute signed queries and persist status cache.
+   - Project `submissionStatus` and `submissionStatusCheckedAt` in GTA interview feed responses (`GET /api/me/courses/:courseId/interviews`).
+
+4. **GTA Interview Dashboard Presentation**:
+   - Enhance GTA interview cards (Expected Arrivals queue and Active Interview in Progress) in `GtaInterviewConsole.vue`:
+     - Clickable link to the student's **Latest Submission** (pointing to `most_recent_submission` if present, else `submission_for_grading`).
+     - Separate clickable link to the **Submission for Grading** when `most_recent_submission` is present and distinct from `submission_for_grading`.
+     - Links prioritize staff grading views (`grading_url` / `direct_url_grading` / `edit_url` / `grader_view_url`) with fallback to feedback URLs, opening in a new tab (`target="_blank"`).
+     - Render optional `staff_notice` HTML fragment in a distinct inspection callout box with safe sanitization.
+     - Provide a manual per-card refresh icon button with loading feedback.
+
+5. **Screen-Bound 15-Minute Staleness & Polling**:
+   - Restrict automatic 15-minute staleness checks exclusively to cards currently visible on screen (Active Interview and paginated Expected Arrivals).
+   - Check staleness on card mount and execute a background refresh interval every 15 minutes while the dashboard is active.
+   - Do not query or refresh off-screen, completed, or paginated-away reservations.
+
+---
 
 ## Non-Goals (Out of Scope)
 
-- Handling extra-time accommodations inside the CBTF (disability services operates a separate dedicated testing center).
-- Dynamic arbitrary non-standard durations (e.g., 47 minutes or 75 minutes); assignments are classified as either 30-minute or 60-minute tiers.
-- Physical room floor-plan reconfiguration.
+- Modifying PassPort extension granting logic (already completed in v2.0).
+- Student-facing interview booking modifications (students already view their own submissions in LMS/tool).
+- Offline or queue-based retry workers for external tool downtime; if the tool status query fails or times out, the dashboard displays an unobtrusive status warning while retaining existing cached data.
 
-## Users
+---
 
-- **Students**: Experience abundant, hole-free appointment slots with clear 30-minute or 60-minute reservation windows.
-- **Instructors**: Configure assignment test duration (30m quiz or 60m exam) with confidence that cohort capacity matches student numbers.
-- **Proctors**: Experience smooth, predictable check-in pacing ($\le 2$ or $\le 3$ arrivals every 5 minutes) and have 2 hot-spare workstations available for emergency swaps.
+## Users & Roles
+
+- **Graduate Teaching Assistants (GTAs)**: Conduct 1-on-1 interviews with students; need immediate deep links to student code/submissions and staff notices without switching browser tabs or manually looking up student IDs in Web-CAT.
+- **Course Instructors**: Oversee grading interviews across all course GTAs, verify submission readiness, and audit student work.
+- **Admins**: Configure or verify PassPort v1.2 endpoints and dynamic registration for external LTI tools.
+
+---
 
 ## Constraints
 
-- **Strict Nuxt 4 Architecture**: Layered sovereignty, pure presenter base components, feature-specific composables, Zod validation.
-- **Timezone Sovereignty**: UTC database storage; `America/New_York` offset math.
-- **Docker Parity**: All tests and commands run via `docker compose exec app-dev`.
-- **Zero Regressions**: Maintain 100% test pass rate across all test suites.
+- **Security & Request Signing**: Every outgoing status request to the tool must carry `X-PassPort-Client-ID`, `X-PassPort-Timestamp`, and `X-PassPort-Signature` (HMAC-SHA256).
+- **HTML Sanitization**: External tools provide `staff_notice` as an HTML fragment; must be safely rendered without XSS vulnerability.
+- **Layered Sovereignty & Docker Parity**: Follow GEMINI.md Nuxt 4 standards, Zod projection on all endpoints, and 100% Vitest behavioral coverage executed via Docker.
+
+---
 
 ## Success Criteria
 
-- [ ] 18 phased seats and 2 elastic pool seats correctly partitioned in `cbtf.ts`.
-- [ ] Arrival quotas strictly enforced per offset (no slot accepts more arrivals than its assigned seats).
-- [ ] 30-minute and 60-minute reservation durations supported end-to-end.
-- [ ] Phantom capacity lockup completely resolved: slots remain available whenever assigned seats are unreserved.
-- [ ] 100% Vitest unit test coverage for new allocation logic, slot generation, and booking endpoints.
+- [ ] Prisma migration successfully applies `passportStatusUrl` to `LtiTool` and `submissionStatus`, `submissionStatusCheckedAt` to `GtaInterviewReservation`.
+- [ ] Tool dynamic registration handshake parses `endpoints.status_handler` and saves `passportStatusUrl`.
+- [ ] PassPort v1.2 status query client constructs signed payloads and parses responses according to specification.
+- [ ] Server refresh endpoint validates authorization and updates reservation status cache.
+- [ ] GTA interview console shows latest submission link, grading submission link (if distinct), and staff notice on Expected Arrivals and Active Interview cards.
+- [ ] Auto-refresh detects visible cards with `submissionStatusCheckedAt` older than 15 minutes (or null) and refreshes without querying off-screen records.
+- [ ] 100% unit test pass rate across all new and existing tests.
