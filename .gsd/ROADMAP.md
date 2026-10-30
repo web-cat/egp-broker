@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 4: Verification, Security Audit & End-to-End Tests
+> **Current Phase**: Complete
 > **Milestone**: v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links
 > **Goal**: Implement PassPort Protocol v1.2 status query support for external LTI tools, caching submission metadata on interview reservations, and displaying deep links to latest/grading submissions and staff notices on GTA interview cards with 15-minute screen-bound staleness refresh.
 
@@ -12,6 +12,7 @@
 - ✅ **v4.0 — Proctor Training Mode** (Completed 2026-09-11) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v4.0-proctor-training-mode-SUMMARY.md)
 - ✅ **v5.0 — Graduate TA Grading Interviews** (Completed 2026-09-16) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v5.0-gta-grading-interviews-SUMMARY.md)
 - ✅ **v6.0 — CBTF Phased Capacity & Duration Engine** (Completed 2026-10-09) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v6.0-cbtf-phased-capacity-SUMMARY.md)
+- ✅ **v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links** (Completed 2026-10-30) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v7.0-passport-status-gta-links-SUMMARY.md)
 
 ---
 
@@ -27,7 +28,7 @@
 - [x] Rendered HTML `staff_notice` callout on GTA interview cards
 - [x] Screen-bound 15-minute staleness auto-refresh and periodic polling for visible dashboard cards
 - [x] Manual refresh icon button on cards for immediate sync
-- [ ] 100% Vitest behavioral test coverage across all new and existing features
+- [x] 100% Vitest behavioral test coverage across all new and existing features
 
 ---
 
@@ -53,12 +54,6 @@
 
 ### Phase 4: Verification, Security Audit & End-to-End Tests
 
-**Status**: ⬜ Not Started  
-**Objective**: Comprehensive Vitest test suite covering PassPort v1.2 handshake, signed status requests, malformed/null response resilience, HTML staff notice sanitization, screen-bound 15-minute staleness checks, manual refresh flows, and regression suite execution.  
-**Requirements**: REQ-710
-
-### Phase 4: Verification, Security Audit & End-to-End Tests
-
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Comprehensive Vitest test suite covering PassPort v1.2 handshake, signed status requests, malformed/null response resilience, HTML staff notice sanitization, screen-bound 15-minute staleness checks, manual refresh flows, and regression suite execution.  
 **Requirements**: REQ-710

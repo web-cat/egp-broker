@@ -18,11 +18,11 @@
 | **REQ-611** | Full Vitest test suite validating high-throughput scenario with 0 phantom capacity dropouts | SPEC Goal 3 | Complete | `test/unit/server/utils/cbtf-simulation.test.ts` |
 | **REQ-701** | Update `LtiTool` schema and admin UI to support `passportStatusUrl` and PassPort v1.2 dynamic registration (`endpoints.status_handler`) | SPEC Goal 1 | Complete | `passport.test.ts`, `lti-tools.test.ts`, `ToolEditPanel.spec.ts` |
 | **REQ-702** | Update `GtaInterviewReservation` model to store `submissionStatus` (Json) and `submissionStatusCheckedAt` (DateTime) | SPEC Goal 1 | Complete | Migration `20261030001436_add_passport_v12_status_fields` & `cbtf-reservations.test.ts` |
-| **REQ-703** | Implement PassPort v1.2 submission status client service in `server/utils/passport.ts` with HMAC-SHA256 signed requests | SPEC Goal 2 | Pending | — |
-| **REQ-704** | Parse status responses extracting latest submission, submission for grading, scores, and HTML staff notice | SPEC Goal 2 | Pending | — |
-| **REQ-705** | Provide interview status refresh endpoints (`POST /api/me/courses/:courseId/interviews/:id/refresh-status`) | SPEC Goal 3 | Pending | — |
-| **REQ-706** | Project `submissionStatus` and `submissionStatusCheckedAt` in GTA interview feed responses | SPEC Goal 3 | Pending | — |
-| **REQ-707** | Implement composable status management with 15-minute staleness check for visible cards and periodic polling | SPEC Goal 4 | Pending | — |
-| **REQ-708** | Render clickable links for latest submission, submission for grading (if different), and HTML staff notice on cards | SPEC Goal 4 | Pending | — |
-| **REQ-709** | Provide manual per-card refresh button on Expected Arrivals and Active Interview cards | SPEC Goal 4 | Pending | — |
-| **REQ-710** | Comprehensive Vitest unit tests verifying protocol signing, status parsing, refresh scheduling, and UI cards | SPEC Goal 5 | Pending | — |
+| **REQ-703** | Implement PassPort v1.2 submission status client service in `server/utils/passport.ts` with HMAC-SHA256 signed requests | SPEC Goal 2 | Complete | `passport-status.test.ts` (15 tests passing) |
+| **REQ-704** | Parse status responses extracting latest submission, submission for grading, scores, and HTML staff notice | SPEC Goal 2 | Complete | `passport-status.test.ts` & `html.test.ts` |
+| **REQ-705** | Provide interview status refresh endpoints (`POST /api/me/courses/:courseId/interviews/:id/refresh-status` and batch endpoint) | SPEC Goal 3 | Complete | `gta-interview-refresh-status.test.ts` (13 tests passing) |
+| **REQ-706** | Project `submissionStatus` and `submissionStatusCheckedAt` in GTA interview feed responses | SPEC Goal 3 | Complete | `gta-interview.test.ts` & `gta-interview-refresh-status.test.ts` |
+| **REQ-707** | Implement composable status management with 15-minute staleness check for visible cards and periodic polling | SPEC Goal 4 | Complete | `useGtaInterviewConsole.spec.ts` (14 tests passing) |
+| **REQ-708** | Render clickable links for latest submission, submission for grading (if different), and HTML staff notice on cards | SPEC Goal 4 | Complete | `GtaInterviewConsole.spec.ts` (20 tests passing) |
+| **REQ-709** | Provide manual per-card refresh button on Expected Arrivals and Active Interview cards | SPEC Goal 4 | Complete | `GtaInterviewConsole.spec.ts` (20 tests passing) |
+| **REQ-710** | Comprehensive Vitest unit tests verifying protocol signing, status parsing, refresh scheduling, and UI cards | SPEC Goal 5 | Complete | Full repo unit test sweep (188/188 files, 1260/1260 tests passing) |
