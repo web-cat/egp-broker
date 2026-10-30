@@ -176,36 +176,42 @@ describe('TeacherRedeemPassModal', () => {
   })
 
   it('auto-defaults start and end dates based on passType hoursPerPass', async () => {
-    const wrapper = mount(TeacherRedeemPassModal, {
-      props: {
-        open: true,
-        student: baseStudent,
-        assignments: baseAssignments
-      },
-      global: {
-        stubs: {
-          UModal: true,
-          USelect: true,
-          UInput: true,
-          USwitch: true,
-          UButton: true,
-          UIcon: true
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-15T12:00:00.000Z'))
+    try {
+      const wrapper = mount(TeacherRedeemPassModal, {
+        props: {
+          open: true,
+          student: baseStudent,
+          assignments: baseAssignments
+        },
+        global: {
+          stubs: {
+            UModal: true,
+            USelect: true,
+            UInput: true,
+            USwitch: true,
+            UButton: true,
+            UIcon: true
+          }
         }
-      }
-    })
+      })
 
-    const vm = wrapper.vm as any
-    vm.selectedAssignmentId = 'assign-1'
-    vm.selectedPassTypeId = 'pt-1' // 48h
-    await wrapper.vm.$nextTick()
+      const vm = wrapper.vm as any
+      vm.selectedAssignmentId = 'assign-1'
+      vm.selectedPassTypeId = 'pt-1' // 48h
+      await wrapper.vm.$nextTick()
 
-    expect(vm.startDate).toBeTruthy()
-    expect(vm.endDate).toBeTruthy()
+      expect(vm.startDate).toBeTruthy()
+      expect(vm.endDate).toBeTruthy()
 
-    const startMs = new Date(vm.startDate).getTime()
-    const endMs = new Date(vm.endDate).getTime()
-    const diffHours = Math.round((endMs - startMs) / (3600 * 1000))
-    expect(diffHours).toBe(48)
+      const startMs = new Date(vm.startDate).getTime()
+      const endMs = new Date(vm.endDate).getTime()
+      const diffHours = Math.round((endMs - startMs) / (3600 * 1000))
+      expect(diffHours).toBe(48)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('submits force redemption and emits redeemed event on success', async () => {

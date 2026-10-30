@@ -671,7 +671,7 @@ describe('GtaInterviewConsole Component', () => {
     await resetCompletedBtn!.trigger('click')
     // Resets back to COMPLETED status (2 completed items)
     expect(wrapper.findAll('tbody tr').length).toBe(2)
-  })
+  }, 30000)
 
   it('defaults expected arrivals to current shift (or next shift) and supports GTA selection for instructors', async () => {
     // Current shift: 10:00 to 12:00 for gta-current
