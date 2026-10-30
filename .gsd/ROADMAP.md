@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 1: Data Models & Registration Protocol v1.2
+> **Current Phase**: Phase 2: PassPort v1.2 Status Query Client & Server APIs
 > **Milestone**: v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links
 > **Goal**: Implement PassPort Protocol v1.2 status query support for external LTI tools, caching submission metadata on interview reservations, and displaying deep links to latest/grading submissions and staff notices on GTA interview cards with 15-minute screen-bound staleness refresh.
 
@@ -17,9 +17,9 @@
 
 ## Must-Haves (Milestone v7.0)
 
-- [ ] Database support for `LtiTool.passportStatusUrl` and `GtaInterviewReservation.submissionStatus` / `submissionStatusCheckedAt`
-- [ ] PassPort v1.2 dynamic registration handshake supporting `passport_version: '1.2'` and extracting `endpoints.status_handler`
-- [ ] Admin tool configuration panel support for viewing and editing `passportStatusUrl`
+- [x] Database support for `LtiTool.passportStatusUrl` and `GtaInterviewReservation.submissionStatus` / `submissionStatusCheckedAt`
+- [x] PassPort v1.2 dynamic registration handshake supporting `passport_version: '1.2'` and extracting `endpoints.status_handler`
+- [x] Admin tool configuration panel support for viewing and editing `passportStatusUrl`
 - [ ] HMAC-SHA256 authenticated PassPort status query engine with Zod schema validation
 - [ ] Server endpoints for interview submission status refresh and projection in GTA interview feeds
 - [ ] Clickable deep link to latest student submission on GTA dashboard cards (preferring staff grading view, opening in new tab)
@@ -35,7 +35,7 @@
 
 ### Phase 1: Data Models & Registration Protocol v1.2
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Update Prisma schema to add `passportStatusUrl` to `LtiTool`, and `submissionStatus` (Json) / `submissionStatusCheckedAt` (DateTime) to `GtaInterviewReservation`. Execute migration. Update shared schemas (`passport.ts`, `tool.ts`). Support PassPort version `1.2` in Phase 1 and parse `endpoints.status_handler` in Phase 2 callback. Update admin `ToolEditPanel.vue` for `passportStatusUrl`.  
 **Requirements**: REQ-701, REQ-702
 
