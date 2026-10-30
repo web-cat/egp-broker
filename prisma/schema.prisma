@@ -131,6 +131,7 @@ model LtiTool {
   passportClientSecret        String?
   passportRegistrationUrl     String?
   passportExtensionUrl        String?
+  passportStatusUrl           String?
   passportRegistrationToken   String?                    @unique
   passportRegistrationStatus  PassPortRegistrationStatus @default(NOT_REGISTERED)
   passportRegistrationError   String?
@@ -854,6 +855,11 @@ model GtaInterviewReservation {
   checkedOutAt DateTime?
 
   notes        String?            @db.Text
+
+  /// Cached student submission status payload from PassPort v1.2 status query
+  submissionStatus          Json?
+  /// Absolute UTC timestamp of the most recent PassPort status query
+  submissionStatusCheckedAt DateTime?
 
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
