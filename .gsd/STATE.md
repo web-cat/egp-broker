@@ -8,9 +8,9 @@ updated: 2026-10-29T22:18:00-04:00
 
 **Milestone:** v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links  
 **Phase:** Phase 3: GTA Dashboard Cards & Periodic Staleness Refresh  
-**Status:** ⏳ Phase 3 Planned, Ready for Plan 3.1 Execution  
+**Status:** ⏳ Plan 3.1 Complete, Ready for Plan 3.2  
 **Roadmap:** [.gsd/ROADMAP.md](file:///Users/edwards/git/egp-broker/.gsd/ROADMAP.md)  
-**Next Step:** Run `/execute 3 1` to execute Plan 3.1 (Composable Submission Status Management & Staleness Engine).
+**Next Step:** Run `/execute 3 2` to execute Plan 3.2 (GTA Interview Dashboard Cards UI & Deep Link Integration).
 
 ## Completed Milestones
 
