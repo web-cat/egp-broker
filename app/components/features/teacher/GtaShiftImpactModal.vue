@@ -99,7 +99,7 @@ const formatTime = (isoString: string) => {
               {{ totalImpacted }} student appointment(s) will be affected upon confirmation:
             </p>
             <p class="text-warning-700/90 dark:text-warning-300/80 mt-0.5">
-              Appointments that can be covered by another on-duty GTA will be rescheduled automatically. Those with no coverage will be marked as cancelled.
+              Appointments that can be covered by another on-duty TA will be rescheduled automatically. Those with no coverage will be marked as cancelled.
             </p>
           </div>
         </div>
@@ -114,7 +114,7 @@ const formatTime = (isoString: string) => {
             <UBadge color="primary" variant="subtle" size="sm">Same appointment time</UBadge>
           </div>
           <p class="text-xs text-neutral-500">
-            These students will be reassigned to another concurrent on-duty GTA at their exact same appointment time.
+            These students will be reassigned to another concurrent on-duty TA at their exact same appointment time.
           </p>
 
           <div class="divide-y divide-neutral-200 dark:divide-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
@@ -137,7 +137,7 @@ const formatTime = (isoString: string) => {
               <div class="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-800/60 px-2.5 py-1 rounded text-[11px] font-mono shrink-0">
                 <span class="text-neutral-500">{{ item.previousGtaName }}</span>
                 <UIcon name="i-lucide-arrow-right" class="w-3.5 h-3.5 text-primary-500" />
-                <span class="text-primary-600 dark:text-primary-400 font-semibold">{{ item.newGtaName || 'New GTA' }}</span>
+                <span class="text-primary-600 dark:text-primary-400 font-semibold">{{ item.newGtaName || 'New TA' }}</span>
               </div>
             </div>
           </div>
@@ -153,7 +153,7 @@ const formatTime = (isoString: string) => {
             <UBadge color="error" variant="subtle" size="sm">Needs Rebooking</UBadge>
           </div>
           <p class="text-xs text-neutral-500">
-            No other concurrent on-duty GTA is available at these timeslots. These appointments will be marked as cancelled so students can reschedule.
+            No other concurrent on-duty TA is available at these timeslots. These appointments will be marked as cancelled so students can reschedule.
           </p>
 
           <div class="divide-y divide-neutral-200 dark:divide-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">

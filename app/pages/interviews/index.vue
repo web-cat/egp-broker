@@ -23,7 +23,7 @@
             Access Restricted
           </h2>
           <p class="text-sm text-neutral-500">
-            The Interview Console is available to Graduate Teaching Assistants and Instructors for this course.
+            The Interview Console is available to Teaching Assistants and Instructors for this course.
           </p>
           <BaseButton to="/" icon="i-lucide-arrow-left" label="Return to Dashboard" />
         </div>

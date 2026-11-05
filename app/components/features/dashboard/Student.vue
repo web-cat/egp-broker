@@ -75,12 +75,12 @@
       </div>
     </BaseCard>
 
-    <!-- Upcoming GTA Grading Interview -->
+    <!-- Upcoming TA Grading Interview -->
     <BaseCard v-if="nextUpcomingGtaReservation">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm text-neutral-500 dark:text-neutral-400 font-medium uppercase">
-            GTA Interview
+            TA Interview
           </p>
           <div class="mt-1">
             <p class="text-sm font-bold text-neutral-900 dark:text-neutral-100 truncate max-w-[180px]">

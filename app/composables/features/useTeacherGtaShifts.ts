@@ -81,8 +81,8 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
         }
       })
       toast.add({
-        title: 'GTA Shift Created',
-        description: 'Successfully scheduled GTA shift.',
+        title: 'TA Shift Created',
+        description: 'Successfully scheduled TA shift.',
         color: 'success'
       })
       await refreshShifts()
@@ -211,7 +211,7 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
       )
       toast.add({
         title: 'Interview Rescheduled',
-        description: `Successfully reassigned to ${res.data?.newGta?.name || 'new GTA'}.`,
+        description: `Successfully reassigned to ${res.data?.newGta?.name || 'new TA'}.`,
         color: 'success'
       })
       return res.data
@@ -329,7 +329,7 @@ export const useTeacherGtaShifts = (courseIdRef: MaybeRefOrGetter<string | null 
       )
       toast.add({
         title: 'Interview Location Saved',
-        description: 'Updated course GTA interview meeting location.',
+        description: 'Updated course TA interview meeting location.',
         color: 'success'
       })
       return res.data?.interviewLocation ?? trimmed

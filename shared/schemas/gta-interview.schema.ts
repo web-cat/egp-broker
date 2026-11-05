@@ -16,7 +16,7 @@ export type GtaInterviewStatusType = z.infer<typeof gtaInterviewStatusEnum>
 export const createGtaShiftInputSchema = z
   .object({
     courseId: z.string().min(1, 'Course ID is required'),
-    userId: z.string().min(1, 'GTA User ID is required'),
+    userId: z.string().min(1, 'TA User ID is required'),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be formatted as YYYY-MM-DD'),
     startTime: z.string().regex(gtaTimeRegex, 'Invalid startTime format (HH:mm)'),
     endTime: z.string().regex(gtaTimeRegex, 'Invalid endTime format (HH:mm)')
@@ -30,7 +30,7 @@ export type CreateGtaShiftInput = z.infer<typeof createGtaShiftInputSchema>
 
 export const updateGtaShiftInputSchema = z
   .object({
-    userId: z.string().min(1, 'GTA User ID is required').optional(),
+    userId: z.string().min(1, 'TA User ID is required').optional(),
     date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be formatted as YYYY-MM-DD')
@@ -69,7 +69,7 @@ export type GtaBatchShiftSlot = z.infer<typeof gtaBatchShiftSlotSchema>
 export const gtaBatchGenerateShiftsSchema = z
   .object({
     courseId: z.string().min(1, 'Course ID is required'),
-    userId: z.string().min(1, 'GTA User ID is required'),
+    userId: z.string().min(1, 'TA User ID is required'),
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be formatted as YYYY-MM-DD'),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate must be formatted as YYYY-MM-DD'),
     shifts: z.array(gtaBatchShiftSlotSchema).min(1, 'At least one shift slot is required'),

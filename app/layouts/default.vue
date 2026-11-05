@@ -43,7 +43,7 @@
           color="neutral"
           icon="i-lucide-user-check"
           :to="localePath('/interviews')"
-          title="Graduate TA Interview Console"
+          title="TA Interview Console"
         />
 
         <BaseButton

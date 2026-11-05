@@ -98,7 +98,7 @@ describe('useTeacherGtaShifts composable', () => {
       }
     })
     expect(mockToast.add).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'GTA Shift Created', color: 'success' })
+      expect.objectContaining({ title: 'TA Shift Created', color: 'success' })
     )
     expect(refreshShiftsMock).toHaveBeenCalled()
   })

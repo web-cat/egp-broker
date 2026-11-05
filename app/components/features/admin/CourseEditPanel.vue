@@ -40,7 +40,7 @@
           <BaseFormInput
             v-model="state.interviewTitlePattern"
             name="interviewTitlePattern"
-            label="GTA Interview Assignment Pattern"
+            label="TA Interview Assignment Pattern"
             placeholder="e.g. \binterview\b"
           />
         </div>

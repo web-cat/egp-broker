@@ -142,7 +142,7 @@ describe('GtaInterviewConsole Component', () => {
       global: { stubs }
     })
 
-    expect(wrapper.text()).toContain('Graduate TA Interview Console')
+    expect(wrapper.text()).toContain('TA Interview Console')
     expect(wrapper.text()).toContain('CS 2114: Software Design')
     expect(wrapper.text()).toContain('McBryde 106')
   })
@@ -352,7 +352,7 @@ describe('GtaInterviewConsole Component', () => {
     })
 
     expect(wrapper.find('[data-testid="training-banner"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('GRADUATE TA TRAINING SANDBOX')
+    expect(wrapper.text()).toContain('TA TRAINING SANDBOX')
     expect(wrapper.text()).toContain('In-Memory Mode')
     expect(wrapper.text()).toContain('TRAINING')
     expect(wrapper.text()).toContain('Maya Lin')

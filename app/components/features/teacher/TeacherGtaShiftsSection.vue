@@ -5,10 +5,10 @@
       <div>
         <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
           <UIcon name="i-lucide-user-check" class="w-5 h-5 text-primary-500" />
-          GTA Interviews &amp; Shifts
+          TA Interviews &amp; Shifts
         </h3>
         <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-          Configure interview meeting location and manage weekly shifts for Graduate Teaching Assistants.
+          Configure interview meeting location and manage weekly shifts for Teaching Assistants.
         </p>
       </div>
       <div class="flex items-center flex-wrap gap-2">
@@ -48,7 +48,7 @@
         </div>
         <div class="space-y-0.5">
           <span class="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-            GTA Interview Location
+            TA Interview Location
           </span>
           <div v-if="!isEditingLocation" class="flex items-center gap-2">
             <p v-if="interviewLocation" class="text-sm font-bold text-neutral-900 dark:text-neutral-100">
@@ -175,24 +175,24 @@
       :columns="shiftColumns"
       :loading="shiftsStatus === 'pending'"
       empty-icon="i-lucide-calendar-x"
-      :empty-text="activeFilterCount > 0 ? 'No GTA shifts match your active filters.' : 'No GTA shifts scheduled yet. Use the Weekly Schedule Builder or Add Shift.'"
+      :empty-text="activeFilterCount > 0 ? 'No TA shifts match your active filters.' : 'No TA shifts scheduled yet. Use the Weekly Schedule Builder or Add Shift.'"
     />
 
     <!-- Modal: Weekly Schedule Builder -->
     <UModal
       v-model:open="showWeeklyModal"
-      title="Weekly Schedule Builder for GTAs"
+      title="Weekly Schedule Builder for TAs"
       :ui="{ content: 'sm:max-w-2xl' }"
     >
       <template #body>
         <div class="space-y-4">
           <p class="text-xs text-neutral-500">
-            Enter a Graduate TA's recurring weekly shift pattern using natural text (or the slot
+            Enter a TA's recurring weekly shift pattern using natural text (or the slot
             builder) and generate concrete shift records across any date range.
           </p>
 
           <!-- Select Target GTA -->
-          <UFormField label="Select Graduate TA" required>
+          <UFormField label="Select TA" required>
             <USelect
               v-model="weeklyGtaId"
               :items="gtaSelectOptions"
@@ -358,14 +358,14 @@
     </UModal>
 
     <!-- Modal: Add Single Shift -->
-    <UModal v-model:open="showAddShiftModal" title="Schedule Single GTA Shift">
+    <UModal v-model:open="showAddShiftModal" title="Schedule Single TA Shift">
       <template #body>
         <div class="space-y-4">
-          <UFormField label="Select Graduate TA" required>
+          <UFormField label="Select TA" required>
             <USelect
               v-model="singleShiftForm.userId"
               :items="gtaSelectOptions"
-              placeholder="Choose GTA..."
+              placeholder="Choose TA..."
               class="w-full"
             />
           </UFormField>
@@ -415,14 +415,14 @@
     </UModal>
 
     <!-- Modal: Edit Single Shift -->
-    <UModal v-model:open="showEditShiftModal" title="Edit GTA Shift">
+    <UModal v-model:open="showEditShiftModal" title="Edit TA Shift">
       <template #body>
         <div class="space-y-4">
-          <UFormField label="Graduate TA" required>
+          <UFormField label="TA" required>
             <USelect
               v-model="editShiftForm.userId"
               :items="gtaSelectOptions"
-              placeholder="Reassign GTA..."
+              placeholder="Reassign TA..."
               class="w-full"
             />
           </UFormField>
@@ -575,7 +575,7 @@ const gtaSelectOptions = computed(() => {
 })
 
 const gtaFilterOptions = computed(() => {
-  const opts = [{ label: 'All GTAs', value: 'all' }]
+  const opts = [{ label: 'All TAs', value: 'all' }]
   const map = new Map<string, string>()
 
   if (gtas.value) {
@@ -591,7 +591,7 @@ const gtaFilterOptions = computed(() => {
         const name = `${s.user.firstName || ''} ${s.user.lastName || ''}`.trim()
         map.set(s.user.id, name ? `${name} (${s.user.email})` : s.user.email || s.user.id)
       } else if (s.userId && !map.has(s.userId)) {
-        map.set(s.userId, `GTA (${s.userId})`)
+        map.set(s.userId, `TA (${s.userId})`)
       }
     }
   }
@@ -967,7 +967,7 @@ const handleExecuteConfirmedAction = async () => {
 const shiftColumns = [
   {
     accessorKey: 'user',
-    header: 'Graduate TA',
+    header: 'TA',
     cell: ({ row }: { row: { original: GtaShiftItem } }) => {
       const user = row.original.user
       const name = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Unknown TA'

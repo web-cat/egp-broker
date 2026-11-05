@@ -151,13 +151,13 @@
           />
         </div>
 
-        <!-- GTA Interview Reservations Table -->
+        <!-- TA Interview Reservations Table -->
         <div class="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
           <div class="flex items-center justify-between px-1">
             <p
               class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400"
             >
-              GTA Interview Reservations
+              TA Interview Reservations
             </p>
           </div>
           <BaseDataTable
@@ -167,7 +167,7 @@
             searchable
             search-placeholder="Search interviews…"
             empty-icon="i-lucide-calendar"
-            empty-text="No GTA interview reservations recorded for this student."
+            empty-text="No TA interview reservations recorded for this student."
           />
         </div>
 

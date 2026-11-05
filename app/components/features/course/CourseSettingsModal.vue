@@ -8,10 +8,10 @@
       <div class="space-y-6">
         <div>
           <label class="block text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
-            GTA Interview Meeting Location
+            TA Interview Meeting Location
           </label>
           <p class="text-xs text-neutral-500 mb-3">
-            The physical room or online video meeting link where students meet with Graduate TAs for
+            The physical room or online video meeting link where students meet with TAs for
             grading interviews (e.g., "McBryde Hall 106" or a Zoom URL).
           </p>
           <UInput
@@ -27,7 +27,7 @@
         >
           <UIcon name="i-lucide-info" class="w-4 h-4 text-primary-500 shrink-0 mt-0.5" />
           <span>
-            All Graduate TA interviews for this course will share this meeting location by default.
+            All TA interviews for this course will share this meeting location by default.
             Students will see this location in their confirmation and calendar reminders.
           </span>
         </div>
@@ -39,7 +39,7 @@
               Automated Assignment Feature Matching
             </h4>
             <p class="text-xs text-neutral-500">
-              Specify regular expression patterns to automatically enable CBTF scheduling or Graduate
+              Specify regular expression patterns to automatically enable CBTF scheduling or
               TA interviews whenever assignments are created or synced from Canvas.
             </p>
           </div>
@@ -61,7 +61,7 @@
 
           <div>
             <label class="block text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
-              GTA Interview Title Pattern
+              TA Interview Title Pattern
             </label>
             <p class="text-xs text-neutral-500 mb-2">
               Case-insensitive regex against assignment titles (e.g., <code class="text-primary-600 dark:text-primary-400">^Project\s[0-9]+|Milestone</code>).

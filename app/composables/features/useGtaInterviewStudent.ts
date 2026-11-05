@@ -79,7 +79,7 @@ export function useGtaInterviewStudent(
       const gtaName = res.data.gta
         ? `${res.data.gta.firstName || ''} ${res.data.gta.lastName || ''}`.trim() ||
           res.data.gta.email
-        : 'Graduate TA'
+        : 'TA'
 
       toast.add({
         title: 'Interview Booked Successfully',

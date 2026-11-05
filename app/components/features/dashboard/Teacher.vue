@@ -40,14 +40,14 @@
     </template>
   </UPageHeader>
 
-  <!-- GTA Interview Location Banner -->
+  <!-- TA Interview Location Banner -->
   <div
     v-if="currentInterviewLocation"
     class="mb-6 px-4 py-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400"
   >
     <div class="flex items-center gap-2">
       <UIcon name="i-lucide-map-pin" class="w-4 h-4 text-primary-500 shrink-0" />
-      <span>GTA Interview Location: <strong class="text-neutral-800 dark:text-neutral-200">{{ currentInterviewLocation }}</strong></span>
+      <span>TA Interview Location: <strong class="text-neutral-800 dark:text-neutral-200">{{ currentInterviewLocation }}</strong></span>
     </div>
     <UButton
       size="sm"
@@ -598,7 +598,7 @@ const assignmentFilterMenuItems = computed<DropdownMenuItem[][]>(() => [
       onSelect: (e: Event) => e.preventDefault()
     },
     {
-      label: 'GTA Interviews',
+      label: 'TA Interviews',
       type: 'checkbox' as const,
       checked: assignmentFilters.value.interviews ?? true,
       onUpdateChecked: (val: boolean) => {

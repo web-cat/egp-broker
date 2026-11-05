@@ -117,7 +117,7 @@ describe('TeacherGtaShiftsSection component', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('GTA Interviews & Shifts')
+    expect(wrapper.text()).toContain('TA Interviews & Shifts')
     expect(wrapper.text()).toContain('McBryde 106')
   })
 

@@ -97,7 +97,7 @@ const formatDate = (dateStr?: string) => {
 <template>
   <UModal
     v-model:open="isOpen"
-    title="GTA Shift Details & Timeslots"
+    title="TA Shift Details & Timeslots"
     description="View all 10-minute intervals for this shift, inspect student bookings, and reschedule or cancel appointments."
     :ui="{ content: 'max-w-3xl' }"
   >
@@ -205,8 +205,8 @@ const formatDate = (dateStr?: string) => {
                 <UTooltip
                   :text="
                     slot.canReschedule
-                      ? `Reschedule to available concurrent GTA: ${slot.availableGtas.map((g) => g.name).join(', ')}`
-                      : 'No other on-duty GTA is available at this exact appointment time'
+                      ? `Reschedule to available concurrent TA: ${slot.availableGtas.map((g) => g.name).join(', ')}`
+                      : 'No other on-duty TA is available at this exact appointment time'
                   "
                 >
                   <UButton

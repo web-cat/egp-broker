@@ -386,7 +386,7 @@ export function createStudentAssignmentColumns(
     } as any,
     {
       accessorKey: 'gtaInterviewSlot',
-      header: 'GTA Interview',
+      header: 'TA Interview',
       cell: ({ row }: { row: any }) => {
         if (!row.original.hasInterviews) return '—'
 

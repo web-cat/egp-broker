@@ -15,7 +15,7 @@
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h2 class="text-base font-bold">GRADUATE TA TRAINING SANDBOX</h2>
+              <h2 class="text-base font-bold">TA TRAINING SANDBOX</h2>
               <UBadge color="warning" variant="solid" size="sm"> In-Memory Mode </UBadge>
             </div>
             <p class="text-xs opacity-85">
@@ -61,7 +61,7 @@
           />
           <h1 class="text-xl font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
             <UIcon name="i-lucide-user-check" class="w-6 h-6 text-primary-500" />
-            Graduate TA Interview Console
+            TA Interview Console
             <UBadge v-if="isTraining" color="warning" variant="subtle" size="sm">
               TRAINING
             </UBadge>
@@ -331,10 +331,10 @@
         </p>
       </div>
 
-      <!-- Filter Bar for Expected Arrivals (GTA, Shift Scope, Date) -->
+      <!-- Filter Bar for Expected Arrivals (TA, Shift Scope, Date) -->
       <UCard :ui="{ body: 'p-4 sm:p-4' }">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- GTA Filter (for Instructors/Admins or viewing specific GTA) -->
+          <!-- TA Filter (for Instructors/Admins or viewing specific TA) -->
           <div>
             <label class="block text-xs font-semibold text-neutral-500 mb-1">Teaching Assistant</label>
             <USelect
@@ -374,7 +374,7 @@
               <UIcon name="i-lucide-filter" class="w-3.5 h-3.5" />
               {{ activeExpectedFilterCount }} active filter{{ activeExpectedFilterCount === 1 ? '' : 's' }}
             </span>
-            <span v-else>Showing current/next shift for GTA</span>
+            <span v-else>Showing current/next shift for TA</span>
           </div>
 
           <div class="flex items-center gap-2">
@@ -430,7 +430,7 @@
                   {{ reservation.student?.email }}
                 </p>
                 <p v-if="isInstructorOrAdmin && (reservation.gta || reservation.gtaId)" class="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-                  GTA: {{ reservation.gta ? `${reservation.gta.firstName} ${reservation.gta.lastName}` : reservation.gtaId }}
+                  TA: {{ reservation.gta ? `${reservation.gta.firstName} ${reservation.gta.lastName}` : reservation.gtaId }}
                 </p>
               </div>
               <UBadge color="neutral" variant="outline" size="sm">
@@ -684,7 +684,7 @@
                 <th class="px-4 py-3">Student</th>
                 <th class="px-4 py-3">Assignment</th>
                 <th class="px-4 py-3">Time</th>
-                <th v-if="isInstructorOrAdmin" class="px-4 py-3">GTA</th>
+                <th v-if="isInstructorOrAdmin" class="px-4 py-3">TA</th>
                 <th class="px-4 py-3">Status</th>
                 <th class="px-4 py-3">Notes</th>
                 <th class="px-4 py-3 text-right">Actions</th>
@@ -811,7 +811,7 @@
             <div><strong>Student:</strong> {{ formatStudentName(targetEditNotes?.student) }} ({{ targetEditNotes?.student?.email }})</div>
             <div><strong>Assignment:</strong> {{ targetEditNotes?.assignment?.title || 'Assignment' }}</div>
             <div><strong>Time:</strong> {{ targetEditNotes ? formatSlotRange(targetEditNotes.startTime, targetEditNotes.endTime) : '' }}</div>
-            <div v-if="targetEditNotes?.gta"><strong>Assigned GTA:</strong> {{ targetEditNotes.gta.firstName }} {{ targetEditNotes.gta.lastName }}</div>
+            <div v-if="targetEditNotes?.gta"><strong>Assigned TA:</strong> {{ targetEditNotes.gta.firstName }} {{ targetEditNotes.gta.lastName }}</div>
           </div>
 
           <!-- Status Dropdown -->
@@ -973,7 +973,7 @@ const canEditInterview = (res: any) => {
 // ─────────────────────────────────────────────────────────
 
 const gtaFilterOptions = computed(() => {
-  const opts = [{ label: 'All GTAs', value: 'ALL' }]
+  const opts = [{ label: 'All TAs', value: 'ALL' }]
   const map = new Map<string, string>()
 
   if (courseGtasData.value?.data) {
@@ -991,7 +991,7 @@ const gtaFilterOptions = computed(() => {
     if (r.gta && r.gta.id) {
       map.set(r.gta.id, `${r.gta.firstName} ${r.gta.lastName}`.trim())
     } else if (r.gtaId) {
-      map.set(r.gtaId, `GTA (${r.gtaId})`)
+      map.set(r.gtaId, `TA (${r.gtaId})`)
     }
   }
 

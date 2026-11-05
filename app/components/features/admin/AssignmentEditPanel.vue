@@ -123,15 +123,15 @@
             </div>
           </div>
 
-          <!-- Graduate TA Grading Interview Options -->
+          <!-- TA Grading Interview Options -->
           <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                  Require Graduate TA Grading Interview
+                  Require TA Grading Interview
                 </p>
                 <p class="text-xs text-neutral-500">
-                  Students must schedule and complete a 1-on-1 interview with a Graduate TA before redeeming resubmission passes.
+                  Students must schedule and complete a 1-on-1 interview with a TA before redeeming resubmission passes.
                 </p>
               </div>
               <USwitch v-model="state.hasInterviews" />

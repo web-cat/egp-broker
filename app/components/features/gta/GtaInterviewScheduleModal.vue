@@ -47,7 +47,7 @@
                 />
               </div>
               <div class="min-w-0">
-                <p class="text-xs text-neutral-500 font-medium">Assigned Graduate TA</p>
+                <p class="text-xs text-neutral-500 font-medium">Assigned TA</p>
                 <p class="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate">
                   {{ formatGtaName(activeOrLatestReservation.gta) }}
                 </p>
@@ -178,7 +178,7 @@
         <!-- Step 1: Half-Day Block Selection -->
         <div v-if="currentStep === 1" class="space-y-4">
           <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            Select an available morning or afternoon period with open Graduate TA slots:
+            Select an available morning or afternoon period with open TA slots:
           </p>
 
           <div v-if="slotsStatus === 'pending'" class="py-12 flex justify-center">
@@ -223,8 +223,8 @@
                 No Open Interview Slots
               </p>
               <p class="text-xs text-neutral-400 max-w-sm mx-auto">
-                There are currently no open Graduate TA slots within the assignment's interview
-                window. Please check back soon as GTAs post shifts.
+                There are currently no open TA slots within the assignment's interview
+                window. Please check back soon as TAs post shifts.
               </p>
             </div>
           </div>
@@ -344,7 +344,7 @@
           </div>
 
           <p class="text-xs text-neutral-500">
-            Select an exact 10-minute slot (5-minute interview with Graduate TA + 5-minute buffer).
+            Select an exact 10-minute slot (5-minute interview with TA + 5-minute buffer).
           </p>
 
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[320px] overflow-y-auto pr-1">
@@ -414,7 +414,7 @@
           >
             <UIcon name="i-lucide-sparkles" class="w-4 h-4 text-primary-500 shrink-0 mt-0.5" />
             <span>
-              An on-duty Graduate TA will be automatically assigned to your appointment upon
+              An on-duty TA will be automatically assigned to your appointment upon
               confirmation.
             </span>
           </div>
@@ -503,7 +503,7 @@ const effectiveLocation = computed(() => {
   return (
     slotsData.value?.interviewLocation ||
     props.interviewLocation ||
-    'Designated GTA Interview Location'
+    'Designated TA Interview Location'
   )
 })
 
@@ -532,14 +532,14 @@ const modalTitle = computed(() => {
   if (activeOrLatestReservation.value && !isRescheduling.value) {
     return 'Grading Interview Appointment'
   }
-  return 'Schedule GTA Grading Interview'
+  return 'Schedule TA Grading Interview'
 })
 
 const modalDescription = computed(() => {
   if (activeOrLatestReservation.value && !isRescheduling.value) {
-    return 'View, reschedule, or cancel your 1-on-1 interview with a Graduate TA.'
+    return 'View, reschedule, or cancel your 1-on-1 interview with a TA.'
   }
-  return 'Reserve a 1-on-1 timeslot with an on-duty Graduate TA for assignment grading.'
+  return 'Reserve a 1-on-1 timeslot with an on-duty TA for assignment grading.'
 })
 
 const stepTitle = computed(() => {
@@ -688,7 +688,7 @@ const formatGtaName = (gta?: {
   lastName: string | null
   email: string
 }) => {
-  if (!gta) return 'Graduate TA'
+  if (!gta) return 'TA'
   const full = `${gta.firstName || ''} ${gta.lastName || ''}`.trim()
   return full || gta.email
 }
