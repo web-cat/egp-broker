@@ -86,6 +86,16 @@
 
         <UButton
           v-if="!isTraining"
+          icon="i-lucide-upload"
+          variant="outline"
+          color="neutral"
+          size="sm"
+          label="Upload Notices"
+          @click="isNoticeModalOpen = true"
+        />
+
+        <UButton
+          v-if="!isTraining"
           icon="i-lucide-graduation-cap"
           variant="outline"
           color="warning"
@@ -230,6 +240,21 @@
               <div
                 class="prose prose-xs dark:prose-invert max-w-none break-words"
                 v-html="sanitizeStaffNoticeHtml(activeInterview.submissionStatus.staffNotice)"
+              />
+            </div>
+
+            <!-- Course Staff Notice callout -->
+            <div
+              v-if="activeInterview.studentAssignmentNotice?.notice"
+              class="p-2.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 text-xs space-y-1"
+            >
+              <div class="flex items-center gap-1.5 font-semibold text-indigo-800 dark:text-indigo-300">
+                <UIcon name="i-lucide-file-text" class="w-3.5 h-3.5 shrink-0" />
+                <span>Course Staff Notice</span>
+              </div>
+              <div
+                class="prose prose-xs dark:prose-invert max-w-none break-words"
+                v-html="sanitizeStaffNoticeHtml(activeInterview.studentAssignmentNotice.notice)"
               />
             </div>
           </div>
@@ -510,6 +535,21 @@
                 <div
                   class="prose prose-xs dark:prose-invert max-w-none break-words"
                   v-html="sanitizeStaffNoticeHtml(reservation.submissionStatus.staffNotice)"
+                />
+              </div>
+
+              <!-- Course Staff Notice banner -->
+              <div
+                v-if="reservation.studentAssignmentNotice?.notice"
+                class="p-2 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 text-xs space-y-1"
+              >
+                <div class="flex items-center gap-1 font-semibold text-indigo-800 dark:text-indigo-300">
+                  <UIcon name="i-lucide-file-text" class="w-3.5 h-3.5 shrink-0" />
+                  <span>Course Staff Notice</span>
+                </div>
+                <div
+                  class="prose prose-xs dark:prose-invert max-w-none break-words"
+                  v-html="sanitizeStaffNoticeHtml(reservation.studentAssignmentNotice.notice)"
                 />
               </div>
             </div>
@@ -888,11 +928,19 @@
         </div>
       </template>
     </UModal>
+
+    <!-- Batch Notice Upload Modal -->
+    <StudentAssignmentNoticeModal
+      v-model:open="isNoticeModalOpen"
+      :course-id="courseId"
+      @uploaded="() => refreshFeed()"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import StudentAssignmentNoticeModal from '~/components/features/gta/StudentAssignmentNoticeModal.vue'
 import { useGtaInterviewConsole } from '~/composables/features/useGtaInterviewConsole'
 import {
   formatSlotRange as sharedFormatSlotRange,
@@ -952,6 +1000,8 @@ const {
   refreshReservationStatus,
   refreshVisibleStaleStatuses
 } = consoleState
+
+const isNoticeModalOpen = ref(false)
 
 const { user } = useUserSession()
 

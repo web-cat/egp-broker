@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 3: TA Interview Console UI Display & Batch Upload Modal
+> **Current Phase**: Phase 4: Full Repository Verification, Security Audit & End-to-End Tests
 > **Milestone**: v8.0 — Uploaded Staff Notices (`StudentAssignmentNotice`) for TA Interviews
 > **Goal**: Implement `StudentAssignmentNotice` model, batch upload API, and TA interview console presentation so course staff can upload internal grading notices in bulk and view them alongside external tool notices on interview cards.
 
@@ -23,8 +23,8 @@
 - [x] Server batch upload endpoint `POST /api/me/courses/:courseId/assignments/:assignmentId/notices/batch`
 - [x] Server management endpoints to list and delete uploaded notices for an assignment
 - [x] Projection of uploaded `studentAssignmentNotice` / `staffNotice` in `GET /api/me/courses/:courseId/interviews`
-- [ ] UI rendering of uploaded staff notices in `GtaInterviewConsole.vue` (both Active Interview and Expected Arrivals) alongside external tool notices
-- [ ] Batch upload modal in teacher interface for pasting and uploading CSV/TSV/JSON notices
+- [x] UI rendering of uploaded staff notices in `GtaInterviewConsole.vue` (both Active Interview and Expected Arrivals) alongside external tool notices
+- [x] Batch upload modal in teacher interface for pasting and uploading CSV/TSV/JSON notices
 - [ ] 100% Vitest behavioral coverage across new models, endpoints, and UI components
 
 ---
@@ -45,9 +45,15 @@
 
 ### Phase 3: TA Interview Console UI Display & Batch Upload Modal
 
-**Status**: ⚙️ In Progress  
+**Status**: ✅ Complete  
 **Objective**: Update `GtaInterviewConsole.vue` cards to display uploaded course staff notices alongside external tool notices with distinct callouts and sanitization. Build an "Upload Staff Notices" modal for teachers to paste CSV/TSV/JSON notices.  
 **Requirements**: REQ-805, REQ-806
+
+### Phase 4: Full Repository Verification, Security Audit & End-to-End Tests
+
+**Status**: ⚙️ In Progress  
+**Objective**: Run complete Vitest suite across all 188+ test files, audit HTML sanitization against XSS, and verify end-to-end multi-notice display and upload flows.  
+**Requirements**: REQ-807
 
 ### Phase 4: Full Repository Verification, Security Audit & End-to-End Tests
 

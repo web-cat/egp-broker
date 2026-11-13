@@ -115,6 +115,11 @@ describe('GtaInterviewConsole Component', () => {
       emits: ['update:page'],
       template:
         '<div data-testid="pagination-stub" :data-page="page" :data-total="total">Pagination</div>'
+    },
+    StudentAssignmentNoticeModal: {
+      props: ['open', 'courseId'],
+      emits: ['update:open', 'uploaded'],
+      template: '<div v-if="open" data-testid="student-assignment-notice-modal">Notice Modal</div>'
     }
   }
 
@@ -862,6 +867,103 @@ describe('GtaInterviewConsole Component', () => {
       expect(latestLink).toBeDefined()
       expect(latestLink!.attributes('href')).toBe('https://web-cat.org/grade/2')
       expect(wrapper.text()).toContain('Flagged for plagiarism check')
+    })
+
+    it('renders uploaded Course Staff Notice in active interview card', () => {
+      mockActiveInterview.value = {
+        id: 'res-active-uploaded-notice',
+        status: 'CHECKED_IN',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T10:10:00.000Z',
+        student: { firstName: 'Grace', lastName: 'Uploaded', email: 'grace@vt.edu' },
+        assignment: { title: 'Project 4' },
+        studentAssignmentNotice: {
+          id: 'notice-123',
+          notice: '<p>Student requested extra feedback on dynamic memory allocation</p>'
+        }
+      }
+      mockExpectedArrivals.value = []
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      expect(wrapper.text()).toContain('Course Staff Notice')
+      expect(wrapper.text()).toContain(
+        'Student requested extra feedback on dynamic memory allocation'
+      )
+    })
+
+    it('renders both external tool notice and uploaded course staff notice simultaneously', () => {
+      mockActiveInterview.value = {
+        id: 'res-active-dual-notices',
+        status: 'CHECKED_IN',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T10:10:00.000Z',
+        student: { firstName: 'Dual', lastName: 'Notice', email: 'dual@vt.edu' },
+        assignment: { title: 'Project 5' },
+        submissionStatus: {
+          staffNotice: 'External PassPort notice content'
+        },
+        studentAssignmentNotice: {
+          id: 'notice-456',
+          notice: 'Uploaded internal staff note'
+        }
+      }
+      mockExpectedArrivals.value = []
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      expect(wrapper.text()).toContain('Staff Notice')
+      expect(wrapper.text()).toContain('External PassPort notice content')
+      expect(wrapper.text()).toContain('Course Staff Notice')
+      expect(wrapper.text()).toContain('Uploaded internal staff note')
+    })
+
+    it('renders uploaded Course Staff Notice on expected arrivals card', () => {
+      mockActiveInterview.value = null
+      mockExpectedArrivals.value = [
+        {
+          id: 'exp-uploaded-notice-1',
+          status: 'SCHEDULED',
+          startTime: '2026-10-05T10:10:00.000Z',
+          endTime: '2026-10-05T10:20:00.000Z',
+          student: { firstName: 'Hannah', lastName: 'Queue', email: 'hannah@vt.edu' },
+          assignment: { title: 'Project 6' },
+          studentAssignmentNotice: {
+            id: 'notice-789',
+            notice: 'Watch out for off-by-one error in problem 3'
+          }
+        }
+      ]
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      expect(wrapper.text()).toContain('Course Staff Notice')
+      expect(wrapper.text()).toContain('Watch out for off-by-one error in problem 3')
+    })
+
+    it('opens StudentAssignmentNoticeModal when clicking Upload Notices header button', async () => {
+      mockActiveInterview.value = null
+      mockExpectedArrivals.value = []
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      const uploadBtn = wrapper.findAll('button').find((b) => b.text().includes('Upload Notices'))
+      expect(uploadBtn).toBeDefined()
+      await uploadBtn?.trigger('click')
+
+      expect(wrapper.find('[data-testid="student-assignment-notice-modal"]').exists()).toBe(true)
     })
 
     it('invokes refreshReservationStatus when clicking refresh button on active card', async () => {
