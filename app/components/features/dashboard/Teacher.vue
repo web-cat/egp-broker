@@ -324,6 +324,14 @@
     :initial-interview-title-pattern="currentInterviewTitlePattern"
     @saved="onCourseSettingsSaved"
   />
+
+  <FeaturesGtaStudentAssignmentNoticeModal
+    v-if="courseId"
+    v-model:open="noticeModalOpen"
+    :course-id="courseId"
+    :initial-assignment-id="selectedAssignmentForNotices?.id"
+    :assignments="selectedAssignmentForNotices ? [{ id: selectedAssignmentForNotices.id, title: selectedAssignmentForNotices.title }] : undefined"
+  />
 </template>
 
 <script setup lang="ts">
@@ -333,6 +341,7 @@ import type { TableColumn, DropdownMenuItem } from '@nuxt/ui'
 import type { CourseSectionRow } from '@@/shared/models/section'
 import FeaturesCourseSettingsModal from '~/components/features/course/CourseSettingsModal.vue'
 import FeaturesTeacherTeacherGtaShiftsSection from '~/components/features/teacher/TeacherGtaShiftsSection.vue'
+import FeaturesGtaStudentAssignmentNoticeModal from '~/components/features/gta/StudentAssignmentNoticeModal.vue'
 
 import { formatDate } from '~/utils/date'
 import {
@@ -453,6 +462,14 @@ const {
   toggleAssignmentPublish,
   deletePassType
 } = useTeacherDashboard()
+
+const noticeModalOpen = ref(false)
+const selectedAssignmentForNotices = ref<AssignmentRow | null>(null)
+
+const openStaffNoticesUpload = (assignment: AssignmentRow) => {
+  selectedAssignmentForNotices.value = assignment
+  noticeModalOpen.value = true
+}
 
 // Handle in-place update and background sync when a student's pass pool balances are edited
 const onStudentBalancesUpdated = (newBalances: StudentPassBalance[]) => {
@@ -784,6 +801,11 @@ const assignmentColumns: TableColumn<AssignmentRow>[] = [
         label: 'View Redemptions',
         icon: 'i-lucide-history',
         onSelect: () => openAssignmentRedemptions(row.original)
+      },
+      {
+        label: 'Upload Staff Notices',
+        icon: 'i-lucide-file-text',
+        onSelect: () => openStaffNoticesUpload(row.original)
       },
       {
         label: row.original.published === false ? 'Publish' : 'Unpublish',

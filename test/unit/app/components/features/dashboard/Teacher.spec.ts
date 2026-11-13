@@ -452,7 +452,8 @@ describe('TeacherDashboard Assignment Table Filters', () => {
           FeaturesDashboardPlatformApiKeyModal: true,
           FeaturesDashboardRosterSyncModal: true,
           FeaturesTeacherTeacherGtaShiftsSection: true,
-          FeaturesCourseSettingsModal: true
+          FeaturesCourseSettingsModal: true,
+          FeaturesGtaStudentAssignmentNoticeModal: true
         }
       }
     })
@@ -529,5 +530,53 @@ describe('TeacherDashboard Assignment Table Filters', () => {
       'asg-pub-active-gta'
     ])
     expect(filterBtn().text()).toBe('Filter')
+  })
+
+  it('includes Upload Staff Notices in the assignment context menu', async () => {
+    let capturedAssignmentColumns: any[] = []
+
+    mount(TeacherDashboard, {
+      global: {
+        stubs: {
+          BaseDataTable: {
+            props: ['columns', 'data'],
+            setup(props) {
+              if (props.columns && props.columns.some((c: any) => c.accessorKey === 'title')) {
+                capturedAssignmentColumns = props.columns
+              }
+              return () => h('div', { class: 'data-table-stub' })
+            }
+          },
+          FeaturesAdminAssignmentEditPanel: true,
+          FeaturesAdminPassTypeEditPanel: true,
+          FeaturesDashboardAssignmentRedemptionsModal: true,
+          FeaturesDashboardStudentRedemptionsModal: true,
+          FeaturesDashboardPlatformApiKeyModal: true,
+          FeaturesDashboardRosterSyncModal: true,
+          FeaturesTeacherTeacherGtaShiftsSection: true,
+          FeaturesCourseSettingsModal: true,
+          FeaturesGtaStudentAssignmentNoticeModal: true
+        }
+      }
+    })
+
+    const actionsCol = capturedAssignmentColumns.find((c: any) => c.id === 'actions')
+    expect(actionsCol).toBeDefined()
+
+    const mockRow = {
+      original: {
+        id: 'asg-test-1',
+        title: 'Project 1',
+        published: true,
+        isSchedulable: false,
+        toolSupportsPassport: false
+      }
+    }
+    const cellVNode = actionsCol.cell({ row: mockRow })
+    expect(cellVNode).toBeDefined()
+    const dropdownItems = cellVNode.props?.items?.[0] || []
+    const uploadNoticeItem = dropdownItems.find((i: any) => i.label === 'Upload Staff Notices')
+    expect(uploadNoticeItem).toBeDefined()
+    expect(uploadNoticeItem.icon).toBe('i-lucide-file-text')
   })
 })

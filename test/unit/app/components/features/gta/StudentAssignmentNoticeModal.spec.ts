@@ -163,4 +163,47 @@ describe('StudentAssignmentNoticeModal.vue', () => {
       })
     )
   })
+
+  it('auto-detects columns and skips empty notice rows in multi-column CSVs', async () => {
+    const wrapper = mount(StudentAssignmentNoticeModal, {
+      props: {
+        open: true,
+        courseId: 'course-1',
+        assignments: [{ id: 'asg-1', title: 'Project 1' }]
+      },
+      global: { stubs }
+    })
+
+    const csvData =
+      'Student Name,Email,Section,Interview Questions\nAlice,alice@vt.edu,001,Ask about concurrency\nBob,bob@vt.edu,002,\nCarol,carol@vt.edu,001,N/A\nDan,dan@vt.edu,002,Verify recursion base case'
+
+    const textarea = wrapper.find('textarea')
+    await textarea.setValue(csvData)
+
+    expect(wrapper.text()).toContain('Column Mapping')
+    expect(wrapper.text()).toContain('Auto-detected from file headers')
+    expect(wrapper.text()).toContain('Preview (2 notices parsed)')
+    expect(wrapper.text()).toContain('2 empty rows skipped')
+
+    expect(wrapper.text()).toContain('alice@vt.edu')
+    expect(wrapper.text()).toContain('Ask about concurrency')
+    expect(wrapper.text()).toContain('dan@vt.edu')
+    expect(wrapper.text()).toContain('Verify recursion base case')
+  })
+
+  it('renders single assignment badge when exactly one assignment is provided', () => {
+    const wrapper = mount(StudentAssignmentNoticeModal, {
+      props: {
+        open: true,
+        courseId: 'course-1',
+        assignments: [{ id: 'asg-single', title: 'Only Assignment' }]
+      },
+      global: { stubs }
+    })
+
+    expect(wrapper.text()).toContain('Only Assignment')
+    // Does not render assignment select when locked to single assignment
+    const selects = wrapper.findAll('select')
+    expect(selects.length).toBe(0)
+  })
 })

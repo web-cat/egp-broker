@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { parseNoticesInput } from '@@/shared/utils/notice-parser'
+import {
+  parseNoticesInput,
+  parseCsvTable,
+  detectStudentIdentifierColumn,
+  detectNoticeColumn,
+  extractNoticesFromTable
+} from '@@/shared/utils/notice-parser'
 import type { BatchUpsertNoticesResult } from '@@/shared/schemas/assignment-notice.schema'
 import type { ApiResponse } from '@@/shared/types/api'
 
@@ -29,15 +35,67 @@ const isOpen = computed({
   set: (val) => emit('update:open', val)
 })
 
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const uploadedFileName = ref<string | null>(null)
 const loadingAssignments = ref(false)
 const availableAssignments = ref<AssignmentOption[]>([])
 const selectedAssignmentId = ref<string>('')
 const rawTextInput = ref('')
+const studentColIdx = ref(0)
+const noticeColIdx = ref(1)
 const isSubmitting = ref(false)
 const uploadResult = ref<BatchUpsertNoticesResult | null>(null)
 const errorMessage = ref<string | null>(null)
 
-const parsedItems = computed(() => parseNoticesInput(rawTextInput.value))
+const parsedTable = computed(() => parseCsvTable(rawTextInput.value))
+
+const hasTableHeaders = computed(() => parsedTable.value.headers.length >= 2)
+
+// Auto-detect columns when table headers change
+watch(
+  () => parsedTable.value.headers,
+  (headers) => {
+    if (headers && headers.length >= 2) {
+      const sIdx = detectStudentIdentifierColumn(headers)
+      let nIdx = detectNoticeColumn(headers)
+      if (nIdx === sIdx) {
+        nIdx = sIdx === 0 ? 1 : 0
+      }
+      studentColIdx.value = sIdx
+      noticeColIdx.value = nIdx
+    }
+  },
+  { immediate: true }
+)
+
+const columnSelectItems = computed(() => {
+  return parsedTable.value.headers.map((h, i) => ({
+    label: `${h || `Column ${i + 1}`} (Col ${i + 1})`,
+    value: i
+  }))
+})
+
+const parsedItems = computed(() => {
+  if (hasTableHeaders.value) {
+    return extractNoticesFromTable(
+      parsedTable.value,
+      studentColIdx.value,
+      noticeColIdx.value
+    )
+  }
+  return parseNoticesInput(rawTextInput.value)
+})
+
+const isSingleAssignment = computed(() => {
+  return props.assignments && props.assignments.length === 1
+})
+
+const singleAssignmentTitle = computed(() => {
+  if (isSingleAssignment.value && props.assignments) {
+    return props.assignments[0]?.title || 'Selected Assignment'
+  }
+  return null
+})
 
 const assignmentSelectItems = computed(() => {
   return availableAssignments.value.map((a) => ({
@@ -79,11 +137,47 @@ watch(
     if (newOpen) {
       uploadResult.value = null
       errorMessage.value = null
+      uploadedFileName.value = null
+      if (props.initialAssignmentId) {
+        selectedAssignmentId.value = props.initialAssignmentId
+      }
       fetchAssignments()
     }
   },
   { immediate: true }
 )
+
+const triggerBrowse = () => {
+  fileInputRef.value?.click()
+}
+
+const handleFileSelected = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  uploadedFileName.value = file.name
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const content = String(e.target?.result || '')
+    rawTextInput.value = content
+  }
+  reader.readAsText(file, 'UTF-8')
+}
+
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault()
+  const file = event.dataTransfer?.files?.[0]
+  if (!file) return
+
+  uploadedFileName.value = file.name
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const content = String(e.target?.result || '')
+    rawTextInput.value = content
+  }
+  reader.readAsText(file, 'UTF-8')
+}
 
 const handleBatchUpload = async () => {
   if (!selectedAssignmentId.value) {
@@ -92,7 +186,7 @@ const handleBatchUpload = async () => {
   }
 
   if (parsedItems.value.length === 0) {
-    errorMessage.value = 'Please enter at least one valid student notice.'
+    errorMessage.value = 'Please provide at least one valid student notice.'
     return
   }
 
@@ -133,8 +227,12 @@ const handleBatchUpload = async () => {
 
 const handleClear = () => {
   rawTextInput.value = ''
+  uploadedFileName.value = null
   uploadResult.value = null
   errorMessage.value = null
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
 }
 </script>
 
@@ -194,12 +292,19 @@ const handleClear = () => {
           </div>
         </div>
 
-        <!-- Assignment Selection -->
+        <!-- Target Assignment Selection -->
         <div class="space-y-1.5">
           <label class="text-xs font-semibold uppercase text-neutral-700 dark:text-neutral-300">
             Target Assignment
           </label>
-          <div v-if="loadingAssignments" class="text-xs text-neutral-400 flex items-center gap-1.5 py-1">
+          <div
+            v-if="isSingleAssignment && singleAssignmentTitle"
+            class="px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-2"
+          >
+            <UIcon name="i-lucide-file-text" class="w-4 h-4 text-primary-500 shrink-0" />
+            <span>{{ singleAssignmentTitle }}</span>
+          </div>
+          <div v-else-if="loadingAssignments" class="text-xs text-neutral-400 flex items-center gap-1.5 py-1">
             <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
             Loading course assignments...
           </div>
@@ -212,11 +317,94 @@ const handleClear = () => {
           />
         </div>
 
-        <!-- Input Box -->
+        <!-- File Upload Drop Zone -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase text-neutral-700 dark:text-neutral-300">
+            CSV / TSV File Upload
+          </label>
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept=".csv,.tsv,.txt"
+            class="hidden"
+            @change="handleFileSelected"
+          >
+          <div
+            class="border-2 border-dashed border-neutral-200 dark:border-neutral-700 hover:border-primary-400 dark:hover:border-primary-500 rounded-xl p-4 text-center cursor-pointer transition-colors bg-neutral-50/50 dark:bg-neutral-900/40"
+            @dragover.prevent
+            @drop="handleDrop"
+            @click="triggerBrowse"
+          >
+            <div class="flex flex-col items-center gap-1.5">
+              <UIcon
+                :name="uploadedFileName ? 'i-lucide-file-check' : 'i-lucide-upload-cloud'"
+                class="w-7 h-7"
+                :class="uploadedFileName ? 'text-emerald-500' : 'text-neutral-400'"
+              />
+              <div v-if="uploadedFileName" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                <span>Loaded file: {{ uploadedFileName }}</span>
+                <UButton
+                  variant="link"
+                  color="neutral"
+                  size="xs"
+                  label="Change"
+                  @click.stop="triggerBrowse"
+                />
+              </div>
+              <div v-else class="text-xs text-neutral-500">
+                <span class="font-semibold text-primary-600 dark:text-primary-400">Click to browse</span> or drag and drop your CSV / TSV file
+              </div>
+              <p class="text-[11px] text-neutral-400">
+                Supports exports from Canvas, PrairieLearn, Gradescope, or custom spreadsheets
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Column Mapping (When Table Headers Detected) -->
+        <div
+          v-if="hasTableHeaders"
+          class="p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/30 space-y-3"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+              <UIcon name="i-lucide-columns" class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              Column Mapping
+            </span>
+            <span class="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono">
+              Auto-detected from file headers
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="space-y-1">
+              <label class="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+                Student Identifier Column (Email, ID, NetID)
+              </label>
+              <USelect
+                v-model="studentColIdx"
+                :items="columnSelectItems"
+                class="w-full text-xs"
+              />
+            </div>
+            <div class="space-y-1">
+              <label class="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+                Staff Notice / Feedback Column
+              </label>
+              <USelect
+                v-model="noticeColIdx"
+                :items="columnSelectItems"
+                class="w-full text-xs"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw Text Paste Fallback / View -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label class="text-xs font-semibold uppercase text-neutral-700 dark:text-neutral-300">
-              Notices (CSV, TSV, or JSON)
+              Or Paste Text Directly (CSV, TSV, or JSON)
             </label>
             <span class="text-xs text-neutral-400">
               Format: <code>email/studentId, notice text</code>
@@ -224,18 +412,24 @@ const handleClear = () => {
           </div>
           <UTextarea
             v-model="rawTextInput"
-            rows="6"
-            placeholder="alice@illinois.edu, Check problem 2 edge cases and recursion limit&#10;bob@illinois.edu, Verified manual test outputs"
+            rows="4"
+            placeholder="alice@illinois.edu, Review problem 1 recursion&#10;bob@illinois.edu, Verified manual test outputs"
             class="w-full font-mono text-xs"
           />
         </div>
 
-        <!-- Live Parsed Preview -->
+        <!-- Live Parsed Preview & Statistics -->
         <div v-if="parsedItems.length > 0" class="space-y-2">
           <div class="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400">
             <span class="font-semibold flex items-center gap-1.5">
               <UIcon name="i-lucide-table" class="w-3.5 h-3.5 text-primary-500" />
               Preview ({{ parsedItems.length }} notice{{ parsedItems.length === 1 ? '' : 's' }} parsed)
+              <span
+                v-if="hasTableHeaders && parsedTable.rows.length > parsedItems.length"
+                class="text-[11px] font-normal text-neutral-400"
+              >
+                — {{ parsedTable.rows.length - parsedItems.length }} empty rows skipped
+              </span>
             </span>
             <UButton
               variant="link"
