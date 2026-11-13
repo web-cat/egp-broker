@@ -32,4 +32,4 @@
 | **REQ-804** | Project uploaded `studentAssignmentNotice` / `staffNotice` in TA interview feed responses (`GET /api/me/courses/:courseId/interviews`) | SPEC Goal 3 | Complete | `gta-interview-console.test.ts` (12 tests passing) |
 | **REQ-805** | Render uploaded course staff notices in `GtaInterviewConsole.vue` alongside external tool notices, sanitized via `sanitizeStaffNoticeHtml` | SPEC Goal 4 | Complete | `GtaInterviewConsole.spec.ts` (24 tests passing) |
 | **REQ-806** | Provide teacher batch upload UI modal with CSV/TSV/JSON paste, preview, and submission | SPEC Goal 5 | Complete | `StudentAssignmentNoticeModal.spec.ts` (4 tests) & `notice-parser.test.ts` (8 tests) |
-| **REQ-807** | Comprehensive Vitest test suite verifying models, batch upload endpoint, interview projection, and UI notice rendering | SPEC Goal 6 | Pending | — |
+| **REQ-807** | Comprehensive Vitest test suite verifying models, batch upload endpoint, interview projection, and UI notice rendering | SPEC Goal 6 | Complete | Full repo suite passing (192/192 files, 1,304/1,304 tests) |

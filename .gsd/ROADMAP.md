@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 4: Full Repository Verification, Security Audit & End-to-End Tests
+> **Current Status**: Milestone v8.0 Complete
 > **Milestone**: v8.0 — Uploaded Staff Notices (`StudentAssignmentNotice`) for TA Interviews
 > **Goal**: Implement `StudentAssignmentNotice` model, batch upload API, and TA interview console presentation so course staff can upload internal grading notices in bulk and view them alongside external tool notices on interview cards.
 
@@ -13,6 +13,7 @@
 - ✅ **v5.0 — Graduate TA Grading Interviews** (Completed 2026-09-16) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v5.0-gta-grading-interviews-SUMMARY.md)
 - ✅ **v6.0 — CBTF Phased Capacity & Duration Engine** (Completed 2026-10-09) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v6.0-cbtf-phased-capacity-SUMMARY.md)
 - ✅ **v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links** (Completed 2026-10-30) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v7.0-passport-status-gta-links-SUMMARY.md)
+- ✅ **v8.0 — Uploaded Staff Notices (`StudentAssignmentNotice`) for TA Interviews** (Completed 2026-11-12) — [Summary](file:///Users/edwards/git/egp-broker/.gsd/milestones/v8.0-uploaded-staff-notices-SUMMARY.md)
 
 ---
 
@@ -25,7 +26,7 @@
 - [x] Projection of uploaded `studentAssignmentNotice` / `staffNotice` in `GET /api/me/courses/:courseId/interviews`
 - [x] UI rendering of uploaded staff notices in `GtaInterviewConsole.vue` (both Active Interview and Expected Arrivals) alongside external tool notices
 - [x] Batch upload modal in teacher interface for pasting and uploading CSV/TSV/JSON notices
-- [ ] 100% Vitest behavioral coverage across new models, endpoints, and UI components
+- [x] 100% Vitest behavioral coverage across new models, endpoints, and UI components
 
 ---
 
@@ -51,12 +52,8 @@
 
 ### Phase 4: Full Repository Verification, Security Audit & End-to-End Tests
 
-**Status**: ⚙️ In Progress  
-**Objective**: Run complete Vitest suite across all 188+ test files, audit HTML sanitization against XSS, and verify end-to-end multi-notice display and upload flows.  
-**Requirements**: REQ-807
-
-### Phase 4: Full Repository Verification, Security Audit & End-to-End Tests
-
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
+**Objective**: Run complete Vitest suite across all 192 test files, audit HTML sanitization against XSS, and verify end-to-end multi-notice display and upload flows.  
+**Requirements**: REQ-807  
 **Objective**: Run complete Vitest suite across all 188+ test files, audit HTML sanitization against XSS, and verify end-to-end multi-notice display and upload flows.  
 **Requirements**: REQ-807
