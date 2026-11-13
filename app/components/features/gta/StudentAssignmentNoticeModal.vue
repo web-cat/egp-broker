@@ -191,8 +191,17 @@ const handleDrop = (event: DragEvent) => {
   reader.readAsText(file, 'UTF-8')
 }
 
+const resolveAssignmentId = (val: unknown): string => {
+  if (typeof val === 'string') return val
+  if (val && typeof val === 'object' && 'value' in val) {
+    return String((val as any).value || '')
+  }
+  return ''
+}
+
 const handleBatchUpload = async () => {
-  if (!selectedAssignmentId.value) {
+  const targetAssignmentId = resolveAssignmentId(selectedAssignmentId.value)
+  if (!targetAssignmentId) {
     errorMessage.value = 'Please select an assignment.'
     return
   }
@@ -215,7 +224,7 @@ const handleBatchUpload = async () => {
 
   try {
     const res = await $fetch<ApiResponse<BatchUpsertNoticesResult>>(
-      `/api/me/courses/${props.courseId}/assignments/${selectedAssignmentId.value}/notices/batch`,
+      `/api/me/courses/${props.courseId}/assignments/${targetAssignmentId}/notices/batch`,
       {
         method: 'POST',
         body: {
@@ -233,8 +242,9 @@ const handleBatchUpload = async () => {
     emit('uploaded', res.data)
   } catch (err: any) {
     const detailMsg =
-      err?.data?.statusMessage ||
+      err?.data?.data?.detail ||
       err?.data?.message ||
+      err?.data?.statusMessage ||
       err?.statusMessage ||
       err?.message ||
       'Failed to upload staff notices.'
@@ -336,6 +346,7 @@ const handleClear = () => {
             v-else
             v-model="selectedAssignmentId"
             :items="assignmentSelectItems"
+            value-key="value"
             placeholder="Select assignment..."
             class="w-full"
           />
