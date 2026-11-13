@@ -1,8 +1,8 @@
 export default defineNitroPlugin((nitroApp) => {
   nitroApp.hooks.hook('error', async (error, { event }) => {
-    // Ignore 404s for static chunks or missing routes to avoid log flooding
+    // Ignore benign 404s, expected 401 unauthenticated access, or static chunks to avoid log flooding
     const statusCode = (error as any)?.statusCode || (error as any)?.status
-    if (statusCode === 404 || event?.path?.startsWith('/_nuxt/')) {
+    if (statusCode === 404 || statusCode === 401 || event?.path?.startsWith('/_nuxt/')) {
       return
     }
 

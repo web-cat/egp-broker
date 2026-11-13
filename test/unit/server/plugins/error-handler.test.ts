@@ -31,6 +31,30 @@ describe('error-handler nitro plugin', () => {
     expect(spy).not.toHaveBeenCalled()
   })
 
+  it('silences 401 unauthorized errors from log flooding', async () => {
+    const spy = vi.spyOn(console, 'error')
+    let errorHandler: any
+    const mockNitroApp = {
+      hooks: {
+        hook: vi.fn((hookName, handler) => {
+          if (hookName === 'error') {
+            errorHandler = handler
+          }
+        })
+      }
+    }
+
+    const { default: plugin } = await import('@@/server/plugins/error-handler')
+    plugin(mockNitroApp as any)
+
+    expect(errorHandler).toBeDefined()
+
+    const err401 = Object.assign(new Error('Authentication required'), { statusCode: 401 })
+    await errorHandler(err401, { event: { path: '/api/me/enrollment' } })
+
+    expect(spy).not.toHaveBeenCalled()
+  })
+
   it('silences /_nuxt/ static asset errors regardless of status', async () => {
     const spy = vi.spyOn(console, 'error')
     let errorHandler: any

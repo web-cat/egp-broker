@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import { toValue } from 'vue'
 
 export interface CasServerOption {
   id: string
@@ -7,6 +8,6 @@ export interface CasServerOption {
 
 export function useCasServers(options?: { immediate?: boolean | Ref<boolean> }) {
   return useFetch<CasServerOption[]>('/api/cas/servers', {
-    immediate: options?.immediate ?? true
+    immediate: options?.immediate !== undefined ? Boolean(toValue(options.immediate)) : true
   })
 }
