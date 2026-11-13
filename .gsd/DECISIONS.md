@@ -393,3 +393,42 @@ Limit 15-minute staleness checks strictly to `GtaInterviewReservation` objects c
 ### Rationale
 
 Avoids unnecessary background queries for off-screen, completed, or paginated-away reservations while ensuring GTAs always have fresh submission links and notices.
+
+---
+
+## DECISION-022: Separate StudentAssignmentNotice Model for Uploaded Staff Notices
+
+### Context
+
+Instructors require the ability to upload staff notices for students in bulk (e.g. from autograder analyses, plagiarism detection, or code inspection reports) to be displayed on TA interview cards alongside external tool notices. These notices are uploaded across many students for an assignment at once, often before students have booked an interview slot or independent of booking timing.
+
+### Decision
+
+Model uploaded staff notices in a dedicated `StudentAssignmentNotice` table:
+
+```prisma
+model StudentAssignmentNotice {
+  id           String     @id @default(cuid())
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignmentId String
+  student      User       @relation("StudentAssignmentNotices", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId    String
+  notice       String     @db.Text
+  author       User?      @relation("NoticeAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+}
+```
+
+Display uploaded notices in `GtaInterviewConsole.vue` alongside external tool notices (`submissionStatus.staffNotice`) with distinct labels/badges, both sanitized with `sanitizeStaffNoticeHtml()`.
+
+### Rationale
+
+1. **Decoupled Lifecycle**: Bulk uploads can occur before any student schedules an appointment and persist if appointments are cancelled or rescheduled.
+2. **Correct Domain Grain**: A grading staff notice belongs to a student's submission on a specific assignment, not to a transient 10-minute calendar reservation slot.
+3. **Clean Multi-Source Presentation**: Clearly distinguishes static, course-staff-uploaded notices from dynamic, live-polled external tool notices.

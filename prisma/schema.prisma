@@ -65,6 +65,8 @@ model User {
   gtaShifts        GtaShift[]
   gtaInterviewReservationsAsStudent GtaInterviewReservation[] @relation("StudentReservations")
   gtaInterviewReservationsAsGta     GtaInterviewReservation[] @relation("GtaReservations")
+  studentAssignmentNotices          StudentAssignmentNotice[] @relation("StudentAssignmentNotices")
+  authoredAssignmentNotices         StudentAssignmentNotice[] @relation("AuthoredAssignmentNotices")
 
   // Current context
   currentCourseId String?
@@ -399,6 +401,7 @@ model Assignment {
   interviewWindowStart DateTime?
   interviewWindowEnd   DateTime?
   gtaInterviewReservations GtaInterviewReservation[]
+  studentAssignmentNotices StudentAssignmentNotice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -869,5 +872,31 @@ model GtaInterviewReservation {
   @@index([assignmentId, startTime])
   @@index([status, startTime])
 }
+
+/// Staff notice uploaded for a student on a specific assignment to be displayed during grading/interviews.
+model StudentAssignmentNotice {
+  id           String     @id @default(cuid())
+
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignmentId String
+
+  student      User       @relation("StudentAssignmentNotices", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId    String
+
+  /// The markdown, HTML, or plaintext notice to be displayed to TAs during grading
+  notice       String     @db.Text
+
+  /// Staff member who uploaded or last modified this notice
+  author       User?      @relation("AuthoredAssignmentNotices", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId     String?
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+}
+
 
 

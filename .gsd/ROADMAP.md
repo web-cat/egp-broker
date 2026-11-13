@@ -1,8 +1,8 @@
 # ROADMAP.md
 
-> **Current Phase**: Complete
-> **Milestone**: v7.0 — PassPort v1.2 External Tool Status & GTA Submission Links
-> **Goal**: Implement PassPort Protocol v1.2 status query support for external LTI tools, caching submission metadata on interview reservations, and displaying deep links to latest/grading submissions and staff notices on GTA interview cards with 15-minute screen-bound staleness refresh.
+> **Current Phase**: Phase 2: Server APIs (Batch Upload, Management & Interview Projection)
+> **Milestone**: v8.0 — Uploaded Staff Notices (`StudentAssignmentNotice`) for TA Interviews
+> **Goal**: Implement `StudentAssignmentNotice` model, batch upload API, and TA interview console presentation so course staff can upload internal grading notices in bulk and view them alongside external tool notices on interview cards.
 
 ## Completed Milestones
 
@@ -16,44 +16,41 @@
 
 ---
 
-## Must-Haves (Milestone v7.0)
+## Must-Haves (Milestone v8.0)
 
-- [x] Database support for `LtiTool.passportStatusUrl` and `GtaInterviewReservation.submissionStatus` / `submissionStatusCheckedAt`
-- [x] PassPort v1.2 dynamic registration handshake supporting `passport_version: '1.2'` and extracting `endpoints.status_handler`
-- [x] Admin tool configuration panel support for viewing and editing `passportStatusUrl`
-- [x] HMAC-SHA256 authenticated PassPort status query engine with Zod schema validation
-- [x] Server endpoints for interview submission status refresh and projection in GTA interview feeds
-- [x] Clickable deep link to latest student submission on GTA dashboard cards (preferring staff grading view, opening in new tab)
-- [x] Separate clickable deep link to submission for grading when distinct from latest submission
-- [x] Rendered HTML `staff_notice` callout on GTA interview cards
-- [x] Screen-bound 15-minute staleness auto-refresh and periodic polling for visible dashboard cards
-- [x] Manual refresh icon button on cards for immediate sync
-- [x] 100% Vitest behavioral test coverage across all new and existing features
+- [x] Database support for `StudentAssignmentNotice` with `assignmentId`, `studentId`, `notice`, `authorId`, `createdAt`, `updatedAt`, and `@@unique([assignmentId, studentId])`
+- [x] Shared Zod schemas for `StudentAssignmentNoticeDto` and batch upload payload
+- [ ] Server batch upload endpoint `POST /api/me/courses/:courseId/assignments/:assignmentId/notices/batch`
+- [ ] Server management endpoints to list and delete uploaded notices for an assignment
+- [ ] Projection of uploaded `studentAssignmentNotice` / `staffNotice` in `GET /api/me/courses/:courseId/interviews`
+- [ ] UI rendering of uploaded staff notices in `GtaInterviewConsole.vue` (both Active Interview and Expected Arrivals) alongside external tool notices
+- [ ] Batch upload modal in teacher interface for pasting and uploading CSV/TSV/JSON notices
+- [ ] 100% Vitest behavioral coverage across new models, endpoints, and UI components
 
 ---
 
 ## Phases
 
-### Phase 1: Data Models & Registration Protocol v1.2
+### Phase 1: Data Model, Migration & Shared Schemas
 
 **Status**: ✅ Complete  
-**Objective**: Update Prisma schema to add `passportStatusUrl` to `LtiTool`, and `submissionStatus` (Json) / `submissionStatusCheckedAt` (DateTime) to `GtaInterviewReservation`. Execute migration. Update shared schemas (`passport.ts`, `tool.ts`). Support PassPort version `1.2` in Phase 1 and parse `endpoints.status_handler` in Phase 2 callback. Update admin `ToolEditPanel.vue` for `passportStatusUrl`.  
-**Requirements**: REQ-701, REQ-702
+**Objective**: Add `StudentAssignmentNotice` model to Prisma schema with reciprocal relations on `Assignment` and `User`. Run Prisma migration. Create Zod schemas and TypeScript interfaces in `shared/schemas/assignment-notice.schema.ts`.  
+**Requirements**: REQ-801, REQ-802
 
-### Phase 2: PassPort v1.2 Status Query Client & Server APIs
+### Phase 2: Server APIs (Batch Upload, Management & Interview Projection)
 
-**Status**: ✅ Complete  
-**Objective**: Implement PassPort v1.2 signed status query function in `server/utils/passport.ts` (`queryPassPortSubmissionStatus`). Build identifying payload (`context`, `user`, `resource`) and sign with HMAC-SHA256 headers. Parse and validate response with Zod. Create server endpoints to query and update status cache (`POST /api/me/courses/:courseId/interviews/:id/refresh-status` and batch endpoint). Include `submissionStatus` and `submissionStatusCheckedAt` in `GET /api/me/courses/:courseId/interviews`.  
-**Requirements**: REQ-703, REQ-704, REQ-705, REQ-706
+**Status**: ⬜ Not Started  
+**Objective**: Implement server endpoints for batch uploading notices, retrieving notices, and projecting student assignment notices in the GTA interview feed (`GET /api/me/courses/:courseId/interviews`).  
+**Requirements**: REQ-803, REQ-804
 
-### Phase 3: GTA Dashboard Cards & Periodic Staleness Refresh
+### Phase 3: TA Interview Console UI Display & Batch Upload Modal
 
-**Status**: ✅ Complete  
-**Objective**: Update GTA interview console composables (`useGtaInterviewConsole`) to handle on-screen 15-minute staleness checks, background 15-minute polling interval, and per-card manual refresh action. Update `GtaInterviewConsole.vue` cards (Expected Arrivals and Active Interview in Progress) to display clickable link to latest submission, separate link to submission for grading (if distinct), rendered HTML `staff_notice`, and manual refresh button.  
-**Requirements**: REQ-707, REQ-708, REQ-709
+**Status**: ⬜ Not Started  
+**Objective**: Update `GtaInterviewConsole.vue` cards to display uploaded course staff notices alongside external tool notices with distinct callouts and sanitization. Build an "Upload Staff Notices" modal for teachers to paste CSV/TSV/JSON notices.  
+**Requirements**: REQ-805, REQ-806
 
-### Phase 4: Verification, Security Audit & End-to-End Tests
+### Phase 4: Full Repository Verification, Security Audit & End-to-End Tests
 
-**Status**: ✅ Complete  
-**Objective**: Comprehensive Vitest test suite covering PassPort v1.2 handshake, signed status requests, malformed/null response resilience, HTML staff notice sanitization, screen-bound 15-minute staleness checks, manual refresh flows, and regression suite execution.  
-**Requirements**: REQ-710
+**Status**: ⬜ Not Started  
+**Objective**: Run complete Vitest suite across all 188+ test files, audit HTML sanitization against XSS, and verify end-to-end multi-notice display and upload flows.  
+**Requirements**: REQ-807
