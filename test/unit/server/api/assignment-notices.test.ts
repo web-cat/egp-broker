@@ -286,6 +286,77 @@ describe('API: Student Assignment Notices Endpoints', () => {
       expect(res.data.updatedCount).toBe(0)
       expect(res.data.unmatchedIdentifiers).toEqual(['unknown@illinois.edu'])
     })
+
+    it('rejects with 400 when body fails schema validation (e.g. empty notices)', async () => {
+      const event = mockEvent({ id: 'teacher-1', globalRole: 'USER' }, { notices: [] })
+
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'enr-teacher',
+        userId: 'teacher-1',
+        courseId: 'course-1',
+        role: 'TEACHER'
+      } as any)
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign-1',
+        courseId: 'course-1'
+      } as any)
+
+      await expect(batchNoticesPost(event)).rejects.toThrowError(
+        expect.objectContaining({
+          statusCode: 400,
+          statusMessage: expect.stringContaining('Validation failed')
+        })
+      )
+    })
+
+    it('successfully coerces numeric student identifiers and notices', async () => {
+      const event = mockEvent(
+        { id: 'teacher-1', globalRole: 'USER' },
+        {
+          notices: [{ studentIdentifier: 12345, notice: 100 }]
+        }
+      )
+
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'enr-teacher',
+        userId: 'teacher-1',
+        courseId: 'course-1',
+        role: 'TEACHER'
+      } as any)
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign-1',
+        courseId: 'course-1'
+      } as any)
+
+      vi.mocked(prisma.enrollment.findMany).mockResolvedValue([
+        {
+          id: 'enr-alice',
+          userId: 'user-alice',
+          courseId: 'course-1',
+          user: {
+            id: 'user-alice',
+            studentId: '12345'
+          }
+        }
+      ] as any)
+
+      vi.mocked(prisma.studentAssignmentNotice.findMany).mockResolvedValue([])
+      vi.mocked(prisma.studentAssignmentNotice.upsert).mockResolvedValue({} as any)
+
+      const res = await batchNoticesPost(event)
+      expect(res.statusCode).toBe(200)
+      expect(res.data.createdCount).toBe(1)
+      expect(prisma.studentAssignmentNotice.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            studentId: 'user-alice',
+            notice: '100'
+          })
+        })
+      )
+    })
   })
 
   describe('GET /api/me/courses/:courseId/assignments/:assignmentId/notices', () => {

@@ -68,6 +68,18 @@ watch(
   { immediate: true }
 )
 
+const resolveColIdx = (val: unknown): number => {
+  if (typeof val === 'number') return val
+  if (typeof val === 'string') {
+    const parsed = parseInt(val, 10)
+    return isNaN(parsed) ? 0 : parsed
+  }
+  if (val && typeof val === 'object' && 'value' in val) {
+    return resolveColIdx((val as any).value)
+  }
+  return 0
+}
+
 const columnSelectItems = computed(() => {
   return parsedTable.value.headers.map((h, i) => ({
     label: `${h || `Column ${i + 1}`} (Col ${i + 1})`,
@@ -79,8 +91,8 @@ const parsedItems = computed(() => {
   if (hasTableHeaders.value) {
     return extractNoticesFromTable(
       parsedTable.value,
-      studentColIdx.value,
-      noticeColIdx.value
+      resolveColIdx(studentColIdx.value),
+      resolveColIdx(noticeColIdx.value)
     )
   }
   return parseNoticesInput(rawTextInput.value)
@@ -185,7 +197,14 @@ const handleBatchUpload = async () => {
     return
   }
 
-  if (parsedItems.value.length === 0) {
+  const sanitizedNotices = parsedItems.value
+    .map((item) => ({
+      studentIdentifier: String(item.studentIdentifier || '').trim(),
+      notice: String(item.notice || '').trim()
+    }))
+    .filter((item) => item.studentIdentifier.length > 0 && item.notice.length > 0)
+
+  if (sanitizedNotices.length === 0) {
     errorMessage.value = 'Please provide at least one valid student notice.'
     return
   }
@@ -200,7 +219,7 @@ const handleBatchUpload = async () => {
       {
         method: 'POST',
         body: {
-          notices: parsedItems.value
+          notices: sanitizedNotices
         }
       }
     )
@@ -213,11 +232,16 @@ const handleBatchUpload = async () => {
     })
     emit('uploaded', res.data)
   } catch (err: any) {
-    errorMessage.value =
-      err?.data?.statusMessage || err?.message || 'Failed to upload staff notices.'
+    const detailMsg =
+      err?.data?.statusMessage ||
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      'Failed to upload staff notices.'
+    errorMessage.value = detailMsg
     toast.add({
       title: 'Upload Failed',
-      description: errorMessage.value || 'Failed to upload notices.',
+      description: detailMsg,
       color: 'error'
     })
   } finally {
@@ -384,6 +408,7 @@ const handleClear = () => {
               <USelect
                 v-model="studentColIdx"
                 :items="columnSelectItems"
+                value-key="value"
                 class="w-full text-xs"
               />
             </div>
@@ -394,6 +419,7 @@ const handleClear = () => {
               <USelect
                 v-model="noticeColIdx"
                 :items="columnSelectItems"
+                value-key="value"
                 class="w-full text-xs"
               />
             </div>

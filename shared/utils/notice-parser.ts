@@ -16,8 +16,14 @@ const IDENTIFIER_FALLBACK_REGEX = /(users?|students?)/i
 const STUDENT_COL_REGEX =
   /(email|net.?ids?|student.?ids?|sis.?user.?ids?|sis.?login.?ids?|usernames?|login.?ids?|user.?ids?|users?|students?)/i
 
+const STUDENT_HEADER_REGEX =
+  /^(student.?name|name|email|student.?email|net.?ids?|student.?ids?|sis.?user.?ids?|sis.?login.?ids?|usernames?|login.?ids?|user.?ids?|users?|students?)$/i
+
 const NOTICE_COL_REGEX =
   /(interview.?questions?|staff.?notices?|notices?|comments?|feedbacks?|notes?|messages?|remarks?|reviews?|flags?|descriptions?|issues?|questions?)/i
+
+const NOTICE_HEADER_REGEX =
+  /^(interview.?questions?|staff.?notices?|notices?|comments?|feedbacks?|notes?|messages?|remarks?|reviews?|flags?|descriptions?|issues?|questions?)$/i
 
 const SENTINEL_NOTICES = new Set([
   '',
@@ -71,7 +77,16 @@ export function isHeaderRow(cells: string[]): boolean {
   if (first.includes('@')) return false
   if (/^\d{5,}$/.test(first)) return false
 
-  return STUDENT_COL_REGEX.test(first) || cells.some((c) => NOTICE_COL_REGEX.test(c.trim()))
+  // Canvas secondary header row
+  if (first.startsWith('points possible') || first === 'points') return true
+
+  const hasNoticeHeader = cells.some((c) => {
+    const trimmed = c.trim()
+    return trimmed.length <= 40 && NOTICE_HEADER_REGEX.test(trimmed)
+  })
+  const hasStudentHeader = first.length <= 40 && STUDENT_HEADER_REGEX.test(first)
+
+  return hasStudentHeader || hasNoticeHeader
 }
 
 /**
@@ -82,7 +97,9 @@ export function parseCsvTable(rawText: string | null | undefined): CsvTableData 
     return { headers: [], rows: [] }
   }
 
-  const lines = rawText.trim().split(/\r?\n/)
+  // Strip optional UTF-8 Byte Order Mark (BOM)
+  const cleanText = rawText.replace(/^\uFEFF/, '')
+  const lines = cleanText.trim().split(/\r?\n/)
   const nonEmptyLines = lines.map((l) => l.trim()).filter(Boolean)
 
   if (nonEmptyLines.length === 0) {
@@ -168,12 +185,18 @@ export function extractNoticesFromTable(
   noticeColIdx: number
 ): ParsedNoticeItem[] {
   const result: ParsedNoticeItem[] = []
+  const sIdx = Number(studentColIdx) || 0
+  const nIdx = Number(noticeColIdx) || 0
 
   for (const row of table.rows) {
     if (isHeaderRow(row)) continue
 
-    const studentIdentifier = (row[studentColIdx] || '').trim().replace(/^["']|["']$/g, '')
-    const notice = (row[noticeColIdx] || '').trim().replace(/^["']|["']$/g, '')
+    const studentIdentifier = String(row[sIdx] || '')
+      .trim()
+      .replace(/^["']|["']$/g, '')
+    const notice = String(row[nIdx] || '')
+      .trim()
+      .replace(/^["']|["']$/g, '')
 
     if (!studentIdentifier || !notice) continue
     if (SENTINEL_NOTICES.has(notice.toLowerCase())) continue
@@ -192,7 +215,8 @@ export function parseNoticesInput(rawText: string | null | undefined): ParsedNot
     return []
   }
 
-  const trimmed = rawText.trim()
+  const cleanText = rawText.replace(/^\uFEFF/, '')
+  const trimmed = cleanText.trim()
   if (!trimmed) {
     return []
   }

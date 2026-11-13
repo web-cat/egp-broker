@@ -118,6 +118,13 @@ describe('shared/utils/notice-parser', () => {
     it('returns empty headers and rows on empty input', () => {
       expect(parseCsvTable('')).toEqual({ headers: [], rows: [] })
     })
+
+    it('strips UTF-8 BOM from input text', () => {
+      const csvWithBom = '\uFEFFEmail,Staff Notice\nalice@vt.edu,Check recursion'
+      const table = parseCsvTable(csvWithBom)
+      expect(table.headers).toEqual(['Email', 'Staff Notice'])
+      expect(table.rows).toEqual([['alice@vt.edu', 'Check recursion']])
+    })
   })
 
   describe('detectStudentIdentifierColumn', () => {
@@ -197,6 +204,32 @@ describe('shared/utils/notice-parser', () => {
           notice: 'Check memory allocation in task 3'
         }
       ])
+    })
+
+    it('does not discard student data rows whose notice text contains keywords like question or review', () => {
+      const table = {
+        headers: ['Student Name', 'Notice'],
+        rows: [
+          ['Alice Smith', 'Needs help with question 1 recursion'],
+          ['Bob Jones', 'Code review issue found'],
+          ['Charlie Brown', 'Description looks solid']
+        ]
+      }
+
+      const notices = extractNoticesFromTable(table, 0, 1)
+      expect(notices).toHaveLength(3)
+      expect(notices[0]).toEqual({
+        studentIdentifier: 'Alice Smith',
+        notice: 'Needs help with question 1 recursion'
+      })
+      expect(notices[1]).toEqual({
+        studentIdentifier: 'Bob Jones',
+        notice: 'Code review issue found'
+      })
+      expect(notices[2]).toEqual({
+        studentIdentifier: 'Charlie Brown',
+        notice: 'Description looks solid'
+      })
     })
   })
 })

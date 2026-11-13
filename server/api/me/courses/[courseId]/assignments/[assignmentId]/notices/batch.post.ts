@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam, readValidatedBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
 import prisma from '@@/server/utils/db'
 import { assertCourseMember } from '@@/server/utils/gta-interview'
 import { batchUpsertStudentAssignmentNoticesSchema } from '@@/shared/schemas/assignment-notice.schema'
@@ -35,10 +35,27 @@ export default defineEventHandler(async (event): Promise<ApiResponse<BatchUpsert
     })
   }
 
-  const { notices } = await readValidatedBody(
-    event,
-    batchUpsertStudentAssignmentNoticesSchema.parse
-  )
+  const rawBody = await readBody(event)
+  const parseResult = batchUpsertStudentAssignmentNoticesSchema.safeParse(rawBody)
+
+  if (!parseResult.success) {
+    const errorDetail = parseResult.error.issues
+      .map((i) => `${i.path.join('.') || 'root'}: ${i.message}`)
+      .join('; ')
+    console.error(
+      `[notices/batch.post.ts] Validation failure on course ${courseId}, assignment ${assignmentId}:`,
+      errorDetail,
+      'Raw body:',
+      rawBody
+    )
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Validation failed: ${errorDetail}`,
+      data: parseResult.error.issues
+    })
+  }
+
+  const { notices } = parseResult.data
 
   // Fetch all enrolled users for this course to resolve student identifiers
   const enrollments = await prisma.enrollment.findMany({

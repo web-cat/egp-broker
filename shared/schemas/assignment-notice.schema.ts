@@ -21,10 +21,17 @@ export type StudentAssignmentNoticeDto = z.infer<typeof studentAssignmentNoticeD
  */
 export const batchUpsertNoticeItemSchema = z.object({
   studentIdentifier: z
-    .string()
-    .trim()
-    .min(1, 'Student identifier (email or student ID) is required'),
-  notice: z.string().trim().min(1, 'Notice content is required')
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim())
+    .refine((val) => val.length > 0, {
+      message: 'Student identifier (email or student ID) is required'
+    }),
+  notice: z
+    .union([z.string(), z.number()])
+    .transform((val) => String(val).trim())
+    .refine((val) => val.length > 0, {
+      message: 'Notice content is required'
+    })
 })
 
 export type BatchUpsertNoticeItem = z.infer<typeof batchUpsertNoticeItemSchema>
