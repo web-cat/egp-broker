@@ -258,6 +258,12 @@ export default defineNuxtConfig({
         corsHandler: false // Use Nitro's built-in one instead
       }
     },
+    // Disable xssValidator for staff notices so instructors/TAs can upload markdown, HTML, math, and code notes
+    '/api/me/courses/:courseId/assignments/:assignmentId/notices/**': {
+      security: {
+        xssValidator: false
+      }
+    },
     // Tighter rate limit for LTI endpoints to prevent nonce probing / DoS
     '/api/lti13/launch': {
       security: { rateLimiter: { tokensPerInterval: 20, interval: 60 * 1000, throwError: true } }
