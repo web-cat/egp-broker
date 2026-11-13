@@ -28,8 +28,8 @@
 | **REQ-710** | Comprehensive Vitest unit tests verifying protocol signing, status parsing, refresh scheduling, and UI cards | SPEC Goal 5 | Complete | Full repo unit test sweep (188/188 files, 1260/1260 tests passing) |
 | **REQ-801** | Add `StudentAssignmentNotice` Prisma model with `assignmentId`, `studentId`, `notice`, `authorId`, `createdAt`, `updatedAt`, and unique constraint `@@unique([assignmentId, studentId])` | SPEC Goal 1 | Complete | Migration `20261112221910_add_student_assignment_notice` |
 | **REQ-802** | Add Zod validation schemas for `StudentAssignmentNotice` DTOs and batch upload payload in `shared/schemas/assignment-notice.schema.ts` | SPEC Goal 2 | Complete | `assignment-notice.schema.test.ts` (14 tests passing) |
-| **REQ-803** | Implement batch upload endpoint `POST /api/me/courses/:courseId/assignments/:assignmentId/notices/batch` and management endpoints | SPEC Goal 3 | Pending | — |
-| **REQ-804** | Project uploaded `studentAssignmentNotice` / `staffNotice` in TA interview feed responses (`GET /api/me/courses/:courseId/interviews`) | SPEC Goal 3 | Pending | — |
+| **REQ-803** | Implement batch upload endpoint `POST /api/me/courses/:courseId/assignments/:assignmentId/notices/batch` and management endpoints | SPEC Goal 3 | Complete | `assignment-notices.test.ts` (13 tests passing) |
+| **REQ-804** | Project uploaded `studentAssignmentNotice` / `staffNotice` in TA interview feed responses (`GET /api/me/courses/:courseId/interviews`) | SPEC Goal 3 | Complete | `gta-interview-console.test.ts` (12 tests passing) |
 | **REQ-805** | Render uploaded course staff notices in `GtaInterviewConsole.vue` alongside external tool notices, sanitized via `sanitizeStaffNoticeHtml` | SPEC Goal 4 | Pending | — |
 | **REQ-806** | Provide teacher batch upload UI modal with CSV/TSV/JSON paste, preview, and submission | SPEC Goal 5 | Pending | — |
 | **REQ-807** | Comprehensive Vitest test suite verifying models, batch upload endpoint, interview projection, and UI notice rendering | SPEC Goal 6 | Pending | — |

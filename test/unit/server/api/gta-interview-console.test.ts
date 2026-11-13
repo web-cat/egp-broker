@@ -12,6 +12,9 @@ vi.mock('@@/server/utils/db', () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
       update: vi.fn()
+    },
+    studentAssignmentNotice: {
+      findMany: vi.fn()
     }
   }
 }))
@@ -77,6 +80,7 @@ describe('API: GTA Interview Console Endpoints', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(prisma.studentAssignmentNotice.findMany).mockResolvedValue([])
   })
 
   describe('GET /api/me/courses/:courseId/interviews (Feed)', () => {
@@ -161,6 +165,61 @@ describe('API: GTA Interview Console Endpoints', () => {
           })
         })
       )
+    })
+
+    it('attaches studentAssignmentNotice to reservations when present', async () => {
+      const event = mockEvent({ id: 'gta-1', globalRole: 'USER' }, {}, {
+        courseId: 'course-1'
+      } as any)
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'enr-gta',
+        userId: 'gta-1',
+        courseId: 'course-1',
+        role: 'TA'
+      } as any)
+
+      vi.mocked(prisma.gtaInterviewReservation.findMany).mockResolvedValue([
+        {
+          id: 'res-1',
+          assignmentId: 'asg-1',
+          studentId: 'stud-1',
+          gtaId: 'gta-1',
+          status: 'SCHEDULED',
+          startTime: new Date('2026-10-15T14:00:00Z'),
+          student: { firstName: 'Alice', lastName: 'Student', email: 'alice@vt.edu' },
+          assignment: { id: 'asg-1', title: 'Project 1' }
+        },
+        {
+          id: 'res-2',
+          assignmentId: 'asg-1',
+          studentId: 'stud-2',
+          gtaId: 'gta-1',
+          status: 'SCHEDULED',
+          startTime: new Date('2026-10-15T14:30:00Z'),
+          student: { firstName: 'Bob', lastName: 'Student', email: 'bob@vt.edu' },
+          assignment: { id: 'asg-1', title: 'Project 1' }
+        }
+      ] as any)
+
+      vi.mocked(prisma.studentAssignmentNotice.findMany).mockResolvedValue([
+        {
+          id: 'notif-alice',
+          assignmentId: 'asg-1',
+          studentId: 'stud-1',
+          notice: 'Notice for Alice',
+          updatedAt: new Date('2026-10-15T10:00:00Z')
+        }
+      ] as any)
+
+      const res = await feedGet(event)
+      expect(res.statusCode).toBe(200)
+      expect(res.data).toHaveLength(2)
+      expect(res.data[0].studentAssignmentNotice).toEqual({
+        id: 'notif-alice',
+        notice: 'Notice for Alice',
+        updatedAt: expect.any(Date)
+      })
+      expect(res.data[1].studentAssignmentNotice).toBeNull()
     })
   })
 

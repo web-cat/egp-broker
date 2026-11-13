@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 2: Server APIs (Batch Upload, Management & Interview Projection)
+> **Current Phase**: Phase 3: TA Interview Console UI Display & Batch Upload Modal
 > **Milestone**: v8.0 — Uploaded Staff Notices (`StudentAssignmentNotice`) for TA Interviews
 > **Goal**: Implement `StudentAssignmentNotice` model, batch upload API, and TA interview console presentation so course staff can upload internal grading notices in bulk and view them alongside external tool notices on interview cards.
 
@@ -20,9 +20,9 @@
 
 - [x] Database support for `StudentAssignmentNotice` with `assignmentId`, `studentId`, `notice`, `authorId`, `createdAt`, `updatedAt`, and `@@unique([assignmentId, studentId])`
 - [x] Shared Zod schemas for `StudentAssignmentNoticeDto` and batch upload payload
-- [ ] Server batch upload endpoint `POST /api/me/courses/:courseId/assignments/:assignmentId/notices/batch`
-- [ ] Server management endpoints to list and delete uploaded notices for an assignment
-- [ ] Projection of uploaded `studentAssignmentNotice` / `staffNotice` in `GET /api/me/courses/:courseId/interviews`
+- [x] Server batch upload endpoint `POST /api/me/courses/:courseId/assignments/:assignmentId/notices/batch`
+- [x] Server management endpoints to list and delete uploaded notices for an assignment
+- [x] Projection of uploaded `studentAssignmentNotice` / `staffNotice` in `GET /api/me/courses/:courseId/interviews`
 - [ ] UI rendering of uploaded staff notices in `GtaInterviewConsole.vue` (both Active Interview and Expected Arrivals) alongside external tool notices
 - [ ] Batch upload modal in teacher interface for pasting and uploading CSV/TSV/JSON notices
 - [ ] 100% Vitest behavioral coverage across new models, endpoints, and UI components
@@ -39,13 +39,13 @@
 
 ### Phase 2: Server APIs (Batch Upload, Management & Interview Projection)
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Objective**: Implement server endpoints for batch uploading notices, retrieving notices, and projecting student assignment notices in the GTA interview feed (`GET /api/me/courses/:courseId/interviews`).  
 **Requirements**: REQ-803, REQ-804
 
 ### Phase 3: TA Interview Console UI Display & Batch Upload Modal
 
-**Status**: ⬜ Not Started  
+**Status**: ⚙️ In Progress  
 **Objective**: Update `GtaInterviewConsole.vue` cards to display uploaded course staff notices alongside external tool notices with distinct callouts and sanitization. Build an "Upload Staff Notices" modal for teachers to paste CSV/TSV/JSON notices.  
 **Requirements**: REQ-805, REQ-806
 

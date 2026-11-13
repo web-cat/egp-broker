@@ -68,8 +68,46 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any[]>> => 
     orderBy: { startTime: 'asc' }
   })
 
+  if (reservations.length === 0) {
+    return {
+      statusCode: 200,
+      data: []
+    }
+  }
+
+  const assignmentIds = Array.from(new Set(reservations.map((r) => r.assignmentId)))
+  const studentIds = Array.from(new Set(reservations.map((r) => r.studentId)))
+
+  const notices = await prisma.studentAssignmentNotice.findMany({
+    where: {
+      assignmentId: { in: assignmentIds },
+      studentId: { in: studentIds }
+    },
+    select: {
+      id: true,
+      assignmentId: true,
+      studentId: true,
+      notice: true,
+      updatedAt: true
+    }
+  })
+
+  const noticeMap = new Map<string, { id: string; notice: string; updatedAt: Date }>()
+  for (const n of notices) {
+    noticeMap.set(`${n.assignmentId}:${n.studentId}`, {
+      id: n.id,
+      notice: n.notice,
+      updatedAt: n.updatedAt
+    })
+  }
+
+  const reservationsWithNotices = reservations.map((r) => ({
+    ...r,
+    studentAssignmentNotice: noticeMap.get(`${r.assignmentId}:${r.studentId}`) || null
+  }))
+
   return {
     statusCode: 200,
-    data: reservations
+    data: reservationsWithNotices
   }
 })

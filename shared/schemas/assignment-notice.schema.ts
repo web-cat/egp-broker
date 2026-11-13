@@ -32,12 +32,26 @@ export type BatchUpsertNoticeItem = z.infer<typeof batchUpsertNoticeItemSchema>
 /**
  * Payload for batch uploading staff notices for an assignment
  */
-export const batchUpsertStudentAssignmentNoticesSchema = z.object({
-  notices: z
-    .array(batchUpsertNoticeItemSchema)
-    .min(1, 'At least one notice is required')
-    .max(1000, 'Cannot exceed 1,000 notices per batch')
-})
+export const batchUpsertStudentAssignmentNoticesSchema = z
+  .object({
+    notices: z
+      .array(batchUpsertNoticeItemSchema)
+      .max(1000, 'Cannot exceed 1,000 notices per batch')
+      .optional(),
+    items: z
+      .array(batchUpsertNoticeItemSchema)
+      .max(1000, 'Cannot exceed 1,000 notices per batch')
+      .optional()
+  })
+  .refine(
+    (data) => (data.notices && data.notices.length > 0) || (data.items && data.items.length > 0),
+    {
+      message: 'At least one notice is required'
+    }
+  )
+  .transform((data) => ({
+    notices: (data.notices || data.items || []) as BatchUpsertNoticeItem[]
+  }))
 
 export type BatchUpsertStudentAssignmentNoticesInput = z.infer<
   typeof batchUpsertStudentAssignmentNoticesSchema
