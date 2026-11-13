@@ -119,11 +119,22 @@ export default defineEventHandler(async (event): Promise<ApiResponse<BatchUpsert
     const userByEmail = new Map<string, string>()
     const userByStudentId = new Map<string, string>()
     const userById = new Map<string, string>()
+    const userByUsernamePrefix = new Map<string, string | 'AMBIGUOUS'>()
 
     for (const e of enrollments) {
       if (e.user) {
         if (e.user.email) {
-          userByEmail.set(e.user.email.trim().toLowerCase(), e.user.id)
+          const email = e.user.email.trim().toLowerCase()
+          userByEmail.set(email, e.user.id)
+          const atIndex = email.indexOf('@')
+          if (atIndex > 0) {
+            const prefix = email.slice(0, atIndex)
+            if (userByUsernamePrefix.has(prefix)) {
+              userByUsernamePrefix.set(prefix, 'AMBIGUOUS')
+            } else {
+              userByUsernamePrefix.set(prefix, e.user.id)
+            }
+          }
         }
         if (e.user.studentId) {
           userByStudentId.set(e.user.studentId.trim().toLowerCase(), e.user.id)
@@ -139,8 +150,15 @@ export default defineEventHandler(async (event): Promise<ApiResponse<BatchUpsert
       const rawIdent = item.studentIdentifier.trim()
       const lowerIdent = rawIdent.toLowerCase()
 
-      const resolvedUserId =
+      let resolvedUserId =
         userByEmail.get(lowerIdent) || userByStudentId.get(lowerIdent) || userById.get(rawIdent)
+
+      if (!resolvedUserId) {
+        const prefixMatch = userByUsernamePrefix.get(lowerIdent)
+        if (prefixMatch && prefixMatch !== 'AMBIGUOUS') {
+          resolvedUserId = prefixMatch
+        }
+      }
 
       if (!resolvedUserId) {
         unmatchedIdentifiers.push(rawIdent)

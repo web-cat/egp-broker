@@ -258,6 +258,157 @@ describe('API: Student Assignment Notices Endpoints', () => {
       expect(res.data.unmatchedIdentifiers).toEqual([])
     })
 
+    it('successfully matches students by email username prefix (local-part before @)', async () => {
+      const event = mockEvent(
+        { id: 'teacher-1', globalRole: 'USER' },
+        {
+          items: [
+            { studentIdentifier: 'edwards', notice: 'Notice using username only' },
+            { studentIdentifier: 'BOB', notice: 'Notice using uppercase username' }
+          ]
+        }
+      )
+
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'enr-teacher',
+        userId: 'teacher-1',
+        courseId: 'course-1',
+        role: 'TEACHER'
+      } as any)
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign-1',
+        courseId: 'course-1',
+        title: 'Project 1'
+      } as any)
+
+      vi.mocked(prisma.enrollment.findMany).mockResolvedValue([
+        {
+          id: 'enr-edwards',
+          userId: 'user-edwards',
+          courseId: 'course-1',
+          user: {
+            id: 'user-edwards',
+            email: 'edwards@vt.edu',
+            studentId: '905123456'
+          }
+        },
+        {
+          id: 'enr-bob',
+          userId: 'user-bob',
+          courseId: 'course-1',
+          user: {
+            id: 'user-bob',
+            email: 'bob@vt.edu',
+            studentId: '905654321'
+          }
+        }
+      ] as any)
+
+      vi.mocked(prisma.studentAssignmentNotice.findMany).mockResolvedValue([])
+      vi.mocked(prisma.studentAssignmentNotice.upsert).mockResolvedValue({} as any)
+
+      const result = await batchNoticesPost(event)
+
+      expect(result.statusCode).toBe(200)
+      expect(result.data).toEqual({
+        createdCount: 2,
+        updatedCount: 0,
+        unmatchedIdentifiers: [],
+        totalProcessed: 2
+      })
+
+      expect(prisma.studentAssignmentNotice.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            assignmentId_studentId: {
+              assignmentId: 'assign-1',
+              studentId: 'user-edwards'
+            }
+          },
+          create: expect.objectContaining({
+            notice: 'Notice using username only'
+          })
+        })
+      )
+      expect(prisma.studentAssignmentNotice.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            assignmentId_studentId: {
+              assignmentId: 'assign-1',
+              studentId: 'user-bob'
+            }
+          },
+          create: expect.objectContaining({
+            notice: 'Notice using uppercase username'
+          })
+        })
+      )
+    })
+
+    it('treats ambiguous username prefixes as unmatched to prevent false collisions', async () => {
+      const event = mockEvent(
+        { id: 'teacher-1', globalRole: 'USER' },
+        {
+          items: [
+            { studentIdentifier: 'alex', notice: 'Notice for ambiguous alex' },
+            { studentIdentifier: 'alex@vt.edu', notice: 'Notice with full email' }
+          ]
+        }
+      )
+
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'enr-teacher',
+        userId: 'teacher-1',
+        courseId: 'course-1',
+        role: 'TEACHER'
+      } as any)
+
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValue({
+        id: 'assign-1',
+        courseId: 'course-1',
+        title: 'Project 1'
+      } as any)
+
+      // Two students share the same username prefix 'alex'
+      vi.mocked(prisma.enrollment.findMany).mockResolvedValue([
+        {
+          id: 'enr-alex-1',
+          userId: 'user-alex-vt',
+          courseId: 'course-1',
+          user: {
+            id: 'user-alex-vt',
+            email: 'alex@vt.edu',
+            studentId: '111'
+          }
+        },
+        {
+          id: 'enr-alex-2',
+          userId: 'user-alex-gmail',
+          courseId: 'course-1',
+          user: {
+            id: 'user-alex-gmail',
+            email: 'alex@gmail.com',
+            studentId: '222'
+          }
+        }
+      ] as any)
+
+      vi.mocked(prisma.studentAssignmentNotice.findMany).mockResolvedValue([])
+      vi.mocked(prisma.studentAssignmentNotice.upsert).mockResolvedValue({} as any)
+
+      const result = await batchNoticesPost(event)
+
+      expect(result.statusCode).toBe(200)
+      // 'alex' is ambiguous so it should be unmatched, while 'alex@vt.edu' matches explicitly
+      expect(result.data).toEqual({
+        createdCount: 1,
+        updatedCount: 0,
+        unmatchedIdentifiers: ['alex'],
+        totalProcessed: 2
+      })
+    })
+
     it('returns 0 created/updated when all student identifiers are unmatched', async () => {
       const event = mockEvent(
         { id: 'teacher-1', globalRole: 'USER' },
