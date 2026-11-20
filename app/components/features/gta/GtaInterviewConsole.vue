@@ -1132,6 +1132,15 @@ watch(
   { deep: true }
 )
 
+watch(
+  () => feedStatus.value,
+  (newStatus) => {
+    if (newStatus === 'success') {
+      checkStaleVisible()
+    }
+  }
+)
+
 // ─────────────────────────────────────────────────────────
 // Scenario & Interview Actions
 // ─────────────────────────────────────────────────────────

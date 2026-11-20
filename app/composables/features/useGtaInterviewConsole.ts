@@ -14,7 +14,8 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
     refresh: refreshFeed
   } = useFetch<ApiResponse<any[]>>(feedUrl, {
     lazy: true,
-    immediate: true
+    immediate: true,
+    deep: true
   })
 
   const reservations = computed<any[]>(() => feedResponse.value?.data || [])
@@ -277,12 +278,17 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
         }
       )
       if (feedResponse.value?.data && res.data) {
-        const idx = feedResponse.value.data.findIndex((r: any) => r.id === reservationId)
+        const nextData = [...feedResponse.value.data]
+        const idx = nextData.findIndex((r: any) => r.id === reservationId)
         if (idx !== -1) {
-          feedResponse.value.data[idx] = {
-            ...feedResponse.value.data[idx],
+          nextData[idx] = {
+            ...nextData[idx],
             submissionStatus: res.data.submissionStatus,
             submissionStatusCheckedAt: res.data.submissionStatusCheckedAt
+          }
+          feedResponse.value = {
+            ...feedResponse.value,
+            data: nextData
           }
         }
       }
@@ -330,14 +336,23 @@ export function useGtaInterviewConsole(courseId: string | Ref<string | null | un
       )
 
       if (feedResponse.value?.data && Array.isArray(res.data)) {
+        const nextData = [...feedResponse.value.data]
+        let didUpdate = false
         for (const updated of res.data) {
-          const idx = feedResponse.value.data.findIndex((r: any) => r.id === updated.id)
+          const idx = nextData.findIndex((r: any) => r.id === updated.id)
           if (idx !== -1) {
-            feedResponse.value.data[idx] = {
-              ...feedResponse.value.data[idx],
+            nextData[idx] = {
+              ...nextData[idx],
               submissionStatus: updated.submissionStatus,
               submissionStatusCheckedAt: updated.submissionStatusCheckedAt
             }
+            didUpdate = true
+          }
+        }
+        if (didUpdate) {
+          feedResponse.value = {
+            ...feedResponse.value,
+            data: nextData
           }
         }
       }

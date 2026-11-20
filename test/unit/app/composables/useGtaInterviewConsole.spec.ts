@@ -377,6 +377,35 @@ describe('useGtaInterviewConsole Composable', () => {
       expect(sched.submissionStatus).toEqual({ latestSubmissionNumber: 1 })
     })
 
+    it('triggers reactive update by reassigning feedResponse.value on batch status refresh', async () => {
+      const courseId = ref('course-1')
+      const initialFeedRef = mockFeedData.value
+
+      mockFetch.mockResolvedValueOnce({
+        statusCode: 200,
+        data: [
+          {
+            id: 'res-sched-1',
+            submissionStatus: {
+              latestSubmissionUrl: 'https://tool.com/link',
+              latestSubmissionNumber: 5
+            },
+            submissionStatusCheckedAt: new Date().toISOString()
+          }
+        ]
+      })
+
+      const { refreshVisibleStaleStatuses, expectedArrivals } = useGtaInterviewConsole(courseId)
+      await refreshVisibleStaleStatuses(['res-sched-1'])
+
+      // feedResponse.value should be a new object reference to trigger Vue reactivity
+      expect(mockFeedData.value).not.toBe(initialFeedRef)
+      expect(expectedArrivals.value[0].submissionStatus).toEqual({
+        latestSubmissionUrl: 'https://tool.com/link',
+        latestSubmissionNumber: 5
+      })
+    })
+
     it('manages polling timers correctly via startStalenessPolling and stopStalenessPolling', () => {
       vi.useFakeTimers()
       const courseId = ref('course-1')
