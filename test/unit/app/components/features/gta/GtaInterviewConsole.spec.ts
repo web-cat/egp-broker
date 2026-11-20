@@ -950,6 +950,64 @@ describe('GtaInterviewConsole Component', () => {
       expect(wrapper.text()).toContain('Watch out for off-by-one error in problem 3')
     })
 
+    it('renders prior interview comments with TA name in active interview card', () => {
+      mockActiveInterview.value = {
+        id: 'res-active-with-prior',
+        status: 'CHECKED_IN',
+        startTime: '2026-10-20T14:00:00.000Z',
+        endTime: '2026-10-20T14:10:00.000Z',
+        student: { firstName: 'Ian', lastName: 'Repeat', email: 'ian@vt.edu' },
+        assignment: { title: 'Project 1' },
+        priorInterviews: [
+          {
+            id: 'prior-1',
+            startTime: '2026-10-15T10:00:00.000Z',
+            notes: 'Completed part 1, gave hints on memory leak for part 2',
+            gta: { firstName: 'Sarah', lastName: 'Miller', email: 'sarah@vt.edu' }
+          }
+        ]
+      }
+      mockExpectedArrivals.value = []
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      expect(wrapper.text()).toContain('Prior Interview (Sarah Miller)')
+      expect(wrapper.text()).toContain('Completed part 1, gave hints on memory leak for part 2')
+    })
+
+    it('renders prior interview comments with TA name on expected arrivals card', () => {
+      mockActiveInterview.value = null
+      mockExpectedArrivals.value = [
+        {
+          id: 'exp-with-prior-1',
+          status: 'SCHEDULED',
+          startTime: '2026-10-20T14:10:00.000Z',
+          endTime: '2026-10-20T14:20:00.000Z',
+          student: { firstName: 'Julia', lastName: 'Prior', email: 'julia@vt.edu' },
+          assignment: { title: 'Project 1' },
+          priorInterviews: [
+            {
+              id: 'prior-2',
+              startTime: '2026-10-16T11:00:00.000Z',
+              notes: 'Struggled with tree traversal, re-interview needed',
+              gta: { firstName: 'Alex', lastName: 'Johnson', email: 'alex@vt.edu' }
+            }
+          ]
+        }
+      ]
+
+      const wrapper = mount(GtaInterviewConsole, {
+        props: { courseId: 'course-1' },
+        global: { stubs }
+      })
+
+      expect(wrapper.text()).toContain('Prior Interview (Alex Johnson)')
+      expect(wrapper.text()).toContain('Struggled with tree traversal, re-interview needed')
+    })
+
     it('opens StudentAssignmentNoticeModal when clicking Upload Notices header button', async () => {
       mockActiveInterview.value = null
       mockExpectedArrivals.value = []

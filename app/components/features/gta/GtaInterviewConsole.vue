@@ -257,6 +257,31 @@
                 v-html="sanitizeStaffNoticeHtml(activeInterview.studentAssignmentNotice.notice)"
               />
             </div>
+
+            <!-- Prior Interview Comments callout -->
+            <div
+              v-if="activeInterview.priorInterviews && activeInterview.priorInterviews.length > 0"
+              class="space-y-2"
+            >
+              <div
+                v-for="prior in activeInterview.priorInterviews"
+                :key="prior.id"
+                class="p-2.5 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/60 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 text-xs space-y-1"
+              >
+                <div class="flex items-center justify-between font-semibold text-purple-800 dark:text-purple-300">
+                  <div class="flex items-center gap-1.5">
+                    <UIcon name="i-lucide-message-square" class="w-3.5 h-3.5 shrink-0" />
+                    <span>Prior Interview ({{ formatPriorTaName(prior.gta) }})</span>
+                  </div>
+                  <span v-if="prior.startTime" class="text-[11px] font-normal text-purple-600 dark:text-purple-400">
+                    {{ formatUpcomingDate(prior.startTime) }}
+                  </span>
+                </div>
+                <p class="whitespace-pre-wrap break-words text-purple-950 dark:text-purple-100">
+                  {{ prior.notes }}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -551,6 +576,31 @@
                   class="prose prose-xs dark:prose-invert max-w-none break-words"
                   v-html="sanitizeStaffNoticeHtml(reservation.studentAssignmentNotice.notice)"
                 />
+              </div>
+
+              <!-- Prior Interview Comments banner -->
+              <div
+                v-if="reservation.priorInterviews && reservation.priorInterviews.length > 0"
+                class="space-y-1.5"
+              >
+                <div
+                  v-for="prior in reservation.priorInterviews"
+                  :key="prior.id"
+                  class="p-2 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/60 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 text-xs space-y-1"
+                >
+                  <div class="flex items-center justify-between font-semibold text-purple-800 dark:text-purple-300">
+                    <div class="flex items-center gap-1">
+                      <UIcon name="i-lucide-message-square" class="w-3.5 h-3.5 shrink-0" />
+                      <span>Prior Interview ({{ formatPriorTaName(prior.gta) }})</span>
+                    </div>
+                    <span v-if="prior.startTime" class="text-[11px] font-normal text-purple-600 dark:text-purple-400">
+                      {{ formatUpcomingDate(prior.startTime) }}
+                    </span>
+                  </div>
+                  <p class="whitespace-pre-wrap break-words text-purple-950 dark:text-purple-100">
+                    {{ prior.notes }}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -944,6 +994,7 @@ import StudentAssignmentNoticeModal from '~/components/features/gta/StudentAssig
 import { useGtaInterviewConsole } from '~/composables/features/useGtaInterviewConsole'
 import {
   formatSlotRange as sharedFormatSlotRange,
+  formatUpcomingDate,
   getLocalTimeParts
 } from '@@/shared/utils/timezone'
 import {
@@ -1271,6 +1322,14 @@ const formatTimeOnly = (dateStr?: string | Date) => {
 
 const formatSlotRange = (startStr: string, endStr: string) => {
   return sharedFormatSlotRange(startStr, endStr)
+}
+
+const formatPriorTaName = (
+  gta?: { firstName?: string; lastName?: string; email?: string } | null
+) => {
+  if (!gta) return 'TA'
+  const full = `${gta.firstName || ''} ${gta.lastName || ''}`.trim()
+  return full || gta.email || 'TA'
 }
 
 const statusColor = (status: string) => {

@@ -221,6 +221,63 @@ describe('API: GTA Interview Console Endpoints', () => {
       })
       expect(res.data[1].studentAssignmentNotice).toBeNull()
     })
+
+    it('attaches priorInterviews with comments and TA details to reservations for the same assignment', async () => {
+      const event = mockEvent({ id: 'gta-1', globalRole: 'USER' }, {}, {
+        courseId: 'course-1'
+      } as any)
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'enr-gta',
+        userId: 'gta-1',
+        courseId: 'course-1',
+        role: 'TA'
+      } as any)
+
+      // First call to findMany: returns today's reservation
+      // Second call to findMany: returns prior reservations for that student & assignment with notes
+      vi.mocked(prisma.gtaInterviewReservation.findMany)
+        .mockResolvedValueOnce([
+          {
+            id: 'res-today',
+            assignmentId: 'asg-1',
+            studentId: 'stud-1',
+            gtaId: 'gta-1',
+            status: 'SCHEDULED',
+            startTime: new Date('2026-10-20T14:00:00Z'),
+            student: { firstName: 'Alice', lastName: 'Student', email: 'alice@vt.edu' },
+            assignment: { id: 'asg-1', title: 'Project 1' }
+          }
+        ] as any)
+        .mockResolvedValueOnce([
+          {
+            id: 'res-prior-1',
+            assignmentId: 'asg-1',
+            studentId: 'stud-1',
+            startTime: new Date('2026-10-15T14:00:00Z'),
+            endTime: new Date('2026-10-15T14:15:00Z'),
+            status: 'COMPLETED',
+            notes: 'Good progress on Part 1, needs to fix Part 2 memory leak',
+            gta: { id: 'gta-prior', firstName: 'Sarah', lastName: 'TA', email: 'sarah@vt.edu' }
+          }
+        ] as any)
+
+      vi.mocked(prisma.studentAssignmentNotice.findMany).mockResolvedValue([])
+
+      const res = await feedGet(event)
+      expect(res.statusCode).toBe(200)
+      expect(res.data).toHaveLength(1)
+      expect(res.data[0].priorInterviews).toHaveLength(1)
+      expect(res.data[0].priorInterviews[0]).toEqual(
+        expect.objectContaining({
+          id: 'res-prior-1',
+          notes: 'Good progress on Part 1, needs to fix Part 2 memory leak',
+          gta: expect.objectContaining({
+            firstName: 'Sarah',
+            lastName: 'TA'
+          })
+        })
+      )
+    })
   })
 
   describe('PATCH /api/me/courses/:courseId/interviews/:id', () => {

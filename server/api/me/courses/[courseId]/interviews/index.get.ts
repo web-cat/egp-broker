@@ -78,19 +78,46 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any[]>> => 
   const assignmentIds = Array.from(new Set(reservations.map((r) => r.assignmentId)))
   const studentIds = Array.from(new Set(reservations.map((r) => r.studentId)))
 
-  const notices = await prisma.studentAssignmentNotice.findMany({
-    where: {
-      assignmentId: { in: assignmentIds },
-      studentId: { in: studentIds }
-    },
-    select: {
-      id: true,
-      assignmentId: true,
-      studentId: true,
-      notice: true,
-      updatedAt: true
-    }
-  })
+  const [notices, priorInterviews] = await Promise.all([
+    prisma.studentAssignmentNotice.findMany({
+      where: {
+        assignmentId: { in: assignmentIds },
+        studentId: { in: studentIds }
+      },
+      select: {
+        id: true,
+        assignmentId: true,
+        studentId: true,
+        notice: true,
+        updatedAt: true
+      }
+    }),
+    prisma.gtaInterviewReservation.findMany({
+      where: {
+        assignmentId: { in: assignmentIds },
+        studentId: { in: studentIds },
+        notes: { not: null }
+      },
+      select: {
+        id: true,
+        assignmentId: true,
+        studentId: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+        notes: true,
+        gta: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      },
+      orderBy: { startTime: 'desc' }
+    })
+  ])
 
   const noticeMap = new Map<string, { id: string; notice: string; updatedAt: Date }>()
   for (const n of notices) {
@@ -101,10 +128,22 @@ export default defineEventHandler(async (event): Promise<ApiResponse<any[]>> => 
     })
   }
 
-  const reservationsWithNotices = reservations.map((r) => ({
-    ...r,
-    studentAssignmentNotice: noticeMap.get(`${r.assignmentId}:${r.studentId}`) || null
-  }))
+  const reservationsWithNotices = reservations.map((r) => {
+    const rTime = new Date(r.startTime).getTime()
+    const studentPrior = (priorInterviews || []).filter((p) => {
+      if (p.assignmentId !== r.assignmentId || p.studentId !== r.studentId) return false
+      if (p.id === r.id) return false
+      if (!p.notes || p.notes.trim().length === 0) return false
+      const pTime = new Date(p.startTime).getTime()
+      return pTime < rTime || (pTime === rTime && p.id !== r.id)
+    })
+
+    return {
+      ...r,
+      studentAssignmentNotice: noticeMap.get(`${r.assignmentId}:${r.studentId}`) || null,
+      priorInterviews: studentPrior
+    }
+  })
 
   return {
     statusCode: 200,
